@@ -193,6 +193,77 @@ const banner =
         : "Viewser dev → mode=auto (https, COEP credentialless + COOP same-origin, runtime-fallback redo för StackBlitz)";
 process.stdout.write(`${banner}\n`);
 
+// --- vercel-sandbox: färsk OIDC-token vid uppstart (predev-auth) ----------
+// I vercel-sandbox-läge läser sandbox-runnern `apps/viewser/.env.vercel.local`
+// för `VERCEL_OIDC_TOKEN` (Vercel-inloggning, gäller ~12 h lokalt). Så
+// operatören aldrig behöver köra `vercel env pull` för hand hämtar dispatchern
+// en färsk token vid `npm run dev` — men bara när den faktiskt behövs (token
+// saknas, går inte att läsa exp, eller har < REFRESH_MARGIN kvar) och ALLTID
+// best-effort: saknad vercel-CLI, olänkat repo eller misslyckad pull stoppar
+// INTE dev. Då degraderar adaptern ärligt ("Vercel-inloggning saknas") tills
+// en token finns. Övriga lägen (local-next/stackblitz) rör detta inte — de
+// behöver ingen Vercel-auth.
+function vercelOidcExpirySeconds(envFile) {
+  try {
+    const raw = readFileSync(envFile, "utf8");
+    const match = raw.match(/^\s*VERCEL_OIDC_TOKEN\s*=\s*(.+)$/m);
+    if (!match) return null;
+    const token = match[1].trim().replace(/^["']|["']$/g, "");
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const decoded = Buffer.from(
+      payload.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64",
+    ).toString("utf8");
+    const claims = JSON.parse(decoded);
+    return typeof claims.exp === "number" ? claims.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+function ensureFreshVercelOidcToken() {
+  const repoRoot = resolve(VIEWSER_ROOT, "..", "..");
+  const envFile = resolve(VIEWSER_ROOT, ".env.vercel.local");
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const REFRESH_MARGIN_SECONDS = 60 * 60; // hämta ny om < 1 h kvar
+  const exp = vercelOidcExpirySeconds(envFile);
+  if (exp !== null && exp - nowSeconds > REFRESH_MARGIN_SECONDS) {
+    const minutesLeft = Math.round((exp - nowSeconds) / 60);
+    process.stdout.write(
+      `Viewser dev → VERCEL_OIDC_TOKEN giltig ~${minutesLeft} min till — hoppar över pull.\n`,
+    );
+    return;
+  }
+  process.stdout.write(
+    "Viewser dev → hämtar färsk VERCEL_OIDC_TOKEN (vercel env pull)…\n",
+  );
+  try {
+    const result = spawnSync(
+      "vercel",
+      ["env", "pull", envFile, "--environment=development", "--yes"],
+      { cwd: repoRoot, stdio: "ignore", shell: true, timeout: 60_000 },
+    );
+    if (result.status === 0) {
+      process.stdout.write("Viewser dev → OIDC-token uppdaterad.\n");
+    } else {
+      process.stderr.write(
+        "Viewser dev → kunde inte hämta OIDC-token (är vercel-CLI installerad " +
+          "och repot länkat via `vercel link`?). Sandbox-preview degraderar " +
+          "ärligt tills `vercel env pull apps/viewser/.env.vercel.local` körts.\n",
+      );
+    }
+  } catch (error) {
+    process.stderr.write(
+      `Viewser dev → kunde inte starta vercel env pull: ${error.message}. Fortsätter ändå.\n`,
+    );
+  }
+}
+
+if (mode === "vercel-sandbox") {
+  ensureFreshVercelOidcToken();
+}
+
 // Pass through extra argv (allt efter scriptnamnet). Tillåter t.ex.
 // `npm run dev -- --port 3001`.
 const passthroughArgs = process.argv.slice(2);
