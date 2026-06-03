@@ -1,0 +1,251 @@
+"""Apply a validated artefakt patch by creating the next Project Input version (KÖR-7c).
+
+``apply_patch_plan`` consumes a **validated** :class:`PatchPlan` (from KÖR-7b)
+and produces the **next** Project Input version snapshot - never an in-place
+edit of history. A follow-up is "a new version of the same site, not a new
+site": identity (``projectId`` / ``siteId``) is preserved and scaffold/variant
+are frozen, exactly like today's follow-up prompt (03 §3).
+
+Reuse, don't duplicate (kor-7c scope): the whole version/merge/write spine is
+the existing follow-up logic in ``scripts/prompt_to_project_input.py`` -
+``read_existing_meta`` / ``read_existing_project_input`` /
+``read_base_run_snapshot`` (read the prior immutable version),
+``merge_followup_project_input`` (identity-preservation + additive merge,
+frozen scaffold/variant), ``_build_project_dna_snapshot`` (DNA),
+``_validate_against_schema`` and ``write_project_input`` (immutable
+``<siteId>.v<N+1>`` snapshot via ``O_EXCL`` + atomic pointer files). This module
+only adds the genuinely new part: mapping the validated patch onto an existing
+Project Input field and recording apply provenance.
+
+Hard guarantees (kor-7c):
+
+- **Patch-driven, not prompt-driven.** The merge runs with an empty follow-up
+  prompt so it stays a deterministic additive merge; the authoritative intent is
+  the validated patch, never re-parsed prompt heuristics.
+- **Immutable.** Only the next ``v<N+1>`` snapshot is written (``write_project_input``
+  refuses to overwrite an existing version). No previous ``vN`` snapshot and no
+  ``data/runs/<älder runId>/`` artefakt is touched.
+- **No build, no ``current.json``.** The build pointer (``.generated/<siteId>/current.json``)
+  is kor-7d's; ``write_project_input`` only advances the prompt-inputs version
+  pointer (``<siteId>.project-input.json``), which is what a follow-up is meant
+  to do.
+- **Rejected/invalid never applies.** A plan that did not pass kor-7b's rails is
+  refused with :class:`PatchApplyError`; a valid plan with an unmappable patch
+  writes nothing and reports the gap.
+- **Mock-safe.** No LLM, no ``OPENAI_API_KEY`` (the empty-prompt merge path runs
+  the deterministic branch only).
+"""
+
+from __future__ import annotations
+
+import copy
+from datetime import UTC, datetime
+from pathlib import Path
+
+from ..patch import PatchPlan
+from .mapping import classify_patch
+from .models import (
+    AppliedCapability,
+    ApplyResult,
+    PatchApplyError,
+    UnmappedPatch,
+)
+from .trace import log_patch_apply_to_existing_run
+
+__all__ = ["apply_patch_plan"]
+
+
+def apply_patch_plan(
+    plan: PatchPlan,
+    *,
+    site_id: str,
+    follow_up_prompt: str = "",
+    output_dir: Path | None = None,
+    base_run_id: str | None = None,
+    runs_dir: Path | None = None,
+    trace_run_dir: Path | str | None = None,
+) -> ApplyResult:
+    """Apply a validated patch plan as the next Project Input version.
+
+    ``site_id`` selects which site's latest meta/version to follow on from.
+    ``base_run_id`` (optional) iterates from a historical version instead of the
+    rolling latest, identical to today's follow-up "iterate from version N".
+    ``follow_up_prompt`` is stored verbatim on the meta sidecar for provenance
+    only - it never drives the merge (apply is patch-driven).
+
+    ``trace_run_dir`` (optional) is the directory of the **new** version's run,
+    if one already exists, to append an append-only apply Engine Event to its
+    ``trace.ndjson``. It defaults to ``None`` so apply touches no run at all -
+    never a *previous* run's directory (that would break the immutability
+    diff). Returns a transient :class:`ApplyResult`.
+    """
+    # Lazy import: keep ``import ...apply`` (models/mapping) free of the brief/
+    # discovery import chain that scripts.prompt_to_project_input pulls in, and
+    # mirror the lazy ``from scripts import build_site`` pattern in
+    # packages/generation/build/renderers.py.
+    from scripts.prompt_to_project_input import (
+        DEFAULT_OUTPUT_DIR,
+        DEFAULT_RUNS_DIR,
+        _build_project_dna_snapshot,
+        _validate_against_schema,
+        merge_followup_project_input,
+        read_base_run_snapshot,
+        read_existing_meta,
+        read_existing_project_input,
+        write_project_input,
+    )
+
+    output_dir = output_dir if output_dir is not None else DEFAULT_OUTPUT_DIR
+    runs_dir = runs_dir if runs_dir is not None else DEFAULT_RUNS_DIR
+
+    # 1. Rejected/invalid plan -> never applied (kor-7c DoD). A kor-7b planner
+    #    sets valid=False whenever it put a rail-breaking patch in rejected; we
+    #    also refuse any hand-built plan that smuggles rejected entries.
+    if plan.rejected or not plan.valid:
+        raise PatchApplyError(
+            "Patch plan är inte giltig (valid=False eller rejected ej tom); "
+            "en rejected/ogiltig patch appliceras aldrig (kor-7c)."
+        )
+
+    # 2. Empty valid plan -> nothing to apply (not an error). No write.
+    if not plan.patches:
+        return ApplyResult(
+            applied=False,
+            siteId=site_id,
+            notes=["Tom patch-plan; ingen ändring att applicera, ingen ny version skapad."],
+        )
+
+    # 3. Map every patch onto an existing Project Input field. All-or-nothing:
+    #    if any patch has no existing home, write nothing and report the gap.
+    capabilities: list[AppliedCapability] = []
+    unmapped: list[UnmappedPatch] = []
+    for patch in plan.patches:
+        capability, reason = classify_patch(patch)
+        if capability is not None:
+            capabilities.append(
+                AppliedCapability(patchField=patch.field, capability=capability)
+            )
+        else:
+            unmapped.append(
+                UnmappedPatch(
+                    patchField=patch.field,
+                    op=patch.op,
+                    value=patch.value,
+                    reason=reason or "okänd anledning",
+                )
+            )
+
+    if unmapped:
+        return ApplyResult(
+            applied=False,
+            siteId=site_id,
+            appliedCapabilities=capabilities,
+            unmapped=unmapped,
+            notes=[
+                "Ingen version skrevs (all-or-nothing): minst en validerad patch "
+                "saknar befintligt Project Input-fält och får inte uppfinna ett "
+                "nytt runtime-kontrakt. Eskalera till operatör (ADR) eller dela "
+                "upp planen.",
+            ],
+        )
+
+    # 4. Read the prior immutable version (rolling latest, or a historical
+    #    version when base_run_id is given) - identical to generate_followup.
+    existing_meta = read_existing_meta(site_id, output_dir=output_dir)
+    latest_version = existing_meta["version"]
+    if base_run_id is not None:
+        previous_pi, previous_meta = read_base_run_snapshot(
+            site_id, base_run_id, output_dir=output_dir, runs_dir=runs_dir
+        )
+        previous_version = previous_meta["version"]
+        next_version = max(latest_version, previous_version) + 1
+    else:
+        previous_pi = read_existing_project_input(site_id, output_dir=output_dir)
+        previous_meta = existing_meta
+        previous_version = latest_version
+        next_version = latest_version + 1
+
+    # 5. Build the candidate Project Input: a copy of the prior version with the
+    #    patch's capability slugs added to requestedCapabilities. The existing
+    #    follow-up merge then preserves identity, freezes scaffold/variant and
+    #    unions requestedCapabilities (with an empty prompt so it stays a
+    #    deterministic additive merge - patch-driven, never prompt-driven).
+    candidate = copy.deepcopy(previous_pi)
+    existing_capabilities = candidate.get("requestedCapabilities")
+    candidate["requestedCapabilities"] = (
+        list(existing_capabilities) if isinstance(existing_capabilities, list) else []
+    ) + [entry.capability for entry in capabilities]
+
+    merged = merge_followup_project_input(
+        previous_pi,
+        candidate,
+        follow_up_prompt="",
+        enable_llm_fallback=False,
+    )
+    _validate_against_schema(merged)
+
+    # 6. Build the meta sidecar by carrying the prior version's meta forward and
+    #    overriding only the per-version keys (projectId stays the canonical
+    #    one). appliedPatchPlan is provenance on the sidecar - not a Project
+    #    Input schema field and not a run artefakt.
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    meta = copy.deepcopy(previous_meta)
+    meta["projectId"] = existing_meta["projectId"]
+    meta["siteId"] = site_id
+    meta["version"] = next_version
+    meta["previousVersion"] = previous_version
+    meta["mode"] = "followup"
+    meta["scaffoldId"] = merged["scaffoldId"]
+    meta["variantId"] = merged["variantId"]
+    meta.setdefault("createdAt", now)
+    meta["updatedAt"] = now
+    if follow_up_prompt:
+        meta["followUpPrompt"] = follow_up_prompt
+    if base_run_id is not None:
+        meta["baseRunId"] = base_run_id
+    # Drop a stale per-version follow-up signal so it never carries forward as a
+    # false claim about this apply.
+    meta.pop("unappliedFollowupIntents", None)
+    meta["appliedPatchPlan"] = {
+        "source": "kor-7c-artifact-apply",
+        "patchCount": len(plan.patches),
+        "appliedCapabilities": [entry.model_dump() for entry in capabilities],
+    }
+    meta["projectDna"] = _build_project_dna_snapshot(
+        merged,
+        previous_project_input=previous_pi,
+        previous_project_dna=previous_meta.get("projectDna")
+        if isinstance(previous_meta.get("projectDna"), dict)
+        else None,
+        version=next_version,
+        mode="followup",
+        follow_up_prompt="",
+    )
+
+    # 7. Write the immutable next version snapshot (refuses to overwrite vN) +
+    #    advance the prompt-inputs version pointer. No build, no current.json.
+    project_input_path, meta_path = write_project_input(
+        merged, meta, output_dir=output_dir
+    )
+
+    result = ApplyResult(
+        applied=True,
+        siteId=site_id,
+        projectId=meta["projectId"],
+        previousVersion=previous_version,
+        version=next_version,
+        projectInputPath=str(project_input_path),
+        metaPath=str(meta_path),
+        appliedCapabilities=capabilities,
+        notes=[
+            f"Applicerade {len(capabilities)} capability-patch(ar) som "
+            f"requestedCapabilities i ny version v{next_version}.",
+        ],
+    )
+
+    # 8. Optional append-only run trace, only for an explicitly supplied (new)
+    #    run dir - never a previous run (immutability diff).
+    if trace_run_dir is not None:
+        log_patch_apply_to_existing_run(trace_run_dir, result)
+
+    return result
