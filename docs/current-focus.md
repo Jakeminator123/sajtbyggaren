@@ -5,6 +5,32 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+## Current objective (2026-06-03 — KÖR-0b state-realign efter heavy-LLM-landning)
+
+Smal Steward-slice (vår lane: docs + governance, ingen `apps/`- eller
+`packages/generation/`-kod) som realignar styrning som drev isär när det tunga
+LLM-flödet landade. `jakob-be` HEAD = `e30cc15`; `origin/main` = `1d6e069`
+(jakob-be 12 commits före, sync = operatörsbeslut). Inne sedan KÖR-0 (#155):
+
+- #160 governance-unblock (heavy-llm-flow-vokabulär allowlistad) — mergad.
+- #157 KÖR-1a blueprint schema skeleton (+ ADR 0036) — mergad.
+- #159 KÖR-6a deterministisk OpenClaw Router — mergad.
+- `docs/heavy-llm-flow/` (README + 00–04 + kor-*-kort + handoff) — inne.
+
+**Vercel-sandbox-adaptern:** verifierad inne + live-bevisad (#146 spike, #147
+opt-in-adapter, route-flip i `app/api/preview/[siteId]`). Default kvar `local`;
+`vercel-sandbox` är primary/opt-in (ADR 0033). Hostad/publik loop (#156 `/live`)
+är parkerad pga säkerhet — separat live-lane, inte vår. Känd P2-härdning kvar:
+`resume:false` på stop/get i `vercel-sandbox-runner.ts` (apps/viewser, ej blocker).
+
+**Öppna PR:er nu:** #156 (`/live`, live-lane, parkerad) + #158 (UI-överhalning,
+Christopher-lane, split ur stängda #150). Ingen öppen backend/heavy-LLM-PR.
+
+**Nästa:** `kor-1b` (briefModel fyller brief-blueprintet) → `1c → 2 → 4a → 3a →
+3b → 5 → 6b → 7a–d`. Orkestrering: `docs/heavy-llm-flow/handoff-orchestration.md`.
+
+---
+
 ## Current objective (2026-06-02 NATT — KÖR-0 state alignment / stale-doc cleanup)
 
 Smal Steward-slice (KÖR-0) som städar felpekande/stale styrning INNAN
@@ -265,27 +291,25 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `6a8e39b` (2026-06-02 UTC, `jakob-be` HEAD — live-verifierad
-kärnloop + committad worktree; `main` = `366f6e9` efter PR #153. KÖR-0
-state-alignment-städningen ligger ovanpå i en PR mot `jakob-be`).
-Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
-module extraction + P2 grounding + contact honesty.
+Last verified state: `e30cc15` (2026-06-03 UTC, `jakob-be` HEAD — heavy-LLM-grunden
+inne: #155 KÖR-0 + #160 governance-unblock + #157 KÖR-1a + #159 KÖR-6a, samt
+`docs/heavy-llm-flow/`. `origin/main` = `1d6e069` (jakob-be 12 commits före; sync =
+operatörsbeslut). KÖR-0b state-realign ligger ovanpå i en PR mot `jakob-be`).
+Nya PRs sedan föregående checkpoint: #155, #160, #157, #159 (alla mergade till
+`jakob-be`).
 
-## Öppen PR att känna till — #150 (christopher-ui)
+## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
-**PR #150** `christopher-ui -> main`: "feat(viewser): auth + billing + starters +
-kärnloop-UX + pre-push-härdning". **STOR: 142 filer, +11189/−936, CONFLICTING.**
-Christophers UI-lane. Innehåller bl.a. auth-flöden, billing/Stripe (checkout +
-webhook), starters, marketing-sidor, samt rör `app/api/preview/[siteId]/route.ts`
-(Bite C-territorium), `app/api/prompt/route.ts` och `floating-chat.tsx` (P2 #3).
+**PR #158** `feat/viewser-ui-overhaul -> main`: "feat(viewser): UI-överhalning
+utan auth/billing (split ur #150)". Christophers UI-lane. **#150** (auth + billing
++ Stripe + starters + kärnloop-UX) är **STÄNGD** — den delades upp och
+auth/billing lyftes ut per produktkompassen (auth/billing väntar tills operatören
+uttryckligen väljer det som scope).
 
-**Operatörs-OBS (produktkompass-spänning):** auth, billing, Stripe står
-uttryckligen på "vänta tills operatören explicit säger annat"-listan i
-`docs/product-operating-context.md`. Detta är ett operatörsbeslut om scope, inte
-ett agentbeslut. Backend-lanen (`jakob-be`) blockeras INTE av #150 — disjunkt
-filscope (PR #150 rör `apps/viewser/**`, backend rör `packages/generation/` +
-`scripts/`). Jakob mergar/rör inte #150 (Christophers lane); den är CONFLICTING
-mot `main` och kräver hans rebase + operatörens scope-OK före merge.
+**Operatörs-OBS:** Backend/heavy-LLM-lanen (`jakob-be`) blockeras INTE av #158 —
+disjunkt filscope (#158 rör `apps/viewser/**`; vår lane rör `packages/generation/`,
+`governance/`, `scripts/`, `docs/heavy-llm-flow/`). Jakob mergar/rör inte #158
+(Christophers lane).
 
 ## Branchmodellen (kort)
 
@@ -299,11 +323,12 @@ mot `main` och kräver hans rebase + operatörens scope-OK före merge.
 
 ## Pågående/öppna PR:s just nu
 
-**Öppna PRs:** #150 (`christopher-ui`) är den enda öppna PR:n — den hålls per
-ADR 0035 (se "## Öppen PR att känna till — #150" ovan). Inga öppna PR:er i
-backend-lanen (`jakob-be`); alla denna sessions backend-PR:er är mergade eller
-stängda. KÖR-0-städningen levereras i **PR #155** mot `jakob-be` (efter merge
-bumpar nästa Steward "Last verified state" till merge-SHA).
+**Öppna PRs:** **#156** (`feat/live-preview → jakob-be`, hostad `/live`-loop —
+parkerad pga säkerhet, live-lane, INTE vår att merga/fixa) och **#158**
+(`feat/viewser-ui-overhaul → main`, UI-överhalning utan auth/billing, split ur
+stängda #150, Christopher-lane). Ingen öppen backend/heavy-LLM-PR i `jakob-be`.
+KÖR-0 (#155) + #160 + #157 + #159 är mergade till `jakob-be`. **#150 är STÄNGD**
+(ersatt av #158).
 
 **Mergade/stängda denna session:**
 - **#147** `cursor/vercel-sandbox-adapter → jakob-be` — **mergad** (squash,
