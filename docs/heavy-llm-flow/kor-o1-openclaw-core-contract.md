@@ -74,8 +74,8 @@ OpenClaw Core komponerar de befintliga typerna — den uppfinner inga nya enums:
   "plan": ["steg 1", "…"],  // satt bara för plan_only / reference
   "patchPlanRequest": {      // satt bara för edit_instruction i V0:
     "targetSummary": "contentBlocks.home.<section>.<field>",
-    "status": "patch_planner_missing",   // ärligt: kor-7b finns inte än
-    "blockedBy": "kor-7b"
+    "status": "apply_missing",   // kor-7b planner finns (#171); apply/version (7c) saknas
+    "blockedBy": "kor-7c"
   },
   "toolCalls": [             // FÖRESLAGNA verktyg — aldrig auto-körda i V0:
     { "name": "propose_patch_plan", "args": {},
@@ -111,10 +111,11 @@ V0 har en **liten, read-only** verktygslåda. Inga skriv-/build-verktyg finns i 
 | `assemble_context(level, …)` | `kor-7a` `context/` | hämta exakt den `contextLevel` routern satte, inom budget | skriva, bygga, boota preview |
 | `decide(router, context)` | **nytt, V0** | välja `OpenClawAction` + formulera svar/plan/fråga | applicera patch, skriva fil, bygga |
 
-Tillägg **senare** (Nivå 2, efter `kor-7b`/`kor-7c`): `plan_patches` (dry-run,
-`kor-7b`) och `apply_patch → ny version` (`kor-7c`). V0 stannar **före** dem och
-returnerar i stället `patch_plan_request{status:"patch_planner_missing"}` på en
-ändringsorder — ärligt, inte en falsk success.
+Tillägg **senare**: `plan_patches` (dry-run) finns redan (`kor-7b`, #171 inne);
+`apply_patch → ny version` (`kor-7c`) + targeted rebuild (`kor-7d`) saknas. V0 stannar
+**före** apply och returnerar `patch_plan_request{status:"apply_missing", blockedBy:"kor-7c"}`
+på en ändringsorder — ärligt, inte en falsk success. (V0 binder bara router + context; den
+anropar inte själv patch-planeraren — den wiringen är patch-flow/`kor-o3`.)
 
 ## Capability-plan (meddelande → kontext → handling, V0)
 
@@ -196,10 +197,13 @@ docs/heavy-llm-flow/kor-o1-openclaw-core-contract.md.
 Krav:
 - Komponera RouterDecision (kor-6a) + AssembledContext (kor-7a) till en transient
   OpenClawDecision. INGEN ny canonical artefakt, INGEN sparad fil.
+- OpenClawDecision ska ha HELA kontraktsformen ovan, inkl. toolCalls[] + capability.
+  I V0 defaultar de till tom lista / None och V0 agerar inte på dem (de fylls/anvands
+  forst i patch-flow). Sa slipper kor-o3 en schemaandring senare.
 - Handlingar i V0: answer_only / clarification / plan_only / patch_plan_request.
   V0 bygger ALDRIG, skriver ALDRIG fil, startar ALDRIG preview.
-- En edit_instruction i V0 ger patch_plan_request{status:"patch_planner_missing"}
-  tills kor-7b finns - arligt, ingen falsk success.
+- En edit_instruction i V0 ger patch_plan_request{status:"apply_missing", blockedBy:"kor-7c"}
+  (kor-7b planner finns; apply/version 7c saknas) - arligt, ingen falsk success.
 - Mock-safe (ingen OPENAI_API_KEY behovs; deterministiskt over router+context).
 
 Definition of done: capability-planens rader (answer/clarify/plan/patch_plan_request)

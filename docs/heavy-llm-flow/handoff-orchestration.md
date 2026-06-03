@@ -1,16 +1,19 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `9ba29ce` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `ab5db12` · **Governance:** grön (18/18)
 
-> **Sedan förra handoffen (2026-06-03 EM):** Vercel auto-deploy begränsad till
-> `jakob-be`/`christopher-ui`/`main` (`9ba29ce`, denylist i `apps/viewser/vercel.json`).
-> **Follow-up-bryggan startad** (coach-prioriterad före 4a): `kor-7b` patch planner
-> (dry-run) ligger som **draft-PR #171** (CI grön efter term-coverage-allowlist-fix).
-> `kor-o1` OpenClaw Core-kontrakt skrivet (designkort, ocommittat — under coach-review).
-> Coachen byggde en körbar FastAPI-spike (`openclaw-mvp/`) av OpenClaw Core som
-> hålls lokal/gitignored tills placeringen är beslutad. Öppen backend-PR utöver #171:
-> **#170** B86 npm-timeout env-override (grön, vår lane). **#169** = Christophers
-> UI-reconcile på jakob-be (hans lane).
+> **Sedan förra handoffen (2026-06-03 kväll):** Vercel auto-deploy begränsad till
+> `jakob-be`/`christopher-ui`/`main` (denylist i `apps/viewser/vercel.json`).
+> **Follow-up-bryggans slice 1 inne:** `kor-7b` artifact patch planner (dry-run) **mergad (#171)**.
+> Även mergat: **#170** (B86 npm-timeout env-override, vår lane) och **#169** (Christophers
+> UI-reconcile på jakob-be runtime — hans lane). `kor-o1` OpenClaw Core-kontrakt **committat**
+> (designkort); coachens körbara FastAPI-spike (`openclaw-mvp/`) hålls lokal/gitignored tills
+> placeringen är beslutad. Öppna PR:er (ej vår lane): #172 (pending-runs) + #173 (layout-no-op),
+> båda `apps/viewser`/Christopher; #156 `/live` parkerad.
+> **Reviewer-fynd att åtgärda före kor-7c:** `component_add` utan `componentIntent` kan ge en
+> giltig men tom `{"component": null}`-patch i `planner.py` (`validate_patch` kollar inte att
+> komponenten är namngiven) — avvisa den. Och `_INTENT_CAPABILITY` bör drift-säkras mot
+> `capability-map.v1.json` i stället för att vara en andra sanning.
 
 Överlämning så en ny orchestrator-agent kan fortsätta jobba med operatören (Jakob) utan
 att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i denna mapp samt
@@ -42,8 +45,8 @@ Routern (kor-6a) + Context Assembler (kor-7a) finns som rails för follow-up/pat
 Sekvens (omprioriterad 2026-06-03 EM per coach): `1b ✓ 1c ✓ 2 ✓ 7a ✓ 1c-copy ✓ →`
 **follow-up-bryggan `7b → 7c → 7d`** (stänger B155 — "ändra rubriken" patchar artefakt →
 ny version → synlig ändring) `→ 4a → 3a → 3b → 5 → 6b`.
-**Aktivt nu:** `kor-7b` (PR #171, draft, grön). **Nästa:** `kor-7c` (apply/version) sedan
-`kor-7d` (targeted rebuild) — ETT steg i taget, operatören mergar med orchestratorn.
+**Aktivt nu:** `kor-7c` (apply/version) — `kor-7b` inne (#171). **Nästa:** `kor-7d` (targeted
+rebuild) — ETT steg i taget, operatören mergar med orchestratorn.
 **Parallellt (read-only, ingen 7b-beroende):** `kor-o2` OpenClaw Core V0 (binder router +
 context → answer/plan/clarify/patch_plan_request; bygger/skriver/patchar/preview:ar aldrig).
 Builder-prompt finns i `kor-o1-openclaw-core-contract.md`. `kor-4a` critic + visuell
