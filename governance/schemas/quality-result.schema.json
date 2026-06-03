@@ -21,9 +21,63 @@
     "summary": {
       "type": "string",
       "description": "Short one-line operator summary that trace.ndjson can surface without rendering the full check list."
+    },
+    "critic": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["score", "issues", "source"],
+      "description": "kor-4a deterministic Quality Critic lane (warning only; NEVER feeds the top-level status). Null unless the caller passed the blueprint into run_quality_gate. Same shape kor-4b's verifierModel critic re-uses. Mirrors packages.generation.quality_gate.CriticResult.",
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Weighted-by-severity score: max(0, 100 - sum(weight(severity))) with high=20, medium=10, low=5. 100 = clean blueprint."
+        },
+        "issues": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/criticIssue" },
+          "description": "Repairable findings. Empty when the blueprint passed all five heuristics."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["deterministic-v0"],
+          "description": "Provenance. Locked to deterministic-v0 in kor-4a; kor-4b adds an LLM critic source without changing this contract."
+        }
+      }
     }
   },
   "$defs": {
+    "criticIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "type", "target", "message", "repairHint"],
+      "description": "One deterministic critic finding. Mirrors packages.generation.quality_gate.CriticIssue.",
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Drives the score penalty (high=20, medium=10, low=5)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["generic_copy", "thin_offer", "placeholder_leakage", "missing_local_context", "missing_cta"],
+          "description": "Heuristic that produced the finding. Adding a type requires bumping this enum and the CriticIssueType Literal together."
+        },
+        "target": {
+          "type": "string",
+          "description": "Address contract <route>.<section> (or global.<section> for brief-level fields)."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable description of the finding."
+        },
+        "repairHint": {
+          "type": "string",
+          "description": "Deterministic suggestion for kor-5 / an operator. Advice, never an applied change."
+        }
+      }
+    },
     "checkResult": {
       "type": "object",
       "additionalProperties": false,

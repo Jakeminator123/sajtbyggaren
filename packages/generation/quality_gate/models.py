@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from .critic import CriticResult
+
 CheckName = Literal[
     "typecheck",
     "route-scan",
@@ -57,8 +59,15 @@ class QualityResult(BaseModel):
     without rendering the full check list. Failed blocking checks
     appear as ``failed=...``; failed warning checks appear as
     ``warning=...`` so the summary stays consistent with ``status``.
+
+    ``critic`` is the optional deterministic Quality Critic lane (kor-4a):
+    ``{score, issues, source="deterministic-v0"}``. It is a **warning lane**
+    and NEVER feeds ``status`` aggregation. It stays ``None`` (serialised as
+    ``null``) unless the caller passes the blueprint into ``run_quality_gate``;
+    existing runs and the Repair Pipeline never set it.
     """
 
     status: QualityStatus
     checks: list[CheckResult]
     summary: str = ""
+    critic: CriticResult | None = None
