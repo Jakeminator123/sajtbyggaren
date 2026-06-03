@@ -354,12 +354,12 @@ def run_verifier_critic(
 
     Always runs ``run_deterministic_critic`` first (kor-4a). Then:
 
-    - **No API key** -> return the deterministic findings unchanged with
+    - No usable API key -> return the deterministic findings unchanged with
       ``source = "mock-no-key"`` (identical findings to kor-4a, no regression).
-    - **Key present** -> call the verifierModel, merge + dedup its findings with
-      the deterministic ones per ``(type, target)``, recompute the score over
-      the merged set, ``source = "verifierModel"``.
-    - **Any LLM / resolution error** -> deterministic findings with
+    - Key present -> call the verifierModel, merge + dedup its findings with the
+      deterministic ones per ``(type, target)``, recompute the score over the
+      merged set, ``source = "verifierModel"``.
+    - Any LLM / resolution error -> deterministic findings with
       ``source = "mock-llm-error"`` (still non-blocking).
 
     The result is the same warning-lane shape kor-4a produced; it NEVER feeds
