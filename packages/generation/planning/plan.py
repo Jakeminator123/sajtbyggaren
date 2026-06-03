@@ -630,7 +630,19 @@ _PLANNING_SYSTEM_INSTRUCTIONS = (
     "    achieve and the angle), not finished customer copy. Entries addressing "
     "    a section the scaffold does not declare are rejected. Leave sectionPlan "
     "    empty if you have nothing specific to add; a deterministic baseline is "
-    "    always produced from the Site Brief."
+    "    always produced from the Site Brief. "
+    # kor-1c-copy — how the rendered copy is composed (honesty)
+    "(8) The Generation Package's contentBlocks (hero, the company story, the "
+    "    branschnära FAQ and the per-service offer summaries) are composed "
+    "    DETERMINISTICALLY from the Site Brief - its positioning "
+    "    (oneLiner/differentiator/localAngle), contentStrategy and "
+    "    servicesMentioned - so the contract is identical with or without an "
+    "    API key. You do not author that copy here; instead make your "
+    "    sectionPlan copyIntent for the hero / offer / story / faq sections "
+    "    honest and specific so it steers that composition. Never propose copy "
+    "    intent that asserts a certification, review, price, contact channel or "
+    "    any fact the Site Brief does not state - anything unknown stays a "
+    "    qualityRisk, never customer copy, and the raw prompt is never copy."
 )
 
 
