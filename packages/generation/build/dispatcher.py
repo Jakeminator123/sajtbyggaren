@@ -40,6 +40,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from packages.generation.orchestration.section_treatments import (
+    load_section_treatments,
+)
+from packages.generation.orchestration.section_treatments import (
+    load_section_treatments_catalogue as load_section_treatments_catalogue,
+)
+
 _SECTION_RENDERERS: dict[str, Callable[..., str]] = {}
 """Section-id → renderer registry.
 
@@ -143,110 +150,23 @@ def _call_section_renderer(
 # ``variant_id`` through the dispatcher (Path B native scaffolds
 # pass it from ``_render_dispatched_route``).
 #
-# kor-3a (2026-06-03): the variant→treatment truth used to live in a
+# kor-3a (2026-06-03): the variant->treatment truth used to live in a
 # hardcoded Python dict here and was mirrored, by hand, by
 # ``_SECTION_TREATMENTS_CATALOGUE`` in ``packages/generation/planning/
-# plan.py``. Both tables now read ONE declarative source on disk —
-# ``scaffolds/<id>/section-treatments.json`` — so the dispatcher and
-# the planning prompt can never drift again. This module owns the
-# loader (``load_section_treatments`` /
-# ``load_section_treatments_catalogue``) and exposes the same flat
-# variant→{section: treatment} view via ``_SECTION_TREATMENTS_BY_VARIANT``
-# that the resolver and the existing tests already expect. No render
-# output changed: the JSON encodes the exact pairs the dict used to
-# hold (byte-for-byte parity, asserted in
-# ``tests/test_section_treatments_json_parity.py``).
+# plan.py``. Both tables now read ONE declarative source on disk --
+# ``orchestration/scaffolds/<id>/section-treatments.json`` -- so the
+# dispatcher and the planning prompt can never drift again.
 #
-# Each ``section-treatments.json`` block is::
-#
-#     {"sections": {"<section-id>": {
-#         "treatments": ["<section-default>", "<variant treatment>", ...],
-#         "byVariant": {"<variant-id>": "<treatment-id>", ...}}}}
-#
-# ``treatments[0]`` is the section default (what a variant that does
-# not register the section inherits); the remaining ids are the
-# variant-specific treatments. Variants absent from ``byVariant``
-# (e.g. ``editorial-warm``, ``clinic-calm``, ``midnight-counsel``,
-# ``pulse-fit``) deliberately inherit the section default. Section ids
-# are scaffold-unique, so flattening every file into one
-# variant-keyed map is unambiguous.
-_SECTION_TREATMENTS_DIR = (
-    Path(__file__).resolve().parents[1] / "orchestration" / "scaffolds"
-)
-
-
-@functools.cache
-def load_section_treatments() -> dict[str, dict[str, Any]]:
-    """Load the declarative section-treatment truth from every scaffold.
-
-    Returns a per-section catalogue keyed by section id::
-
-        {section_id: {"treatments": [...], "byVariant": {variant: treatment}}}
-
-    This is the single on-disk source of truth that both the build
-    dispatcher (variant → treatment resolution, via
-    ``_SECTION_TREATMENTS_BY_VARIANT``) and the planning prompt catalogue
-    (section → treatment list, via ``load_section_treatments_catalogue``)
-    consume. Scaffolds without a ``section-treatments.json`` simply
-    contribute nothing. Result is cached because the files are read once
-    per process and never mutate at runtime; tests that need a re-read
-    can call ``load_section_treatments.cache_clear()``.
-    """
-    catalogue: dict[str, dict[str, Any]] = {}
-    if not _SECTION_TREATMENTS_DIR.is_dir():
-        return catalogue
-    for scaffold_dir in sorted(_SECTION_TREATMENTS_DIR.iterdir()):
-        treatments_path = scaffold_dir / "section-treatments.json"
-        if not treatments_path.is_file():
-            continue
-        try:
-            loaded = json.loads(treatments_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            raise SystemExit(
-                "Builder failed: scaffold section-treatments.json at "
-                f"{treatments_path} is not valid JSON ({exc.msg} at "
-                f"line {exc.lineno}). kor-3a requires a parsable "
-                "section-treatments.json so the dispatcher and the "
-                "planning catalogue can read one declarative truth."
-            ) from exc
-        sections = loaded.get("sections") if isinstance(loaded, dict) else None
-        if not isinstance(sections, dict):
-            continue
-        for section_id, block in sections.items():
-            if not isinstance(block, dict):
-                continue
-            treatments = [
-                str(item)
-                for item in (block.get("treatments") or [])
-                if isinstance(item, str)
-            ]
-            by_variant = {
-                str(variant_id): str(treatment_id)
-                for variant_id, treatment_id in (
-                    block.get("byVariant") or {}
-                ).items()
-                if isinstance(variant_id, str) and isinstance(treatment_id, str)
-            }
-            entry = catalogue.setdefault(
-                section_id, {"treatments": [], "byVariant": {}}
-            )
-            entry["treatments"] = treatments
-            entry["byVariant"].update(by_variant)
-    return catalogue
-
-
-def load_section_treatments_catalogue() -> dict[str, list[str]]:
-    """Section-id → ordered treatment-id list (default first).
-
-    The planning prompt (``packages/generation/planning/plan.py``) reads
-    this so ``planningModel`` sees the registered treatment ids. Reads the
-    same JSON the dispatcher uses, so the catalogue can never drift from
-    the runtime variant→treatment table.
-    """
-    return {
-        section_id: list(block["treatments"])
-        for section_id, block in load_section_treatments().items()
-    }
+# Pushvakt P1 (2026-06-03): the loaders (``load_section_treatments`` /
+# ``load_section_treatments_catalogue``) were moved out of this build
+# module into ``packages/generation/orchestration/section_treatments.py``
+# so fas-2 ``planning`` no longer imports fas-3 ``build`` (repo-boundaries
+# v10). They are imported at the top of this module and re-exported, so
+# the resolver, the parity tests and external callers keep the same
+# ``packages.generation.build.dispatcher`` import path. The flat
+# variant->{section: treatment} view ``_SECTION_TREATMENTS_BY_VARIANT`` is
+# still built here from that single source (byte-for-byte parity, asserted
+# in ``tests/test_section_treatments_json_parity.py``).
 
 
 def _build_section_treatments_by_variant() -> dict[str, dict[str, str]]:
