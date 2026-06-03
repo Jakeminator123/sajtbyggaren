@@ -4344,9 +4344,12 @@ def _append_targeted_render_event(
     never truncates the build's trace, it only adds one honest summary event so
     every targeted build - applied, no-op or skipped - leaves a trace (FYND1).
     """
-    status = {"applied": "done", "no-op": "warning", "skipped": "skipped"}.get(
-        result.outcome, "done"
-    )
+    status = {
+        "applied": "done",
+        "no-op": "warning",
+        "skipped": "skipped",
+        "failed": "failed",
+    }.get(result.outcome, "done")
     record = {
         "runId": run_id,
         "phase": "build",
@@ -4363,6 +4366,143 @@ def _append_targeted_render_event(
     trace_path = run_dir / "trace.ndjson"
     with trace_path.open("a", encoding="utf-8", newline="\n") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _route_segment_to_id_map(run_dir: Path) -> dict[str, str]:
+    """Map generated route-directory segments to scaffold route ids (KÖR-7-STAB #176).
+
+    The targeted-render diff attributes a changed file to a route by its URL
+    path segment (``app/kontakt/page.tsx``), but affected routes are derived from
+    the kor-1a logical route id (``contentBlocks.contact``). The site plan's
+    ``routePlan`` carries the authoritative scaffold path<->id map, so we read it
+    from the just-built run and translate file segments back to route ids before
+    comparing. Returns ``{}`` (raw-segment fallback) when the plan is missing or
+    unreadable.
+    """
+    try:
+        plan = load_json(run_dir / "site-plan.json")
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+    route_plan = plan.get("routePlan") if isinstance(plan, dict) else None
+    if not isinstance(route_plan, list):
+        return {}
+    mapping: dict[str, str] = {}
+    for entry in route_plan:
+        if not isinstance(entry, dict):
+            continue
+        route_id = entry.get("id")
+        path = entry.get("path")
+        if not isinstance(route_id, str) or not route_id:
+            continue
+        if not isinstance(path, str):
+            continue
+        mapping[path.strip("/")] = route_id
+    return mapping
+
+
+def _find_active_build_generated_files_snapshot(
+    runs_root: Path,
+    generated_root: Path,
+    site_id: str | None,
+) -> Path | None:
+    """Return the generated-files snapshot of the operator's ACTIVE build.
+
+    KÖR-7-STAB #176: ``previewShouldRefresh``/changed-routes must compare against
+    what the preview actually serves - the build ``current.json`` points at - not
+    an arbitrary historical previousVersion run that may not be active. Reads the
+    active build id from the immutable-build pointer (read-only; the current.json
+    contract stays off-limits) and finds the run whose ``build-result.json``
+    published that build id, returning its ``generated-files`` snapshot. Returns
+    ``None`` when there is no active pointer yet or no matching run, so the caller
+    falls back to the historical previous-version snapshot.
+    """
+    if not site_id:
+        return None
+    from packages.generation.build.immutable_builds import read_active_build_dir
+
+    active_build_dir = read_active_build_dir(generated_root / site_id)
+    if active_build_dir is None:
+        return None
+    active_build_id = active_build_dir.name
+    if not runs_root.exists():
+        return None
+    candidates = [run_dir for run_dir in runs_root.iterdir() if run_dir.is_dir()]
+    candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    for run_dir in candidates:
+        try:
+            payload = json.loads(
+                (run_dir / "build-result.json").read_text(encoding="utf-8")
+            )
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        if payload.get("activeBuildId") != active_build_id:
+            continue
+        snapshot = run_dir / "generated-files"
+        if snapshot.is_dir():
+            return snapshot
+    return None
+
+
+def _find_new_run_dir(runs_root: Path, before_names: set[str]) -> Path | None:
+    """Return the run directory created during this call (newest not in ``before_names``)."""
+    if not runs_root.exists():
+        return None
+    new_dirs = [
+        run_dir
+        for run_dir in runs_root.iterdir()
+        if run_dir.is_dir() and run_dir.name not in before_names
+    ]
+    if not new_dirs:
+        return None
+    new_dirs.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return new_dirs[0]
+
+
+def _apply_result_mismatch(
+    apply_result: Any,
+    dossier_path: Path,
+    dossier: dict[str, Any],
+    prompt_meta: dict[str, Any] | None,
+) -> str | None:
+    """Return a mismatch reason, or ``None`` when the apply_result fits the build.
+
+    KÖR-7-STAB #176: a supplied ``apply_result`` must describe the SAME version
+    ``dossier_path`` points at; otherwise affected-route derivation and the build
+    would silently operate on the wrong site/version. Checks ``siteId``,
+    ``version`` and (when present) ``projectInputPath`` against the dossier being
+    built. Only fields that are populated on both sides are compared, so a sparse
+    apply_result is not rejected on absent data.
+    """
+    apply_site = getattr(apply_result, "siteId", None)
+    dossier_site = dossier.get("siteId")
+    if apply_site and dossier_site and apply_site != dossier_site:
+        return (
+            f"apply_result.siteId {apply_site!r} matchar inte dossier.siteId "
+            f"{dossier_site!r}."
+        )
+    apply_version = getattr(apply_result, "version", None)
+    meta_version = _prompt_meta_version(prompt_meta)
+    if (
+        isinstance(apply_version, int)
+        and isinstance(meta_version, int)
+        and apply_version != meta_version
+    ):
+        return (
+            f"apply_result.version {apply_version} matchar inte versionen som "
+            f"byggs ({meta_version})."
+        )
+    apply_path = getattr(apply_result, "projectInputPath", None)
+    if isinstance(apply_path, str) and apply_path:
+        try:
+            same = Path(apply_path).resolve() == dossier_path.resolve()
+        except OSError:
+            same = False
+        if not same:
+            return (
+                f"apply_result.projectInputPath {apply_path!r} pekar inte på "
+                f"dossier_path {str(dossier_path)!r}."
+            )
+    return None
 
 
 def build_targeted_version(
@@ -4407,6 +4547,19 @@ def build_targeted_version(
     rendered: a capability/section/dossier not on the rails is rejected at plan
     time, before render/build. Either way, un-revalidated input is never
     rendered. ``build_fn`` is injectable for tests; it defaults to ``build``.
+
+    KÖR-7-STAB #176 stabilisations: (1) a skipped/unmapped ``apply_result``
+    (``applied=False``) never triggers build/promote; (2) a supplied
+    ``apply_result`` is matched (siteId/version/projectInputPath) against the
+    version being built before anything runs; (3) ``previewShouldRefresh`` and
+    changed-routes diff against the operator's ACTIVE build snapshot
+    (``current.json``, captured before the pointer swap), falling back to the
+    historical previous-version snapshot only when no active pointer exists yet;
+    (4) generated route files are attributed to routes via the scaffold's
+    routePlan path<->id map (so ``app/kontakt`` is reported as route ``contact``,
+    not ``kontakt``); (5) a FAILED build still trace-logs a targeted-render
+    outcome before the SystemExit propagates; all run snapshots are read/written
+    under the same ``runs_root``.
     """
     from packages.generation.build.targeted_render import (
         ROOT_ROUTE_ID,
@@ -4417,6 +4570,24 @@ def build_targeted_version(
         decide_preview_refresh,
         route_id_from_patch_field,
     )
+
+    # KÖR-7-STAB #176: a skipped/unmapped apply never wrote a new version.
+    # Building it would re-render unchanged input and risk promoting a stale
+    # build, so refuse to build/promote. The apply step already traced its
+    # skipped/unmapped outcome under its own run (FYND1), so this stays honest.
+    if apply_result is not None and not getattr(apply_result, "applied", True):
+        return TargetedRenderResult(
+            siteId=getattr(apply_result, "siteId", None),
+            version=getattr(apply_result, "version", None),
+            previousVersion=getattr(apply_result, "previousVersion", None),
+            outcome="skipped",
+            previewShouldRefresh=False,
+            notes=[
+                "apply_result.applied=False (skipped/unmapped apply): ingen "
+                "targeted build, ingen promote. Apply-steget loggade redan "
+                "utfallet i sin egen run.",
+            ],
+        )
 
     dossier = load_json(dossier_path)
     site_id = dossier.get("siteId")
@@ -4442,6 +4613,19 @@ def build_targeted_version(
             "planeringens rails via produce_site_plan innan render)."
         )
 
+    # KÖR-7-STAB #176: an explicit apply_result must describe the SAME version
+    # dossier_path points at, or affected-route derivation and the build would
+    # silently operate on the wrong site/version.
+    if apply_result is not None:
+        mismatch = _apply_result_mismatch(
+            apply_result, dossier_path, dossier, prompt_meta
+        )
+        if mismatch:
+            raise TargetedRenderError(
+                "kor-7d: apply_result matchar inte versionen som ska byggas. "
+                + mismatch
+            )
+
     # Affected routes: prefer the apply_result, then an explicit list, then the
     # meta provenance's patch fields, then the root route as a documented default.
     affected: list[str] = []
@@ -4460,17 +4644,63 @@ def build_targeted_version(
 
     runs_root = runs_dir if runs_dir is not None else RUNS_DIR
 
+    # KÖR-7-STAB #176: capture the operator's ACTIVE build snapshot (current.json)
+    # BEFORE this build swaps the pointer, so previewShouldRefresh/changed-routes
+    # compare against what the preview actually serves - not a historical
+    # previousVersion run that may not be active. resolve_generated_dir mirrors
+    # the resolution build() uses internally, so the active pointer is read from
+    # the same site dir the build writes to.
+    generated_root = resolve_generated_dir(generated_dir)
+    previous_snapshot = _find_active_build_generated_files_snapshot(
+        runs_root, generated_root, site_id
+    )
+
+    # Run ids present before this build so a FAILED build's new run can be found
+    # for trace-logging in the SystemExit path below.
+    runs_before = (
+        {run_dir.name for run_dir in runs_root.iterdir() if run_dir.is_dir()}
+        if runs_root.exists()
+        else set()
+    )
+
     # Reuse the existing project-wide build (immutable build dir + atomic
     # current.json swap on ok|degraded + honest appliedVisibleEffect + new runId
     # + previous runs untouched). build() raises SystemExit(1) on a failed build
-    # and already traced the failure + left the pointer on the previous build, so
-    # we deliberately do not swallow it here.
-    target, run_dir = build_fn(
-        dossier_path,
-        do_build=do_build,
-        runs_dir=runs_dir,
-        generated_dir=generated_dir,
-    )
+    # after writing build-result.json + tracing the failure and leaving the
+    # pointer on the previous build. KÖR-7-STAB #176: we still append a targeted-
+    # render outcome event so a FAILED targeted build is never silent, then
+    # re-raise (we never swallow the failure).
+    try:
+        target, run_dir = build_fn(
+            dossier_path,
+            do_build=do_build,
+            runs_dir=runs_dir,
+            generated_dir=generated_dir,
+        )
+    except SystemExit:
+        failed_run = _find_new_run_dir(runs_root, runs_before)
+        if failed_run is not None:
+            _append_targeted_render_event(
+                failed_run,
+                failed_run.name,
+                TargetedRenderResult(
+                    siteId=site_id,
+                    version=_prompt_meta_version(prompt_meta),
+                    previousVersion=_prompt_meta_previous_version(prompt_meta),
+                    outcome="failed",
+                    affectedRoutes=affected,
+                    buildStatus="failed",
+                    appliedVisibleEffect=False,
+                    previewShouldRefresh=False,
+                    runId=failed_run.name,
+                    notes=[
+                        "Targeted build misslyckades (status=failed); "
+                        "current.json lämnades på föregående build, ingen "
+                        "preview-omstart.",
+                    ],
+                ),
+            )
+        raise
 
     build_result = load_json(run_dir / "build-result.json")
     build_status = build_result.get("status")
@@ -4478,13 +4708,17 @@ def build_targeted_version(
     active_build_id = build_result.get("activeBuildId")
 
     # Per-route change verification: which routes actually differ from the
-    # previous active build's snapshot (reasonable verification of the affected
-    # route). None when there is no comparable previous snapshot.
-    previous_snapshot = _find_previous_generated_files_snapshot(
-        runs_root, run_dir, prompt_meta
-    )
+    # operator's active build snapshot (captured above). Fall back to the
+    # historical previous-version snapshot when no active pointer existed yet
+    # (e.g. the very first build, or an injected build_fn in tests). None when
+    # there is no comparable previous snapshot at all.
+    if previous_snapshot is None:
+        previous_snapshot = _find_previous_generated_files_snapshot(
+            runs_root, run_dir, prompt_meta
+        )
+    route_map = _route_segment_to_id_map(run_dir)
     changed = changed_routes_between_snapshots(
-        previous_snapshot, run_dir / "generated-files"
+        previous_snapshot, run_dir / "generated-files", route_map=route_map
     )
     changed_routes = sorted(changed) if changed is not None else []
 
