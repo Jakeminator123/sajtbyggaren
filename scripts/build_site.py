@@ -3644,6 +3644,8 @@ def run_phase3_quality_and_repair(
     npm_steps: list[dict],
     overall_status: str,
     do_typecheck: bool,
+    generation_package: dict[str, Any] | None = None,
+    site_brief: dict[str, Any] | None = None,
 ) -> tuple[dict, dict]:
     """Thin wiring around packages/generation/repair (which itself
     orchestrates quality_gate + repair).
@@ -3664,6 +3666,10 @@ def run_phase3_quality_and_repair(
         npm_steps=npm_steps,
         build_status=overall_status,
         do_typecheck=do_typecheck,
+        generation_package=generation_package,
+        site_brief=site_brief,
+        run_dir=run_dir,
+        run_id=run_dir.name,
     )
 
     quality_payload = final_quality.model_dump()
@@ -4205,6 +4211,8 @@ def build(
         npm_steps,
         overall_status,
         do_typecheck,
+        generation_package=generation_package,
+        site_brief=site_brief,
     )
     trace.event(
         "build",
