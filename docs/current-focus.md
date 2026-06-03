@@ -5,21 +5,22 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Current objective (2026-06-03 natt — kor-3a/4a inne + boundary-fix; våg 2 i gång)
+## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
-`jakob-be` @ `a2ffa05`, rent träd. **Denna session mergade:** #179 (kor-3a:
+`jakob-be` @ `5b051b6`, rent träd. **Denna session mergade:** #179 (kor-3a:
 section-treatments Python→JSON, en deklarativ källa), #180 (kor-4a: deterministisk
 quality critic v0 — non-blocking, ingen LLM), och #183 (kor-3a follow-up: flyttar
 section-treatments-loadern till `orchestration/` så `planning` inte importerar
 `build` — Pushvakt P1; repo-boundaries v10 + fail-closed på trasig JSON + boundary-test
-som scannar riktiga imports). **Ärlighet:** kor-4a-critic är library-komplett men
-**dormant i build-vägen** (gaten anropas utan `generation_package` → `critic` blir null
-i verkliga runs) tills `build_site`/`dev_generate` wire:as.
-**Pågår (cloud-builders):** kor-3b (visualDirection väljer treatment, Option A — additiv
-wiring i renderers/blueprint_render OK, ingen JSX/nya treatments; rebase:as mot a2ffa05)
-och kor-5 (repairModel blueprint-only; planen godkänd men hålls/dormant tills
-no-key-inkonsekvensen + build-väg-wiringen är klara).
-**Justerad ordning (orchestrator + coach, natt):** (1) C/kor-3b landar → (2) wira
+som scannar riktiga imports), och #184 (kor-3b: visualDirection väljer section-treatment,
+Option A — verifierad mot kombinerat träd med #183, alla paritets-/pick-tester gröna).
+**Ärlighet:** kor-4a-critic är library-komplett men **dormant i build-vägen** (gaten
+anropas utan `generation_package` → `critic` blir null i verkliga runs) tills
+`build_site`/`dev_generate` wire:as. kor-3b är likaså aktiv bara när blueprintens
+`visualDirection` är satt (annars byte-paritet mot kor-3a).
+**Status cloud-builders:** kor-3b INNE (#184). kor-5 pushad på `feat/kor-5-repair-pass`
+(ingen PR än; hålls/dormant + no-key-inkonsekvensen kvar att fixa innan den tas).
+**Justerad ordning (orchestrator + coach, natt):** (1) ✓ kor-3b inne (#184) → (2) **NU:** wira
 critic/repair + follow-up-bryggan i build-vägen/`/api/prompt` (största hävstången; gör
 kor-4a/7 verkliga + UPPLÅSER Christophers #177) → (3) minimal E2E + read-only baseline-eval
 → (4) kor-5 (library → wira in) → (5) kor-o2 OpenClaw Core V0 (read-only, spec:as parallellt)
@@ -353,7 +354,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `a2ffa05` (2026-06-03 natt UTC, `jakob-be` HEAD — #179 kor-3a
+Last verified state: `5b051b6` (2026-06-03 natt UTC, `jakob-be` HEAD — #184 kor-3b
+visualDirection väljer section-treatment (Option A, verifierad mot kombinerat träd) + #179 kor-3a
 section-treatments-JSON + #180 kor-4a deterministisk critic + #183 kor-3a planning→build
 boundary-fix (Pushvakt P1: loader → orchestration, repo-boundaries v10, fail-closed,
 import-scan-test) mergade denna session. Föregående `f4d2a1e` (kväll) — #178 KÖR-7-STAB stabiliserar
