@@ -1,0 +1,308 @@
+"""Tests for OpenClaw Core V0 (KÖR-o2).
+
+These lock the kor-o1 capability plan as regression tests: each
+``messageKind`` the deterministic router (KÖR-6a) can emit maps to exactly
+one of the four V0 actions
+
+    answer_only | clarification | plan_only | patch_plan_request
+
+and V0 is provably read-only - it writes nothing, builds nothing, starts no
+preview, and always reports ``appliedVisibleEffect == False`` (kor-o1 "Mål"
++ 04 §9). Classification is delegated to the real ``classify_message`` so
+there is a single router truth and no divergent classifier here.
+
+Everything runs without ``OPENAI_API_KEY`` and is fully deterministic over
+(router, context): no LLM is involved at any point.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from packages.generation.orchestration.context import assemble_context  # noqa: E402
+from packages.generation.orchestration.context.models import (  # noqa: E402
+    AssembledContext,
+)
+from packages.generation.orchestration.openclaw import (  # noqa: E402
+    OpenClawDecision,
+    PatchPlanRequest,
+    ToolCall,
+    decide,
+    orchestrate,
+)
+from packages.generation.orchestration.router import classify_message  # noqa: E402
+from packages.generation.orchestration.router.models import (  # noqa: E402
+    RouterDecision,
+)
+
+# ---------------------------------------------------------------------------
+# Capability-plan rows (kor-o1): messageKind -> V0 action
+# ---------------------------------------------------------------------------
+
+
+def _decide_for(message: str, *, context: AssembledContext | None = None) -> OpenClawDecision:
+    """Classify with the real router, then run V0 ``decide`` on the result."""
+    router = classify_message(message)
+    ctx = context if context is not None else AssembledContext(contextLevel=router.contextLevel)
+    return decide(router, ctx)
+
+
+def test_answer_only_pure_question_is_answer_only():
+    """answer_only -> answer_only, with an answer and no other result field."""
+    d = _decide_for("vad är klockan?")
+    assert d.router.messageKind == "answer_only"
+    assert d.action == "answer_only"
+    assert d.answer
+    assert d.clarifyingQuestion is None
+    assert d.plan == []
+    assert d.patchPlanRequest is None
+
+
+def test_unclear_is_clarification():
+    """unclear -> clarification, with a clarifying question."""
+    router = classify_message("öö")
+    # Force the ambiguous path deterministically if the heuristic disagrees.
+    if router.messageKind != "unclear" and not router.requiresClarification:
+        router = RouterDecision(messageKind="unclear", requiresClarification=True)
+    d = decide(router, AssembledContext(contextLevel="none"))
+    assert d.action == "clarification"
+    assert d.clarifyingQuestion
+    assert d.answer is None
+    assert d.plan == []
+    assert d.patchPlanRequest is None
+
+
+def test_reference_analysis_is_plan_only_never_copy():
+    """reference_analysis -> plan_only proposing an own variant (no copy)."""
+    d = _decide_for("samma klocka som på aftonbladet.se")
+    assert d.router.messageKind == "reference_analysis"
+    assert d.action == "plan_only"
+    assert d.plan
+    # Honest: the plan must say it does not copy exactly.
+    assert any("kopiera" in step.lower() for step in d.plan)
+    assert d.patchPlanRequest is None
+
+
+def test_bug_report_is_plan_only():
+    """bug_report -> plan_only (V0 proposes; it does not fix/build)."""
+    d = _decide_for("knappen funkar inte")
+    assert d.router.messageKind == "bug_report"
+    assert d.action == "plan_only"
+    assert d.plan
+
+
+def test_site_review_is_answer_only_when_no_change_wanted():
+    """site_review with buildRequirement none -> answer_only."""
+    d = _decide_for("vad tycker du om sidan?")
+    assert d.router.messageKind == "site_review"
+    assert d.router.buildRequirement == "none"
+    assert d.action == "answer_only"
+    assert d.answer
+
+
+def test_edit_instruction_is_honest_patch_plan_request():
+    """edit_instruction -> patch_plan_request{apply_missing, kor-7c}.
+
+    The single most important honesty test: an edit order in V0 must NOT
+    fake a success - it returns the missing-apply flag (planner exists at
+    kor-7b, apply/version at kor-7c does not).
+    """
+    d = _decide_for("lägg en klocka i andra sektionen till vänster")
+    assert d.router.messageKind == "edit_instruction"
+    assert d.action == "patch_plan_request"
+    assert d.patchPlanRequest is not None
+    assert d.patchPlanRequest.status == "apply_missing"
+    assert d.patchPlanRequest.blockedBy == "kor-7c"
+    assert d.patchPlanRequest.targetSummary.startswith("contentBlocks.")
+    # Never an applied effect.
+    assert d.appliedVisibleEffect is False
+
+
+def test_multi_intent_with_edit_aggregates_to_patch_plan_request():
+    """multi_intent containing an edit -> aggregated patch_plan_request."""
+    d = _decide_for(
+        "gör sidan mer premium, lägg en klocka i andra sektionen, "
+        "ändra inte texterna"
+    )
+    assert d.router.messageKind == "multi_intent"
+    assert d.action == "patch_plan_request"
+    assert d.patchPlanRequest is not None
+    assert d.patchPlanRequest.status == "apply_missing"
+    # One plan line per subtask, for transparency.
+    assert len(d.plan) == len(d.router.subtasks)
+
+
+def test_component_discovery_lists_available_options():
+    """component_discovery -> answer_only that lists options from context."""
+    router = classify_message("vilka klockor finns att tillgå?")
+    assert router.messageKind == "component_discovery"
+    ctx = AssembledContext(
+        contextLevel="component_registry",
+        payload={
+            "dossiers": [
+                {"id": "clock-basic", "label": "Klocka (enkel)"},
+                {"id": "clock-analog", "label": "Klocka (analog)"},
+            ],
+            "capabilities": [{"capability": "clock_widget"}],
+        },
+    )
+    d = decide(router, ctx)
+    assert d.action == "answer_only"
+    assert "Klocka (enkel)" in d.answer
+    assert "Klocka (analog)" in d.answer
+
+
+def test_component_discovery_is_honest_when_registry_empty():
+    """No options in context -> an honest 'inga val' answer, not invented."""
+    router = classify_message("vilka komponenter finns att välja på?")
+    d = decide(router, AssembledContext(contextLevel="component_registry"))
+    assert d.action == "answer_only"
+    assert "Inga" in d.answer or "inga" in d.answer
+
+
+# ---------------------------------------------------------------------------
+# Full contract shape + V0 invariants
+# ---------------------------------------------------------------------------
+
+ALL_MESSAGES = [
+    "vad är klockan?",
+    "vilka klockor finns att tillgå?",
+    "samma klocka som på aftonbladet.se",
+    "vad tycker du om sidan?",
+    "lägg en klocka i andra sektionen till vänster",
+    "knappen funkar inte",
+    "gör sidan mer premium, lägg en klocka, ändra inte texterna",
+]
+
+
+@pytest.mark.parametrize("message", ALL_MESSAGES)
+def test_decision_carries_full_contract_shape(message: str):
+    """OpenClawDecision embeds the unchanged router + context and the full
+    contract fields (toolCalls/capability default empty/None in V0)."""
+    router = classify_message(message)
+    ctx = AssembledContext(contextLevel=router.contextLevel)
+    d = decide(router, ctx)
+
+    # Composes the existing types unchanged (no new enums).
+    assert isinstance(d.router, RouterDecision)
+    assert d.router == router
+    assert isinstance(d.context, AssembledContext)
+    assert d.context is ctx
+    # Action is one of the four closed V0 actions.
+    assert d.action in {"answer_only", "clarification", "plan_only", "patch_plan_request"}
+    # V0 defaults: empty tool list, no capability, no applied effect.
+    assert d.toolCalls == []
+    assert d.capability is None
+    assert d.appliedVisibleEffect is False
+    assert d.rationale
+    # Round-trips through the contract shape.
+    dumped = d.model_dump()
+    assert set(
+        [
+            "router",
+            "context",
+            "action",
+            "answer",
+            "clarifyingQuestion",
+            "plan",
+            "patchPlanRequest",
+            "toolCalls",
+            "capability",
+            "appliedVisibleEffect",
+            "rationale",
+        ]
+    ).issubset(dumped.keys())
+
+
+def test_applied_visible_effect_cannot_be_set_true():
+    """The validator forces appliedVisibleEffect False even if a caller tries
+    to set it True - V0 can never fabricate a visible change (04 §9)."""
+    d = OpenClawDecision(
+        router=classify_message("vad är klockan?"),
+        context=AssembledContext(contextLevel="none"),
+        action="answer_only",
+        appliedVisibleEffect=True,
+    )
+    assert d.appliedVisibleEffect is False
+
+
+def test_toolcall_always_requires_approval():
+    """A proposed ToolCall can never be marked auto-runnable in V0."""
+    tc = ToolCall(name="propose_patch_plan", requiresApproval=False)
+    assert tc.requiresApproval is True
+
+
+def test_patch_plan_request_defaults_are_honest():
+    """PatchPlanRequest defaults to the honest apply-missing/kor-7c marker."""
+    p = PatchPlanRequest(targetSummary="contentBlocks.home.hero.<field>")
+    assert p.status == "apply_missing"
+    assert p.blockedBy == "kor-7c"
+
+
+# ---------------------------------------------------------------------------
+# Read-only / mock-safe guarantees
+# ---------------------------------------------------------------------------
+
+
+def test_decide_is_deterministic():
+    """Same (router, context) pair -> identical decision (no LLM, no clock)."""
+    router = classify_message("lägg en klocka i andra sektionen till vänster")
+    ctx = AssembledContext(contextLevel=router.contextLevel)
+    first = decide(router, ctx)
+    second = decide(router, ctx)
+    assert first.model_dump() == second.model_dump()
+
+
+def test_decide_needs_no_openai_key(monkeypatch: pytest.MonkeyPatch):
+    """V0 is mock-safe: it works with OPENAI_API_KEY absent."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    d = _decide_for("vad är klockan?")
+    assert d.action == "answer_only"
+    assert os.environ.get("OPENAI_API_KEY") is None
+
+
+def test_decide_writes_no_files(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Running decide for every kind creates no files and no run dirs.
+
+    decide is a pure function, so this is belt-and-braces: it proves V0
+    materialises nothing on disk (no build, no current.json, no run).
+    """
+    monkeypatch.chdir(tmp_path)
+    for message in ALL_MESSAGES:
+        d = _decide_for(message)
+        assert d.appliedVisibleEffect is False
+    # The working directory is untouched - nothing was written.
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_orchestrate_wires_three_tools_read_only():
+    """orchestrate(message) runs classify -> assemble -> decide read-only.
+
+    For a pure question the context level is ``none`` (assembler returns an
+    empty, budgeted envelope) and the action is answer_only - no run, no
+    build, no preview.
+    """
+    d = orchestrate("vad är klockan?")
+    assert d.router.messageKind == "answer_only"
+    assert d.context.contextLevel == "none"
+    assert d.action == "answer_only"
+    assert d.appliedVisibleEffect is False
+
+
+def test_orchestrate_matches_manual_composition():
+    """orchestrate is exactly classify + assemble + decide (no extra logic)."""
+    message = "vilka klockor finns att tillgå?"
+    router = classify_message(message)
+    ctx = assemble_context(router.contextLevel)
+    expected = decide(router, ctx)
+    got = orchestrate(message)
+    assert got.action == expected.action
+    assert got.router == router

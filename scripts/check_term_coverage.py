@@ -1145,6 +1145,16 @@ COMMON_WORDS = {
     # families above. A real type gets registered in naming-dictionary.v1 with
     # an ADR if/when it becomes a persisted runtime contract (see kor-o2).
     "OpenClawDecision", "OpenClawAction",
+    # KÖR-O2 OpenClaw Core V0 runtime symbols
+    # (packages/generation/orchestration/openclaw/). The V0 module that binds
+    # the KÖR-6a router + KÖR-7a context assembler into one transient
+    # ``OpenClawDecision`` (already allowlisted above). ``PatchPlanRequest`` is
+    # the honest "patch needed, apply path missing (kor-7c)" marker embedded in
+    # the decision; ``ToolCall`` is the proposed-tool shape (always
+    # requiresApproval in V0, never auto-run). Transient implementation symbols
+    # (no saved file, no ADR) - same local-allowlist treatment as the
+    # OpenClawDecision / RouterDecision families above.
+    "PatchPlanRequest", "ToolCall",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
