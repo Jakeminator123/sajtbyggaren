@@ -4333,6 +4333,208 @@ def build(
     return target, run_dir
 
 
+def _append_targeted_render_event(
+    run_dir: Path,
+    run_id: str,
+    result: Any,
+) -> None:
+    """Append the kor-7d targeted-render outcome to the run's trace.ndjson.
+
+    Append-only (mirrors ``Trace.event`` and the router/apply trace helpers): it
+    never truncates the build's trace, it only adds one honest summary event so
+    every targeted build - applied, no-op or skipped - leaves a trace (FYND1).
+    """
+    status = {"applied": "done", "no-op": "warning", "skipped": "skipped"}.get(
+        result.outcome, "done"
+    )
+    record = {
+        "runId": run_id,
+        "phase": "build",
+        "event": "targeted_render.outcome",
+        "status": status,
+        "message": (
+            f"targeted render {result.outcome}: "
+            f"previewShouldRefresh={result.previewShouldRefresh} "
+            f"affected={result.affectedRoutes} changed={result.changedRoutes}"
+        ),
+        "timestamp": utc_now().isoformat(),
+        "payloadPath": None,
+    }
+    trace_path = run_dir / "trace.ndjson"
+    with trace_path.open("a", encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def build_targeted_version(
+    dossier_path: Path,
+    *,
+    apply_result: Any = None,
+    affected_routes: list[str] | None = None,
+    do_build: bool = True,
+    runs_dir: Path | None = None,
+    generated_dir: str | Path | None = None,
+    require_internal_chain: bool = True,
+    build_fn: Any = build,
+) -> Any:
+    """KÖR-7d: targeted render + version-build for a kor-7c-applied version.
+
+    Builds a NEW immutable version of a Project Input produced by the internal
+    kor-7b(plan) -> kor-7c(apply) chain, reusing the existing project-wide
+    ``build()`` unchanged: immutable build dir, atomic ``current.json`` swap on
+    ``ok``/``degraded`` only, honest follow-up ``appliedVisibleEffect``, a fresh
+    runId, and previous runs left untouched. On top it adds the *targeted* layer:
+    derive the affected route(s), verify which routes actually changed, and
+    decide whether the operator preview should refresh (only on a shippable build
+    with a real visible change - a no-op never restarts the preview).
+
+    Targeted = render of the affected route files, NOT a partial Next build (see
+    kor-7d "Targeted = render/filgenerering, inte partiell Next build"): the
+    deterministic builder re-renders the whole site, but because the render is
+    deterministic only the affected route changes vs the previous build, which is
+    verified here via a per-route snapshot diff. ``npm run build`` / typecheck /
+    Quality Gate stay project-wide (v1).
+
+    FYND2 (revalidation assumption): this entry point is intended to build ONLY a
+    version produced by the internal apply chain. ``require_internal_chain``
+    (default True) refuses - with :class:`TargetedRenderError` (STOP and report)
+    - a version that carries no kor-7c apply provenance
+    (``meta.appliedPatchPlan.source == "kor-7c-artifact-apply"``) and no
+    ``apply_result``, so an external/hand-built Project Input never silently
+    reaches the build path through this entry. When a caller explicitly opts out
+    (``require_internal_chain=False``) the fallback is still safe because
+    ``build()`` re-runs ``produce_site_plan``, which re-applies the SAME planning
+    rails (capability-map + scaffold sections) to the version before anything is
+    rendered: a capability/section/dossier not on the rails is rejected at plan
+    time, before render/build. Either way, un-revalidated input is never
+    rendered. ``build_fn`` is injectable for tests; it defaults to ``build``.
+    """
+    from packages.generation.build.targeted_render import (
+        ROOT_ROUTE_ID,
+        TargetedRenderError,
+        TargetedRenderResult,
+        affected_routes_from_apply,
+        changed_routes_between_snapshots,
+        decide_preview_refresh,
+        route_id_from_patch_field,
+    )
+
+    dossier = load_json(dossier_path)
+    site_id = dossier.get("siteId")
+    prompt_meta = load_prompt_input_meta(dossier_path, dossier)
+
+    # FYND2: internal-chain guard. Refuse to build a version that did not come
+    # from the kor-7c apply chain unless the caller explicitly opts in to the
+    # planner-rails re-validation fallback documented above.
+    provenance = prompt_meta.get("appliedPatchPlan") if prompt_meta else None
+    has_internal_provenance = (
+        isinstance(provenance, dict)
+        and provenance.get("source") == "kor-7c-artifact-apply"
+    )
+    is_followup = _prompt_meta_mode(prompt_meta) == "followup"
+    internal = apply_result is not None or (is_followup and has_internal_provenance)
+    if require_internal_chain and not internal:
+        raise TargetedRenderError(
+            "kor-7d bygger bara en version producerad av den interna kedjan "
+            "kor-7b(plan) -> kor-7c(apply). Project Input saknar apply-proveniens "
+            "(meta.appliedPatchPlan.source != 'kor-7c-artifact-apply') och inget "
+            "apply_result gavs. STOPP: kör via den interna kedjan, eller sätt "
+            "require_internal_chain=False (build() re-validerar då versionen mot "
+            "planeringens rails via produce_site_plan innan render)."
+        )
+
+    # Affected routes: prefer the apply_result, then an explicit list, then the
+    # meta provenance's patch fields, then the root route as a documented default.
+    affected: list[str] = []
+    if apply_result is not None:
+        affected = affected_routes_from_apply(apply_result)
+    if not affected and affected_routes:
+        affected = [route for route in affected_routes if isinstance(route, str)]
+    if not affected and isinstance(provenance, dict):
+        for entry in provenance.get("appliedCapabilities") or []:
+            field = entry.get("patchField") if isinstance(entry, dict) else None
+            route_id = route_id_from_patch_field(field)
+            if route_id and route_id not in affected:
+                affected.append(route_id)
+    if not affected:
+        affected = [ROOT_ROUTE_ID]
+
+    runs_root = runs_dir if runs_dir is not None else RUNS_DIR
+
+    # Reuse the existing project-wide build (immutable build dir + atomic
+    # current.json swap on ok|degraded + honest appliedVisibleEffect + new runId
+    # + previous runs untouched). build() raises SystemExit(1) on a failed build
+    # and already traced the failure + left the pointer on the previous build, so
+    # we deliberately do not swallow it here.
+    target, run_dir = build_fn(
+        dossier_path,
+        do_build=do_build,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+
+    build_result = load_json(run_dir / "build-result.json")
+    build_status = build_result.get("status")
+    applied_visible_effect = bool(build_result.get("appliedVisibleEffect", False))
+    active_build_id = build_result.get("activeBuildId")
+
+    # Per-route change verification: which routes actually differ from the
+    # previous active build's snapshot (reasonable verification of the affected
+    # route). None when there is no comparable previous snapshot.
+    previous_snapshot = _find_previous_generated_files_snapshot(
+        runs_root, run_dir, prompt_meta
+    )
+    changed = changed_routes_between_snapshots(
+        previous_snapshot, run_dir / "generated-files"
+    )
+    changed_routes = sorted(changed) if changed is not None else []
+
+    preview_should_refresh = decide_preview_refresh(
+        build_status=build_status,
+        applied_visible_effect=applied_visible_effect,
+    )
+    if build_status not in ("ok", "degraded"):
+        outcome = "skipped"
+    elif preview_should_refresh:
+        outcome = "applied"
+    else:
+        outcome = "no-op"
+
+    notes: list[str] = []
+    if changed is None:
+        notes.append(
+            "Kunde inte diffa per-route (saknar jämförbar föregående snapshot); "
+            "appliedVisibleEffect från build-result är auktoritativ."
+        )
+    elif applied_visible_effect:
+        unexpected = [
+            route
+            for route in changed_routes
+            if route not in affected and route != "(shared)"
+        ]
+        if unexpected:
+            notes.append(
+                "Varning: routes utanför de förväntade påverkade ändrades också: "
+                + ", ".join(unexpected)
+            )
+
+    result = TargetedRenderResult(
+        siteId=site_id,
+        version=build_result.get("version"),
+        previousVersion=(build_result.get("prompt") or {}).get("previousVersion"),
+        outcome=outcome,
+        affectedRoutes=affected,
+        changedRoutes=changed_routes,
+        buildStatus=build_status,
+        appliedVisibleEffect=applied_visible_effect,
+        previewShouldRefresh=preview_should_refresh,
+        activeBuildId=active_build_id,
+        runId=run_dir.name,
+        notes=notes,
+    )
+    _append_targeted_render_event(run_dir, run_dir.name, result)
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a generated site from a Project Input.")
     parser.add_argument(

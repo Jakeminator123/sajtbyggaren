@@ -53,11 +53,16 @@ def log_patch_apply_to_existing_run(
             f"applied patch plan -> {result.siteId} "
             f"v{result.previousVersion}->v{result.version}"
         )
-    else:
+    elif result.unmapped:
         message = (
             f"patch plan not applied for {result.siteId} "
             f"({len(result.unmapped)} unmapped patch(es))"
         )
+    else:
+        # Empty plan or a rejected/invalid plan: the specific reason rides on
+        # ``result.notes`` (dumped into the ``apply`` payload below); the summary
+        # message just records that it was not applied, never a false success.
+        message = f"patch plan not applied for {result.siteId}"
     record = {
         "runId": resolved_run_id,
         "phase": _PHASE,
