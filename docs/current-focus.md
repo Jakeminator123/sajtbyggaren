@@ -5,18 +5,24 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Current objective (2026-06-03 EM — heavy-LLM synliggjord: kor-1b→1c→2→7a→1c-copy inne)
+## Current objective (2026-06-03 kväll — follow-up-bryggan startad: kor-7b inne)
 
-`jakob-be` @ `167ace5`, rent träd. Hela "gör-det-synligt"-kedjan för det tunga LLM-flödet är
-mergad: briefModel + planning fyller blueprint (kor-1b/1c/1c-copy), renderern konsumerar det
-(kor-2), och routern + Context Assembler finns som rails (kor-6a/7a). De fyra baseline-
-branscherna (elektriker/frisör/naprapat/keramik) renderas nu med branschnära hero/CTA/trust +
-story/faq/tjänster (gated på svensk kor-1b-positioning; legacy/mock = byte-identisk, noll
-regression). Orchestrering + nästa kort: `docs/heavy-llm-flow/handoff-orchestration.md`.
+`jakob-be` @ `a7246dc`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
+**Follow-up-bryggan startad** (coach-omprioriterad före kor-4a för att stänga B155): `kor-7b`
+artifact patch planner (dry-run) mergad (#171). Även mergat denna runda: #170 (B86 npm-timeout
+env-override) och #169 (Christophers UI-överhalning reconcilad på jakob-be runtime — hans lane).
+Vercel auto-deploy begränsad till `jakob-be`/`christopher-ui`/`main` (denylist i
+`apps/viewser/vercel.json`). `kor-o1` OpenClaw Core-kontrakt skrivet (design); coachens körbara
+`openclaw-mvp/`-spike hålls lokal/gitignored tills placeringen är beslutad. Orchestrering +
+nästa kort: `docs/heavy-llm-flow/handoff-orchestration.md`.
 
-**Nästa:** `kor-4a` (deterministisk Quality Critic) → `3a`/`3b` → `5` → `6b` → `7b–d`.
-**Checkpoint pågår:** operatören kör dev-sajt + tittar visuellt innan kor-4a dispatchas
-(coexistence: ingen full-pytest-builder medan dev-sajt körs).
+**Nästa:** follow-up-bryggan `kor-7c` (apply → ny version) → `kor-7d` (targeted rebuild) —
+stänger B155. Parallellt (read-only): `kor-o2` OpenClaw Core V0. Därefter `kor-4a` critic →
+`3a`/`3b` → `5` → `6b`. Ett steg i taget; operatören mergar med orchestratorn.
+**Öppna PR:er (ej vår lane — dokumenterade per focus_check):** #172 (`apps/viewser`, Bug A —
+markera stale pending-runs som aborted/`current.json`) och #173 (`apps/viewser`, Bug B — ärligt
+layout-no-op-meddelande för follow-ups som inte stöds). Båda Christopher/UI-lane; backend-lanen
+mergar dem inte. #156 `/live` parkerad (se nedan).
 **Parkerat:** #156 `/live` (P1 security), KÖR-0G renderer naming hygiene (`dossier` =
 render-input, ej orchestration `Dossier`), `resume:false`-härdning (apps/viewser),
 `jakob-be → main`-sync.
@@ -309,11 +315,12 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `167ace5` (2026-06-03 EM UTC, `jakob-be` HEAD — heavy-LLM synliggjord:
-#162 KÖR-1b + #163 guardrail + #164 KÖR-1c + #165 KÖR-2 + #166 KÖR-7a + #167 KÖR-1c-copy alla
-mergade. `origin/main` = `1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #162, #163, #164, #165, #166, #167 (alla mergade till
-`jakob-be`).
+Last verified state: `a7246dc` (2026-06-03 kväll UTC, `jakob-be` HEAD — follow-up-bryggan
+startad: #171 KÖR-7b artifact patch planner (dry-run) mergad ovanpå #170 (B86 npm-timeout
+env-override) och #169 (Christopher UI-reconcile, hans lane). Plus Vercel deploy-denylist
+(`9ba29ce`) och docs-batch (kor-o1 OpenClaw Core-kontrakt + handoff-bump). `origin/main` =
+`1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
+Nya PRs sedan föregående checkpoint: #169, #170, #171 (alla mergade till `jakob-be`).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
