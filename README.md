@@ -87,10 +87,11 @@ python -m pip install -e .
 Kör validerings- och teskedjan:
 
 ```bash
-python scripts/governance_validate.py    # validerar policies mot schemas
-python scripts/rules_sync.py --check     # verifierar att .cursor/rules är speglad
-python scripts/check_term_coverage.py    # hittar nya termer som saknar registrering
-python -m pytest tests/                  # pytest-svit för cross-policy-konsistens
+python scripts/governance_validate.py        # validerar policies mot schemas
+python scripts/rules_sync.py --check         # verifierar att .cursor/rules är speglad
+python scripts/check_term_coverage.py        # hittar nya termer som saknar registrering
+python scripts/check_platform_baseline.py --check  # versionsdrift i package.json mot platform-baseline.v1.json (ADR 0037)
+python -m pytest tests/                       # pytest-svit för cross-policy-konsistens
 python scripts/mini_eval.py              # isolerad fyra-case mini-eval under data/evals/artifacts/mini
 
 streamlit run backoffice.py              # backoffice för att se/redigera governance

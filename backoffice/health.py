@@ -76,6 +76,11 @@ def run_term_coverage(strict: bool = True) -> CheckResult:
     return _run("check_term_coverage.py", *args)
 
 
+def run_platform_baseline_check() -> CheckResult:
+    """Drift check: do package.json files conform to platform-baseline.v1.json?"""
+    return _run("check_platform_baseline.py", "--check")
+
+
 def run_pytest_governance() -> CheckResult:
     """Run pytest with the governance marker for fast feedback."""
     result = subprocess.run(

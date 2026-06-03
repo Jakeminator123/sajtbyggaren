@@ -1,0 +1,85 @@
+{
+  "$schema": "../schemas/platform-baseline.schema.json",
+  "policyId": "platform-baseline.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "adr": "0037",
+  "purpose": "En sanningskälla för runtime- och beroende-versioner. Lokalt, Vercel, sandbox, starters och genererad output ska alla läsa samma pins i stället för att duplicera dem för hand i sex separata package.json. scripts/check_platform_baseline.py asserterar att apps/viewser/package.json och alla data/starters/*/package.json (codegen-mallen) konformar. Värdena är grundade i nuvarande viewser- och starter-pins (verifierat 2026-06-03). Bryter inte ADR 0030: ingen workspace/catalog införs, varje genererad sajt och starter förblir fristående vanlig Next.js.",
+  "principles": [
+    "EN sanningskälla. En version pinnas på ett ställe (denna policy); package.json speglar den, de äger den inte.",
+    "Varje version måste vara en Vercel-stödd kombo. Node 24 är GA och Next 16 stöds, så baslinjen pinnar Node 24 LTS. En bump kräver en ny Vercel-stödd kombo.",
+    "Fristående output (ADR 0030). Baslinjen är en deklarativ källa + en grind, inte en npm/pnpm-workspace eller catalog. Varje genererad sajt och starter måste fortsatt kunna 'npm install && npm run build && npm run start' på vilken Node-host som helst.",
+    "Baslinjen är samtidigt allowlist + pinnad version för vad codegen får lägga i en genererad sajt. Nytt bibliotek = lägg i baslinjen en gång, med en vettad Vercel-stödd version.",
+    "Byt aldrig Node-major utan ny ADR. Stanna på 24 LTS."
+  ],
+  "runtime": {
+    "node": "24.x",
+    "voltaNode": "24.15.0",
+    "npm": "11.x"
+  },
+  "framework": {
+    "next": "16.2.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "eslint-config-next": "16.2.6"
+  },
+  "ui": {
+    "lucide-react": "^1.14.0",
+    "shadcn": "^4.7.0",
+    "class-variance-authority": "^0.7.1",
+    "tailwind-merge": "^3.5.0",
+    "clsx": "^2.1.1",
+    "tw-animate-css": "^1.4.0",
+    "@base-ui/react": "^1.4.1"
+  },
+  "styling": {
+    "tailwindcss": "^4",
+    "@tailwindcss/postcss": "^4"
+  },
+  "tooling": {
+    "typescript": "^5",
+    "@types/node": "^24",
+    "eslint": "^9",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0"
+  },
+  "enforcement": {
+    "enforced": [
+      "next",
+      "react",
+      "react-dom",
+      "eslint-config-next",
+      "lucide-react",
+      "shadcn",
+      "class-variance-authority",
+      "tailwind-merge",
+      "clsx",
+      "tw-animate-css",
+      "@base-ui/react",
+      "typescript",
+      "eslint"
+    ],
+    "pendingPropagation": [
+      "tailwindcss",
+      "@tailwindcss/postcss",
+      "prettier",
+      "prettier-plugin-tailwindcss",
+      "@types/node",
+      "engines.node",
+      "volta.node"
+    ],
+    "comment": "enforced = pins som redan är uniforma över viewser + starters; --check failar deterministiskt om en av dem driftar (exakt strängmatchning, present-only: en starter måste inte använda varje paket). pendingPropagation = mål som steg 4 propagerar via ett granskat --fix (operatörs-OK + christopher-ui-koordinering): engines.node + volta.node injiceras, @types/node bumpas ^20 -> ^24, och de pins som idag varierar (tailwindcss/@tailwindcss/postcss ^4 vs ^4.0.14, prettier/prettier-plugin-tailwindcss exakt i viewser vs caret i starters) alignas. När steg 4 landat flyttas dessa till enforced och pendingPropagation krymper."
+  },
+  "targets": {
+    "include": [
+      "apps/viewser/package.json",
+      "data/starters/*/package.json"
+    ],
+    "comment": "Genererad sajt = kopia av sin starter: scripts/build_site.py copy_starter() kopierar starterns package.json och patch_package_json() byter bara fältet name till siteId. Därför ÄR starters codegen-mallen, och att grinda starters grindar den genererade sajtens package.json. saas-base saknar ännu package.json (bara README) och hoppas tyst över tills den får en."
+  },
+  "vercelSupport": {
+    "rule": "Varje pinnad version måste tillhöra en kombo som Vercel kör. Node 24 är GA, Next 16 stöds. Versioner som Vercel inte kör (t.ex. Node-major Vercel saknar) får aldrig pinnas. En bump kräver att den nya komboon är Vercel-stödd.",
+    "node": "24",
+    "comment": "Sandbox-runnern hårdkodar runtime node24 (apps/viewser/lib/vercel-sandbox-runner.ts) och Vercel-projektet sajtbyggaren-viewser kör Node 24.x. Baslinjen håller lokalt + Vercel + sandbox + starters + genererad output i lås på samma major."
+  }
+}

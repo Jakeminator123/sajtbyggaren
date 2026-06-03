@@ -49,11 +49,16 @@ en användarväg eller taggas dormant + får en wiring-follow-up (#178-trion fil
   `renderers.py` 5518, `build_site.py` 4816, `prompt_to_project_input.py` 3535.
 - **Baseline-eval** (read-only, 4 prompter) — bevisa var upplevd kvalitet brister
   (copy/trust/kontakt vs visuellt) innan design-system-investering.
-- **Platform-version-baseline** (governance+scripts; spec i
-  `docs/agent-prompts/platform-version-baseline.md` via `b2efe50`): EN sanningskälla för
-  Node/Next/React/UI-pins + drift-checker (`scripts/check_platform_baseline.py --check/--fix`);
-  package.json-propagering via `--fix` (koordineras med Christopher). Möjliggör shadcn/lucide
-  kontrollerat (codegen-allowlist + pinnade versioner).
+- **Platform-version-baseline** — steg 1-3 INNE på branch (DRAFT-PR mot `jakob-be`,
+  `cursor/platform-version-baseline-5e94`): ADR 0037 + `governance/policies/platform-baseline.v1.json`
+  (+ schema) som EN sanningskälla för Node/Next/React/UI/tooling-pins, grundad i nuvarande
+  viewser+starters-pins, + drift-checker `scripts/check_platform_baseline.py --check/--fix`
+  (wirad i guard-sviten + README). `--check` är grön nu (enforced pins uniforma) och failar
+  deterministiskt vid drift; engines/volta + `@types/node` `^20`->`^24` + varierande pins
+  markerade `pendingPropagation`. Kvar är steg 4 (granskat `--fix` operatören kör senare,
+  rör `apps/viewser/package.json` = Christophers lane + starters; kräver operatörs-OK +
+  inbox-notis till `christopher-ui`). Ingen workspace/catalog (ADR 0030). Möjliggör
+  shadcn/lucide kontrollerat (codegen-allowlist + pinnade versioner).
 
 ## Current objective (2026-06-03 kväll — follow-up-bryggan startad: kor-7b inne)
 
