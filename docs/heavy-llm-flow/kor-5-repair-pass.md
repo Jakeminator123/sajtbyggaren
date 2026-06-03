@@ -9,9 +9,19 @@
 
 ## Mål
 
-En repair-agent som vid **high-severity** critic-issues ändrar **bara blueprint-fält**
+En repair-agent som vid **reparerbara** critic-issues ändrar **bara blueprint-fält**
 (inte fria filer) och triggar re-render. Detta är systemets **första riktiga
 agent-loop**: bygg → granska → förbättra. Wira `repairModel` (rollen finns).
+
+> **Implementationsnot (matchar koden, #185):** Grinden är **issue-typ-baserad**, inte
+> ren severity. Den deterministiska critic v0 (kör-4a) sätter `generic_copy` och
+> `thin_offer` till `severity=medium` (bara `placeholder_leakage`/`missing_cta` är
+> `high`), så en ren "high-only"-grind skulle aldrig reparera dem och bryta DoD. De
+> reparerbara typerna styrs därför av `fix-registry.v1.json:blueprintRepair
+> .triggerIssueTypes` = `{generic_copy, thin_offer, missing_cta}` (sorteras high-först).
+> Det finns **ingen** `trust_missing`-issue-typ i critic v0 — "ärlig trust" hanteras via
+> `missing_cta` (conversion). Passen rör aldrig `critic.py` och inför inga nya
+> critic-typer.
 
 ## Varför
 
@@ -30,15 +40,23 @@ nytt repair-steg: **blueprint-repair** — och håller principen "en central rep
 ## Loop (bunden)
 
 ```text
-critic.issues (severity=high)   <- fran KOR 4a (deterministisk) / KOR 4b (verifierModel)
-  -> repairModel: patch relevant blueprint-falt
-       generic_copy   -> skriv om hero.headline/proofLine (positioning-grundat)
-       thin_offer     -> lagg 2-3 grundade tjanster i services.service-list
-       trust_missing  -> skapa arlig trust ur businessFacts (inga fake claims)
-  -> re-render (samma deterministiska renderer)
+critic.issues (typ in triggerIssueTypes)   <- fran KOR 4a (deterministisk) / KOR 4b (verifierModel)
+  -> repairModel: patch relevant blueprint-falt (BARA befintliga falt)
+       generic_copy   -> skriv om BEFINTLIGA hero-textfalt (headline/subheadline/proofLine)
+       thin_offer     -> lagg 3 grundade tjanster i den befintliga offer-listan
+       missing_cta    -> fyll conversion.primaryCta i den BEFINTLIGA conversion-gruppen
+  -> re-render (samma deterministiska renderer; injicerad callback)
   -> kor critic igen (max N pass, default 1)
-  -> spara repair-result.json
+  -> spara repair-result.json (blueprintRepairs[] + blueprintPasses)
 ```
+
+Kontrakt: passen skapar **aldrig** nya nycklar/sektioner/grupper — den skriver bara om
+fält som redan finns (`generic_copy`), eller fyller ett schema-känt fält i en redan
+existerande grupp (`missing_cta` -> `conversion.primaryCta`). Den materialiseras bara när
+en `rerender`-callback injiceras (annars dormant). Saknad nyckel / otillgänglig modell ->
+`no-fix-applied`, `blueprintPasses=0`, inga `blueprintRepairs`, trace `repair.blueprint_skipped`
+(aldrig en syntetisk `success=false`). Render-fel kraschar aldrig fasen — det nedgraderas
+till `partial-fix`/`no-fix-applied` med `rerender_error` i tracen.
 
 ## Output
 
@@ -50,9 +68,9 @@ Utöka `repair-result.json`:
   "blueprintRepairs": [
     { "issueType": "generic_copy", "target": "home.hero",
       "field": "contentBlocks.home.hero.headline", "before": "...", "after": "...",
-      "source": "repairModel" }
+      "source": "repairModel", "success": true }
   ],
-  "passes": 1,
+  "blueprintPasses": 1,
   "status": "fixed"   // not-needed | no-fix-applied | fixed | partial-fix
 }
 ```
@@ -73,7 +91,8 @@ redan finns i schemat.
 ## Konkret arbete
 
 1. Lägg blueprint-repair efter critic i `execute_phase3_quality_and_repair`. Bara
-   high-severity issues triggar; bunden pass-räknare.
+   issues vars typ finns i `blueprintRepair.triggerIssueTypes` triggar (sorteras
+   high-först); bunden pass-räknare; aktiveras bara när en `rerender`-callback injiceras.
 2. `repairModel` får critic-issue + relevant blueprint-snitt och returnerar en
    **patch på namngivna fält** (validera mot schema + rails före apply).
 3. Re-render via samma deterministiska väg; kör critic igen; logga before/after i
@@ -101,8 +120,9 @@ mock-körning utan nyckel · **full** `pytest tests/ -q` (repair-vägen rörs br
 ```text
 Du ar builder-agent i Sajtbyggaren. Folj docs/heavy-llm-flow/04-builder-profil.md.
 Uppgift: KOR 5 - wira repairModel som en blueprint-only repair-pass efter Quality Critic
-(KOR 4a). Vid high-severity issues patchar den namngivna blueprint-falt -> re-render ->
-critic igen, bunden pass-rakning. Hall principen "en central repair-gate".
+(KOR 4a). Vid reparerbara issues (typ i blueprintRepair.triggerIssueTypes, high-forst)
+patchar den namngivna blueprint-falt -> re-render -> critic igen, bunden pass-rakning.
+Hall principen "en central repair-gate".
 
 Krav:
 - LLM far ENDAST patcha befintliga blueprint-falt (validera mot schema/rails). Aldrig fria filer.
