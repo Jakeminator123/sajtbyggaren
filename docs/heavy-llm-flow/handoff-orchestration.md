@@ -1,6 +1,6 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 · **Bas:** `jakob-be` @ `89530a1` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `1461945` · **Governance:** grön (18/18)
 
 Överlämning så en ny orchestrator-agent kan fortsätta jobba med operatören (Jakob) utan
 att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i denna mapp.
@@ -9,14 +9,16 @@ att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i d
 
 | Commit | Vad |
 |--------|-----|
-| `89530a1` | KÖR-6a — deterministisk OpenClaw-router (#159) |
+| `1461945` | chore: ignorera lokala junk-filer (`*.code-workspace`, `*.lnk`) |
+| `fa943ac` | denna handoff |
+| `89530a1` | KÖR-6a — deterministisk router (#159) |
 | `3f210f1` | KÖR-1a — blueprint schema skeleton + ADR 0036 (#157) |
-| `4c469a3` | governance-unblock: allowlist + reword av heavy-llm-flow-docs (#160) |
+| `4c469a3` | governance-unblock (#160) |
 | `eb68028` | KÖR-0 state alignment / städning (#155) |
 | `caf9a71`, `6a8e39b` | vercel-sandbox hosting-roadmap + preview-loop-kärna |
 
-Grunden för det tunga LLM-flödet (blueprint-kontrakt + deterministisk router) är alltså
-inne och governance-grön.
+Grunden för det tunga LLM-flödet (blueprint-kontrakt + deterministisk router) är inne
+och governance-grön.
 
 ## Orchestrerings-modellen (hur operatör + orchestrator-agent jobbar)
 
@@ -25,23 +27,15 @@ inne och governance-grön.
   mergar **på operatörens OK** (`gh pr merge --squash`), aldrig self-merge.
 - **Ett kör-kort = ett worktree** (`Desktop\sajtbyggaren-worktrees\<kort>`) +
   `feat/<kort>`-branch + PR mot `jakob-be`. Fil-disjunkta kort körs parallellt.
-- **Checks är scope-baserade** (se `04-builder-profil.md`). Governance-grindar:
+- **Checks är scope-baserade** (`04-builder-profil.md`). Governance-grindar:
   `check_term_coverage --strict` + `test_no_legacy_terms`. **Lägg docs via PR, eller kör
   båda grindarna lokalt före direkt-push** — en direkt-push av docs blockade term-coverage
-  tidigare; `#160` allowlistar nu heavy-llm-flow-vokabulären och rewordade legacy-exempel.
-- **Bevakar-mönster:** bakgrunds-poller på `gh pr checks <n>` (governance-grön) + PR-head-OID
-  (fixup landad). Notiser kan lagga några sekunder — verifiera alltid med `gh pr checks`
-  innan merge.
-
-## Lane-gränser (viktigt)
-
-- **Vårt:** `packages/generation/**`, `governance/**`, `scripts/**`.
-- **Inte vårt — rör ej:** `apps/viewser/**` = live/Christopher-lane. Öppna PR där:
-  - **#156** hostad `/live`-loop — parkerad pga riktiga säkerhetsflaggor
-    (oautentiserad publik sandbox-start utan rate-limit, secrets i sandbox-env,
-    `run-build.sh`-path-bugg, next.config-tracing kan bryta `/api/prompt`). Fixas i
-    live-agentens egen slice, inte av oss.
-  - **#158** UI-överhalning. Christopher-lane.
+  tidigare; #160 allowlistar nu heavy-llm-flow-vokabulären.
+- **Bevakar-mönster:** bakgrunds-poller på `gh pr checks <n>` (governance-grön) + PR-head.
+  Notiser kan lagga några sekunder — verifiera alltid med `gh pr checks` innan merge.
+- **Review-bottar:** två bottar kommenterar PR-rader (codex-connector + Vercels review-bot).
+  Validera fynden — agera på giltiga, ignorera false positives, jaga inte en oändlig
+  P2-ström på deterministisk kod.
 
 ## Nästa kort (sekvens enligt README)
 
@@ -50,41 +44,55 @@ inne och governance-grön.
 
 ## Uppskjutet — router v1 P2-luckor (→ `kor-6b` / v1.1)
 
-Deterministiska routern (#159) passerade sin DoD (klock-exempel A–E + ~45 prompter) och
-ai-bug-review-grinden, men review-bottarna (codex + Vercel-VADE) listade ~14 rådgivande
-P2-heuristikluckor (de blockerar inte merge). Jaga dem inte deterministiskt —
-LLM-fallbacken (`kor-6b`) är byggd just för dem. Kvarvarande kategorier:
+Deterministiska routern (#159) passerade sin DoD + ai-bug-review, men review-bottarna
+listade ~14 rådgivande P2-heuristikluckor (de blockerar inte merge). Jaga dem inte
+deterministiskt — LLM-fallbacken (`kor-6b`) är byggd just för dem. Kvarvarande:
+komponent-vs-route ("klocka på sidan"), create-verb→component_add, bar "ny/nytt",
+preserve i samma klausul, koordinerade listor, bart remove utan mål, fråga-med-stilord,
+multi-intent-referensskydd, referens+placering, "sista sektionen", nordiska TLD:er,
+negerade stil-klausuler, frågeformulerad fix. (Ligger som olösta P2-trådar på #159.)
 
-- komponent-placering vs route-skapande ("lägg en klocka på sidan")
-- create-verb ("skapa en klocka") → component_add
-- bar "ny/nytt" → copy-edit felklassad som ny route
-- preserve-villkor i samma klausul ("...utan att ändra texten") tappar editen
-- koordinerade listor ("karta och kontaktformulär") tappar andra objektet
-- bart remove-verb utan mål → bör be om förtydligande
-- ren fråga med stil-ord ("vad betyder premium?") → bör inte trigga build
-- multi-intent med referens tappar referens-/plan-only-skydd
-- referens + placering tappar parsat target
-- "sista sektionen" (negativ ordinal) resolvas inte
-- nordiska TLD:er (.dk/.no/.fi) känns inte igen som referens
-- negerade stil-klausuler ("men inte mörk") tappar villkoret
-- frågeformulerad fix ("kan du fixa det där?") → svaras som ren fråga
+## Vercel Sandbox — tre spår, håll isär
 
-(De ligger även som olösta P2-trådar på #159.)
+1. **Runtime-adaptern** (`apps/viewser/lib/vercel-sandbox-runner.ts` + `PreviewRuntime`,
+   redan på jakob-be): sund ~8/10, behåll. Kör en redan-byggd sajt; `@vercel/sandbox`
+   bara i app-lagret (ADR 0030/0033). Känd P2-härdning: `resume:false` på stop/get.
+2. **#156 hostad `/live`** (öppen PR, live-lane): bygg vidare — merga inte, radera inte.
+   Bevisade hostad prompt→sandbox→preview (~75 s). Riktiga blockers = **säkerhet**
+   (oautentiserad publik start, secrets som env in i VM:en, ingen rate-limit, 12h-token)
+   + tracing-excludes-regressionsrisk på befintliga routes. Bot-fynd: Vercels review-bots
+   5 förslag är giltiga härdningar (status-signatur, fel-state, `resume:false`, race);
+   GPT:s "run-build.sh kan aldrig starta" är en **false positive** (sandbox-cwd är
+   `/vercel/sandbox`, så relativ write == absolut exec; live-verifierat). "Följdprompt
+   syns inte" = heavy-LLM:s copy-direktiv-gap (kor-1b→2 fixar det gratis), inte wiringen.
+3. **hosted-sandbox-mvp** (worktree, 7 ocommittade filer): tredje konkurrerande WIP-spår
+   mot #156 — konvergensbeslut behövs (live-lane). Force-radera worktreet förlorar arbetet.
+
+## Lane-gränser
+
+- **Vårt:** `packages/generation/**`, `governance/**`, `scripts/**`, `docs/heavy-llm-flow/**`.
+- **Inte vårt — rör ej:** `apps/viewser/**` = live/Christopher-lane (#156 `/live`, #158
+  UI-överhalning, hosted-sandbox-mvp). Säkerhet/hosted/auth väntar tills operatören
+  uttryckligen väljer det som scope (produktkompassen).
 
 ## Branch/worktree-läge
 
 - **Aktiva worktrees:** huvudträdet (`jakob-be`), `sajtbyggaren-live`
-  (`feat/live-preview`, annan agent), `sajtbyggaren-hosted-sandbox`
-  (`hosted-sandbox-mvp`, annan agent). Rör inte de två sista.
-- **Raderade (mergade):** `chore/termcov-heavy-llm-flow`, `feat/kor-1a`, `feat/kor-6a`.
-- **Att se över (operatörsbeslut):** `cursor/kor-0-state-alignment-90e4` (#155 mergad),
-  äldre `cursor/preview-runtime-*`, `cursor/dossier-intake-*`, `cursor/dev-env-setup-*`.
-  **Rör aldrig** `backup-*` (säkerhetskopior) eller `christopher-ui`.
-- **Sync `jakob-be → main`** = pending operatörsbeslut (så når arbetet canonical/publik linje).
+  (`feat/live-preview` #156), `sajtbyggaren-hosted-sandbox` (`hosted-sandbox-mvp`,
+  7 ocommittade). Rör inte de två sista.
+- **Raderade mergade branches:** `chore/termcov-heavy-llm-flow`, `feat/kor-1a`,
+  `feat/kor-6a`, `cursor/kor-0-state-alignment-90e4` (#155),
+  `cursor/preview-runtime-bite-b-di` (#140).
+- **Att se över (EJ mergade — rör ej utan beslut):** `cursor/dev-env-setup-7245`
+  (#154 closed, troligen ersatt av #151), `cursor/dossier-intake-v11-review-895d`
+  (49 commits, ingen PR), `cursor/preview-runtime-adapters` (1 commit + 6-dagars tom
+  stash). **Lämna alltid** `backup-*` (säkerhetskopior) och `christopher-ui`.
+- **Sync `jakob-be → main`** = pending operatörsbeslut (så når arbetet canonical linje).
 
 ## Gör inte
 
-- Merga inte till `main` utan operatörens OK.
-- Rör inte `apps/viewser/**`, #156 eller #158 (live/Christopher-lane).
+- Merga inte till `main` utan operatörens OK; merga inte #156 (säkerhet kvar).
+- Rör inte `apps/viewser/**`, #156/#158 eller hosted-sandbox-mvp (live/Christopher-lane).
 - Bygg inte fri kodagent; inga nya canonical-typer utan ADR; inga påhittade claims.
 - Committa aldrig `.env*`; skriv aldrig ut secrets.
+- Force-radera inte hosted-sandbox-worktreet utan beslut (7 ocommittade filer).
