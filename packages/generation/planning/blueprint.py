@@ -245,7 +245,10 @@ def _about_story_section(
     scaffold: dict[str, Any], route_plan: list[dict[str, Any]]
 ) -> str | None:
     valid = section_addresses(scaffold)
-    route_ids = {r.get("id") for r in route_plan if isinstance(r, dict)}
+    # List (not set) comprehension: preserve route_plan order so the chosen
+    # about-story address is deterministic across runs (set iteration order of
+    # strings varies with hash randomization). Mirrors _primary_offer_section.
+    route_ids = [r.get("id") for r in route_plan if isinstance(r, dict)]
     for route_id in route_ids:
         for section_id in _ABOUT_STORY_SECTION_IDS:
             address = f"{route_id}.{section_id}"
