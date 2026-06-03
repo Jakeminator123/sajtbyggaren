@@ -10,8 +10,11 @@ Startpromptar och rollgränser finns i
 `jakob-be` @ `68d8936`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
 **Follow-up-bryggan KOMPLETT: 7b ✓ 7c ✓ 7d ✓ (#171/#174/#175/#176).** En capability-backad
 följdprompt går nu hela vägen router→context→patch→apply→targeted render→current.json-swap
-→ärlig preview-refresh. B155:s capability-väg stängd end-to-end. Nästa huvudspår: kor-4a critic.
-Kvar för HELA B155: ADR för copy_change (sektionsrubrik) + inline-komponenter (unmapped idag).
+→ärlig preview-refresh. Bryggan är RÖRD men inte stabil nog. **Nästa huvudspår: KÖR-7-STAB**
+(inte kor-4a) — extern reviewer + coach hittade P1/P2 i #175/#176. P1 (verifierad): apply lägger
+capability i requestedCapabilities men säkrar inte dossiern i selectedDossiers → codegen monterar
+den inte. Coach-ordning efter STAB: baseline-eval (read-only) → #177/routerDecision → kor-4a →
+ADR copy_change/inline → kor-o2 → 3a/3b → 5. Main-sync väntar tills STAB + #177 + E2E klara.
 **Tidigare (kor-7c-detalj):** kor-7c (#175) applicerar capability-backade
 `component_add` → `requestedCapabilities` i ny immutabel v<N+1> (ingen build/current.json).
 `copy_change` (rubrik) + inline-komponenter rapporteras `unmapped` (all-or-nothing) → kräver

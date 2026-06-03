@@ -47,10 +47,18 @@ ny version → synlig ändring) `→ 4a → 3a → 3b → 5 → 6b`.
 **Follow-up-bryggan KOMPLETT:** `kor-7b`+`kor-7c`+`kor-7d` inne (#171/#174/#175/#176). En
 capability-backad följdprompt går nu hela vägen: router → context → patch plan → apply (ny
 immutabel v<N+1>) → targeted render → `current.json`-swap (bara ok/degraded) → preview-refresh
-bara vid ärlig synlig ändring. **B155:s capability-väg är stängd end-to-end.**
-**Nästa (huvudspår):** `kor-4a` deterministisk Quality Critic, sedan `3a/3b` (visualDirection),
-`5` (repair), `6b` (router-fallback). Parallellt/valfritt: `kor-o2` OpenClaw Core V0 (read-only).
-ETT steg i taget, operatören mergar med orchestratorn.
+bara vid ärlig synlig ändring. Bryggan är **rörd** end-to-end men **inte stabil nog** — extern
+reviewer + coach hittade kvarvarande P1/P2 i #175/#176.
+**Nästa (huvudspår): `KÖR-7-STAB`** — stabilisera apply/targeted-render INNAN mer byggs ovanpå.
+**P1 (verifierad):** kor-7c apply lägger capability i `requestedCapabilities` men säkrar inte
+dossiern i `selectedDossiers.required` → codegen monterar den inte (buildens
+`_unapplied_followup`-observer flaggar den). Plus #176-P2:or (build trots `applied=false`, diff
+mot historisk bas ej aktiv build, route→routeId-mappning, failed-build-trace, runs_root).
+Builder-prompt finns (orchestratorn skrev den 2026-06-03).
+**Coach-ordning efter STAB:** baseline-eval (read-only obs; init ≠ follow-up) → #177 +
+exponera `routerDecision` i `/api/prompt` (Christopher) → `kor-4a` critic → ADR copy_change/inline
+→ `kor-o2` OpenClaw V0 → `3a/3b` → `5`. ETT steg i taget, operatören mergar med orchestratorn.
+**Main-sync: vänta** tills STAB inne + #177 hanterad + `consumeWizardHandoff`-fix + E2E-följdprompt körd.
 **OPERATÖRSBESLUT (kontrakt, för att HELT stänga B155):** kor-7c applicerar bara
 capability-backade `component_add` (→ `requestedCapabilities`). `copy_change` (sektionsrubrik)
 och inline-`component_add` (utan capability) rapporteras som `unmapped` och skrivs aldrig
