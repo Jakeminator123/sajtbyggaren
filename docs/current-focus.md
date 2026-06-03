@@ -7,7 +7,11 @@ Startpromptar och rollgränser finns i
 
 ## Current objective (2026-06-03 kväll — follow-up-bryggan startad: kor-7b inne)
 
-`jakob-be` @ `7685c79`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
+`jakob-be` @ `f14904c`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
+**Follow-up-bryggan: 7b ✓ 7c ✓ (kvar: 7d).** kor-7c (#175) applicerar capability-backade
+`component_add` → `requestedCapabilities` i ny immutabel v<N+1> (ingen build/current.json).
+`copy_change` (rubrik) + inline-komponenter rapporteras `unmapped` (all-or-nothing) → kräver
+**ADR/nytt directive-fält** för att helt stänga B155. Nästa: kor-7d (build + current.json-swap).
 **Follow-up-bryggan startad** (coach-omprioriterad före kor-4a för att stänga B155): `kor-7b`
 artifact patch planner (dry-run) mergad (#171). Även mergat denna runda: #170 (B86 npm-timeout
 env-override) och #169 (Christophers UI-överhalning reconcilad på jakob-be runtime — hans lane).
@@ -315,13 +319,15 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `7685c79` (2026-06-03 kväll UTC, `jakob-be` HEAD — #174 härdar KÖR-7b
+Last verified state: `f14904c` (2026-06-03 kväll UTC, `jakob-be` HEAD — #175 KÖR-7c apply:
+validerad capability-patch → ny immutabel Project Input-version v<N+1> (requestedCapabilities),
+ingen build/current.json; copy_change+inline = unmapped (ADR-beslut). Ovanpå #174 som härdar KÖR-7b
 patch-planeraren: component_add utan namngiven komponent avvisas + _INTENT_CAPABILITY drift-låst.
 Ovanpå: #171 KÖR-7b artifact patch planner (dry-run) mergad ovanpå #170 (B86 npm-timeout
 env-override) och #169 (Christopher UI-reconcile, hans lane). Plus Vercel deploy-denylist
 (`9ba29ce`) och docs-batch (kor-o1 OpenClaw Core-kontrakt + handoff-bump). `origin/main` =
 `1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #169, #170, #171, #174 (alla mergade till `jakob-be`).
+Nya PRs sedan föregående checkpoint: #169, #170, #171, #174, #175 (alla mergade till `jakob-be`).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 

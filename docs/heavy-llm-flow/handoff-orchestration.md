@@ -1,6 +1,6 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `7685c79` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `f14904c` · **Governance:** grön (18/18)
 
 > **Sedan förra handoffen (2026-06-03 kväll):** Vercel auto-deploy begränsad till
 > `jakob-be`/`christopher-ui`/`main` (denylist i `apps/viewser/vercel.json`).
@@ -44,8 +44,15 @@ Routern (kor-6a) + Context Assembler (kor-7a) finns som rails för follow-up/pat
 Sekvens (omprioriterad 2026-06-03 EM per coach): `1b ✓ 1c ✓ 2 ✓ 7a ✓ 1c-copy ✓ →`
 **follow-up-bryggan `7b → 7c → 7d`** (stänger B155 — "ändra rubriken" patchar artefakt →
 ny version → synlig ändring) `→ 4a → 3a → 3b → 5 → 6b`.
-**Aktivt nu:** `kor-7c` (apply/version) — `kor-7b` inne (#171). **Nästa:** `kor-7d` (targeted
-rebuild) — ETT steg i taget, operatören mergar med orchestratorn.
+**Aktivt nu:** `kor-7d` (targeted rebuild) — `kor-7b`+`kor-7c` inne (#171/#174/#175). **Nästa:**
+`kor-7d` bygger om påverkad route + swap:ar `current.json` → då är capability-följdprompten
+komplett end-to-end. ETT steg i taget, operatören mergar med orchestratorn.
+**OPERATÖRSBESLUT (kontrakt, för att HELT stänga B155):** kor-7c applicerar bara
+capability-backade `component_add` (→ `requestedCapabilities`). `copy_change` (sektionsrubrik)
+och inline-`component_add` (utan capability) rapporteras som `unmapped` och skrivs aldrig
+(all-or-nothing, ärligt). Att ge dem ett hem kräver nytt directive-fält + build-konsument =
+**ADR/runtime-kontrakt**. Tills dess: "lägg till kontaktformulär" funkar via bryggan, men
+"ändra rubriken" gör det inte.
 **Parallellt (read-only, ingen 7b-beroende):** `kor-o2` OpenClaw Core V0 (binder router +
 context → answer/plan/clarify/patch_plan_request; bygger/skriver/patchar/preview:ar aldrig).
 Builder-prompt finns i `kor-o1-openclaw-core-contract.md`. `kor-4a` critic + visuell
