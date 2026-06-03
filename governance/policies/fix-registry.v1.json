@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/fix-registry.schema.json",
   "policyId": "fix-registry.v1",
-  "version": 3,
+  "version": 4,
   "status": "draft-but-authoritative",
-  "purpose": "Central lista över alla Mechanical Fixes och LLM Fixes. Repair Pipeline läser hit. Ingen kod får implementera fix utanför detta register. Version 2 lägger till loop-limits, priority och onFailure per fix. Version 3 (Sprint 3B v1.1, post-reviewer-clean) korrigerar ensure-default-export från onFailure=abort-pipeline till onFailure=skip-and-log: tidigare semantiken matchade inte implementationen i packages/generation/repair/fixes/ensure_default_export.py som låter en fil failas och fortfarande försöker övriga filer (partial-fix-vägen). Registret är spec; koden är subset (Sprint 3B v1 levererar 1 av 8 mechanicalFixes; resten är pluggable via samma dispatcher).",
+  "purpose": "Central lista över alla Mechanical Fixes och LLM Fixes. Repair Pipeline läser hit. Ingen kod får implementera fix utanför detta register. Version 2 lägger till loop-limits, priority och onFailure per fix. Version 3 (Sprint 3B v1.1, post-reviewer-clean) korrigerar ensure-default-export från onFailure=abort-pipeline till onFailure=skip-and-log: tidigare semantiken matchade inte implementationen i packages/generation/repair/fixes/ensure_default_export.py som låter en fil failas och fortfarande försöker övriga filer (partial-fix-vägen). Registret är spec; koden är subset (Sprint 3B v1 levererar 1 av 8 mechanicalFixes; resten är pluggable via samma dispatcher). Version 4 (kor-5) lägger till blueprintRepair-blocket: den bundna repairModel-blueprint-passen som körs efter den deterministiska Quality Critic (kor-4a) på den enda centrala repair-gaten. Passen patchar BARA namngivna, redan existerande blueprint-fält (contentBlocks/conversion), re-renderar deterministiskt och kör critic igen. triggerIssueTypes är issue-TYP-grinden (severity-only hade brutit DoD eftersom critic v0 markerar generic_copy/thin_offer som medium, inte high); triggerSeverities dokumenterar prioriteringsordningen (high först). maxPasses binder loopen (ingen oändlig loop).",
   "principles": [
     "En fix = en post i registret. Inga oregistrerade fixar.",
     "Mekaniska fixar körs först, alltid. LLM fixar bara om mekaniska inte räcker.",
@@ -135,5 +135,12 @@
       "maxRetries": 1,
       "onFailure": "mark-degraded"
     }
-  ]
+  ],
+  "blueprintRepair": {
+    "modelRole": "repairModel",
+    "maxPasses": 1,
+    "triggerSeverities": ["high", "medium"],
+    "triggerIssueTypes": ["generic_copy", "thin_offer", "missing_cta"],
+    "purpose": "kor-5 blueprint-only repair-pass: efter den deterministiska Quality Critic patchar repairModel BARA namngivna, redan existerande blueprint-fält (contentBlocks på Generation Package, conversion på Site Brief) för de critic-issues vars typ finns i triggerIssueTypes, re-renderar deterministiskt och kör critic igen. Validering (rails + grounding-guard + schema) sker FÖRE apply; LLM skriver aldrig fria filer. maxPasses binder loopen. Saknad nyckel / otillgänglig modell -> no-fix-applied, passes=0, inga blueprintRepairs (loggas som repair.blueprint_skipped, aldrig success=false)."
+  }
 }

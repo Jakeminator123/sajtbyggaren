@@ -45,9 +45,60 @@
       "type": "integer",
       "minimum": 0,
       "description": "Number of successful sandwich-loop passes (apply-fixes + re-run-gate cycles). Bounded by fix-registry.v1.json:loopLimits.maxTotalSandwichPasses."
+    },
+    "blueprintRepairs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blueprintRepair" },
+      "description": "kor-5 blueprint-repair telemetry: one entry per repairModel proposal received during a real run (success=true applied a named blueprint field; success=false was rejected before apply by rails/grounding/schema). Empty when no Generation Package was threaded in, when there was no eligible critic issue, or when the model was unavailable (no key / error) - the latter is a skip recorded only as a repair.blueprint_skipped trace event, never a success=false entry."
+    },
+    "passes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of bounded blueprint-repair passes executed (apply blueprint patch + re-render + re-run critic). Bounded by fix-registry.v1.json:blueprintRepair.maxPasses (default 1). Stays 0 on mechanical-only runs, no-eligible-issue runs, and skipped (no-key / model-unavailable) runs."
     }
   },
   "$defs": {
+    "blueprintRepair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issueType", "target", "field"],
+      "properties": {
+        "issueType": {
+          "type": "string",
+          "description": "Critic issue type this patch addressed (e.g. 'generic_copy', 'thin_offer', 'missing_cta')."
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Critic '<route>.<section>' address (or the brief conversion target) the patch acted on."
+        },
+        "field": {
+          "type": "string",
+          "description": "The named blueprint field that was (or would have been) patched, e.g. 'contentBlocks.home.hero.headline' or 'conversion.primaryCta'."
+        },
+        "before": {
+          "type": "string",
+          "description": "Field value before the patch (empty when the field did not exist yet)."
+        },
+        "after": {
+          "type": "string",
+          "description": "Field value after the patch (empty on a rejected/failed attempt)."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["repairModel"],
+          "description": "Which model role produced the patch. Always 'repairModel' for kor-5."
+        },
+        "success": {
+          "type": "boolean",
+          "description": "True when the named field was actually patched; false when a received proposal was rejected before apply (grounding guard / rails / schema). Missing-key / model-unavailable never produces a success=false entry."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Per-attempt detail (what changed, or why the proposal was rejected)."
+        }
+      }
+    },
     "repairFix": {
       "type": "object",
       "additionalProperties": false,

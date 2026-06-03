@@ -320,6 +320,16 @@ COMMON_WORDS = {
     # it is not a separate domain term. Same treatment as
     # PlanningChoice / RepairFix (Sprint 2B / 3A).
     "MechanicalFixSpec",
+    # kor-5 blueprint-repair implementation symbols
+    # (packages/generation/repair/blueprint_repair.py + model_resolver.py).
+    # The canonical domain term Blueprint Repair is registered in
+    # naming-dictionary.v1; these are local Pydantic models / type aliases /
+    # error classes around the repairModel structured-output call, the bounded
+    # loop outcome and the re-render callback - implementation symbols, not
+    # separate canonical terms (same treatment as Critic* / Codegen* above).
+    "BlueprintRepairOutcome", "BlueprintRepairStatus",
+    "HeroCopyPatch", "OfferItemPatch", "OfferListPatch",
+    "RepairModelResolutionError", "RerenderFn",
     # Sprint 3B-next codegenModel implementation symbols (ADR 0017).
     # CodegenLLMResponse is the narrow Pydantic schema the OpenAI call
     # parses into; CodegenUsage is a token-usage stub mirroring
