@@ -152,6 +152,7 @@ SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaff
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
+PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"
 
 # Files the builder must NEVER write under any siteId. Case-insensitive.
 # `.env.example` is allowed (canonical placeholder).
@@ -3644,6 +3645,8 @@ def run_phase3_quality_and_repair(
     npm_steps: list[dict],
     overall_status: str,
     do_typecheck: bool,
+    generation_package: dict[str, Any] | None = None,
+    site_brief: dict[str, Any] | None = None,
 ) -> tuple[dict, dict]:
     """Thin wiring around packages/generation/repair (which itself
     orchestrates quality_gate + repair).
@@ -3664,6 +3667,10 @@ def run_phase3_quality_and_repair(
         npm_steps=npm_steps,
         build_status=overall_status,
         do_typecheck=do_typecheck,
+        generation_package=generation_package,
+        site_brief=site_brief,
+        run_dir=run_dir,
+        run_id=run_dir.name,
     )
 
     quality_payload = final_quality.model_dump()
@@ -4205,6 +4212,8 @@ def build(
         npm_steps,
         overall_status,
         do_typecheck,
+        generation_package=generation_package,
+        site_brief=site_brief,
     )
     trace.event(
         "build",
@@ -4769,12 +4778,267 @@ def build_targeted_version(
     return result
 
 
+def _latest_run_id_for_site(runs_root: Path, site_id: str) -> str | None:
+    """Return the newest run id whose build-result.json is for ``site_id``.
+
+    Used by the CLI follow-up entrypoint to find the base run a follow-up
+    prompt iterates from (the run whose artefakts the Context Assembler reads).
+    Reads only build-result.json (read-only) and picks the most recent by mtime;
+    returns ``None`` when no run for the site exists yet.
+    """
+    if not runs_root.exists():
+        return None
+    candidates = [d for d in runs_root.iterdir() if d.is_dir()]
+    candidates.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+    for run_dir in candidates:
+        try:
+            payload = json.loads(
+                (run_dir / "build-result.json").read_text(encoding="utf-8")
+            )
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        if payload.get("siteId") == site_id:
+            return run_dir.name
+    return None
+
+
+def run_followup_chain(
+    site_id: str,
+    follow_up_prompt: str,
+    *,
+    base_run_id: str | None = None,
+    do_build: bool = True,
+    runs_dir: Path | None = None,
+    generated_dir: str | Path | None = None,
+    output_dir: Path | None = None,
+) -> dict[str, Any]:
+    """KÖR-7 follow-up bridge as a real user path (CLI E2E wiring).
+
+    Runs the WHOLE capability follow-up chain for a single follow-up prompt,
+    reusing the existing library modules verbatim - no new engine:
+
+        router (kor-6a)  -> classify the message
+        context (kor-7a) -> assemble *lagom* much context (artifacts+sections)
+        patch  (kor-7b)  -> propose + validate a transient PatchPlan
+        apply  (kor-7c)  -> create the next immutable v<N+1> Project Input
+        build  (kor-7d)  -> targeted render + version-build + current.json swap
+                            (swap only on ok/degraded, via build())
+
+    The chain is honest at every gate: a message with no patchable edit, an
+    empty/rejected plan, or an unmapped apply stops BEFORE any build and reports
+    why (no false "changed your site"). Only a validated capability patch that
+    apply actually writes reaches the targeted build, whose ``appliedVisibleEffect``
+    /``previewShouldRefresh`` stay authoritative (a no-op never refreshes preview).
+
+    Mock-safe: every module on the chain is deterministic with no
+    ``OPENAI_API_KEY`` (router/context/patch/apply are pure; build falls back to
+    the mock brief/plan). Returns a transient dict summary (never a new canonical
+    artefakt, builder-profil §3); the per-step trace events are the durable
+    record.
+    """
+    from packages.generation.orchestration.apply import (
+        PatchApplyError,
+        apply_patch_plan,
+    )
+    from packages.generation.orchestration.context import (
+        ContextPaths,
+        assemble_context,
+    )
+    from packages.generation.orchestration.patch import plan_patches
+    from packages.generation.orchestration.router import (
+        RouterContext,
+        classify_message,
+    )
+
+    runs_root = runs_dir if runs_dir is not None else RUNS_DIR
+    prompt_inputs_dir = output_dir if output_dir is not None else PROMPT_INPUTS_DIR
+
+    def _result(stage: str, applied: bool, notes: list[str], **extra: Any) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "siteId": site_id,
+            "followUpPrompt": follow_up_prompt,
+            "baseRunId": base_run_id,
+            "stage": stage,
+            "applied": applied,
+            "notes": notes,
+        }
+        payload.update(extra)
+        return payload
+
+    # 0. Resolve the base run (the version + artefakts the follow-up builds on).
+    if base_run_id is None:
+        base_run_id = _latest_run_id_for_site(runs_root, site_id)
+    if base_run_id is None:
+        raise SystemExit(
+            f"Follow-up: hittade ingen tidigare run för siteId={site_id!r} under "
+            f"{runs_root}. Kör en init-build först (skapar artefakter att bygga vidare på)."
+        )
+
+    paths = ContextPaths(runsDir=runs_root, promptInputsDir=prompt_inputs_dir)
+
+    # 1. Router (kor-6a): what kind of message is this, how much context.
+    pre_ctx = assemble_context(
+        "artifacts_plus_sections", run_id=base_run_id, paths=paths
+    )
+    route_sections_payload = pre_ctx.payload.get("routeSections")
+    route_sections = (
+        {
+            route: [s for s in ids if isinstance(s, str)]
+            for route, ids in route_sections_payload.items()
+            if isinstance(ids, list)
+        }
+        if isinstance(route_sections_payload, dict)
+        else {}
+    )
+    decision = classify_message(
+        follow_up_prompt,
+        context=RouterContext(siteId=site_id, routeSections=route_sections),
+    )
+
+    # 2. Context (kor-7a): the router chose a level; honour it (artifacts+sections
+    #    for an edit), plus the component registry to validate any capability.
+    context = (
+        pre_ctx
+        if decision.contextLevel == "artifacts_plus_sections"
+        else assemble_context(
+            decision.contextLevel,
+            site_id=site_id,
+            run_id=base_run_id,
+            paths=paths,
+        )
+    )
+    registry = assemble_context("component_registry", paths=paths)
+
+    # 3. Patch planner (kor-7b): propose + validate. Applies nothing.
+    plan = plan_patches(decision, context, registry=registry)
+    if not plan.patches:
+        return _result(
+            "router_no_edit" if decision.editKind == "none" else "plan_empty",
+            applied=False,
+            notes=[
+                f"Router: messageKind={decision.messageKind} "
+                f"editKind={decision.editKind}; patch-planeraren föreslog inget "
+                "att applicera (ingen byggbar capability-patch).",
+                *plan.notes,
+            ],
+            messageKind=decision.messageKind,
+            editKind=decision.editKind,
+        )
+    if not plan.valid:
+        return _result(
+            "plan_rejected",
+            applied=False,
+            notes=[
+                "Patch-planeraren avvisade förslaget (rails). Ingen apply, "
+                "ingen build.",
+                *[f"rejected {r.field}: {r.reason}" for r in plan.rejected],
+            ],
+            messageKind=decision.messageKind,
+            editKind=decision.editKind,
+        )
+
+    # 4. Apply (kor-7c): create the next immutable v<N+1> Project Input. A valid
+    #    plan whose patch is unmapped writes nothing (all-or-nothing, honest).
+    try:
+        apply_result = apply_patch_plan(
+            plan,
+            site_id=site_id,
+            follow_up_prompt=follow_up_prompt,
+            output_dir=prompt_inputs_dir,
+            runs_dir=runs_root,
+        )
+    except PatchApplyError as exc:
+        return _result(
+            "apply_rejected",
+            applied=False,
+            notes=[f"Apply avvisade planen: {exc}"],
+            messageKind=decision.messageKind,
+            editKind=decision.editKind,
+        )
+
+    if not apply_result.applied:
+        return _result(
+            "apply_unmapped" if apply_result.unmapped else "apply_empty",
+            applied=False,
+            notes=[
+                "Apply skrev ingen ny version (all-or-nothing eller tom plan); "
+                "ingen build.",
+                *apply_result.notes,
+            ],
+            messageKind=decision.messageKind,
+            editKind=decision.editKind,
+        )
+
+    # 5. Targeted render + version-build (kor-7d): reuse build_targeted_version,
+    #    which reuses build() (immutable build dir + atomic current.json swap on
+    #    ok/degraded only + honest appliedVisibleEffect). No new build engine.
+    new_version_path = Path(apply_result.projectInputPath)
+    targeted = build_targeted_version(
+        new_version_path,
+        apply_result=apply_result,
+        do_build=do_build,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+
+    return _result(
+        "built",
+        applied=True,
+        notes=[
+            f"Applicerade capability-patch -> v{apply_result.version}; "
+            f"targeted render outcome={targeted.outcome}.",
+            *targeted.notes,
+        ],
+        messageKind=decision.messageKind,
+        editKind=decision.editKind,
+        version=apply_result.version,
+        previousVersion=apply_result.previousVersion,
+        appliedCapabilities=[c.model_dump() for c in apply_result.appliedCapabilities],
+        outcome=targeted.outcome,
+        affectedRoutes=targeted.affectedRoutes,
+        changedRoutes=targeted.changedRoutes,
+        buildStatus=targeted.buildStatus,
+        appliedVisibleEffect=targeted.appliedVisibleEffect,
+        previewShouldRefresh=targeted.previewShouldRefresh,
+        runId=targeted.runId,
+        projectInputPath=apply_result.projectInputPath,
+    )
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build a generated site from a Project Input.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Build a generated site from a Project Input, or run a follow-up "
+            "prompt through the full kor-7 capability chain (--followup)."
+        )
+    )
     parser.add_argument(
         "--dossier",
-        required=True,
+        default=None,
         help="Path to the Project Input JSON file (examples/<siteId>.project-input.json).",
+    )
+    parser.add_argument(
+        "--followup",
+        default=None,
+        metavar="PROMPT",
+        help=(
+            "Follow-up prompt mode: run router -> context -> patch -> apply "
+            "(new immutable v<N+1>) -> targeted render for an EXISTING site. "
+            "Requires --site-id. Reuses the kor-7 modules; builds no new engine."
+        ),
+    )
+    parser.add_argument(
+        "--site-id",
+        default=None,
+        help="siteId to follow up on (required with --followup).",
+    )
+    parser.add_argument(
+        "--base-run-id",
+        default=None,
+        help=(
+            "Optional base run id the follow-up iterates from. Defaults to the "
+            "newest run for the site."
+        ),
     )
     parser.add_argument(
         "--skip-build",
@@ -4797,12 +5061,33 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    runs_dir = Path(args.runs_dir).resolve() if args.runs_dir else None
+
+    # Follow-up mode: run the whole capability chain for a follow-up prompt.
+    if args.followup is not None:
+        if not args.site_id:
+            print("--followup requires --site-id.", file=sys.stderr)
+            return 1
+        result = run_followup_chain(
+            args.site_id,
+            args.followup,
+            base_run_id=args.base_run_id,
+            do_build=not args.skip_build,
+            runs_dir=runs_dir,
+            generated_dir=args.generated_dir,
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    # Build (init) mode.
+    if not args.dossier:
+        print("--dossier is required (or use --followup with --site-id).", file=sys.stderr)
+        return 1
     dossier_path = Path(args.dossier).resolve()
     if not dossier_path.exists():
         print(f"Dossier not found: {dossier_path}", file=sys.stderr)
         return 1
 
-    runs_dir = Path(args.runs_dir).resolve() if args.runs_dir else None
     build(
         dossier_path,
         do_build=not args.skip_build,
