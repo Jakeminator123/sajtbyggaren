@@ -1,0 +1,17 @@
+{
+  "sections": {
+    "practice-grid": {
+      "treatments": ["dense-grid", "tabular", "grouped"],
+      "byVariant": {
+        "legal-classic": "tabular",
+        "accounting-trust": "grouped"
+      }
+    },
+    "expertise-areas": {
+      "treatments": ["numbered-2col", "tag-cluster"],
+      "byVariant": {
+        "consulting-modern": "tag-cluster"
+      }
+    }
+  }
+}

@@ -133,109 +133,142 @@ def _call_section_renderer(
 # 2026-05-25) layered operator-pin
 # (``dossier.directives.sectionTreatments``) on top via
 # ``_treatment_for_section(operator_pin=...)`` without changing the
-# section-renderer signatures. A future Phase 4 will add an LLM-pick
-# step in front of operator-pin; the helper signature is designed to
-# absorb that without touching renderers.
+# section-renderer signatures. A future Phase 4 (kor-3b) will add an
+# LLM-pick step in front of operator-pin; the helper signature is
+# designed to absorb that without touching renderers.
 #
 # Renderers that opt in declare ``variant_id: str | None = None`` in
 # their signature and call ``_treatment_for_section`` to pick the
 # treatment id; ``_call_section_renderer`` already threads
 # ``variant_id`` through the dispatcher (Path B native scaffolds
 # pass it from ``_render_dispatched_route``).
-_SECTION_TREATMENTS_BY_VARIANT: dict[str, dict[str, str]] = {
-    # agency-studio (Phase 1 pilot + Phase 2 expansion)
-    #
-    # ``studio-monochrome`` swaps the home selected-work-preview from
-    # the editorial-stack baseline to an asymmetric-grid where every
-    # other card is offset vertically. Same data, deliberately broken
-    # rhythm — gives the monochrome studio a visually distinct front
-    # page from the warm and electric agency variants without changing
-    # any sections.json.
-    "studio-monochrome": {"selected-work-preview": "asymmetric-grid"},
-    # ``editorial-warm`` inherits ``editorial-stack`` (the section
-    # default) so the warm agency reads as a calm magazine spread
-    # rather than competing for attention with the other two
-    # variants.
-    #
-    # ``bold-electric`` swaps to ``marquee-row`` (Phase 2): a
-    # horizontal scroll-snap rail with six tight cards instead of
-    # four wide ones. Reads as a motion-led studio reel; the
-    # auto-animation is intentionally left out of Phase 2 so a
-    # reduced-motion user gets the same scroll-able rail without
-    # any movement. Phase 3 may layer scroll-snap auto-rotation
-    # behind ``prefers-reduced-motion: no-preference`` if operator
-    # feedback wants it.
-    "bold-electric": {"selected-work-preview": "marquee-row"},
-    # clinic-healthcare (Phase 2) — treatment-list × 3 treatments
-    #
-    # ``clinic-calm`` keeps the byte-identical default
-    # (``minimal-rows``); not registered in the map so the
-    # section's own default kicks in. Calm clinics keep the
-    # pre-Phase-2 rounded-card menu.
-    #
-    # ``warm-care`` swaps to ``split-cards``: a 2-col grid of
-    # warmer cards with an accent-tinted left rail. Reads as a
-    # warmer brochure rather than a clinical menu.
-    "warm-care": {"treatment-list": "split-cards"},
-    # ``modern-precision`` swaps to ``numbered-stack``: large mono
-    # numerals + thin separators. Reads as a clinical sequence
-    # appropriate for a precision-focused practice.
-    "modern-precision": {"treatment-list": "numbered-stack"},
-    # professional-services (Phase 2) — practice-grid × 3 treatments
-    #
-    # ``consulting-modern`` keeps the byte-identical ``dense-grid``
-    # default (3-col compact card grid). Not registered in the map
-    # so the section default kicks in.
-    #
-    # ``legal-classic`` swaps to ``tabular``: formal row listing
-    # without card chrome, thin ``border-b`` separators, column
-    # header. Reads as a court-filing index rather than a
-    # marketing brochure.
-    "legal-classic": {"practice-grid": "tabular"},
-    # ``accounting-trust`` swaps to ``grouped``: 2-col feature
-    # columns with numbered eyebrows. Reads as "this is how we
-    # organise our practice" rather than a dense menu.
-    "accounting-trust": {"practice-grid": "grouped"},
-    # consulting-modern (Phase 2) — expertise-areas treatment.
-    #
-    # The /expertis route already has consulting-modern on
-    # ``dense-grid`` (the section default) for practice-grid; the
-    # home page expertise-areas section flips to ``tag-cluster``
-    # so the modern consulting variant reads as an associative
-    # "what we do"-cloud rather than a numbered list.
-    #
-    # Note: variant-key already exists in the map for selected-
-    # work-preview... but consulting-modern is a PS variant, not
-    # an agency variant. Each scaffold has its own variants, so
-    # the same variant-id never serves two scaffolds.
-    "consulting-modern": {"expertise-areas": "tag-cluster"},
-    # legal-classic and accounting-trust inherit ``numbered-2col``
-    # (the section default) for expertise-areas so the home page
-    # eyebrows stay calmly numbered. The PS variation lives on
-    # /expertis (practice-grid) instead.
-    # local-service-business (Phase 2) — service-list × 4 treatments
-    #
-    # ``nordic-trust`` swaps to ``tabular``: a formal service
-    # catalogue with a column header and thin ``border-b``
-    # separators. Matches the calm Scandinavian-formality the
-    # variant leans into.
-    "nordic-trust": {"service-list": "tabular"},
-    # ``warm-craft`` swaps to ``alternating-rows``: vertical
-    # sequence where odd rows put the icon on the left and even
-    # rows flip via ``md:flex-row-reverse``. Reads as a
-    # back-and-forth rhythm appropriate for a craft-led service
-    # business.
-    "warm-craft": {"service-list": "alternating-rows"},
-    # ``clinical-calm`` swaps to ``icon-strip``: compact horizontal
-    # pill row with summaries on a quiet grid underneath. Reads as
-    # a minimalist contents bar.
-    "clinical-calm": {"service-list": "icon-strip"},
-    # ``midnight-counsel`` and ``pulse-fit`` inherit ``card-grid``
-    # (the section default) so the LSB look most operators expect
-    # stays stable in pilot. Phase 3 may flip pulse-fit to
-    # ``alternating-rows`` if the energetic gym variant wants more
-    # movement.
-}
+#
+# kor-3a (2026-06-03): the variant→treatment truth used to live in a
+# hardcoded Python dict here and was mirrored, by hand, by
+# ``_SECTION_TREATMENTS_CATALOGUE`` in ``packages/generation/planning/
+# plan.py``. Both tables now read ONE declarative source on disk —
+# ``scaffolds/<id>/section-treatments.json`` — so the dispatcher and
+# the planning prompt can never drift again. This module owns the
+# loader (``load_section_treatments`` /
+# ``load_section_treatments_catalogue``) and exposes the same flat
+# variant→{section: treatment} view via ``_SECTION_TREATMENTS_BY_VARIANT``
+# that the resolver and the existing tests already expect. No render
+# output changed: the JSON encodes the exact pairs the dict used to
+# hold (byte-for-byte parity, asserted in
+# ``tests/test_section_treatments_json_parity.py``).
+#
+# Each ``section-treatments.json`` block is::
+#
+#     {"sections": {"<section-id>": {
+#         "treatments": ["<section-default>", "<variant treatment>", ...],
+#         "byVariant": {"<variant-id>": "<treatment-id>", ...}}}}
+#
+# ``treatments[0]`` is the section default (what a variant that does
+# not register the section inherits); the remaining ids are the
+# variant-specific treatments. Variants absent from ``byVariant``
+# (e.g. ``editorial-warm``, ``clinic-calm``, ``midnight-counsel``,
+# ``pulse-fit``) deliberately inherit the section default. Section ids
+# are scaffold-unique, so flattening every file into one
+# variant-keyed map is unambiguous.
+_SECTION_TREATMENTS_DIR = (
+    Path(__file__).resolve().parents[1] / "orchestration" / "scaffolds"
+)
+
+
+@functools.cache
+def load_section_treatments() -> dict[str, dict[str, Any]]:
+    """Load the declarative section-treatment truth from every scaffold.
+
+    Returns a per-section catalogue keyed by section id::
+
+        {section_id: {"treatments": [...], "byVariant": {variant: treatment}}}
+
+    This is the single on-disk source of truth that both the build
+    dispatcher (variant → treatment resolution, via
+    ``_SECTION_TREATMENTS_BY_VARIANT``) and the planning prompt catalogue
+    (section → treatment list, via ``load_section_treatments_catalogue``)
+    consume. Scaffolds without a ``section-treatments.json`` simply
+    contribute nothing. Result is cached because the files are read once
+    per process and never mutate at runtime; tests that need a re-read
+    can call ``load_section_treatments.cache_clear()``.
+    """
+    catalogue: dict[str, dict[str, Any]] = {}
+    if not _SECTION_TREATMENTS_DIR.is_dir():
+        return catalogue
+    for scaffold_dir in sorted(_SECTION_TREATMENTS_DIR.iterdir()):
+        treatments_path = scaffold_dir / "section-treatments.json"
+        if not treatments_path.is_file():
+            continue
+        try:
+            loaded = json.loads(treatments_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise SystemExit(
+                "Builder failed: scaffold section-treatments.json at "
+                f"{treatments_path} is not valid JSON ({exc.msg} at "
+                f"line {exc.lineno}). kor-3a requires a parsable "
+                "section-treatments.json so the dispatcher and the "
+                "planning catalogue can read one declarative truth."
+            ) from exc
+        sections = loaded.get("sections") if isinstance(loaded, dict) else None
+        if not isinstance(sections, dict):
+            continue
+        for section_id, block in sections.items():
+            if not isinstance(block, dict):
+                continue
+            treatments = [
+                str(item)
+                for item in (block.get("treatments") or [])
+                if isinstance(item, str)
+            ]
+            by_variant = {
+                str(variant_id): str(treatment_id)
+                for variant_id, treatment_id in (
+                    block.get("byVariant") or {}
+                ).items()
+                if isinstance(variant_id, str) and isinstance(treatment_id, str)
+            }
+            entry = catalogue.setdefault(
+                section_id, {"treatments": [], "byVariant": {}}
+            )
+            entry["treatments"] = treatments
+            entry["byVariant"].update(by_variant)
+    return catalogue
+
+
+def load_section_treatments_catalogue() -> dict[str, list[str]]:
+    """Section-id → ordered treatment-id list (default first).
+
+    The planning prompt (``packages/generation/planning/plan.py``) reads
+    this so ``planningModel`` sees the registered treatment ids. Reads the
+    same JSON the dispatcher uses, so the catalogue can never drift from
+    the runtime variant→treatment table.
+    """
+    return {
+        section_id: list(block["treatments"])
+        for section_id, block in load_section_treatments().items()
+    }
+
+
+def _build_section_treatments_by_variant() -> dict[str, dict[str, str]]:
+    """Flatten the per-section JSON into the variant→{section: treatment} map.
+
+    Section ids are scaffold-unique and each variant belongs to exactly
+    one scaffold, so the flattening is collision-free.
+    """
+    by_variant: dict[str, dict[str, str]] = {}
+    for section_id, block in load_section_treatments().items():
+        for variant_id, treatment_id in block["byVariant"].items():
+            by_variant.setdefault(variant_id, {})[section_id] = treatment_id
+    return by_variant
+
+
+# Thin module-level wrapper around the JSON read above, kept so the
+# resolver (``_treatment_for_section``) and the long-standing tests /
+# external callers can keep using the ``_SECTION_TREATMENTS_BY_VARIANT``
+# spelling. It is no longer a source of truth — the JSON is.
+_SECTION_TREATMENTS_BY_VARIANT: dict[
+    str, dict[str, str]
+] = _build_section_treatments_by_variant()
 
 
 def _operator_pin_for_section(dossier: dict, section_id: str) -> str | None:

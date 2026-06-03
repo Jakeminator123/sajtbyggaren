@@ -1,0 +1,11 @@
+{
+  "sections": {
+    "treatment-list": {
+      "treatments": ["minimal-rows", "split-cards", "numbered-stack"],
+      "byVariant": {
+        "warm-care": "split-cards",
+        "modern-precision": "numbered-stack"
+      }
+    }
+  }
+}

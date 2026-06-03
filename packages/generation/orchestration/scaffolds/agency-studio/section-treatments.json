@@ -1,0 +1,11 @@
+{
+  "sections": {
+    "selected-work-preview": {
+      "treatments": ["editorial-stack", "asymmetric-grid", "marquee-row"],
+      "byVariant": {
+        "studio-monochrome": "asymmetric-grid",
+        "bold-electric": "marquee-row"
+      }
+    }
+  }
+}
