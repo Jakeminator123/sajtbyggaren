@@ -16,8 +16,8 @@ Hard guarantees (kor-o1 "Mål" + 04 §9), all structurally enforced:
   router owns all classification (one router truth, kor-o1) - this module
   never re-classifies the message.
 - **Honest.** An ``edit_instruction`` returns ``patch_plan_request`` with
-  ``status="apply_missing"`` / ``blockedBy="kor-7c"`` rather than a faked
-  success, and ``appliedVisibleEffect`` is always ``False``.
+  ``status="action_bridge_missing"`` / ``blockedBy="openclaw-action-bridge"``
+  rather than a faked success, and ``appliedVisibleEffect`` is always ``False``.
 
 ``toolCalls`` / ``capability`` stay empty / ``None`` in V0 (the model
 carries them for the later patch-flow slice; V0 never acts on them).
@@ -95,6 +95,15 @@ def orchestrate(
     what the router asked for and nothing more.
     """
     router = classify_message(message, context=router_context)
+    # Forward an external reference URL so the assembler can fetch reference
+    # context: assemble_context("external_reference") needs ``url`` (kor-7a),
+    # otherwise an OpenClaw reference plan would be built on empty context.
+    if (
+        router.reference is not None
+        and router.reference.url
+        and "url" not in context_kwargs
+    ):
+        context_kwargs["url"] = router.reference.url
     context = assemble_context(router.contextLevel, **context_kwargs)  # type: ignore[arg-type]
     return decide(router, context)
 
@@ -227,12 +236,13 @@ def _patch_plan_request(
         action="patch_plan_request",
         patchPlanRequest=PatchPlanRequest(
             targetSummary=_target_summary(router),
-            status="apply_missing",
-            blockedBy="kor-7c",
+            status="action_bridge_missing",
+            blockedBy="openclaw-action-bridge",
         ),
         rationale=(
-            "edit_instruction: patch-planner finns (kor-7b) men apply/version "
-            "(kor-7c) saknas - ärlig flagga, ingen falsk success."
+            "edit_instruction: patch-planner -> apply -> targeted render finns "
+            "(kor-7b/7c/7d), men OpenClaw-action-bryggan som kör dem från ett "
+            "OpenClaw-beslut saknas - ärlig flagga, ingen falsk success."
         ),
     )
 
@@ -240,11 +250,31 @@ def _patch_plan_request(
 def _multi_intent(
     router: RouterDecision, context: AssembledContext
 ) -> OpenClawDecision:
-    # Per-subtask handling, aggregated to one V0 action: if any subtask is an
-    # edit, the whole request needs the (still-missing) patch-apply path, so
-    # V0 is honest and returns patch_plan_request; otherwise it is plan_only.
-    has_edit = any(s.editKind != "none" for s in router.subtasks)
+    # Per-subtask handling, aggregated to one V0 action.
     plan = [_subtask_line(i, s) for i, s in enumerate(router.subtasks, start=1)]
+    # Reference-gated multi_intent: if the router flagged an external reference,
+    # a do-not-copy risk, or already chose plan_only, propose a reference/plan
+    # first instead of jumping to a patch - kor-6a routes a reference multi-intent
+    # to plan_only/do_not_copy_exact and OpenClaw must respect that gate so a
+    # "lägg X som på example.com och ändra rubriken" goes to analysis first.
+    if (
+        router.reference is not None
+        or router.risk == "do_not_copy_exact"
+        or router.buildRequirement == "plan_only"
+    ):
+        return OpenClawDecision(
+            router=router,
+            context=context,
+            action="plan_only",
+            plan=plan,
+            rationale=(
+                "multi_intent med referens/plan_only: analysera referensen och "
+                "föreslå en plan först, kopiera aldrig exakt (ingen patch)."
+            ),
+        )
+    # Otherwise: if any subtask is an edit, the whole request needs the (still-
+    # unbridged) patch path, so V0 is honest and returns patch_plan_request.
+    has_edit = any(s.editKind != "none" for s in router.subtasks)
     if has_edit:
         return OpenClawDecision(
             router=router,
@@ -253,12 +283,12 @@ def _multi_intent(
             plan=plan,
             patchPlanRequest=PatchPlanRequest(
                 targetSummary=_target_summary(router),
-                status="apply_missing",
-                blockedBy="kor-7c",
+                status="action_bridge_missing",
+                blockedBy="openclaw-action-bridge",
             ),
             rationale=(
                 "multi_intent med minst en ändring: aggregerat till "
-                "patch_plan_request (apply saknas, kor-7c)."
+                "patch_plan_request (OpenClaw-action-bryggan saknas)."
             ),
         )
     return OpenClawDecision(

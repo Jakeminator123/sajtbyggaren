@@ -41,6 +41,8 @@ from packages.generation.orchestration.openclaw import (  # noqa: E402
 from packages.generation.orchestration.router import classify_message  # noqa: E402
 from packages.generation.orchestration.router.models import (  # noqa: E402
     RouterDecision,
+    RouterReference,
+    RouterSubtask,
 )
 
 # ---------------------------------------------------------------------------
@@ -109,18 +111,19 @@ def test_site_review_is_answer_only_when_no_change_wanted():
 
 
 def test_edit_instruction_is_honest_patch_plan_request():
-    """edit_instruction -> patch_plan_request{apply_missing, kor-7c}.
+    """edit_instruction -> patch_plan_request{action_bridge_missing}.
 
-    The single most important honesty test: an edit order in V0 must NOT
-    fake a success - it returns the missing-apply flag (planner exists at
-    kor-7b, apply/version at kor-7c does not).
+    The single most important honesty test: an edit order in V0 must NOT fake a
+    success - it returns the missing-bridge flag. The patch -> apply -> targeted
+    render chain exists (kor-7b/7c/7d), but the OpenClaw action-bridge that drives
+    it from a decision does not.
     """
     d = _decide_for("lägg en klocka i andra sektionen till vänster")
     assert d.router.messageKind == "edit_instruction"
     assert d.action == "patch_plan_request"
     assert d.patchPlanRequest is not None
-    assert d.patchPlanRequest.status == "apply_missing"
-    assert d.patchPlanRequest.blockedBy == "kor-7c"
+    assert d.patchPlanRequest.status == "action_bridge_missing"
+    assert d.patchPlanRequest.blockedBy == "openclaw-action-bridge"
     assert d.patchPlanRequest.targetSummary.startswith("contentBlocks.")
     # Never an applied effect.
     assert d.appliedVisibleEffect is False
@@ -135,7 +138,7 @@ def test_multi_intent_with_edit_aggregates_to_patch_plan_request():
     assert d.router.messageKind == "multi_intent"
     assert d.action == "patch_plan_request"
     assert d.patchPlanRequest is not None
-    assert d.patchPlanRequest.status == "apply_missing"
+    assert d.patchPlanRequest.status == "action_bridge_missing"
     # One plan line per subtask, for transparency.
     assert len(d.plan) == len(d.router.subtasks)
 
@@ -241,10 +244,77 @@ def test_toolcall_always_requires_approval():
 
 
 def test_patch_plan_request_defaults_are_honest():
-    """PatchPlanRequest defaults to the honest apply-missing/kor-7c marker."""
+    """PatchPlanRequest defaults to the honest action-bridge-missing marker."""
     p = PatchPlanRequest(targetSummary="contentBlocks.home.hero.<field>")
-    assert p.status == "apply_missing"
-    assert p.blockedBy == "kor-7c"
+    assert p.status == "action_bridge_missing"
+    assert p.blockedBy == "openclaw-action-bridge"
+
+
+def test_applied_visible_effect_cannot_be_mutated_true():
+    """validate_assignment re-runs the validator on assignment too, so a caller
+    cannot mute appliedVisibleEffect to True after construction (KÖR-o2 §6)."""
+    d = OpenClawDecision(
+        router=classify_message("vad är klockan?"),
+        context=AssembledContext(contextLevel="none"),
+        action="answer_only",
+    )
+    d.appliedVisibleEffect = True
+    assert d.appliedVisibleEffect is False
+
+
+def test_toolcall_requires_approval_cannot_be_mutated_false():
+    """A ToolCall's requiresApproval cannot be muted to False post-construction."""
+    tc = ToolCall(name="propose_patch_plan")
+    tc.requiresApproval = False
+    assert tc.requiresApproval is True
+
+
+# ---------------------------------------------------------------------------
+# Reference gating + reference-url forwarding (KÖR-o2 §3/§4)
+# ---------------------------------------------------------------------------
+
+
+def test_multi_intent_with_reference_is_plan_only_not_patch():
+    """A multi_intent carrying an external reference goes to plan_only
+    (referensanalys först), never patch_plan_request, even with an edit subtask."""
+    router = RouterDecision(
+        messageKind="multi_intent",
+        buildRequirement="plan_only",
+        contextLevel="external_reference",
+        reference=RouterReference(url="https://aftonbladet.se"),
+        risk="do_not_copy_exact",
+        subtasks=[
+            RouterSubtask(
+                editKind="component_add",
+                instruction="lägg en klocka som på aftonbladet.se",
+            ),
+            RouterSubtask(editKind="copy_change", instruction="ändra rubriken"),
+        ],
+    )
+    d = decide(router, AssembledContext(contextLevel="external_reference"))
+    assert d.action == "plan_only"
+    assert d.patchPlanRequest is None
+    assert len(d.plan) == len(router.subtasks)
+
+
+def test_orchestrate_forwards_reference_url_to_assembler(monkeypatch):
+    """orchestrate passes router.reference.url to assemble_context so an external
+    reference is not assembled on empty context (KÖR-o2 §3)."""
+    import packages.generation.orchestration.openclaw.core as core
+
+    router = classify_message("samma klocka som på aftonbladet.se")
+    assert router.reference is not None and router.reference.url
+
+    captured: dict = {}
+
+    def _spy(level, **kwargs):
+        captured["level"] = level
+        captured["kwargs"] = kwargs
+        return AssembledContext(contextLevel=level)
+
+    monkeypatch.setattr(core, "assemble_context", _spy)
+    core.orchestrate("samma klocka som på aftonbladet.se")
+    assert captured["kwargs"].get("url") == router.reference.url
 
 
 # ---------------------------------------------------------------------------

@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..context.models import AssembledContext
 from ..router.models import RouterDecision
@@ -59,6 +59,10 @@ class ToolCall(BaseModel):
     it without a schema change.
     """
 
+    # validate_assignment re-runs the validators on post-construction assignment
+    # so requiresApproval can never be muted to False after the fact (KÖR-o2 §6).
+    model_config = ConfigDict(validate_assignment=True)
+
     name: str
     args: dict[str, Any] = Field(default_factory=dict)
     requiresApproval: bool = True
@@ -72,18 +76,19 @@ class ToolCall(BaseModel):
 
 
 class PatchPlanRequest(BaseModel):
-    """An honest "a patch is needed but the apply path is missing" marker.
+    """An honest "a patch is needed but the OpenClaw action-bridge is missing" marker.
 
-    Set only for an ``edit_instruction`` in V0: the patch planner exists
-    (kor-7b, #171) but apply/version (kor-7c) does not, so V0 returns this
-    instead of faking a success (kor-o1 "Tool-ytan" + 04 §9). ``status`` and
-    ``blockedBy`` are plain strings so a later slice can report a different
-    status (e.g. once kor-7c lands) without a schema change.
+    Set only for an ``edit_instruction`` in V0: the patch planner -> apply ->
+    targeted render chain exists (kor-7b/7c/7d, all merged), but the OpenClaw
+    action-bridge that would drive it *from an OpenClaw decision* does not, so V0
+    returns this instead of faking a success (kor-o1 "Tool-ytan" + 04 §9).
+    ``status`` and ``blockedBy`` are plain strings so a later slice can report a
+    different status (e.g. once the action-bridge lands) without a schema change.
     """
 
     targetSummary: str = ""
-    status: str = "apply_missing"
-    blockedBy: str | None = "kor-7c"
+    status: str = "action_bridge_missing"
+    blockedBy: str | None = "openclaw-action-bridge"
 
 
 class OpenClawDecision(BaseModel):
@@ -97,9 +102,13 @@ class OpenClawDecision(BaseModel):
     Exactly one of the result fields is meaningful per ``action``:
     ``answer`` for ``answer_only``, ``clarifyingQuestion`` for
     ``clarification``, ``plan`` for ``plan_only``, and ``patchPlanRequest``
-    for ``patch_plan_request``. ``rationale`` is a short trace/observability
+    for     ``patch_plan_request``. ``rationale`` is a short trace/observability
     line, never customer copy.
     """
+
+    # validate_assignment re-runs the validators on post-construction assignment
+    # so appliedVisibleEffect can never be muted to True after the fact (KÖR-o2 §6).
+    model_config = ConfigDict(validate_assignment=True)
 
     router: RouterDecision
     context: AssembledContext

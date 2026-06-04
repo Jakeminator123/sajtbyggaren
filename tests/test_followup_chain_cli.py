@@ -267,6 +267,39 @@ def test_followup_chain_routes_via_llm_fallback(
     assert calls["n"] == 1, "follow-up chain must classify via the KÖR-6b fallback"
 
 
+def test_followup_chain_forwards_base_run_id_to_apply(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """run_followup_chain passes base_run_id through to apply_patch_plan so apply
+    iterates from the same historical version the context was read from, instead
+    of the rolling latest (kör-7 base-run consistency)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    import packages.generation.orchestration.apply as apply_mod
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, base_run_id = _seed_init_build(tmp_path)
+
+    captured: dict = {}
+    real_apply = apply_mod.apply_patch_plan
+
+    def _spy(plan, **kwargs):
+        captured["base_run_id"] = kwargs.get("base_run_id")
+        return real_apply(plan, **kwargs)
+
+    monkeypatch.setattr(apply_mod, "apply_patch_plan", _spy)
+
+    run_followup_chain(
+        SITE_ID,
+        CAPABILITY_FOLLOWUP,
+        base_run_id=base_run_id,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert captured["base_run_id"] == base_run_id
+
+
 def test_followup_chain_is_mock_safe_without_key(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

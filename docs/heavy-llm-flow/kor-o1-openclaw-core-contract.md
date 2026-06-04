@@ -74,8 +74,8 @@ OpenClaw Core komponerar de befintliga typerna — den uppfinner inga nya enums:
   "plan": ["steg 1", "…"],  // satt bara för plan_only / reference
   "patchPlanRequest": {      // satt bara för edit_instruction i V0:
     "targetSummary": "contentBlocks.home.<section>.<field>",
-    "status": "apply_missing",   // kor-7b planner finns (#171); apply/version (7c) saknas
-    "blockedBy": "kor-7c"
+    "status": "action_bridge_missing", // kor-7b/7c/7d finns; OpenClaw-action-bryggan saknas
+    "blockedBy": "openclaw-action-bridge"
   },
   "toolCalls": [             // FÖRESLAGNA verktyg — aldrig auto-körda i V0:
     { "name": "propose_patch_plan", "args": {},
@@ -111,11 +111,13 @@ V0 har en **liten, read-only** verktygslåda. Inga skriv-/build-verktyg finns i 
 | `assemble_context(level, …)` | `kor-7a` `context/` | hämta exakt den `contextLevel` routern satte, inom budget | skriva, bygga, boota preview |
 | `decide(router, context)` | **nytt, V0** | välja `OpenClawAction` + formulera svar/plan/fråga | applicera patch, skriva fil, bygga |
 
-Tillägg **senare**: `plan_patches` (dry-run) finns redan (`kor-7b`, #171 inne);
-`apply_patch → ny version` (`kor-7c`) + targeted rebuild (`kor-7d`) saknas. V0 stannar
-**före** apply och returnerar `patch_plan_request{status:"apply_missing", blockedBy:"kor-7c"}`
-på en ändringsorder — ärligt, inte en falsk success. (V0 binder bara router + context; den
-anropar inte själv patch-planeraren — den wiringen är patch-flow/`kor-o3`.)
+Tillägg **senare**: `plan_patches` (dry-run, `kor-7b`), `apply_patch → ny version`
+(`kor-7c`) och targeted rebuild (`kor-7d`) finns alla redan (mergade). Det som saknas är
+**OpenClaw-action-bryggan** som kör den kedjan *från ett OpenClaw-beslut*. V0 stannar
+**före** den bryggan och returnerar `patch_plan_request{status:"action_bridge_missing",
+blockedBy:"openclaw-action-bridge"}` på en ändringsorder — ärligt, inte en falsk success.
+(V0 binder bara router + context; den anropar inte själv patch-planeraren — den wiringen är
+patch-flow/`kor-o3`.)
 
 ## Capability-plan (meddelande → kontext → handling, V0)
 
@@ -202,8 +204,9 @@ Krav:
   forst i patch-flow). Sa slipper kor-o3 en schemaandring senare.
 - Handlingar i V0: answer_only / clarification / plan_only / patch_plan_request.
   V0 bygger ALDRIG, skriver ALDRIG fil, startar ALDRIG preview.
-- En edit_instruction i V0 ger patch_plan_request{status:"apply_missing", blockedBy:"kor-7c"}
-  (kor-7b planner finns; apply/version 7c saknas) - arligt, ingen falsk success.
+- En edit_instruction i V0 ger patch_plan_request{status:"action_bridge_missing",
+  blockedBy:"openclaw-action-bridge"} (kor-7b/7c/7d finns; OpenClaw-action-bryggan som kor
+  dem fran ett beslut saknas) - arligt, ingen falsk success.
 - Mock-safe (ingen OPENAI_API_KEY behovs; deterministiskt over router+context).
 
 Definition of done: capability-planens rader (answer/clarify/plan/patch_plan_request)

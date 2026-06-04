@@ -4948,6 +4948,7 @@ def run_followup_chain(
             site_id=site_id,
             follow_up_prompt=follow_up_prompt,
             output_dir=prompt_inputs_dir,
+            base_run_id=base_run_id,
             runs_dir=runs_root,
         )
     except PatchApplyError as exc:
