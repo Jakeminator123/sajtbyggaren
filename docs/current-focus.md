@@ -5,6 +5,13 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+> **Nästa fas (2026-06-04):** hela `docs/heavy-llm-flow/`-kör-sekvensen är
+> implementerad (`jakob-be` @ `54055fc`). **Bygg inga nya kör-kort.** Nästa arbete
+> är härdning → wiring → eval enligt
+> [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md)
+> (med syntes av de externa reviewerna + arkiveringsplan). Ny featureutveckling
+> väntar tills "allt i synk"-checklistan där är grön.
+
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
 `jakob-be` @ `2033282`, rent träd. **Denna session mergade:** #179 (kor-3a:
