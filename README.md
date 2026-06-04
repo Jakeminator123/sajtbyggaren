@@ -156,7 +156,6 @@ Python-cache (`__pycache__`, `.pytest_cache`) inom tillåtna rötter.
 | [`tests/`](tests/) | Evals och schemavalidering. |
 | [`data/`](data/) | Lokal persistent state (versions/, runs/). |
 | [`docs/`](docs/) | Mänsklig dokumentation och arkitektur. |
-| [`referens/`](referens/) | Externt input-material. Inte produktkod. Se [`referens/README.md`](referens/README.md). |
 | [`.cursor/rules/`](.cursor/rules/) | Cursor-agent-regler (auto-genererade speglar från `governance/rules/`). |
 
 ## Språk
