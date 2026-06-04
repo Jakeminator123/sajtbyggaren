@@ -246,6 +246,67 @@ def test_llm_none_output_falls_back_to_heuristic(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Cross-field clamp - a semantically inconsistent LLM pairing can never build
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "kind,given,expected",
+    [
+        # Non-edit kinds can never escalate to a build -> clamped to least action.
+        ("answer_only", "targeted_rebuild", "none"),
+        ("component_discovery", "full_rebuild", "none"),
+        ("site_review", "targeted_rebuild", "none"),
+        ("reference_analysis", "targeted_rebuild", "plan_only"),
+        ("bug_report", "full_rebuild", "plan_only"),
+        ("unclear", "artifact_patch_only", "none"),
+        ("multi_intent", "none", "plan_only"),
+        ("edit_instruction", "none", "artifact_patch_only"),
+        # Values already in the allowed set are left untouched.
+        ("edit_instruction", "targeted_rebuild", "targeted_rebuild"),
+        ("site_review", "plan_only", "plan_only"),
+        ("multi_intent", "full_rebuild", "full_rebuild"),
+    ],
+)
+def test_clamp_build_requirement(kind, given, expected):
+    decision = RouterDecision(messageKind=kind, buildRequirement=given)
+    llm_fallback._clamp_build_requirement(decision)
+    assert decision.buildRequirement == expected
+
+
+def test_llm_inconsistent_answer_only_cannot_build(monkeypatch):
+    """routerModel returning answer_only + targeted_rebuild is clamped to none,
+    so a pure question can never actuate a build/preview (kor-6a / 02 §2)."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    crafted = RouterDecision(
+        messageKind="answer_only",
+        buildRequirement="targeted_rebuild",  # semantically inconsistent
+        rationale="pure question wrongly marked as a rebuild",
+    )
+    monkeypatch.setattr(llm_fallback, "_real_router_decision", lambda *a, **k: crafted)
+
+    decision = classify_message_with_llm_fallback("fixa det där", model="test-model")
+    assert decision.buildRequirement == "none"
+    assert decision.shouldStartPreview is False
+
+
+def test_llm_valid_edit_is_not_clamped(monkeypatch):
+    """A consistent edit_instruction + targeted_rebuild is preserved (no clamp)."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    crafted = RouterDecision(
+        messageKind="edit_instruction",
+        editKind="component_add",
+        buildRequirement="targeted_rebuild",
+        rationale="add a component",
+    )
+    monkeypatch.setattr(llm_fallback, "_real_router_decision", lambda *a, **k: crafted)
+
+    decision = classify_message_with_llm_fallback("fixa det där", model="test-model")
+    assert decision.buildRequirement == "targeted_rebuild"
+    assert decision.shouldStartPreview is True
+
+
+# ---------------------------------------------------------------------------
 # routerModel resolution from the policy
 # ---------------------------------------------------------------------------
 

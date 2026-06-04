@@ -4847,7 +4847,7 @@ def run_followup_chain(
     from packages.generation.orchestration.patch import plan_patches
     from packages.generation.orchestration.router import (
         RouterContext,
-        classify_message,
+        classify_message_with_llm_fallback,
     )
 
     runs_root = runs_dir if runs_dir is not None else RUNS_DIR
@@ -4890,7 +4890,10 @@ def run_followup_chain(
         if isinstance(route_sections_payload, dict)
         else {}
     )
-    decision = classify_message(
+    # KÖR-6b: escalate genuinely ambiguous (unclear/long/complex multi_intent)
+    # follow-ups to routerModel when OPENAI_API_KEY is set; identical to the
+    # deterministic KÖR-6a heuristic without a key (no-key parity preserved).
+    decision = classify_message_with_llm_fallback(
         follow_up_prompt,
         context=RouterContext(siteId=site_id, routeSections=route_sections),
     )

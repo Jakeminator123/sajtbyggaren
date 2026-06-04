@@ -234,6 +234,39 @@ def test_cli_followup_entrypoint(
     assert (prompt_inputs / f"{SITE_ID}.v2.project-input.json").exists()
 
 
+def test_followup_chain_routes_via_llm_fallback(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The chain classifies via classify_message_with_llm_fallback (KÖR-6b), not
+    the bare KÖR-6a heuristic, so ambiguous/long follow-ups can escalate to
+    routerModel when a key is present. Without a key it stays heuristic-identical;
+    here we only assert the fallback entrypoint is the one invoked."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    import packages.generation.orchestration.router as router_pkg
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, _base = _seed_init_build(tmp_path)
+
+    calls = {"n": 0}
+    real = router_pkg.classify_message_with_llm_fallback
+
+    def _spy(message, **kwargs):
+        calls["n"] += 1
+        return real(message, **kwargs)
+
+    monkeypatch.setattr(router_pkg, "classify_message_with_llm_fallback", _spy)
+
+    run_followup_chain(
+        SITE_ID,
+        "vad kostar en logga?",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert calls["n"] == 1, "follow-up chain must classify via the KÖR-6b fallback"
+
+
 def test_followup_chain_is_mock_safe_without_key(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

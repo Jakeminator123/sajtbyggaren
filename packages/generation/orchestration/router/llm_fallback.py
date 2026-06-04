@@ -65,6 +65,30 @@ LONG_WORD_THRESHOLD = 25
 LONG_CHAR_THRESHOLD = 180
 MULTI_INTENT_MIN_ACTIONABLE = 3
 
+# Per-messageKind allowlist for buildRequirement (kor-6a / 02 §2). A non-edit
+# kind must never escalate to a build; an edit kind must do at least a patch.
+# routerModel can return a schema-valid but semantically inconsistent pair, so an
+# LLM decision is clamped to the least-action value its kind allows before
+# shouldStartPreview is recomputed. The deterministic heuristic is already
+# consistent, so in practice the clamp only ever rewrites a bad model output.
+_BUILD_RANK: dict[str, int] = {
+    "none": 0,
+    "plan_only": 1,
+    "artifact_patch_only": 2,
+    "targeted_rebuild": 3,
+    "full_rebuild": 4,
+}
+_ALLOWED_BUILD_BY_KIND: dict[str, tuple[str, ...]] = {
+    "answer_only": ("none",),
+    "component_discovery": ("none",),
+    "site_review": ("none", "plan_only"),
+    "reference_analysis": ("plan_only",),
+    "bug_report": ("plan_only",),
+    "unclear": ("none",),
+    "edit_instruction": ("artifact_patch_only", "targeted_rebuild", "full_rebuild"),
+    "multi_intent": ("plan_only", "targeted_rebuild", "full_rebuild"),
+}
+
 
 def has_openai_api_key() -> bool:
     """True when OPENAI_API_KEY is set to a non-whitespace value.
@@ -148,6 +172,23 @@ def needs_llm_fallback(decision: RouterDecision, message: str) -> bool:
         if actionable >= MULTI_INTENT_MIN_ACTIONABLE:
             return True
     return False
+
+
+def _clamp_build_requirement(decision: RouterDecision) -> RouterDecision:
+    """Clamp ``buildRequirement`` to the set allowed for ``messageKind``.
+
+    Defensive normalisation of an LLM-produced decision (KÖR-6b): routerModel can
+    return a schema-valid but semantically inconsistent pair - e.g. messageKind
+    ``answer_only`` with buildRequirement ``targeted_rebuild``. Left unclamped, the
+    deterministic ``shouldStartPreview`` recompute would then actuate a build for a
+    pure question. We clamp to the least-action value the kind allows so a non-edit
+    kind can never start a build/preview (kor-6a / 02 §2). Mutates and returns
+    ``decision``; a value already in the allowed set is left untouched.
+    """
+    allowed = _ALLOWED_BUILD_BY_KIND.get(decision.messageKind)
+    if allowed and decision.buildRequirement not in allowed:
+        decision.buildRequirement = min(allowed, key=lambda b: _BUILD_RANK[b])
+    return decision
 
 
 _SYSTEM_INSTRUCTIONS = (
@@ -267,6 +308,10 @@ def classify_message_with_llm_fallback(
     if decision is None:
         return heuristic
 
+    # Clamp a semantically inconsistent model pairing (e.g. answer_only +
+    # targeted_rebuild) BEFORE recomputing the actuation flag, so a non-edit kind
+    # can never escalate to a build/preview (kor-6a / 02 §2).
+    _clamp_build_requirement(decision)
     # The router owns shouldStartPreview as the single actuation flag: recompute
     # it deterministically so the LLM can never actuate a preview it should not.
     decision.shouldStartPreview = _should_start_preview(decision.buildRequirement, ctx)
