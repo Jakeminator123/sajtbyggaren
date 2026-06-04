@@ -5,12 +5,14 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-> **Nästa fas (2026-06-04):** hela `docs/heavy-llm-flow/`-kör-sekvensen är
-> implementerad (`jakob-be` @ `54055fc`). **Bygg inga nya kör-kort.** Nästa arbete
-> är härdning → wiring → eval enligt
-> [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md)
-> (med syntes av de externa reviewerna + arkiveringsplan). Ny featureutveckling
-> väntar tills "allt i synk"-checklistan där är grön.
+> **Nästa fas (uppdaterad 2026-06-05):** hela `docs/heavy-llm-flow/`-kör-sekvensen är
+> implementerad OCH **Fas 0-härdningen (router/OpenClaw-sömmarna) + #187 npm-check är klara**
+> (`jakob-be` @ `d149f23`). **Bygg inga nya kör-kort.** Nästa arbete enligt
+> [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md): **Fas 1** —
+> wira `routerDecision`/follow-up-kedjan i `/api/prompt` (låser #177, Christopher-lane) +
+> rerender-wiring (kor-5); sedan **Fas 2** baseline-eval (operatörsnärvaro: kostar tokens +
+> kräver ögon på renderingen). `referens/` borttagen (#191), `MIN_IDE/` raderad,
+> `backup_100_BRA` pushad som återställningspunkt.
 
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
@@ -390,7 +392,17 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `029f652` (2026-06-04 natt UTC, `jakob-be` HEAD — #190 kor-4b verifierModel
+Last verified state: `d149f23` (2026-06-05 natt UTC, `jakob-be` HEAD — **POST-BUILD FAS 0 KLAR**:
+router/OpenClaw-sömmarna härdade i tre skivor — `d8ef7ea` (KÖR-6b-fallback i CLI-followup +
+RouterDecision cross-field-clamp så non-edit aldrig kan starta build), `bb94445` (OpenClaw
+reference-gating i multi_intent + `orchestrate()` skickar `reference.url` + action-bridge-label
+ersätter stale `blockedBy="kor-7c"` + `validate_assignment`-immutability + `base_run_id`→apply),
+`d149f23` (#187: npm `packageManager`-check som pendingPropagation-fält, policy v2, + EN-docstring).
+Full `pytest tests/` grön (endast väntade skips), governance/rules_sync/term_coverage gröna. Dessförinnan:
+`002045f` (#191 mergad: `referens/` borttagen + README/paths.py/repo-boundaries-rensning), `86f9df6`
+(post-build-status + plan-doc). `MIN_IDE/` raderad lokalt; `backup_100_BRA` pushad. **Nästa: Fas 1**
+(`/api/prompt`-wiring, Christopher-lane) + rerender-wiring; **Fas 2** baseline-eval (operatörsnärvaro).
+Föregående: `029f652` (#190 kor-4b verifierModel
 read-only smak-critic ovanpå kor-4a (mock=4a, dedup, icke-blockerande, llm-models v8). **HELA
 KÖR-SEKVENSEN i docs/heavy-llm-flow/ ÄR NU IMPLEMENTERAD** (0/1a/1b/1c/2/3a/3b/4a/4b/5/6a/6b/7a/7b/7c/7d/
 STAB/o1/o2). Kvar = INKOPPLING, inte fler kör-kort: rerender-wiring (gör kor-5 verklig),

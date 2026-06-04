@@ -41,6 +41,14 @@ Varje fas = en eller flera dispatchbara agentuppgifter. Behåll builderprofilen
 (`04-builder-profil.md`) och scope-baserade checks. **Princip: ingen ny LLM-slice
 utan inkopplingsplan.**
 
+> **Status 2026-06-05 (nattsession):** Fas 0 är **klar** — router/OpenClaw-sömmarna
+> härdade i tre skivor på `jakob-be`: `d8ef7ea` (KÖR-6b-fallback i CLI-followup +
+> RouterDecision cross-field-clamp), `bb94445` (reference-gating + action-bridge-label +
+> validate_assignment-immutability + base_run_id→apply) och `d149f23` (#187 npm
+> packageManager-check + EN-docstring, policy v2). Punkt 1–8 nedan + #187 npm-pin gjorda.
+> **Kvar inom #187:** lockfile-check + hårt core-deps-krav (rör step-4/policy-schema).
+> Full pytest + governance/rules_sync/term_coverage gröna. **Nästa: Fas 1.**
+
 ### Fas 0 — Härda router/OpenClaw-sömmarna (FÖRE wiring)
 
 Latenta söm-fel verifierade i koden. De blockerar inget idag (OpenClaw Core är
