@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/platform-baseline.schema.json",
   "policyId": "platform-baseline.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
   "adr": "0037",
   "purpose": "En sanningskälla för runtime- och beroende-versioner. Lokalt, Vercel, sandbox, starters och genererad output ska alla läsa samma pins i stället för att duplicera dem för hand i sex separata package.json. scripts/check_platform_baseline.py asserterar att apps/viewser/package.json och alla data/starters/*/package.json (codegen-mallen) konformar. Värdena är grundade i nuvarande viewser- och starter-pins (verifierat 2026-06-03). Bryter inte ADR 0030: ingen workspace/catalog införs, varje genererad sajt och starter förblir fristående vanlig Next.js.",
@@ -66,9 +66,10 @@
       "prettier-plugin-tailwindcss",
       "@types/node",
       "engines.node",
-      "volta.node"
+      "volta.node",
+      "packageManager"
     ],
-    "comment": "enforced = pins som redan är uniforma över viewser + starters; --check failar deterministiskt om en av dem driftar (exakt strängmatchning, present-only: en starter måste inte använda varje paket). pendingPropagation = mål som steg 4 propagerar via ett granskat --fix (operatörs-OK + christopher-ui-koordinering): engines.node + volta.node injiceras, @types/node bumpas ^20 -> ^24, och de pins som idag varierar (tailwindcss/@tailwindcss/postcss ^4 vs ^4.0.14, prettier/prettier-plugin-tailwindcss exakt i viewser vs caret i starters) alignas. När steg 4 landat flyttas dessa till enforced och pendingPropagation krymper."
+    "comment": "enforced = pins som redan är uniforma över viewser + starters; --check failar deterministiskt om en av dem driftar (exakt strängmatchning, present-only: en starter måste inte använda varje paket). pendingPropagation = mål som steg 4 propagerar via ett granskat --fix (operatörs-OK + christopher-ui-koordinering): engines.node + volta.node injiceras, @types/node bumpas ^20 -> ^24, och de pins som idag varierar (tailwindcss/@tailwindcss/postcss ^4 vs ^4.0.14, prettier/prettier-plugin-tailwindcss exakt i viewser vs caret i starters) alignas. Token packageManager (v2) avser package.json-fältet packageManager (corepack npm-pin mot runtime.npm): --check rapporterar saknad eller fel npm-major som pending men failar inte (exakt version sätts av corepack/steg 4, inte ur ett 'x'-intervall). När steg 4 landat flyttas dessa till enforced och pendingPropagation krymper."
   },
   "targets": {
     "include": [

@@ -76,6 +76,7 @@ def _conformant_package(baseline: dict) -> dict[str, Any]:
         },
         "engines": {"node": runtime["node"]},
         "volta": {"node": runtime["voltaNode"]},
+        "packageManager": f"npm@{runtime['npm'].split('.')[0]}.0.0",
     }
 
 
@@ -159,6 +160,27 @@ def test_missing_engines_and_volta_are_pending_notes(baseline: dict):
     assert errors == []
     assert any("engines.node" in n for n in notes)
     assert any("volta.node" in n for n in notes)
+
+
+@pytest.mark.tooling
+def test_missing_package_manager_is_pending_note(baseline: dict):
+    """runtime.npm is now checked: a missing packageManager is a pending note
+    (step 4 / corepack sets it), never a hard error."""
+    pkg = _conformant_package(baseline)
+    pkg.pop("packageManager")
+    errors, notes = check_package(pkg, baseline)
+    assert errors == []
+    assert any("packageManager" in n for n in notes), notes
+
+
+@pytest.mark.tooling
+def test_mismatched_package_manager_npm_major_is_pending_note(baseline: dict):
+    """A packageManager pinning a different npm major is reported as pending."""
+    pkg = _conformant_package(baseline)
+    pkg["packageManager"] = "npm@10.9.0"  # wrong major vs baseline 11.x
+    errors, notes = check_package(pkg, baseline)
+    assert errors == []
+    assert any("packageManager" in n for n in notes), notes
 
 
 @pytest.mark.tooling

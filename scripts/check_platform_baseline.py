@@ -1,28 +1,28 @@
-"""Drift-checker för plattforms-versionsbaslinjen (ADR 0037).
+"""Drift checker for the platform version baseline (ADR 0037).
 
-Baslinjen i ``governance/policies/platform-baseline.v1.json`` är EN
-sanningskälla för runtime- och beroende-versioner. Det här skriptet
-asserterar att ``apps/viewser/package.json`` och alla
-``data/starters/*/package.json`` (codegen-mallen) konformar mot den.
+The baseline in ``governance/policies/platform-baseline.v1.json`` is the single
+source of truth for runtime and dependency versions. This script asserts that
+``apps/viewser/package.json`` and every ``data/starters/*/package.json`` (the
+codegen template) conform to it.
 
-Körs från repo-roten:
+Run from the repo root:
 
-    python scripts/check_platform_baseline.py            # samma som --check
-    python scripts/check_platform_baseline.py --check    # exit-kod 1 vid drift
-    python scripts/check_platform_baseline.py --fix       # skriv engines/volta + align pins
+    python scripts/check_platform_baseline.py            # same as --check
+    python scripts/check_platform_baseline.py --check    # exit code 1 on drift
+    python scripts/check_platform_baseline.py --fix      # write engines/volta + align pins
 
-``--check`` (default, wirad i guard-sviten) failar deterministiskt om en
-``enforced`` pin driftar från baslinjen. Mål som baslinjen markerar
-``pendingPropagation`` (engines/volta + @types/node-bump + de pins som idag
-varierar) rapporteras men failar inte ``--check`` — de propageras av ett
-granskat ``--fix`` i steg 4 (operatörs-OK + christopher-ui-koordinering, se
-ADR 0037).
+``--check`` (the default, wired into the guard suite) fails deterministically
+when an ``enforced`` pin drifts from the baseline. Targets the baseline marks
+``pendingPropagation`` (engines/volta, the @types/node bump, the npm
+``packageManager`` pin, and the pins that vary today) are reported but do not
+fail ``--check`` - they are propagated by a reviewed ``--fix`` in step 4
+(operator OK + christopher-ui coordination, see ADR 0037).
 
-``--fix`` skriver in ``engines.node`` + ``volta.node`` och sätter varje
-baslinje-listad pin som förekommer i en ``package.json`` till baslinjens
-version (samma mekaniska mönster som ``rules_sync.py``). Det rör
-``apps/viewser/package.json`` (Christophers lane) + ``data/starters/*`` och
-ska därför bara köras efter operatörs-OK.
+``--fix`` writes ``engines.node`` + ``volta.node`` and sets every baseline-listed
+pin present in a ``package.json`` to the baseline version (the same mechanical
+pattern as ``rules_sync.py``). It touches ``apps/viewser/package.json``
+(Christopher's lane) + ``data/starters/*`` and must therefore only run after
+operator OK.
 """
 
 from __future__ import annotations
@@ -39,10 +39,11 @@ BASELINE_PATH = REPO_ROOT / "governance" / "policies" / "platform-baseline.v1.js
 # dubbletter, även om npm inte tillåter samma paket i flera).
 _DEP_FIELDS = ("dependencies", "devDependencies")
 
-# pendingPropagation-tokens som inte är paketpins utan package.json-fält.
+# pendingPropagation tokens that are package.json fields, not package pins.
 _ENGINES_NODE_TOKEN = "engines.node"
 _VOLTA_NODE_TOKEN = "volta.node"
-_FIELD_TOKENS = (_ENGINES_NODE_TOKEN, _VOLTA_NODE_TOKEN)
+_PACKAGE_MANAGER_TOKEN = "packageManager"
+_FIELD_TOKENS = (_ENGINES_NODE_TOKEN, _VOLTA_NODE_TOKEN, _PACKAGE_MANAGER_TOKEN)
 
 
 def load_json(path: Path) -> dict:
@@ -175,6 +176,26 @@ def check_package(pkg: dict, baseline: dict) -> tuple[list[str], list[str]]:
         (errors if target == "enforced" else notes).append(
             msg if target == "enforced" else msg + " (pendingPropagation)"
         )
+
+    # packageManager (npm pin). runtime.npm declares the npm major (e.g. "11.x");
+    # the field, when present, is corepack-style "npm@<version>". It is a
+    # pendingPropagation field-token (not enforced today), so a missing or
+    # major-mismatched pin is a step-4 note, never a hard error - the exact
+    # version is set by corepack / a reviewed --fix, not derived from an "x" range.
+    expected_npm = runtime.get("npm")
+    if expected_npm:
+        npm_major = str(expected_npm).split(".")[0]
+        package_manager = pkg.get("packageManager")
+        target = _engine_bucket(_PACKAGE_MANAGER_TOKEN, enforced, pending)
+        pm_msg: str | None = None
+        if package_manager is None:
+            pm_msg = f"packageManager saknas (baslinje npm {expected_npm!r})"
+        elif not str(package_manager).startswith(f"npm@{npm_major}"):
+            pm_msg = f"packageManager: {package_manager!r} != npm@{expected_npm}"
+        if pm_msg is not None:
+            (errors if target == "enforced" else notes).append(
+                pm_msg if target == "enforced" else pm_msg + " (pendingPropagation)"
+            )
 
     return errors, notes
 
