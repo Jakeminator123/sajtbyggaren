@@ -47,7 +47,7 @@ Det vi inte tar med - exakta förbjudna termer står i [`naming-dictionary.v1.js
 
 ## Implementation: WebContainer / StackBlitz
 
-`StackBlitzRuntime` bygger på `@webcontainer/api`. Implementationsdetaljer (boot/mount/spawn/server-ready, COOP/COEP-headers, vanliga fel) ligger i [`docs/integrations/webcontainers-notes.md`](../integrations/webcontainers-notes.md). Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline lever i [`docs/integrations/stackblitz-research.md`](../integrations/stackblitz-research.md). Original-konversationen som underlag finns i [`referens/preview-runtime/konversation.txt`](../../referens/preview-runtime/konversation.txt).
+`StackBlitzRuntime` bygger på `@webcontainer/api`. Implementationsdetaljer (boot/mount/spawn/server-ready, COOP/COEP-headers, vanliga fel) ligger i [`docs/integrations/webcontainers-notes.md`](../integrations/webcontainers-notes.md). Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline lever i [`docs/integrations/stackblitz-research.md`](../integrations/stackblitz-research.md). Det ursprungliga underlaget låg i `referens/preview-runtime/konversation.txt` (borttaget i referens-städningen, finns kvar i git-historiken).
 
 Sammanfattat:
 
