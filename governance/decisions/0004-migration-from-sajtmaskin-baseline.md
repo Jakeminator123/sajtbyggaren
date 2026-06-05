@@ -5,7 +5,7 @@
 
 ## Kontext
 
-`Jakeminator123/sajtmaskin@master` har för bred yta, för många namnskuggor och för mycket parallellt arbete för att återanvändas wholesale. Två externa utlåtanden plus en review (se [`referens/utlatanden/utlatande-1-rebuild-vs-restore.txt`](../../referens/utlatanden/utlatande-1-rebuild-vs-restore.txt) och [`referens/utlatanden/utlatande-2-llm-flode.txt`](../../referens/utlatanden/utlatande-2-llm-flode.txt)) pekar på samma slutsats: kontrollerad rekonstruktion, inte blank-slate.
+`Jakeminator123/sajtmaskin@master` har för bred yta, för många namnskuggor och för mycket parallellt arbete för att återanvändas wholesale. Två externa utlåtanden plus en review (`referens/utlatanden/utlatande-1-rebuild-vs-restore.txt` och `referens/utlatanden/utlatande-2-llm-flode.txt`, borttagna i #191, finns i git-historiken) pekar på samma slutsats: kontrollerad rekonstruktion, inte blank-slate.
 
 Tre April-taggar i sajtmaskin är intressanta som generation-baskandidater:
 
@@ -27,4 +27,4 @@ Sajtbyggaren bygger inte upp generation-kärnan från noll och ärver inte helle
 
 - Det går inte att "starta sajtbyggaren" i full mening innan baseline-evalen är gjord. Backoffice och governance kan dock byggas oberoende.
 - Migrationsplanen i `docs/migration-plan.md` underhåller listan över vad som plockats från vilken sajtmaskin-commit.
-- Allt referensmaterial bor numera under [`referens/`](../../referens/) (se [`referens/README.md`](../../referens/README.md) för indelning). Det bevaras tills respektive funktion är implementerad, sen arkiveras eller raderas det.
+- Referensmaterialet låg under `referens/` (se `referens/README.md` för indelning). Mappen raderades i #191 (operatörsbeslut: externt inspirationsmaterial, inte produktkod); innehållet finns kvar i git-historiken.

@@ -160,10 +160,33 @@ function repoRoot(): string {
       ),
     ),
   );
-  return match ?? path.resolve(process.cwd(), "..", "..");
+  // Only return a match if the expected file actually exists;
+  // Else default to the correct repo root relative to the current working dir.
+  if (match) return match;
+
+  // Fallback — check if the fallback actually contains the file as a last-gasp
+  const fallback = path.resolve(process.cwd(), "..", "..");
+  if (
+    existsSync(
+      path.join(
+        fallback,
+        "governance",
+        "policies",
+        "discovery-taxonomy.v1.json",
+      ),
+    )
+  ) {
+    return fallback;
+  }
+
+  // If nothing works: throw explicit error (prevents unpredictable bundle behavior)
+  throw new Error(
+    'Could not find repo root containing "governance/policies/discovery-taxonomy.v1.json". Sajtbyggaren discovery-options API will not function.',
+  );
 }
 
 async function readJson<T>(...segments: string[]): Promise<T> {
+  // If repoRoot throws, surface as 500 (not broad dynamic bundle trace)
   const filePath = path.join(repoRoot(), ...segments);
   return JSON.parse(await readFile(filePath, "utf-8")) as T;
 }
@@ -228,7 +251,9 @@ export async function GET(request: NextRequest) {
               : undefined,
           runtimeScaffoldId,
           availableVariants,
-          operatorNotes: includeOperatorNotes ? category.operatorNotes : undefined,
+          operatorNotes: includeOperatorNotes
+            ? category.operatorNotes
+            : undefined,
         };
       }),
     );

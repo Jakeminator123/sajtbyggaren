@@ -102,8 +102,8 @@
         },
         "previewRuntime": {
           "type": "string",
-          "enum": ["local", "stackblitz", "fly"],
-          "description": "Preview Runtime to use after the run. Names match preview-runtime-policy.v1.json."
+          "enum": ["vercel-sandbox", "local", "stackblitz", "fly"],
+          "description": "Preview Runtime to use after the run. Names match preview-runtime-policy.v1.json:runtimes[].kind (canonical PreviewRuntimeKind, naming-dictionary v19)."
         }
       }
     },
@@ -202,6 +202,29 @@
       "type": "string",
       "format": "date-time",
       "description": "ISO 8601 timestamp when the plan was written."
+    },
+    "sectionPlan": {
+      "type": "object",
+      "description": "Optional blueprint field (kor-1a skeleton, see docs/heavy-llm-flow/01). Section-level intent keyed by '<routeId>.<sectionId>' (routeId from routePlan[].id, sectionId from the scaffold's sections.json). No model fills it in kor-1a; planning fills it in kor-1c.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$",
+        "description": "Address contract: exactly '<routeId>.<sectionId>'."
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "goal": {"type": "string", "description": "What this section should achieve."},
+          "copyIntent": {"type": "string", "description": "Intent for the copy in this section."},
+          "visualTreatment": {"type": "string", "description": "Hint for visual treatment of the section."},
+          "ctaRole": {"type": "string", "description": "Role of any CTA in this section (e.g. 'primary', 'secondary', 'none')."},
+          "proofSources": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Where proof/credibility for this section may come from (e.g. 'prompt', 'wizard')."
+          }
+        }
+      }
     }
   }
 }

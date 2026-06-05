@@ -4,8 +4,12 @@ Prompt-till-sajt MVP v1 introduced PromptBuilder as the operator-facing
 prompt -> Project Input -> build_site.py path. The legacy ChatPanel was
 removed entirely in the B46 audit-fix (2026-05-14); these guards lock
 that PromptBuilder remains the canonical prompt surface and that no
-restored ChatPanel can sneak in via app/page.tsx without tripping the
+restored ChatPanel can sneak in via the console page without tripping the
 test.
+
+Marknadssajt-omtaget (juni 2026) flyttade konsolen från ``app/page.tsx`` till
+route-gruppen ``app/(console)/studio/page.tsx`` ((marketing) äger nu "/"); den
+här guarden följde med till studio-sidan.
 """
 
 from __future__ import annotations
@@ -15,7 +19,9 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PAGE_PATH = REPO_ROOT / "apps" / "viewser" / "app" / "page.tsx"
+PAGE_PATH = (
+    REPO_ROOT / "apps" / "viewser" / "app" / "(console)" / "studio" / "page.tsx"
+)
 
 
 @pytest.mark.tooling

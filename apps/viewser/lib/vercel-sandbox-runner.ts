@@ -125,14 +125,72 @@ export interface SandboxStopResult {
 }
 
 /**
+ * Vercel-auth-nycklar som ``vercel env pull`` skriver. Next auto-laddar
+ * ``.env.local`` men INTE ``.env.vercel.local`` (filen ``vercel env pull``
+ * default-skapar för OIDC-token, gitignored, ~12 h TTL lokalt). Den körande
+ * viewser-dev-processen behöver därför en explicit broms-broms-laddning av just
+ * dessa nycklar för att sandbox-runnern ska hitta auth (Bite C auth-wiring).
+ */
+const VERCEL_ENV_LOCAL_FILE = ".env.vercel.local";
+const VERCEL_AUTH_ENV_KEYS = [
+  "VERCEL_OIDC_TOKEN",
+  "VERCEL_TOKEN",
+  "VERCEL_TEAM_ID",
+  "VERCEL_PROJECT_ID",
+] as const;
+
+let vercelEnvLocalLoaded = false;
+
+/**
+ * Ladda ``apps/viewser/.env.vercel.local`` EN gång och fyll bara de
+ * Vercel-auth-nycklar som ännu inte finns i ``process.env`` (process.env och
+ * Next-laddad ``.env.local`` vinner alltid — samma precedens som dotenv).
+ *
+ * cwd-OBEROENDE: filen resolvas relativt denna moduls plats
+ * (``apps/viewser/lib/<fil>.ts`` → ``apps/viewser/.env.vercel.local``), inte
+ * ``process.cwd()``. Icke-kastande: saknad fil → no-op, och ``resolveCredentials``
+ * degraderar då ärligt (``null``). Värden tål omslutande citat (``vercel env
+ * pull`` quotar token-strängen).
+ */
+function ensureVercelEnvLocalLoaded(): void {
+  if (vercelEnvLocalLoaded) return;
+  vercelEnvLocalLoaded = true;
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const envPath = path.resolve(moduleDir, "..", VERCEL_ENV_LOCAL_FILE);
+  let raw: string;
+  try {
+    raw = readFileSync(envPath, "utf-8");
+  } catch {
+    return;
+  }
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (!(VERCEL_AUTH_ENV_KEYS as readonly string[]).includes(key)) continue;
+    if (process.env[key] && process.env[key]?.trim()) continue;
+    let value = trimmed.slice(eq + 1).trim();
+    const quoted = value.match(/^(['"])([\s\S]*)\1$/);
+    if (quoted) value = quoted[2];
+    if (value) process.env[key] = value;
+  }
+}
+
+/**
  * Resolverar Vercel-credentials. OIDC vinner om ``VERCEL_OIDC_TOKEN`` finns
  * (SDK:n läser den automatiskt → vi spreadar ingenting). Annars krävs hela
  * access-token-trion. Returnerar ``null`` om ingen auth är tillgänglig.
+ *
+ * Laddar först ``.env.vercel.local`` (best-effort) så OIDC-token från
+ * ``vercel env pull`` hittas även om Next inte auto-laddade den filen.
  */
 function resolveCredentials():
   | { mode: "oidc"; create: Record<string, never> }
   | { mode: "token"; create: { token: string; teamId: string; projectId: string } }
   | null {
+  ensureVercelEnvLocalLoaded();
   if (process.env.VERCEL_OIDC_TOKEN && process.env.VERCEL_OIDC_TOKEN.trim()) {
     return { mode: "oidc", create: {} };
   }

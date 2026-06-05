@@ -39,6 +39,19 @@
       }
     },
     "stages": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "blueprintRepair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelRole", "maxPasses", "triggerIssueTypes"],
+      "description": "kor-5 blueprint-only repair-pass config. The bounded repairModel pass that runs after the deterministic Quality Critic and patches only named, already-existing blueprint fields. Optional block (older policy generations omit it).",
+      "properties": {
+        "modelRole": { "type": "string" },
+        "maxPasses": { "type": "integer", "minimum": 1 },
+        "triggerSeverities": { "type": "array", "items": { "type": "string" } },
+        "triggerIssueTypes": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "purpose": { "type": "string" }
+      }
+    },
     "mechanicalFixes": {
       "type": "array",
       "minItems": 1,

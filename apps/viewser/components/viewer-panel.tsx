@@ -39,14 +39,6 @@ type ViewerPanelProps = {
   buildStage?: PromptStage;
 };
 
-type PreviewServerInfo = {
-  siteId: string;
-  port: number;
-  url: string;
-  status: "starting" | "ready";
-  uptimeMs: number;
-};
-
 type FilesPayload = {
   runId: string;
   files: Record<string, string>;
@@ -120,8 +112,27 @@ type PreviewApiError = {
     | "port_pool_full"
     | "spawn_failed"
     | "not_running"
+    // Vercel Sandbox-adaptern (ADR 0033) degraderar ärligt:
+    | "vercel_auth"
+    | "sandbox_failed"
     | "unknown";
   hint?: string;
+};
+
+/**
+ * Svar-shape från ``POST /api/preview/<siteId>`` vid lyckad start. local-next
+ * returnerar full info (port/uptimeMs), vercel-sandbox bara
+ * ``{ url, kind, sessionId }``. Båda har ``url`` — det är allt ViewerPanel
+ * behöver för att iframe:a previewn.
+ */
+type PreviewStartResponse = {
+  url: string;
+  siteId?: string;
+  status?: "starting" | "ready";
+  port?: number;
+  uptimeMs?: number;
+  kind?: string;
+  sessionId?: string;
 };
 
 function unavailableForPreviewError(
@@ -157,6 +168,31 @@ function unavailableForPreviewError(
       hint:
         errHint ??
         "Kontrollera viewser-loggen för stderr-tail från next start.",
+    };
+  }
+  // Vercel Sandbox-adaptern (ADR 0033): saknad/utgången OIDC-token. Visa ett
+  // pedagogiskt inloggningsfel i stället för en tyst fallback.
+  if (code === "vercel_auth") {
+    return {
+      title: "Vercel-inloggning saknas",
+      message:
+        errMsg ??
+        "Vercel Sandbox kräver en giltig OIDC-token som saknas eller har gått ut.",
+      hint:
+        errHint ??
+        "Kör `vercel env pull apps/viewser/.env.vercel.local` för en färsk token (gäller ~12 h) och starta om npm run dev.",
+    };
+  }
+  // Sandboxen byggde/startade inte (npm install / next build / timeout).
+  if (code === "sandbox_failed") {
+    return {
+      title: "Molnförhandsvisningen kunde inte startas",
+      message:
+        errMsg ??
+        "Vercel Sandbox byggde inte den genererade sajten.",
+      hint:
+        errHint ??
+        "Försök igen, eller kontrollera viewser-loggen för install/build-loggar.",
     };
   }
   return {
@@ -200,6 +236,14 @@ const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
 //   - ``auto``        → prova lokal, fall till StackBlitz vid miss
 //                       (oförändrat — det är vad ``auto`` betyder)
 const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
+// ``vercel-sandbox`` (ADR 0033, primärt förstahandsval): preview serveras från
+// en isolerad Vercel Sandbox och POST /api/preview/<siteId> returnerar en publik
+// ``…vercel.run``-https-URL. ViewerPanel behandlar den EXAKT som local-next-
+// vägen — iframe:ar den returnerade URL:en — och visar pedagogiskt fel (t.ex.
+// saknad token) i stället för att tyst falla till StackBlitz. Skillnaden mot
+// local-next är bara cold-starten (~28 s medan sandboxen kör npm install +
+// next build innan URL:en svarar), som loading-UI:t nedan tål.
+const IS_VERCEL_SANDBOX_MODE = VIEWSER_PREVIEW_MODE === "vercel-sandbox";
 
 // Mode-aware UI-copy för BuildProgressCard-preview-steget. Tidigare
 // hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode
@@ -211,7 +255,9 @@ const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
 // behöva förstå pipelinen för att vänta i lugn och ro.
 const PREVIEW_PREP_HINT = IS_LOCAL_NEXT_MODE
   ? "Snart kan du klicka runt på er sajt."
-  : "Laddar förhandsvisningen i webbläsaren.";
+  : IS_VERCEL_SANDBOX_MODE
+    ? "Vi startar en säker molnförhandsvisning – det tar en stund första gången."
+    : "Laddar förhandsvisningen i webbläsaren.";
 
 function formatViewerError(caught: unknown): string {
   if (caught instanceof Error) {
@@ -348,25 +394,34 @@ export function ViewerPanel({
       // browsers, och same-machine-iframen tar emot postMessage från
       // Site Inspector för Sprint 5:s live token-editor.
       //
+      // Samma POST-väg används av vercel-sandbox: svaret är då en publik
+      // ``…vercel.run``-URL (i stället för ``http://localhost:<port>``) men
+      // hanteras identiskt — iframe:a ``info.url``.
+      //
       // Vad vi gör vid misslyckande beror på ``VIEWSER_PREVIEW_MODE``:
       //
-      //   - ``local-next``  → visa pedagogiskt fel direkt. Försök INTE
-      //                       StackBlitz; host saknar COEP-headers och
-      //                       Chrome skulle bara svara med "Specify a
-      //                       Cross-Origin Embedder Policy", vilket
-      //                       maskerar det riktiga problemet (sajten
-      //                       inte byggd, port-pool full, etc.). Det
-      //                       här är fixet för "CORS-tjafset" som
-      //                       drabbar nya prompts där siteId ännu inte
-      //                       hunnits byggas.
-      //   - ``stackblitz``  → hoppa Steg 1 HELT (configens namn är
-      //                       auktoritativ — vi vill se WebContainer-
-      //                       flödet, inte lokal preview). Fall genom
-      //                       till Steg 2 nedan med tom files-fetch.
-      //   - ``auto``        → prova lokal, fall till StackBlitz vid
-      //                       miss (befintlig auto-semantik). COEP är
-      //                       då ON och embedded WebContainer kan
-      //                       rendera.
+      //   - ``local-next``    → visa pedagogiskt fel direkt. Försök INTE
+      //                         StackBlitz; host saknar COEP-headers och
+      //                         Chrome skulle bara svara med "Specify a
+      //                         Cross-Origin Embedder Policy", vilket
+      //                         maskerar det riktiga problemet (sajten
+      //                         inte byggd, port-pool full, etc.). Det
+      //                         här är fixet för "CORS-tjafset" som
+      //                         drabbar nya prompts där siteId ännu inte
+      //                         hunnits byggas.
+      //   - ``vercel-sandbox``→ samma ärliga fel-väg som local-next (visa
+      //                         pedagogiskt fel, t.ex. ``vercel_auth`` vid
+      //                         saknad token). Fall ALDRIG till StackBlitz —
+      //                         host saknar COEP och sandboxen är den valda
+      //                         primära runtimen (ADR 0033).
+      //   - ``stackblitz``    → hoppa Steg 1 HELT (configens namn är
+      //                         auktoritativ — vi vill se WebContainer-
+      //                         flödet, inte lokal preview). Fall genom
+      //                         till Steg 2 nedan med tom files-fetch.
+      //   - ``auto``          → prova lokal, fall till StackBlitz vid
+      //                         miss (befintlig auto-semantik). COEP är
+      //                         då ON och embedded WebContainer kan
+      //                         rendera.
       //
       // ``IS_STACKBLITZ_MODE``-grinden ovanför Steg 1 stänger reviewerns
       // ärlighetsglapp där configens namn antydde "use StackBlitz" men
@@ -378,13 +433,15 @@ export function ViewerPanel({
             method: "POST",
           });
           if (previewResponse.ok) {
-            const info = (await previewResponse.json()) as PreviewServerInfo;
+            // local-next → http://localhost:<port>; vercel-sandbox →
+            // publik …vercel.run-https-URL. Båda iframe:as identiskt.
+            const info = (await previewResponse.json()) as PreviewStartResponse;
             if (cancelled) return;
             setLocalPreviewUrl(info.url);
             setLoading(false);
             return;
           }
-          if (IS_LOCAL_NEXT_MODE) {
+          if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
             if (cancelled) return;
             const errPayload = (await previewResponse
               .json()
@@ -403,10 +460,10 @@ export function ViewerPanel({
           // build_site.py kan ha skippats medvetet och vi har files
           // tillgängliga via /api/runs/<runId>/files istället.
         } catch {
-          if (IS_LOCAL_NEXT_MODE) {
+          if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
             if (cancelled) return;
             setUnavailable({
-              title: "Lokal preview-server kunde inte nås",
+              title: "Preview-servern kunde inte nås",
               message: "Nätverksfel mot /api/preview/<siteId>.",
               hint: "Är viewser-dev-servern igång? Starta om med npm run dev.",
             });
@@ -415,16 +472,17 @@ export function ViewerPanel({
           }
           // Stackblitz-mode: fortsätt med StackBlitz-fallback.
         }
-      } else if (IS_LOCAL_NEXT_MODE) {
+      } else if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
         // siteId saknas men runId finns — t.ex. en mock-run från
-        // dev_generate.py. I local-next-mode kan vi inte bygga preview
-        // utan siteId, så visa pedagogiskt fel istället för att tyst
+        // dev_generate.py. Varken local-next eller vercel-sandbox kan bygga
+        // preview utan siteId (sandboxen behöver en byggd .generated/<siteId>/-
+        // mapp att kopiera), så visa pedagogiskt fel istället för att tyst
         // försöka StackBlitz (vilket ändå skulle blockas av Chrome).
         if (cancelled) return;
         setUnavailable({
-          title: "Saknar siteId för lokal preview",
+          title: "Saknar siteId för preview",
           message:
-            "Den valda runen har inget siteId i build-result.json. Lokal preview kräver en byggd .generated/<siteId>/-mapp.",
+            "Den valda runen har inget siteId i build-result.json. Preview kräver en byggd .generated/<siteId>/-mapp.",
           hint: "Kör en ny prompt för att skapa en builder-run, eller byt till VIEWSER_PREVIEW_MODE=stackblitz för fil-baserad preview.",
         });
         setLoading(false);
@@ -950,13 +1008,18 @@ export function ViewerPanel({
         empty/unavailable äger ytan.
       */}
       {/*
-        Lokal preview-iframe. Renderas bara när /api/preview/<siteId>
-        returnerat en URL. Denna väg används före StackBlitz när vi
-        kunnat boota en lokal ``next start`` på den genererade sajten.
-        Stora vinster: ~1s init istället för StackBlitz 60+s, funkar
-        i Safari/Firefox utan credentialless-fallback, och same-machine-
-        iframe kan ta emot postMessage från Site Inspector för
-        Sprint 5:s live token-editor.
+        Preview-iframe. Renderas bara när /api/preview/<siteId>
+        returnerat en URL. Den URL:en är antingen en lokal
+        ``http://localhost:<port>`` (``local-next``: ``next start`` på den
+        genererade sajten) ELLER en publik ``…vercel.run``-https-URL
+        (``vercel-sandbox``: en isolerad kopia i en Vercel Sandbox, ADR 0033).
+        Båda iframe:as identiskt — ``localPreviewUrl`` håller den returnerade
+        URL:en oavsett mode.
+        Stora vinster (local-next): ~1s init istället för StackBlitz 60+s,
+        funkar i Safari/Firefox utan credentialless-fallback, och
+        same-machine-iframe kan ta emot postMessage från Site Inspector för
+        Sprint 5:s live token-editor. vercel-sandbox är en publik https-iframe
+        som fungerar i alla browsers utan att belasta operatörens maskin.
 
         Positionering: ``absolute inset-0`` så iframen fyller HELA
         canvasen oavsett vad andra flex-syskon (containerRef-divet,
@@ -988,12 +1051,15 @@ export function ViewerPanel({
           <iframe
             ref={iframeRef}
             src={localPreviewUrl}
-            title="Lokal sajt-preview"
+            title="Sajt-preview"
             className="h-full w-full border-0 bg-white"
             // Tillåt scripts (Next.js client-side hydration) och
-            // same-origin (vi äger localhost:<port> som vi själva
-            // spawnat) men inte top-navigation eller popups från
-            // sajten — extra defensivt även om vi själva byggt den.
+            // same-origin (sajten behåller sin egen origin —
+            // localhost:<port> som vi spawnat, eller vercel.run-sandboxen
+            // vi startat) men inte top-navigation eller popups. För den
+            // cross-origin publika vercel.run-URL:en är allow-same-origin
+            // ofarlig (sajten är cross-origin mot oss → ingen sandbox-escape)
+            // och behövs så den genererade sajtens egna fetch/hydration fungerar.
             sandbox="allow-scripts allow-same-origin allow-forms"
           />
         </div>

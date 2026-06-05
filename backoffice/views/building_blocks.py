@@ -39,6 +39,7 @@ SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaff
 REFERENCE_TEMPLATES_DIR = REPO_ROOT / "data" / "reference-templates"
 VARIANT_CANDIDATES_DIR = REPO_ROOT / "data" / "variant-candidates"
 DOSSIER_CANDIDATES_DIR = REPO_ROOT / "data" / "dossier-candidates"
+SCAFFOLD_CANDIDATES_DIR = REPO_ROOT / "data" / "scaffold-candidates"
 PLACEHOLDER_MARKER = asset_graph.PLACEHOLDER_MARKER
 
 
@@ -1247,14 +1248,16 @@ def view_scaffolds() -> None:
         cols[1].write(f"- `{f}`")
 
     st.divider()
-    st.subheader("Lägg till första filuppsättning för en Scaffold")
+    st.subheader("Skapa kandidat-skelett för en Scaffold")
     st.caption(
-        "Skapar mappen `packages/generation/orchestration/scaffolds/<id>/` med minimala "
-        "obligatoriska filer enligt scaffold-contract. Innehållet är platshållare; "
-        "redigera per fil efter creation."
+        "Skapar ett kandidat-skelett under `data/scaffold-candidates/<id>/` med de "
+        "obligatoriska filerna enligt scaffold-contract (platshållarinnehåll). "
+        "Backoffice skriver aldrig till canonical `packages/` (repo-boundaries); "
+        "promotering till `packages/generation/orchestration/scaffolds/` sker via "
+        "Builder-agent/PR. Samma kandidat-mönster som Variant Candidates och Dossier Candidates."
     )
 
-    edit_mode = st.toggle("Aktivera filsystemskrivning", key="scaffold_edit_toggle")
+    edit_mode = st.toggle("Aktivera kandidatskrivning", key="scaffold_edit_toggle")
     if not edit_mode:
         return
 
@@ -1264,13 +1267,15 @@ def view_scaffolds() -> None:
     if not candidate_ids:
         st.info("Alla 14 Scaffolds är redan implementerade.")
         return
-    selected = st.selectbox("Välj Scaffold att skapa", candidate_ids, key="scaffold_create_select")
+    selected = st.selectbox(
+        "Välj Scaffold att skapa kandidat för", candidate_ids, key="scaffold_create_select"
+    )
     if not isinstance(selected, str) or not selected:
-        st.info("Välj en Scaffold innan du skapar filer.")
+        st.info("Välj en Scaffold innan du skapar kandidatfiler.")
         return
     pick = selected
-    if st.button(f"Skapa mapp för {pick}", key="scaffold_create"):
-        target = SCAFFOLDS_DIR / pick
+    if st.button(f"Skapa kandidat för {pick}", key="scaffold_create"):
+        target = SCAFFOLD_CANDIDATES_DIR / pick
         target.mkdir(parents=True, exist_ok=True)
         for required in layout["requiredFiles"]:
             path = target / required
@@ -1283,9 +1288,9 @@ def view_scaffolds() -> None:
                 else:
                     path.write_text("# placeholder\n", encoding="utf-8")
         st.success(
-            f"Skapade {target.relative_to(REPO_ROOT)} med platshållare. "
-            "Tabellen ovan visar den nu som 'platshållare', inte 'ja' - "
-            "fyll filerna enligt scaffold-contract innan den räknas som implementerad."
+            f"Skapade kandidat-skelett {target.relative_to(REPO_ROOT)} med platshållare. "
+            "Det här promoterar aldrig till canonical `packages/` - en Builder-agent/PR "
+            "flyttar skelettet till scaffolds/ när filerna fyllts enligt scaffold-contract."
         )
 
 

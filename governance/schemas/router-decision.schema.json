@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sajtbyggaren.local/schemas/router-decision.schema.json",
+  "title": "Router Decision",
+  "description": "Structured output of the deterministic message router (KÖR-6a, working name OpenClaw Router per docs/heavy-llm-flow/02). Classifies a single user message into messageKind + buildRequirement + contextLevel + target/subtasks so pure questions, discovery and external references never trigger a build, adapter or iframe. This is NOT a persisted canonical run-artefakt: the router returns the decision in-memory and may only append it to an existing run's trace.ndjson. The shape mirrors packages.generation.orchestration.router.models.RouterDecision; tests/test_router_schema.py locks the two against drift (top-level + nested $defs).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["messageKind", "editKind", "buildRequirement", "contextLevel"],
+  "properties": {
+    "messageKind": {
+      "type": "string",
+      "enum": [
+        "answer_only",
+        "site_review",
+        "edit_instruction",
+        "component_discovery",
+        "reference_analysis",
+        "bug_report",
+        "multi_intent",
+        "unclear"
+      ],
+      "description": "What kind of message this is (02 §2.1)."
+    },
+    "editKind": {
+      "$ref": "#/$defs/editKind",
+      "description": "The concrete edit, when the message is an edit. 'none' for non-edit kinds."
+    },
+    "buildRequirement": {
+      "type": "string",
+      "enum": ["none", "plan_only", "artifact_patch_only", "targeted_rebuild", "full_rebuild"],
+      "description": "How much the system must do (02 §2.2). 'none'/'plan_only' must never start a build or preview."
+    },
+    "contextLevel": {
+      "type": "string",
+      "enum": [
+        "none",
+        "project_dna",
+        "artifacts",
+        "artifacts_plus_sections",
+        "manifest",
+        "selected_files",
+        "preview_dom",
+        "external_reference",
+        "component_registry"
+      ],
+      "description": "How much context a downstream handler should assemble (02 §4)."
+    },
+    "target": {
+      "description": "Where an edit applies. Null when there is no concrete target.",
+      "anyOf": [{ "$ref": "#/$defs/routerTarget" }, { "type": "null" }]
+    },
+    "subtasks": {
+      "type": "array",
+      "description": "Ordered deluppgifter for a multi_intent decision; empty otherwise.",
+      "items": { "$ref": "#/$defs/routerSubtask" }
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Cross-cutting constraints to preserve, e.g. 'preserve_copy'.",
+      "items": { "type": "string" }
+    },
+    "reference": {
+      "description": "External reference the user pointed at; null when none.",
+      "anyOf": [{ "$ref": "#/$defs/routerReference" }, { "type": "null" }]
+    },
+    "componentIntent": {
+      "type": ["string", "null"],
+      "description": "Best-effort component slug for a component edit (e.g. 'clock_widget')."
+    },
+    "risk": {
+      "type": ["string", "null"],
+      "description": "Risk note, e.g. 'do_not_copy_exact' for reference_analysis."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Short explanation of why this decision was made, including why a build was (not) required."
+    },
+    "requiresClarification": {
+      "type": "boolean",
+      "description": "True when the router cannot act and should ask the user to clarify."
+    },
+    "shouldStartPreview": {
+      "type": "boolean",
+      "description": "The only actuation flag the router owns. True only for a real rebuild and forced false under builder coexistence."
+    }
+  },
+  "$defs": {
+    "editKind": {
+      "type": "string",
+      "enum": [
+        "component_add",
+        "component_remove",
+        "visual_style",
+        "copy_change",
+        "layout_change",
+        "route_add",
+        "none"
+      ]
+    },
+    "position": {
+      "anyOf": [
+        { "type": "string", "enum": ["left", "right", "center", "top", "bottom"] },
+        { "type": "null" }
+      ]
+    },
+    "scope": {
+      "anyOf": [
+        { "type": "string", "enum": ["global", "route", "section", "component"] },
+        { "type": "null" }
+      ]
+    },
+    "routerTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "routeId": { "type": ["string", "null"] },
+        "sectionId": { "type": ["string", "null"] },
+        "sectionOrdinal": { "type": ["integer", "null"] },
+        "position": { "$ref": "#/$defs/position" }
+      }
+    },
+    "routerReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": { "type": "string" },
+        "object": { "type": ["string", "null"] }
+      }
+    },
+    "routerSubtask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["editKind"],
+      "properties": {
+        "editKind": { "$ref": "#/$defs/editKind" },
+        "instruction": { "type": "string" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "componentIntent": { "type": ["string", "null"] },
+        "target": {
+          "anyOf": [{ "$ref": "#/$defs/routerTarget" }, { "type": "null" }]
+        },
+        "constraint": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

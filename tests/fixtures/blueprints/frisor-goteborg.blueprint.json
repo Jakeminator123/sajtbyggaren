@@ -1,0 +1,122 @@
+{
+  "_fixture": "Baseline branch 'frisör' (hair salon, Göteborg). Mock blueprint example for kor-1a. Hand-written fixture, no model output. Deliberately different mood/conversion from the electrician fixture.",
+  "siteBrief": {
+    "runId": "run-frisor-goteborg",
+    "language": "sv",
+    "rawPrompt": "Snygg hemsida för en frisörsalong i Göteborg med onlinebokning.",
+    "companyName": "Salong Lykke",
+    "businessTypeGuess": "hair-salon",
+    "locationHint": "Göteborg",
+    "tone": ["varm", "personlig", "stilren"],
+    "targetAudience": ["privatkunder", "återkommande stamkunder"],
+    "requestedCapabilities": ["booking"],
+    "conversionGoals": ["booking"],
+    "servicesMentioned": ["klippning", "färgning", "slingor"],
+    "sourceModelRole": "briefModel",
+    "modelUsed": "mock",
+    "briefSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:05:00+00:00",
+    "businessFacts": {
+      "facts": ["salong i Göteborg", "erbjuder onlinebokning"],
+      "unknowns": ["prislista", "öppettider", "antal stolar"]
+    },
+    "positioning": {
+      "oneLiner": "Personlig frisörsalong i Göteborg för en look som känns som du.",
+      "differentiator": "tid att lyssna och ett varmt bemötande",
+      "audienceNeed": "en frisör som förstår vad kunden vill ha",
+      "localAngle": "mitt i Göteborg, lätt att boka",
+      "tone": "varm, personlig, stilren",
+      "avoid": ["stressig säljton", "påhittade priser", "tomma superlativ"]
+    },
+    "contentStrategy": {
+      "heroAngle": "varm personlig salong med enkel bokning",
+      "trustStrategy": "äkta känsla genom ton och bilder, inga fejkade omdömen",
+      "offerStrategy": "lyft de vanligaste behandlingarna tydligt",
+      "avoidGenericClaims": true
+    },
+    "conversion": {
+      "primaryAction": "book",
+      "primaryCta": "Boka tid",
+      "secondaryCta": "Se behandlingar",
+      "contactPriority": ["form", "phone_if_real"],
+      "ctaRules": ["använd inte bokning om bokning saknas", "visa inte priser om priser saknas"]
+    }
+  },
+  "sitePlan": {
+    "runId": "run-frisor-goteborg",
+    "scaffoldId": "local-service-business",
+    "variantId": "nordic-trust",
+    "starterId": "marketing-base",
+    "routePlan": [
+      {"id": "home", "path": "/", "purpose": "Set the warm tone and drive a booking"},
+      {"id": "services", "path": "/tjanster", "purpose": "Present the salon's services"},
+      {"id": "contact", "path": "/kontakt", "purpose": "Booking and contact details"}
+    ],
+    "selectedDossiers": {
+      "required": ["booking-cta"],
+      "recommended": ["image-gallery"],
+      "conditional": []
+    },
+    "buildSpec": {
+      "qualityTarget": 9.0,
+      "verificationPolicy": "build-must-pass",
+      "previewRuntime": "vercel-sandbox"
+    },
+    "sourceModelRole": "planningModel",
+    "modelUsed": "mock",
+    "planSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:05:00+00:00",
+    "sectionPlan": {
+      "home.hero": {
+        "goal": "set warm tone and invite booking",
+        "copyIntent": "personlig salong i Göteborg",
+        "visualTreatment": "full-bleed-image",
+        "ctaRole": "primary"
+      },
+      "services.service-list": {
+        "goal": "present treatments clearly",
+        "copyIntent": "vanliga behandlingar utan prispåhitt",
+        "ctaRole": "secondary",
+        "proofSources": ["prompt"]
+      }
+    }
+  },
+  "generationPackage": {
+    "runId": "run-frisor-goteborg",
+    "policyVersions": {"engineRun": "engine-run.v1"},
+    "siteBriefRef": "site-brief.json",
+    "sitePlanRef": "site-plan.json",
+    "scaffoldId": "local-service-business",
+    "variantId": "nordic-trust",
+    "starterId": "marketing-base",
+    "language": "sv",
+    "engineMode": "init",
+    "createdAt": "2026-06-03T08:05:00+00:00",
+    "contentBlocks": {
+      "home.hero": {
+        "headline": "En look som känns som du",
+        "subheadline": "Personlig frisörsalong mitt i Göteborg med enkel onlinebokning.",
+        "primaryCta": "Boka tid"
+      },
+      "services.service-list": [
+        {"title": "Klippning", "summary": "Klippning för dam och herr."},
+        {"title": "Färgning", "summary": "Färg som håller och ser naturlig ut."},
+        {"title": "Slingor", "summary": "Slingor för dimension och lyster."}
+      ]
+    },
+    "visualDirection": {
+      "mood": "varm, personlig, stilren",
+      "density": "spacious",
+      "heroStyle": "full_bleed_image",
+      "colorIntent": "soft_warm_neutral",
+      "sectionTreatments": {"services.service-list": "card-grid"},
+      "imageBriefs": ["ljus salongsinteriör i Göteborg, varm stämning, naturligt ljus"],
+      "layoutSignals": {"useTrustBandNearHero": false, "avoidOverlyPlayfulShapes": false}
+    },
+    "qualityRisks": [
+      "No fake prices",
+      "No invented reviews",
+      "Do not offer booking unless booking exists"
+    ]
+  }
+}

@@ -87,7 +87,10 @@ def view_followup_flow() -> None:
     st.title("Follow-up Flow")
     st.caption(
         "followup-mode läser befintlig Project DNA och klassificerar FollowUp Intent. "
-        "Implementation kommer; nu visas planerad design."
+        "Delvis implementerat: deterministisk intent + semantisk merge, samt "
+        "copyDirectiveModel (ADR 0034 väg A, nivå 1-3a, llm-models v6) för "
+        "name/tagline/about-text/services. Patch-planerare / targeted rebuild "
+        "(väg C) är ännu inte implementerad; diagrammet visar den planerade designen."
     )
     dna, err = loaders.safe_load_policy("project-dna.v1.json")
     if err or dna is None:

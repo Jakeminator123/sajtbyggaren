@@ -6,6 +6,7 @@ import path from "node:path";
 import { killProcessTree, stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertProjectInputExists } from "@/lib/project-inputs";
 import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
+import { stopSandboxSessionForSite } from "@/lib/vercel-sandbox-sessions";
 
 // Första bygget i en helt ny `.generated/<siteId>/` involverar:
 //   - npm install från noll (typiskt 60–120 sek beroende på cache),
@@ -39,7 +40,14 @@ const TEST_ENV_ACTIVE =
 const inFlight = new Map<string, Promise<unknown>>();
 
 function repoRoot(): string {
-  return path.resolve(process.cwd(), "..", "..");
+  // ``...up`` (spread av variabel-array) gör resultatet opakt för Turbopacks
+  // statiska analys, så repo-rot-baserade path.join() (t.ex. python-spawn mot
+  // ``.venv/bin/python``) inte viks ihop till fil/dir-asset-referenser. Med
+  // ``turbopack.root`` = repo-roten (krävs för att resolva ``@preview-runtime``)
+  // skulle annars output-tracern panika på ``.venv``-symlänkar som pekar ut ur
+  // repo-roten. Detta är rent runtime-logik, aldrig en modul.
+  const up = ["..", ".."];
+  return path.resolve(process.cwd(), ...up);
 }
 
 function pythonCommand(): string {
@@ -161,6 +169,13 @@ async function runBuildOnce(
   // start picks up the freshly published current.json build instead of
   // serving the previous version indefinitely.
   await stopAndWaitPreviewServer(siteId);
+
+  // Livscykel/kostnad (ADR 0033): ett nytt bygge/följdprompt ska stoppa en
+  // ev. aktiv Vercel Sandbox för samma siteId — annars lever den gamla
+  // sandboxen kvar tills TTL (~15 min) och kostar ören i onödan. Idempotent
+  // no-op i local-next-läge (sessionsregistret är tomt → oförändrat beteende).
+  // Speglar ``stopAndWaitPreviewServer`` ovan men för den fjärr-körda runtimen.
+  await stopSandboxSessionForSite(siteId);
 
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");
   const args = [scriptPath, "--dossier", dossierPath];

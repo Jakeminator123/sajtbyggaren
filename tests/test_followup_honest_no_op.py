@@ -8,6 +8,7 @@ scope for this backend slice.
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
@@ -16,9 +17,14 @@ import pytest
 from scripts.build_site import (
     _detect_followup_applied_visible_effect,
     _find_previous_page_snapshot,
+    _prompt_meta_unapplied_followup_intents,
     build,
 )
-from scripts.prompt_to_project_input import generate, generate_followup
+from scripts.prompt_to_project_input import (
+    compute_unapplied_followup_intents,
+    generate,
+    generate_followup,
+)
 
 INIT_PROMPT = "Skapa en hemsida för Surdegsbagaren i Malmö."
 NO_OP_FOLLOWUP_PROMPT = "Lägg till mycket mer info om surdegsbröd"
@@ -260,3 +266,258 @@ def test_previous_snapshot_lookup_derives_previous_version_from_current_version(
         )
         == previous_page
     )
+
+
+# ---------------------------------------------------------------------------
+# B155 honest-level-1: per-intent unappliedFollowupIntents signal
+# ---------------------------------------------------------------------------
+#
+# Reproduces data/runs/20260602T151424.516Z-44580d9a-bryggans-bageri-823775
+# (v2): a multi-part follow-up where the two new products landed but the hero
+# heading rewrite + the reviews section were silently dropped while
+# appliedVisibleEffect stayed true.
+V2_FOLLOWUP_PROMPT = (
+    "Lagg till tva nya produkter: lunchmackor och glutenfritt surdegsbrod. "
+    "Skriv om hjaltesektionens rubriktext sa att den varmt valkomnar besokaren "
+    "till bageriet i Kalmar, och lagg till en kort sektion med kundomdomen."
+)
+
+
+def _bryggans_v1_project_input() -> dict[str, object]:
+    """Shape mirrors the real v1 Project Input snapshot for this site."""
+    return {
+        "company": {
+            "name": "Bryggans Bageri",
+            "tagline": "Hjälp med ekologiskt surdegsbröd",
+        },
+        "requestedCapabilities": ["map"],
+        "selectedDossiers": {"required": [], "recommended": []},
+        "services": [
+            {
+                "id": "ekologiskt-surdegsbrod",
+                "label": "Ekologiskt surdegsbröd",
+                "summary": "Tydlig hjälp med ekologiskt surdegsbröd.",
+            }
+        ],
+    }
+
+
+def _bryggans_v2_project_input() -> dict[str, object]:
+    """v2: two products added (services), reviews capability requested, hero
+    heading + tagline byte-stable (the real merge kept them unchanged)."""
+    data = copy.deepcopy(_bryggans_v1_project_input())
+    data["requestedCapabilities"] = ["map", "reviews"]
+    data["services"].extend(
+        [
+            {
+                "id": "lunchmackor",
+                "label": "Lunchmackor",
+                "summary": "Tydlig hjälp med lunchmackor.",
+            },
+            {
+                "id": "glutenfritt-surdegsbrod",
+                "label": "Glutenfritt surdegsbröd",
+                "summary": "Tydlig hjälp med glutenfritt surdegsbröd.",
+            },
+        ]
+    )
+    return data
+
+
+@pytest.mark.tooling
+def test_compute_unapplied_flags_reviews_and_hero_not_products() -> None:
+    """The exact v2 intent must flag hero-rubrik + reviews, never the products."""
+    posts = compute_unapplied_followup_intents(
+        _bryggans_v1_project_input(),
+        _bryggans_v2_project_input(),
+        follow_up_prompt=V2_FOLLOWUP_PROMPT,
+    )
+    targets = {post["target"] for post in posts}
+
+    # Hero rewrite + reviews section recognised-but-not-applied.
+    assert targets == {"hero", "reviews"}
+    # The two products landed as services - they must never be flagged.
+    assert not (targets & {"lunchmackor", "glutenfritt-surdegsbrod", "products"})
+    # `map` was a v1 capability (not this follow-up's ask) and is not even a
+    # capability-map slug - it must not be flagged either.
+    assert "map" not in targets
+    for post in posts:
+        assert isinstance(post["target"], str) and post["target"].strip()
+        assert isinstance(post["reason"], str) and post["reason"].strip()
+
+
+@pytest.mark.tooling
+def test_compute_unapplied_products_only_is_empty() -> None:
+    """An additive products-only follow-up has nothing unapplied."""
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+    merged["services"].append(
+        {
+            "id": "lunchmackor",
+            "label": "Lunchmackor",
+            "summary": "Tydlig hjälp med lunchmackor.",
+        }
+    )
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt="Lagg till tva nya produkter: lunchmackor och glutenfritt surdegsbrod.",
+    )
+    assert posts == []
+
+
+@pytest.mark.tooling
+def test_compute_unapplied_skips_capability_that_is_mounted() -> None:
+    """A reviews dossier in selectedDossiers.required means reviews IS rendered."""
+    previous = _bryggans_v1_project_input()
+    merged = _bryggans_v2_project_input()
+    merged["selectedDossiers"] = {"required": ["reviews-display"], "recommended": []}
+
+    posts = compute_unapplied_followup_intents(
+        previous, merged, follow_up_prompt=V2_FOLLOWUP_PROMPT
+    )
+    targets = {post["target"] for post in posts}
+    # reviews is mounted now -> not flagged; hero still unapplied.
+    assert "reviews" not in targets
+    assert "hero" in targets
+
+
+@pytest.mark.tooling
+def test_compute_unapplied_skips_unknown_capability_slug() -> None:
+    """A newly requested slug absent from capability-map.v1.json is not claimed."""
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+    merged["requestedCapabilities"] = ["map", "totally-unknown-capability"]
+
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt="Lagg till stod for totally-unknown-capability.",
+    )
+    assert posts == []
+
+
+@pytest.mark.tooling
+def test_compute_unapplied_hero_suppressed_when_heading_changed() -> None:
+    """An explicit heading rewrite that DID change company.name is not flagged."""
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+    merged["company"]["name"] = "Bryggans Surdegsbageri"
+
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt="Skriv om hjaltesektionens rubrik till Bryggans Surdegsbageri",
+    )
+    targets = {post["target"] for post in posts}
+    assert "hero" not in targets
+
+
+@pytest.mark.tooling
+def test_compute_unapplied_hero_requires_rewrite_verb() -> None:
+    """No rewrite verb -> the hero rule stays silent (avoids false positives)."""
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt="Berätta mer om hjältesektionen för mig.",
+    )
+    assert posts == []
+
+
+@pytest.mark.tooling
+def test_prompt_meta_reader_validates_dedupes_and_caps() -> None:
+    """The build_site reader rejects malformed entries and bounds strings."""
+    meta = {
+        "unappliedFollowupIntents": [
+            {"target": "reviews", "reason": "ok"},
+            {"target": "reviews", "reason": "duplicate target dropped"},
+            {"target": "  ", "reason": "blank target dropped"},
+            {"target": "hero"},  # missing reason -> dropped
+            "not-a-dict",  # dropped
+            {"target": "x" * 200, "reason": "y" * 1000},
+        ]
+    }
+    posts = _prompt_meta_unapplied_followup_intents(meta)
+    targets = [post["target"] for post in posts]
+
+    assert targets.count("reviews") == 1
+    assert "hero" not in targets  # reason was missing
+    long_post = next(post for post in posts if post["target"].startswith("x"))
+    assert len(long_post["target"]) <= 80
+    assert len(long_post["reason"]) <= 400
+
+
+@pytest.mark.tooling
+def test_prompt_meta_reader_handles_missing_or_malformed_field() -> None:
+    assert _prompt_meta_unapplied_followup_intents(None) == []
+    assert _prompt_meta_unapplied_followup_intents({}) == []
+    assert _prompt_meta_unapplied_followup_intents(
+        {"unappliedFollowupIntents": "nope"}
+    ) == []
+
+
+@pytest.mark.tooling
+def test_hero_rewrite_followup_surfaces_signal_in_build_result_and_trace(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """End-to-end: a no-op + hero-rewrite follow-up writes the honest signal.
+
+    Uses the deterministic mock path (no OPENAI_API_KEY). "Lägg till ..."
+    classifies as no-semantic-change so the hero heading/tagline stay
+    byte-stable; the hero rewrite then has no copyDirective target and is
+    reported via unappliedFollowupIntents + a trace event, while
+    appliedVisibleEffect remains the unchanged global boolean.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+
+    _, _, init_path, _ = generate(
+        INIT_PROMPT,
+        output_dir=prompt_inputs_dir,
+        site_id=SITE_ID,
+        project_id=PROJECT_ID,
+    )
+    build(init_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir)
+
+    # The real v2 prompt: "Lägg till ..." keeps the intent no-semantic-change
+    # (hero heading/tagline byte-stable) and "rubriktext" does not word-match
+    # the deterministic name keyword "rubrik", so no copyDirective is applied -
+    # exactly the silent hero drop the signal must surface.
+    _, followup_meta, followup_path, _ = generate_followup(
+        V2_FOLLOWUP_PROMPT,
+        output_dir=prompt_inputs_dir,
+        site_id=SITE_ID,
+    )
+    # The sidecar carries the honest signal (deterministic for the hero rule).
+    meta_posts = followup_meta.get("unappliedFollowupIntents")
+    assert isinstance(meta_posts, list)
+    assert any(post["target"] == "hero" for post in meta_posts)
+
+    _, run_dir_v2 = build(
+        followup_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+
+    build_result = _read_json(run_dir_v2 / "build-result.json")
+    posts = build_result["unappliedFollowupIntents"]
+    assert any(post["target"] == "hero" for post in posts)
+    # The complement does not replace the global boolean - both coexist.
+    assert "appliedVisibleEffect" in build_result
+
+    events = _read_trace_events(run_dir_v2)
+    event_names = [event["event"] for event in events]
+    assert "followup.unapplied_intents_detected" in event_names
+    assert event_names.index("followup.unapplied_intents_detected") < event_names.index(
+        "build.result.written"
+    )
+    unapplied_event = events[event_names.index("followup.unapplied_intents_detected")]
+    assert unapplied_event["status"] == "warning"
+    assert "hero" in str(unapplied_event["reason"])

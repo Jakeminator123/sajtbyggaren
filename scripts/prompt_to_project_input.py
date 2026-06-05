@@ -91,6 +91,10 @@ _validate_copy_directive_candidate = _copy_directives._validate_copy_directive_c
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
 DEFAULT_RUNS_DIR = REPO_ROOT / "data" / "runs"
 SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
+# Source of truth for which capability slugs are recognised and which Dossiers
+# back them. Read read-only by the B155 honest-level-1 signal to tell when a
+# follow-up requested a capability the deterministic v1 codegen does not mount.
+CAPABILITY_MAP_PATH = REPO_ROOT / "governance" / "policies" / "capability-map.v1.json"
 
 # Mirrors apps/viewser/lib/project-inputs.ts SITE_ID_PATTERN. Lower-case
 # letters, digits and dashes, must start and end with alphanumeric.
@@ -2709,6 +2713,184 @@ def merge_followup_project_input(
     return merged
 
 
+# ---------------------------------------------------------------------------
+# B155 honest-level-1 signal: per-intent "could not apply" reporting
+# ---------------------------------------------------------------------------
+#
+# ``appliedVisibleEffect`` (B155 backend, in build-result.json) is a single
+# global file-diff boolean: it answers "did ANY visible file change between
+# versions?". A multi-part follow-up ("add two products + rewrite the hero
+# heading + add a reviews section") can flip it to ``true`` because the products
+# landed, while the hero rewrite and the reviews section were silently dropped.
+# This complement names the parts the deterministic v1 pipeline RECOGNISED but
+# could NOT apply, so build-result.json can be honest instead of implying full
+# success. It is a pure observer over the already-merged Project Input + the
+# follow-up prompt: it never changes ``classify_followup_intent`` /
+# ``_apply_semantic_patch`` / copyDirective behaviour and never remaps an intent
+# to another target.
+_UNAPPLIED_CAPABILITY_REASON = (
+    "Förmågan '{capability}' känns igen men byggsteget renderar den inte ännu."
+)
+_UNAPPLIED_HERO_TARGET = "hero"
+_UNAPPLIED_HERO_REASON = (
+    "Hjältesektionens rubrik kan inte skrivas om via följdprompt ännu – just "
+    "nu går det bara att ändra namn, tagline, om-oss-text eller tjänstetext."
+)
+# Hero/"hjältesektion" scope, matched as substrings so inflected forms
+# ("hjältesektionen", "hjältesektionens") are covered. The hero H1 renders from
+# company.name and the subheading from company.tagline; "hjältesektion" maps to
+# neither copyDirective target, so a rewrite scoped to it is a silent no-op
+# today. Used ONLY by this observer - the copyDirective classifier is untouched.
+_UNAPPLIED_HERO_SCOPE_KEYWORDS: tuple[str, ...] = (
+    "hjältesektion",
+    "hjaltesektion",
+    "herosektion",
+    "hero-sektion",
+    "hero section",
+    "hero-section",
+)
+
+
+def _load_capability_map() -> dict[str, dict[str, Any]]:
+    """Return ``capability slug -> entry`` from capability-map.v1.json.
+
+    The honest-no-op signal only needs (a) whether a slug is a recognised
+    capability and (b) which Dossiers back it. A missing/malformed policy
+    degrades to an empty map so the signal silently skips rather than breaking
+    the prompt -> build loop.
+    """
+    try:
+        payload = json.loads(CAPABILITY_MAP_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    capabilities = payload.get("capabilities")
+    if not isinstance(capabilities, dict):
+        return {}
+    return {
+        slug: entry
+        for slug, entry in capabilities.items()
+        if isinstance(slug, str) and isinstance(entry, dict)
+    }
+
+
+def _capability_is_mounted(
+    entry: dict[str, Any],
+    required_dossiers: set[str],
+) -> bool:
+    """True when one of the capability's Dossiers is in selectedDossiers.required.
+
+    Deterministic codegen v1 mounts only ``selectedDossiers.required``
+    (build_site.py ``selected_required_dossiers``). A capability with an empty
+    Dossier list (a documented gap in capability-map.v1.json) is never mounted.
+    """
+    dossiers = entry.get("dossiers")
+    if not isinstance(dossiers, list):
+        return False
+    return any(
+        isinstance(dossier, str) and dossier in required_dossiers
+        for dossier in dossiers
+    )
+
+
+def _is_unapplied_hero_rewrite(
+    previous: dict[str, Any],
+    merged: dict[str, Any],
+    normalised_text: str,
+) -> bool:
+    """True when the follow-up asks to rewrite the hero heading but nothing changed.
+
+    Gated on a rewrite verb (``_COPY_CONTENT_REWRITE_VERBS`` - "skriv om" etc.)
+    + a hero scope word. Suppressed when the hero H1 (company.name) or
+    subheading (company.tagline) actually changed between versions, so an
+    explicit "byt rubriken till 'X'" (which DOES change company.name) is never
+    flagged as unapplied.
+    """
+    if not _contains_any_word(normalised_text, _copy_directives._COPY_CONTENT_REWRITE_VERBS):
+        return False
+    targets_hero = _contains_any(
+        normalised_text, _UNAPPLIED_HERO_SCOPE_KEYWORDS
+    ) or _contains_word(normalised_text, "hero")
+    if not targets_hero:
+        return False
+    previous_company = (
+        previous.get("company") if isinstance(previous.get("company"), dict) else {}
+    )
+    merged_company = (
+        merged.get("company") if isinstance(merged.get("company"), dict) else {}
+    )
+    name_changed = _string_value(previous_company.get("name")) != _string_value(
+        merged_company.get("name")
+    )
+    tagline_changed = _string_value(previous_company.get("tagline")) != _string_value(
+        merged_company.get("tagline")
+    )
+    return not name_changed and not tagline_changed
+
+
+def compute_unapplied_followup_intents(
+    previous: dict[str, Any],
+    merged: dict[str, Any],
+    *,
+    follow_up_prompt: str,
+) -> list[dict[str, str]]:
+    """Report follow-up asks the deterministic v1 pipeline could not apply.
+
+    Returns ``[{"target": ..., "reason": ...}]`` for (1) capabilities this
+    follow-up newly requested that are recognised in capability-map.v1.json but
+    not mounted by deterministic codegen v1, and (2) a hero/"hjältesektion"
+    heading rewrite that has no deterministic copyDirective target. Pure
+    observer - no mutation, no intent remapping. Empty list = everything the
+    follow-up asked for was either applied or not recognised at all.
+    """
+    posts: list[dict[str, str]] = []
+    seen_targets: set[str] = set()
+
+    # Rule 1: a capability THIS follow-up newly requested (delta vs previous)
+    # that codegen v1 does not mount.
+    previous_caps = {
+        cap
+        for cap in (previous.get("requestedCapabilities") or [])
+        if isinstance(cap, str) and cap.strip()
+    }
+    selected = merged.get("selectedDossiers")
+    required_dossiers = {
+        dossier
+        for dossier in (
+            (selected.get("required") or []) if isinstance(selected, dict) else []
+        )
+        if isinstance(dossier, str) and dossier.strip()
+    }
+    capability_map = _load_capability_map()
+    for raw_cap in merged.get("requestedCapabilities") or []:
+        if not isinstance(raw_cap, str) or not raw_cap.strip():
+            continue
+        cap = raw_cap.strip()
+        if cap in previous_caps or cap in seen_targets:
+            continue
+        entry = capability_map.get(cap)
+        if entry is None:
+            # Not a recognised capability slug - don't claim anything about it.
+            continue
+        if _capability_is_mounted(entry, required_dossiers):
+            continue
+        seen_targets.add(cap)
+        posts.append(
+            {
+                "target": cap,
+                "reason": _UNAPPLIED_CAPABILITY_REASON.format(capability=cap),
+            }
+        )
+
+    # Rule 2: a hero/section heading rewrite the deterministic v1 cannot target.
+    normalised_text = _normalise_followup_text(follow_up_prompt)
+    if _is_unapplied_hero_rewrite(previous, merged, normalised_text):
+        posts.append(
+            {"target": _UNAPPLIED_HERO_TARGET, "reason": _UNAPPLIED_HERO_REASON}
+        )
+
+    return posts
+
+
 def _is_discovery_asset_ref(value: Any) -> bool:
     if not isinstance(value, dict):
         return False
@@ -3096,6 +3278,19 @@ def generate(
     # operator/scrape filled every contact field.
     if placeholder_contact_fields:
         meta["placeholderContactFields"] = list(placeholder_contact_fields)
+    # B155 honest-level-1: name the follow-up asks the deterministic v1 pipeline
+    # recognised but could not apply (unmounted capability / hero rewrite), so
+    # build-result.json can complement the global appliedVisibleEffect boolean
+    # instead of implying full success. Only a follow-up over a previous version
+    # can have unapplied intents; the list is omitted when empty.
+    if mode == "followup" and base_project_input is not None:
+        unapplied_followup_intents = compute_unapplied_followup_intents(
+            base_project_input,
+            project_input,
+            follow_up_prompt=prompt,
+        )
+        if unapplied_followup_intents:
+            meta["unappliedFollowupIntents"] = unapplied_followup_intents
     # B132 (Scout-orchestrator merge 2026-05-19): wizardMustHave från
     # _wizard_must_have_from_discovery() flödar genom meta-sidecaren och
     # konsumeras av _prompt_meta_wizard_must_have() i build_site.py för

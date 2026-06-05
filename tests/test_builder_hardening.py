@@ -942,6 +942,37 @@ def test_npm_timeout_constants_are_defined() -> None:
 
 
 @pytest.mark.tooling
+def test_npm_timeouts_are_env_overridable(monkeypatch) -> None:
+    """B86: operators on slow Cloud Agent VMs can raise the npm-step
+    timeouts via env vars without a code change.
+
+    The resolver must use the default when unset/blank/invalid/non-positive,
+    accept a valid positive integer (with surrounding whitespace), and the
+    public env-var name constants must stay wired to the documented keys.
+    """
+    from packages.generation.build import subprocesses
+
+    resolve = subprocesses._timeout_seconds_from_env
+    env_var = subprocesses.NPM_INSTALL_TIMEOUT_ENV
+
+    assert env_var == "SAJTBYGGAREN_NPM_INSTALL_TIMEOUT_SECONDS"
+    assert subprocesses.NPM_BUILD_TIMEOUT_ENV == "SAJTBYGGAREN_NPM_BUILD_TIMEOUT_SECONDS"
+
+    monkeypatch.delenv(env_var, raising=False)
+    assert resolve(env_var, 600) == 600
+
+    monkeypatch.setenv(env_var, "1800")
+    assert resolve(env_var, 600) == 1800
+
+    monkeypatch.setenv(env_var, "  900 ")
+    assert resolve(env_var, 600) == 900
+
+    for bad in ("", "   ", "abc", "0", "-5", "12.5"):
+        monkeypatch.setenv(env_var, bad)
+        assert resolve(env_var, 600) == 600, f"{bad!r} should fall back to default"
+
+
+@pytest.mark.tooling
 def test_build_calls_run_npm_with_documented_timeouts(monkeypatch, tmp_path: Path) -> None:
     """build() must pass the documented timeouts to run_npm for both steps.
 

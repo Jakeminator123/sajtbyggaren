@@ -3,7 +3,6 @@
 import {
   Brush,
   CircleCheck,
-  Loader2,
   RotateCcw,
   Sparkles,
   Wand2,
@@ -19,6 +18,7 @@ import { PRIMARY_INTERACTIONS, SECONDARY_INTERACTIONS } from "@/lib/ui-tokens";
 import { cn } from "@/lib/utils";
 
 import type { RunArtefactBundle } from "@/components/builder/inspector/use-run-artefacts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * VariantsTab — Site Inspectors live-switch-presets för scaffold-variants.
@@ -222,9 +222,21 @@ export function VariantsTab({
 
   if (options === null) {
     return (
-      <div className="text-muted-foreground flex h-32 items-center justify-center gap-2 text-[12px]">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Laddar variants…
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        className="flex flex-col gap-3"
+      >
+        <span className="sr-only">Laddar variants…</span>
+        {/* Tre kort-skeleton som approximerar variant-grid (2 cols
+            på sm+, 1 col på xs). Höjden 88px speglar variant-kortets
+            faktiska kompakta höjd så layouten inte hoppar. */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[88px] w-full rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }

@@ -3,46 +3,62 @@
   "policyId": "preview-runtime-policy.v1",
   "version": 1,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin.",
+  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin. ADR 0033: vercel-sandbox är primärt förstahandsval (intended primary, status=primary), MEN faktisk runtime-default (fältet 'default') är fortfarande local/local-next tills default-flip (Bite C) är verifierad. local är garanterad fallback/dev, fly framtida, stackblitz pausad. Policyn ska aldrig peka 'default' på en runtime som koden inte använder ännu.",
   "principles": [
     "Preview Runtime är en abstraktion. Produktkoden talar bara om 'Preview Runtime', aldrig 'VM' eller 'sandbox'.",
-    "Sajtbyggaren startar med StackBlitz som default. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
+    "vercel-sandbox är primärt förstahandsval för användarpreview (ADR 0033, status=primary), men fältet 'default' speglar FAKTISK default = local/local-next tills default-flip/Bite C verifierats - intended primary != actual default. local är den garanterade fallbacken. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
     "Det finns EN Quality Gate; nya lager läggs först om eval-batchen visar bevisat behov (se ADR 0016)."
   ],
-  "default": "stackblitz",
+  "default": "local",
   "runtimes": [
     {
-      "kind": "stackblitz",
+      "kind": "vercel-sandbox",
       "status": "primary",
       "useWhen": [
-        "iteration på Next.js-sajt utan tunga server-side-integrationer",
-        "snabb dev-loop"
+        "användarvänd preview av genererad sajt (publik HTTPS-URL i iframe, fungerar i alla browsers)",
+        "kärnflödet prompt -> företagshemsida -> preview -> följdprompt -> ny version",
+        "intended primary per ADR 0033 - blir 'default' först när VIEWSER_PREVIEW_MODE-flippen (Bite C) verifierats; tills dess väljs den explicit via VIEWSER_PREVIEW_MODE=vercel-sandbox"
       ],
       "limitations": [
-        "vissa Node-API:er saknas i WebContainer",
-        "långa byggen kan vara långsammare än lokal Node"
+        "kräver Vercel-auth (OIDC eller access-token); utan auth degraderar adaptern till unsupported/failed",
+        "kostar ett par ören per körning (active CPU + memory + data transfer); TTL + stop()/delete() håller kostnaden i schack",
+        "idag bara i regionen iad1 -> högre latens från Sverige"
       ],
-      "envInjection": "client-only via WebContainer FS"
-    },
-    {
-      "kind": "fly",
-      "status": "secondary",
-      "useWhen": [
-        "sajten kräver riktig build som inte fungerar i StackBlitz (Hard Dossier-integrationer som Stripe, Supabase, databas)",
-        "produktnära smoke-test innan promotion"
-      ],
-      "limitations": ["kostar pengar", "långsammare uppstart än StackBlitz"],
-      "envInjection": "via Fly secrets injection"
+      "envInjection": "server-only DI via @vercel/sandbox i apps/viewser/lib; VERCEL_OIDC_TOKEN"
     },
     {
       "kind": "local",
       "status": "developer-only",
       "useWhen": [
-        "felsökning på utvecklarmaskin",
-        "ingen användarvänd preview"
+        "faktisk runtime-default idag (local-next) tills default-flip till vercel-sandbox verifierats (ADR 0033)",
+        "lokal dev och felsökning på utvecklarmaskin",
+        "garanterad fallback när vercel-sandbox inte är tillgänglig (ingen Vercel-auth)"
       ],
       "limitations": ["kräver att utvecklaren har Node och deps installerade"],
       "envInjection": "läs från .env.local"
+    },
+    {
+      "kind": "fly",
+      "status": "secondary",
+      "useWhen": [
+        "framtida server-runtime-fallback för sajter som kräver riktig build med tunga integrationer (Stripe, Supabase, databas)",
+        "produktnära smoke-test innan promotion"
+      ],
+      "limitations": ["kostar pengar", "ej implementerad - slot för framtida adapter"],
+      "envInjection": "via Fly secrets injection"
+    },
+    {
+      "kind": "stackblitz",
+      "status": "paused",
+      "useWhen": [
+        "ingen - pausad/degraderad per ADR 0033 (kräver Chromium-isolation, lång init); får finnas kvar men är inte default och blockerar inte"
+      ],
+      "limitations": [
+        "kan inte laddas i Safari/Firefox (B125)",
+        "vissa Node-API:er saknas i WebContainer",
+        "långa byggen kan vara långsammare än lokal Node"
+      ],
+      "envInjection": "client-only via WebContainer FS"
     }
   ],
   "promotionRule": "En Promoted Site får aldrig promotas direkt från en Preview Runtime som inte kunnat köra hela quality gate-batchen utan att skippa checks.",

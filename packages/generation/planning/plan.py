@@ -30,7 +30,18 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from packages.generation.brief.models import has_openai_api_key
+from packages.generation.orchestration.section_treatments import (
+    load_section_treatments_catalogue,
+)
 
+from .blueprint import (
+    SectionPlanEntry,
+    build_generation_blueprint,
+    derive_section_plan,
+    merge_section_plans,
+    resolve_section_plan,
+    section_addresses,
+)
 from .models import resolve_planning_model
 
 logger = logging.getLogger("sajtbyggaren.planning")
@@ -105,26 +116,24 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
 # Phase 3 (ADR 0032, originally landed as ADR 0031 on origin/main pre-port;
 # renumbered during the B146 port to avoid colliding with jakob-be:s
 # ADR 0031 — Steward auto-bump): catalogue of registered section design
-# treatments per section-id. Mirrors
-# governance/schemas/project-input.schema.json
-# directives.sectionTreatments enums and the runtime table
-# packages/generation/build/dispatcher.py::_SECTION_TREATMENTS_BY_VARIANT.
-# Used by the planning prompt so planningModel can reason about visual
-# structure when it picks a scaffold/variant.
+# treatments per section-id. Used by the planning prompt so planningModel
+# can reason about visual structure when it picks a scaffold/variant.
 #
-# This catalogue is an LLM-prompt aid, not a source of truth. The
-# schema enums and the Python runtime table are the canonical
-# sources; tests/test_section_treatments_prompts.py guards against
-# drift between this list and the runtime catalogue (so a new
-# treatment registered in dispatcher.py without bumping this list
-# fails CI before the planning prompt can silently mislead the LLM).
-_SECTION_TREATMENTS_CATALOGUE: dict[str, list[str]] = {
-    "selected-work-preview": ["editorial-stack", "asymmetric-grid", "marquee-row"],
-    "treatment-list": ["minimal-rows", "split-cards", "numbered-stack"],
-    "practice-grid": ["dense-grid", "tabular", "grouped"],
-    "expertise-areas": ["numbered-2col", "tag-cluster"],
-    "service-list": ["card-grid", "alternating-rows", "icon-strip", "tabular"],
-}
+# kor-3a (2026-06-03): this catalogue is no longer a hand-maintained
+# Python mirror. It is loaded from the SAME declarative source the build
+# dispatcher reads — ``scaffolds/<id>/section-treatments.json`` via the
+# shared loader in ``orchestration/section_treatments`` (moved out of
+# ``build`` in the Pushvakt P1 boundary fix, 2026-06-03)
+# — so the planning prompt and the runtime variant→treatment table
+# (``_SECTION_TREATMENTS_BY_VARIANT``) cannot drift apart. The catalogue
+# stays an LLM-prompt aid; the JSON files + schema enums are the
+# canonical sources. tests/test_section_treatments_prompts.py still
+# guards catalogue↔schema↔runtime agreement, and
+# tests/test_section_treatments_json_parity.py proves the JSON encodes
+# the exact pre-migration values.
+_SECTION_TREATMENTS_CATALOGUE: dict[str, list[str]] = (
+    load_section_treatments_catalogue()
+)
 
 
 # Heuristic keywords used by the deterministic mock planner to pick
@@ -220,11 +229,16 @@ class RejectedCapability(BaseModel):
 class PlanningChoice(BaseModel):
     """Structured plan output from planningModel.
 
-    Narrow on purpose: the LLM only chooses scaffold/variant + which
-    Dossiers from the candidate set to include. starterId, routePlan and
-    buildSpec are derived deterministically from the chosen scaffold
-    after the call so the LLM cannot invent values that drift from the
-    on-disk scaffold registry.
+    Narrow on purpose: the LLM chooses scaffold/variant + which Dossiers from
+    the candidate set to include, and MAY propose ``sectionPlan`` (section-level
+    intent). starterId, routePlan and buildSpec are derived deterministically
+    from the chosen scaffold after the call so the LLM cannot invent values that
+    drift from the on-disk scaffold registry. ``sectionPlan`` entries are
+    validated against the scaffold's sections.json (kor-1c); an entry that
+    addresses a section the scaffold does not declare is rejected, never
+    written. contentBlocks / visualDirection / qualityRisks are derived
+    deterministically from the (LLM-or-mock) Site Brief blueprint, not emitted
+    here, so the contract is identical with or without an API key.
     """
 
     scaffoldId: str = Field(description="Must be a registered scaffold with content on disk.")
@@ -232,6 +246,15 @@ class PlanningChoice(BaseModel):
     selectedDossiers: list[str] = Field(default_factory=list)
     rejectedCapabilities: list[RejectedCapability] = Field(default_factory=list)
     rationale: str = Field(default="")
+    sectionPlan: list[SectionPlanEntry] = Field(
+        default_factory=list,
+        description=(
+            "Section-level intent, one entry per '<routeId>.<sectionId>' address. "
+            "Each section MUST be one the chosen scaffold declares in sections.json; "
+            "unknown sections are rejected. Leave empty if unsure - a deterministic "
+            "baseline is always produced."
+        ),
+    )
 
 
 class PlanResult(BaseModel):
@@ -598,7 +621,29 @@ _PLANNING_SYSTEM_INSTRUCTIONS = (
     "    pinned ids, and do not include sectionTreatments in your output - the "
     "    PlanningChoice schema does not carry that field on purpose. The "
     "    Section Design Treatments Catalogue listed in the user message tells "
-    "    you which treatments exist per section. Do not invent treatment ids."
+    "    you which treatments exist per section. Do not invent treatment ids. "
+    # kor-1c — section-level intent (sectionPlan)
+    "(7) You MAY return sectionPlan: a list of section-level intent entries, one "
+    "    per section you want to steer. Each entry's 'section' MUST be a "
+    "    '<routeId>.<sectionId>' address from the chosen scaffold's section list "
+    "    (shown per scaffold in the user message); never invent a section. Use "
+    "    goal/copyIntent/ctaRole to express INTENT (what the section should "
+    "    achieve and the angle), not finished customer copy. Entries addressing "
+    "    a section the scaffold does not declare are rejected. Leave sectionPlan "
+    "    empty if you have nothing specific to add; a deterministic baseline is "
+    "    always produced from the Site Brief. "
+    # kor-1c-copy — how the rendered copy is composed (honesty)
+    "(8) The Generation Package's contentBlocks (hero, the company story, the "
+    "    branschnära FAQ and the per-service offer summaries) are composed "
+    "    DETERMINISTICALLY from the Site Brief - its positioning "
+    "    (oneLiner/differentiator/localAngle), contentStrategy and "
+    "    servicesMentioned - so the contract is identical with or without an "
+    "    API key. You do not author that copy here; instead make your "
+    "    sectionPlan copyIntent for the hero / offer / story / faq sections "
+    "    honest and specific so it steers that composition. Never propose copy "
+    "    intent that asserts a certification, review, price, contact channel or "
+    "    any fact the Site Brief does not state - anything unknown stays a "
+    "    qualityRisk, never customer copy, and the raw prompt is never copy."
 )
 
 
@@ -618,11 +663,15 @@ def _build_planning_prompt(
     for entry in registry:
         profile = entry.get("selectionProfile") or {}
         variant_ids = [v["id"] for v in entry.get("variants") or []]
+        # kor-1c: list the valid '<routeId>.<sectionId>' addresses so the LLM
+        # can only steer sections the scaffold actually declares.
+        section_addr = sorted(section_addresses(entry))
         scaffold_lines.append(
             f"- id: {entry['id']}\n"
             f"  label: {entry['label']}\n"
             f"  description: {entry.get('description', '')}\n"
             f"  variants: {variant_ids}\n"
+            f"  sections: {section_addr}\n"
             f"  embeddingText: {profile.get('embeddingText', '')}\n"
             f"  semanticSignals: {profile.get('semanticSignals', [])}\n"
             f"  negativeSignals: {profile.get('negativeSignals', [])}"
@@ -1215,6 +1264,7 @@ def _assemble_site_plan(
     route_plan: list[dict[str, str]] | None = None,
     page_count_warning: dict[str, Any] | None = None,
     intent_guard_warnings: list[dict[str, str]] | None = None,
+    section_plan: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if route_plan is None:
         route_plan = _route_plan_from_scaffold(scaffold)
@@ -1243,6 +1293,11 @@ def _assemble_site_plan(
         # Empty list intentionally omitted from the schema-required keys so
         # legacy consumers do not need to treat "no warnings" as a new field.
         site_plan["intentGuardWarnings"] = list(intent_guard_warnings)
+    if section_plan:
+        # kor-1c blueprint: section-level intent keyed by '<routeId>.<sectionId>'.
+        # Optional + additive; omitted entirely when empty so legacy runs are
+        # byte-identical until the blueprint actually carries content.
+        site_plan["sectionPlan"] = section_plan
     scaffold_version = (scaffold.get("scaffold") or {}).get("version")
     if isinstance(scaffold_version, str) and scaffold_version:
         site_plan["scaffoldVersion"] = scaffold_version
@@ -1258,6 +1313,8 @@ def _assemble_generation_package(
     engine_mode: str,
     project_id: str | None,
     created_at: str,
+    scaffold: dict[str, Any] | None = None,
+    route_plan: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     package: dict[str, Any] = {
         "runId": run_id,
@@ -1283,6 +1340,19 @@ def _assemble_generation_package(
         raise RuntimeError(
             "engine_mode='followup' requires a projectId; got None."
         )
+    # kor-1c blueprint: the actual work order the renderer consumes in kor-2.
+    # contentBlocks / visualDirection / qualityRisks are derived deterministically
+    # from the (LLM-or-mock) Site Brief blueprint + the scaffold's sections.json,
+    # so the contract is identical with or without an API key. Each is additive
+    # and only emitted when it has content.
+    if scaffold is not None:
+        blueprint = build_generation_blueprint(
+            site_brief,
+            scaffold,
+            route_plan or _route_plan_from_scaffold(scaffold),
+            section_treatments_catalogue=_SECTION_TREATMENTS_CATALOGUE,
+        )
+        package.update(blueprint)
     return package
 
 
@@ -1419,6 +1489,24 @@ def produce_site_plan(
     full_route_plan = _insert_wizard_extras_before_contact(
         trimmed_route_plan, wizard_extra_routes
     )
+
+    # kor-1c blueprint: derive section-level intent from the (LLM-or-mock) Site
+    # Brief blueprint, then overlay any sectionPlan planningModel proposed. The
+    # resolver rejects addresses the chosen scaffold's sections.json does not
+    # declare - the same rail used for dossiers. The deterministic baseline
+    # guarantees a usable sectionPlan in every path (mock, pinned, real).
+    section_plan = derive_section_plan(site_brief, scaffold, full_route_plan)
+    resolved_section_plan, rejected_sections = resolve_section_plan(
+        choice.sectionPlan, scaffold
+    )
+    if rejected_sections:
+        logger.warning(
+            "planningModel proposed sectionPlan addresses not in %r sections.json: %s",
+            choice.scaffoldId,
+            rejected_sections,
+        )
+    section_plan = merge_section_plans(section_plan, resolved_section_plan)
+
     site_plan = _assemble_site_plan(
         run_id=run_id,
         choice=choice,
@@ -1437,6 +1525,7 @@ def produce_site_plan(
         route_plan=full_route_plan,
         page_count_warning=page_count_warning,
         intent_guard_warnings=intent_guard_warnings,
+        section_plan=section_plan,
     )
     validate_site_plan(site_plan)
 
@@ -1448,6 +1537,8 @@ def produce_site_plan(
         engine_mode=engine_mode,
         project_id=project_id,
         created_at=created_at,
+        scaffold=scaffold,
+        route_plan=full_route_plan,
     )
     validate_generation_package(generation_package)
 

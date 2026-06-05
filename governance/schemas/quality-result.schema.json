@@ -21,9 +21,63 @@
     "summary": {
       "type": "string",
       "description": "Short one-line operator summary that trace.ndjson can surface without rendering the full check list."
+    },
+    "critic": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["score", "issues", "source"],
+      "description": "Quality Critic lane (warning only; NEVER feeds the top-level status). Null unless the caller passed the blueprint into run_quality_gate. kor-4a deterministic heuristics (source deterministic-v0); kor-4b merges read-only verifierModel taste findings on top (source verifierModel / mock-no-key / mock-llm-error). Mirrors packages.generation.quality_gate.CriticResult.",
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Weighted-by-severity score: max(0, 100 - sum(weight(severity))) with high=20, medium=10, low=5. 100 = clean blueprint."
+        },
+        "issues": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/criticIssue" },
+          "description": "Repairable findings. Empty when the blueprint passed all heuristics and the verifier found no smells."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["deterministic-v0", "verifierModel", "mock-no-key", "mock-llm-error"],
+          "description": "Provenance. deterministic-v0 = kor-4a heuristics only. kor-4b verifierModel critic adds: verifierModel (LLM findings merged on top of the heuristics), mock-no-key / mock-llm-error (verifier requested but fell back to the heuristic findings only - same findings as kor-4a)."
+        }
+      }
     }
   },
   "$defs": {
+    "criticIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "type", "target", "message", "repairHint"],
+      "description": "One critic finding (deterministic heuristic or verifierModel taste finding). Mirrors packages.generation.quality_gate.CriticIssue.",
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "description": "Drives the score penalty (high=20, medium=10, low=5)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["generic_copy", "thin_offer", "placeholder_leakage", "missing_local_context", "missing_cta", "fake_or_ungrounded_trust", "weak_hero", "too_template_like"],
+          "description": "Finding kind. generic_copy/thin_offer/placeholder_leakage/missing_local_context/missing_cta come from the kor-4a deterministic heuristics; fake_or_ungrounded_trust/weak_hero/too_template_like are kor-4b verifierModel taste findings (and a refined generic_copy). Adding a type requires bumping this enum and the CriticIssueType Literal together."
+        },
+        "target": {
+          "type": "string",
+          "description": "Address contract <route>.<section> (or global.<section> for brief-level fields)."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable description of the finding."
+        },
+        "repairHint": {
+          "type": "string",
+          "description": "Deterministic suggestion for kor-5 / an operator. Advice, never an applied change."
+        }
+      }
+    },
     "checkResult": {
       "type": "object",
       "additionalProperties": false,

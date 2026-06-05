@@ -58,7 +58,9 @@ On Ubuntu Noble use `sudo apt-get install -y python3-venv` when available;
 if the meta-package is missing, install `python3.12-venv` explicitly before
 the first `python3 -m venv .venv`. When neither apt package is available,
 the VM update script falls back to `pip install virtualenv` and
-`virtualenv .venv` (same outcome as `python3 -m venv`).
+`~/.local/bin/virtualenv .venv` (same outcome as `python3 -m venv`; user
+installs land in `~/.local/bin`, which may be off the shell search path in
+non-login shells).
 Activate with `source .venv/bin/activate`. The update script handles
 this automatically.
 
@@ -121,3 +123,27 @@ Commands are documented in the README under "Snabbstart". Key commands:
 - Long-running dev servers (Next.js preview, Streamlit backoffice) should run
   under tmux on Cloud Agent VMs (portal config under
   `/exec-daemon/tmux.portal.conf`).
+- Stop Viewser on port 3000 before `python -m pytest tests/`: otherwise
+  `test_api_prompt_smoke` (which starts its own Next dev server) flakes /
+  collides on an already-heavy suite. Run the full suite first, then start
+  `npm run dev` in `apps/viewser`. (Same coexistence note as the Windows
+  orphan gotcha above — applies to Cloud VMs too.)
+- Killing leftover Sajtbyggaren node processes (Windows) — the easy-fix: run
+  `kill-dev-trees.bat` (repo root) **as administrator**. It tree-kills only
+  Sajtbyggaren-scoped node trees (path token, or `next start`/`next dev` on the
+  preview port range, or a matching port listener). Run it elevated: without
+  admin the script often cannot read other processes' command lines (especially
+  after UAC changes, or when a process runs at a different integrity level), so
+  the match whitelist sees empty cmdlines and reports "ingen matchar" even when
+  Sajtbyggaren processes exist. Make a shortcut to the `.bat` with "Run as
+  administrator" ticked. This is the canonical "kill all my dev/preview node"
+  recovery after an interrupted `npm run dev` or an orphaned preview server.
+- Operator grant (Jakob, 2026-06-02; utökad 2026-06-03): the agent has standing
+  rights to read and edit ALL `.env*` files **anywhere in the repo** (repo root,
+  `apps/viewser/`, and any subfolder) plus `.cursorignore`, and the `.vercel/`
+  and `.cursor/` folders, as part of builder/preview/orchestration work. Never
+  print real secret values in replies, and never commit `.env*` or
+  `.cursor/mcp.json` (they stay gitignored). To run the vercel-sandbox preview
+  locally, the dev process needs a fresh `VERCEL_OIDC_TOKEN` (`vercel env pull
+  apps/viewser/.env.vercel.local`, ~12h TTL) in its environment plus
+  `VIEWSER_PREVIEW_MODE=vercel-sandbox`.

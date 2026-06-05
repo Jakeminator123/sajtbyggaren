@@ -1,4 +1,19 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { NextConfig } from "next";
+
+// Monorepo-rot (två nivåer upp från apps/viewser). Beräknas från configens
+// egen filsökväg (oberoende av process.cwd(), som inte är pålitlig under
+// Turbopacks worker-processer). Används som ``turbopack.root`` så Turbopack
+// inkluderar ``../../packages`` i modulgrafen — annars kan VARKEN ``next dev``
+// ELLER ``next build`` resolva ``@preview-runtime`` (TS-källa utanför
+// app-roten). Se kommentaren vid ``turbopack`` nedan.
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+);
 
 // Preview-runtime-läge (ADR 0028 — Runtime Ladder).
 // ------------------------------------------------------------------
@@ -30,6 +45,15 @@ import type { NextConfig } from "next";
 //                      LocalRuntime när bygget finns, annars
 //                      StackBlitz). Idag mappar `auto` på StackBlitz-
 //                      headers för säker bakåtkompatibilitet.
+//
+//   4. `vercel-sandbox` — VercelSandboxRuntime (ADR 0033, primärt
+//                      förstahandsval). Previewn serveras från en publik
+//                      `…vercel.run`-https-URL (isolerad Vercel Sandbox) och
+//                      bäddas som en plain cross-origin <iframe>. Precis som
+//                      `local-next` FÅR vi INTE sätta COEP/COOP — en publik
+//                      https-iframe behöver ingen cross-origin-isolation
+//                      (det krävs bara av StackBlitz/WebContainers). Samma
+//                      transport som local-next (http, COEP off).
 //
 // `credentialless` används i StackBlitz-grenen istället för
 // `require-corp` eftersom vi embeddar tredjepartsiframe (stackblitz.com)
@@ -153,6 +177,27 @@ if (
 }
 
 const nextConfig: NextConfig = {
+  // ``@preview-runtime`` är ett tsconfig-path-alias som pekar på delad TS-källa
+  // utanför app-roten (``../../packages/preview-runtime/src``). tsc resolvar det
+  // via ``paths``, men Turbopack (BÅDE ``next dev`` och ``next build``)
+  // inkluderar aldrig moduler vars riktiga sökväg ligger utanför den inferrade
+  // projektroten — så utan detta 500:ar preview-routen i dev och bygget failar.
+  // Bite C är första konsumenten som faktiskt RUNTIME-importerar paketet
+  // (``app/api/preview/[siteId]`` → ``lib/preview-runtime-server.ts``). Därför:
+  //   - ``turbopack.root`` breddar bygg-/dev-roten till repo-roten (``REPO_ROOT``,
+  //     beräknad från configens egen filsökväg — pålitligare än ``process.cwd()``
+  //     under Turbopacks worker-processer) så ``../../packages`` ingår i modulgrafen.
+  //   - ``resolveAlias`` pekar specifieraren på TS-källans index.
+  // De repo-rot-baserade runtime-sökvägarna i ``lib/*-runner.ts`` (python-spawn
+  // mot ``.venv`` m.m.) görs opaka för Turbopacks statiska analys (se
+  // ``repoRoot()`` där) så den bredare roten inte får output-tracern att
+  // försöka inkludera t.ex. ``.venv``-symlänkar som pekar ut ur repo-roten.
+  turbopack: {
+    root: REPO_ROOT,
+    resolveAlias: {
+      "@preview-runtime": "../../packages/preview-runtime/src/index.ts",
+    },
+  },
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
   // på det (t.ex. skippa StackBlitz-fallbacken när vi vet att vi kör
   // LocalRuntime). NEXT_PUBLIC_-prefixet är vad Next.js kräver för att
@@ -172,12 +217,17 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: PREVIEW_MODE,
   },
   async headers() {
-    // LocalRuntime-grenen: tom header-lista. COEP credentialless +
-    // COOP same-origin skulle annars blockera den cross-origin iframen
-    // som pekar på localhost:<4100-4199>. Notera: `effectiveMode`, inte
-    // `PREVIEW_MODE` — production-gaten ovanför ser till att vi aldrig
-    // når den här grenen oavsiktligt i `NODE_ENV=production`.
-    if (effectiveMode === "local-next") {
+    // Tom header-lista för local-next OCH vercel-sandbox. COEP
+    // credentialless + COOP same-origin skulle annars blockera en
+    // cross-origin iframe:
+    //   - local-next  → localhost:<4100-4199> (annan port, cross-origin).
+    //   - vercel-sandbox → publik …vercel.run-https-URL (cross-origin).
+    // Ingendera behöver cross-origin isolation (det krävs bara av
+    // StackBlitz/WebContainers för SharedArrayBuffer). En publik https-iframe
+    // bäddas utan isolation (ADR 0033). Notera: `effectiveMode`, inte
+    // `PREVIEW_MODE` — production-gaten ovanför promotar bara local-next, så
+    // vercel-sandbox passerar oförändrad hit även i NODE_ENV=production.
+    if (effectiveMode === "local-next" || effectiveMode === "vercel-sandbox") {
       return [];
     }
 

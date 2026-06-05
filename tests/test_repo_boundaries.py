@@ -33,3 +33,45 @@ def test_scripts_imports_from_planning_are_allowed():
     scripts = _ownership_entry(policy, "scripts/")
     allowed = set(scripts.get("mayImportFrom", []))
     assert "packages/generation/planning" in allowed
+
+
+@pytest.mark.tooling
+def test_build_may_import_orchestration_for_section_treatments():
+    """repo-boundaries v10: build may import orchestration.
+
+    kor-3a's section-treatment loader lives in
+    ``packages/generation/orchestration/section_treatments.py``; the build
+    dispatcher re-exports it, so build must be allowed to import orchestration.
+    """
+    policy = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+    build = _ownership_entry(policy, "packages/generation/build/")
+    allowed = set(build.get("mayImportFrom", []))
+    assert "packages/generation/orchestration" in allowed
+
+
+@pytest.mark.tooling
+def test_planning_does_not_import_from_build():
+    """Real-import regression: fas-2 planning must not import fas-3 build.
+
+    The policy-content assertions above only check the policy document; this
+    scans actual source so a planning->build import (Pushvakt P1, kor-3a)
+    cannot regress silently. planning ``mayImportFrom`` lists ``orchestration``,
+    never ``build``.
+    """
+    planning_dir = REPO_ROOT / "packages" / "generation" / "planning"
+    offenders: list[str] = []
+    for path in sorted(planning_dir.rglob("*.py")):
+        for lineno, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            stripped = line.strip()
+            if stripped.startswith(("import ", "from ")) and (
+                "packages.generation.build" in stripped
+            ):
+                offenders.append(
+                    f"{path.relative_to(REPO_ROOT)}:{lineno}: {stripped}"
+                )
+    assert not offenders, (
+        "planning must not import from packages.generation.build "
+        f"(repo-boundaries.v1): {offenders}"
+    )

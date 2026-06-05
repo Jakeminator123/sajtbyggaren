@@ -269,11 +269,14 @@ function installCleanupHandler(): void {
   cleanupHandlerInstalled = true;
   const stopAll = () => {
     for (const [siteId, entry] of servers.entries()) {
-      try {
-        entry.process.kill("SIGTERM");
-      } catch {
-        // Process kan redan ha exitat; ignorera.
-      }
+      // Tree-kill, inte bara entry.process.kill(): på Windows dödar
+      // ChildProcess.kill() bara npx-parenten och lämnar ``next start``-
+      // barnet som orphan (samma B157-klass som killProcessTree fixar i
+      // rebuild-pathen). Fire-and-forget är OK även precis före
+      // process.exit(0) eftersom spawn("taskkill") skapar OS-processen
+      // synkront — den lever vidare och reapar trädet efter att viewser
+      // exitat. POSIX faller tillbaka på child.kill(signal) i helpern.
+      void killProcessTree(entry.process, "SIGTERM");
       servers.delete(siteId);
     }
   };

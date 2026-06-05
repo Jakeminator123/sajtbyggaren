@@ -14,10 +14,14 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import jsonschema
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VIEWSER_DIR = REPO_ROOT / "apps" / "viewser"
+ROUTER_DECISION_SCHEMA = (
+    REPO_ROOT / "governance" / "schemas" / "router-decision.schema.json"
+)
 PROMPT = "Skapa en hemsida för en elektriker i Malmö."
 CANONICAL_ARTEFACTS = ("input.json", "site-brief.json", "site-plan.json", "generation-package.json", "quality-result.json", "repair-result.json", "build-result.json", "trace.ndjson")
 
@@ -190,6 +194,16 @@ def test_api_prompt_route_spawns_python_end_to_end(tmp_path: Path) -> None:
     assert isinstance(build_result, dict)
     assert build_result["status"] == "ok"
     assert build_result["engineMode"] == "init"
+
+    # KÖR-6a (Fas 1, skiva 1a): the response carries a schema-valid, read-only
+    # routerDecision alongside runId/siteId/buildStatus. The init prompt is not
+    # a follow-up edit, so it is never suppressed by the honesty gate.
+    router_decision = payload["routerDecision"]
+    assert isinstance(router_decision, dict), "routerDecision must be present."
+    schema = json.loads(ROUTER_DECISION_SCHEMA.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema).validate(router_decision)
+    # Read-only metadata never asks to start a build/preview from this surface.
+    assert router_decision["shouldStartPreview"] is False
 
     run_dir = tmp_path / "runs" / payload["runId"]
     for artefact in CANONICAL_ARTEFACTS:

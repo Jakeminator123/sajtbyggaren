@@ -1,0 +1,464 @@
+
+
+Jag: "Granska denna zip. Skapar denna en bra körplan för hur mina cursoragenter ska jobba tycker du? Jag har ju både sajtmaskin oc hsajtbyggaren lokalt. Min agent avslutade med orden. "Klart. Jag jobbade read-only (läste coach-konversationen + kartlade båda repona med 4 read-only explore-agenter) och skrev bara .md-filer i docs/heavy-llm-flow/. Ingen kod rörd, sajtmaskin bara läst. Vad som levererades (13 filer) Ramverk/referens: Fil Innehåll README.md Index, nordstjärna, två-lagermodellen, sprintsekvens, globala guardrails 00-malbild-och-lager.md Målarkitektur, fullt init+follow-up-flöde, "språket" (scaffold/variant/dossier/starter), var LLM:en är tunn idag, sajtmaskin-destillat (styrkor + fallgropar) 01-artefakt-kontrakt-blueprint.md Kärnan: utöka Site Brief/Plan/Generation Package (positioning, contentBlocks, visualDirection, qualityRisks) — inte ny canonical-typ 02-orchestrator-och-intent.md OpenClaw-routern: messageKind/buildRequirement/contextLevel, tool-yta, klock-exemplen 03-preview-data-och-versioner.md Vercel Sandbox primär, adaptrar, datamodell (siteId/projectId/version, två pekare), versionsväxling 04-builder-profil.md Driftkontraktet varje Cursor-agent följer Kördokument (en dispatchbar agentuppgift var): kor-1 blueprint-kontrakt → kor-2 renderer konsumerar → kor-3 visual direction → kor-4 quality critic → kor-5 repair pass → kor-6 orchestrator-router → kor-7 context assembler + patch planner. Tre nyckelinsikter ur kartläggningen Grunden är bra, LLM:en är tunn. codegenModel får idag bara skriva rationale/riskNotes; verifierModel/repairModel finns som roller i llm-models.v1.json men anropas inte. Gapet är copy/positionering/verifiering — inte selektion (rätt scaffold väljs varje gång) och inte embeddings (parkerade, rätt parkerade). Blueprintet ska bo i befintliga artefakter. Coachen + handoffen varnar mot nya canonical-namn → jag mappade allt på Site Brief/Plan/Generation Package + <route>.<section>-adressering. OpenClaw var en sidecar i sajtmaskin, inte orchestrator. Run-doc:en bygger den som router ovanpå pipelinen, coexistence-säkert. Var börja: kor-1 (blueprint-bron) — kor-6 (routern) kan köras parallellt eftersom den inte rör generation-koden. Källan ligger kvar i real_llm-flow.txt, oförändrad. Vill du att jag delar upp kor-korten i ännu mindre skivor, eller justerar sekvensen?". Men altså ska jag i "sajtbyggaren" kanske totalt börja ta bort förbjudna nammn och så vidare.. Känns osm jag har för mycket restriktioner"
+
+---
+
+
+Coach:
+
+"I’ll inspect the zip as an actual Cursor-agent run plan, checking structure, task dispatchability, alignment with the current LLM/OpenClaw direction, and whether governance should be simplified rather than expanded.
+
+The package is real and dispatchable, not just notes: 13 markdown files plus real_llm-flow.txt, with no code changes. I’m now checking which run cards need narrowing before sending agents into code.
+
+Thought for 6m 35s
+
+Ja — zippen är i grunden bra. Den skapar en mycket bättre körplan än “bygg tungt LLM-flöde” som allmän instruktion. Den är dessutom rätt placerad konceptuellt: gamla sajtmaskin behandlas som referens/baslinje, medan nya sajtbyggaren är repo:t som ska bli den renare ersättaren. Det matchar din grundidé: Jakeminator123/sajtmaskin är referensen, men nya versionen ska byggas i Jakeminator123/sajtbyggaren.
+
+Min dom:
+
+8/10 som strategisk körplan.
+6,5–7/10 som direkt Cursor-agent-dispatch utan justering.
+
+Den behöver inte kastas. Den behöver slankas, delas upp och göras mindre rädd.
+
+Det zippen gör riktigt bra
+
+Den sätter rätt huvudriktning:
+
+deterministisk grund
++ blueprint-lager
++ OpenClaw-router
++ quality critic
++ repair
++ context assembler
++ artifact patching
+
+Det är rätt tänk.
+
+Det bästa är att den inte föreslår “LLM skriver hela Next.js fritt”. Den håller fast vid att Sajtbyggaren ska vara kontrollerad, företagsnära och mer seriös än Lovable/v0, men med Lovable/v0 som ribba för enkelhet, iteration och finish.
+
+Den gör också rätt sak med scaffold / variant / dossier / starter: den behandlar dem som språket LLM:en ska resonera över, inte som saker LLM:en ska hitta på.
+
+Det är exakt rätt.
+
+Det stora problemet: körplanen är lite för “governance-säker”
+
+Din känsla är korrekt: det finns lite för mycket broms i dokumenten.
+
+Framför allt 04-builder-profil.md säger i praktiken:
+
+kör ruff hela repo:t
+kör full pytest
+kör governance_validate
+kör rules_sync
+kör check_term_coverage
+registrera allt i naming-dictionary
+stoppa vid nya termer
+ADR vid off-limits
+
+För stora schema-/generatorändringar är det rimligt. Men som generell agentprofil blir det för tungt.
+
+Det krockar delvis med din egen arbetsmodell, där du uttryckligen vill skruva ned säkerhetsnivån cirka 20 %, undvika onödig PR-friktion och använda scope-baserade checks i stället för att köra maximal process varje gång.
+
+Så: behåll skyddet, men gör det scope-baserat.
+
+Ska du börja ta bort “förbjudna namn”?
+
+Inte totalt. Men du bör rensa och omformulera dem.
+
+Det finns två olika saker som blandas ihop:
+
+1. Bra förbjudna saker
+
+Dessa ska vara kvar:
+
+- inte skapa nya canonical-artefakter utan beslut
+- inte återinföra gamla Sajtmaskin-begrepp okontrollerat
+- inte blanda Site/Feature/Integration/Data/Hybrid-dossier-typer om repo:t redan låst soft/hard
+- inte använda demoUrl/template/v0-namn om de skapar begreppskaos
+- inte låta LLM byta starter/scaffold/dossier utan resolver
+
+Det är skydd mot det kaos som gamla Sajtmaskin hade.
+
+2. Dåliga “förbud” som börjar kväva arbetet
+
+Detta bör mjukas upp:
+
+- “blueprint” får användas som pedagogiskt ord
+- “patch plan” får användas som transient intern struktur
+- “OpenClaw Router” får användas i docs medan termen etableras
+- nya fältnamn behöver inte alltid bli stor governance-fråga
+- ADR ska inte krävas för varje liten additiv schemafältändring
+
+Min rekommendation är:
+
+Förbjud inte ord. Förbjud felaktig canonicalisering.
+
+Alltså:
+
+OK: “blueprint” som samlingsnamn i docs.
+Inte OK: ny sparad artefaktfil site-blueprint.json utan beslut.
+
+OK: “patch plan” som transient Pydantic/Zod-objekt i router/patcher.
+Inte OK: ny canonical run-artefakt patch-plan.json utan beslut.
+
+OK: “OpenClaw Router” som arbetsnamn.
+Inte OK: att bygga en fristående parallell generation engine bredvid befintlig pipeline.
+
+Detta är den viktigaste språkjusteringen.
+
+Det jag skulle ändra innan du ger detta till fler Cursor-agenter
+1. Gör 04-builder-profil.md mindre tung
+
+Byt från:
+
+Alla fem guards alltid.
+Full pytest alltid.
+ADR vid off-limits.
+Term-dictionary vid varje ny term.
+
+till:
+
+Checks väljs efter scope.
+
+Jag skulle skriva om checkdelen ungefär så här:
+
+## Checks före leverans
+
+Kör scope-baserade checks.
+
+Alltid:
+- git diff --stat
+- relevant unit-test för ändrat scope
+- eventuell schema-/policyvalidering om schema/policy ändrats
+
+Python/generator:
+- ruff på berörda filer eller paket
+- relevanta pytest-filer
+- full pytest endast vid bred generator-/schema-/repair-/planning-ändring
+
+Governance:
+- governance_validate om governance/schemas/policies ändrats
+- check_term_coverage endast om nya canonical-termer/fältnamn introduceras
+- rules_sync endast om governance rules eller .cursor/rules rörts
+
+Full femguards krävs inför större merge/sync, inte för varje liten skiva.
+
+Det här följer din arbetsmodell bättre.
+
+2. Dela upp kor-1
+
+kor-1 är rätt viktigast — men den är för stor.
+
+Den försöker samtidigt göra:
+
+- schema-tillägg
+- Site Brief v2
+- businessFacts
+- positioning
+- contentStrategy
+- conversion
+- Site Plan sectionPlan
+- Generation Package contentBlocks
+- visualDirection
+- qualityRisks
+- briefModel prompt
+- planningModel prompt
+- mock-fallback
+- naming-dictionary
+- baseline-test
+
+Det är mycket för en Cursor-agent.
+
+Jag skulle dela den i tre:
+
+kor-1a — schema skeleton
+Endast optional schemafält + validators + mock fixtures.
+Ingen LLM-promptändring.
+
+kor-1b — briefModel fyller businessFacts/positioning/contentStrategy/conversion
+Mock + real path.
+
+kor-1c — planningModel/generationPackage fyller sectionPlan/contentBlocks/visualDirection/qualityRisks
+Mock + real path.
+
+Då blir varje skiva testbar och mindre läskig.
+
+3. Kör kor-6 parallellt, men utan LLM först
+
+kor-6 är väldigt bra. Men jag skulle inte börja med LLM fallback direkt.
+
+Bygg först:
+
+kor-6a — deterministic OpenClaw Router
+
+Den ska bara klassificera:
+
+answer_only
+component_discovery
+edit_instruction
+reference_analysis
+multi_intent
+unclear
+
+och sätta:
+
+buildRequirement
+contextLevel
+shouldStartPreview
+
+Ingen ny routerModel. Ingen ny llm-models-roll. Ingen OpenAI-call.
+
+Varför? För att du får produktvärde direkt: chatten slutar bygga om för rena frågor.
+
+Sedan:
+
+kor-6b — LLM fallback för svåra/tvetydiga meddelanden
+
+Då kan ni ta model role/naming-frågan.
+
+4. Var försiktig med trace.ndjson i router-skivan
+
+I kor-6 står att varje klassning ska loggas i trace.ndjson.
+
+Det låter bra, men det finns en praktisk fråga:
+
+Var skriver man trace om meddelandet är answer_only och ingen run finns?
+
+Om det inte finns en run ska routern inte behöva skapa en Engine Run bara för att logga “vad är klockan”.
+
+Jag skulle ändra till:
+
+- Om routerbeslutet hör till en befintlig run/follow-up: logga i trace.ndjson.
+- Om det är answer_only utan run: returnera beslutet till UI/API, men skapa ingen run bara för loggning.
+- Eventuell separat router-logg är senare beslut.
+
+Annars råkar man skapa ny infrastruktur för ett rent svar.
+
+5. kor-3 bör delas i två
+
+kor-3 är bra men riskerar att bli en stor behavior-preserving refaktor + ny feature samtidigt.
+
+Dela:
+
+kor-3a — flytta section treatment-sanningen från Python till JSON
+Mål: byte-paritet när visualDirection saknas.
+
+kor-3b — låt visualDirection välja treatment från JSON
+Mål: ny behavior, men bara efter att JSON-sanningen är stabil.
+
+Detta minskar risken enormt.
+
+6. kor-4 bör börja med deterministic critic
+
+kor-4 vill wira verifierModel. Det är rätt på sikt.
+
+Men första versionen kan vara mycket enklare:
+
+critic v0 deterministic:
+- generic_copy via fraslista/likhet
+- thin_offer via antal tjänster/bullets
+- placeholder_leakage via regex
+- missing_local_context om locationHint finns men output inte nämner ort
+- missing_cta om CTA saknas i hero/contact
+
+Sedan kan verifierModel komma ovanpå.
+
+Varför? För att annars blir första quality critic beroende av LLM, model role, prompts och fallback. En deterministisk critic ger regressionstest och riktning direkt.
+
+7. kor-7 är för stor
+
+kor-7 innehåller:
+
+context assembler
+artifact patch planner
+patch validation
+apply mot ny Project Input-version
+targeted rebuild
+visible-effect verifier
+preview update
+
+Det är minst fyra skivor.
+
+Jag skulle dela:
+
+kor-7a — Context Assembler read-only
+Hämta rätt kontextnivå, med budgetar. Ingen patch.
+
+kor-7b — Patch Planner dry-run
+Returnera patchförslag mot artefaktfält. Applicera inte.
+
+kor-7c — Artifact apply + ny version
+Applicera validerad patch till Project Input / Generation Package snapshot.
+
+kor-7d — Targeted rebuild
+Bygg bara påverkad route/section.
+
+Annars kommer agenten antingen överbygga eller fastna.
+
+Min rekommenderade nya ordning
+
+Jag skulle köra så här:
+
+1. kor-6a — OpenClaw Router deterministic, no build
+2. kor-1a — blueprint schema skeleton, optional fields only
+3. kor-1b — briefModel fills businessFacts/positioning/contentStrategy/conversion
+4. kor-1c — generationPackage contentBlocks/visualDirection/qualityRisks
+5. kor-2 — renderer consumes contentBlocks for hero/services/story/FAQ/CTA
+6. kor-4a — deterministic critic
+7. kor-3a — section treatments JSON migration
+8. kor-3b — visualDirection mapping
+9. kor-5 — blueprint-only repair
+10. kor-7a/b/c/d — context assembler → patch planner → apply → targeted rebuild
+
+Det ger snabbare produktkänsla och mindre risk.
+
+Var jag skulle börja just nu
+
+Jag skulle inte börja med att rensa hela governance/naming.
+
+Jag skulle göra detta:
+
+Steg 1: Steward-agent justerar körplanen
+
+Be en Steward-agent göra en docs-only patch:
+
+- gör 04-builder-profil scope-baserad i checks
+- dela kor-1 i 1a/1b/1c
+- dela kor-3 i 3a/3b
+- dela kor-4 i deterministic critic först + verifierModel senare
+- dela kor-7 i 7a/7b/7c/7d
+- förtydliga att “blueprint” och “patch plan” är tillåtna som pedagogiska/transienta ord
+- förtydliga att ADR krävs bara vid ny canonical artefakt, runtime-kontrakt, mappgräns eller större arkitekturbeslut
+Steg 2: Builder kör kor-6a
+
+Det ger snabb vinst utan att röra generatorn.
+
+Steg 3: Builder kör kor-1a
+
+Då har du både:
+
+OpenClaw vet när den inte ska bygga.
+Blueprint-fälten finns att bygga mot.
+
+Det är en bra bas.
+
+Svar på din fråga: “Har jag för mycket restriktioner?”
+
+Ja, lite.
+
+Men problemet är inte att du har regler. Problemet är att vissa regler är skrivna som absoluta trots att de egentligen ska vara scope-baserade.
+
+Bra restriktioner:
+
+- inga fake claims
+- inga secrets
+- ingen fri filagent innan rails finns
+- ingen ny canonical artefakt utan beslut
+- follow-up ska inte bli ny init
+- Sajtmaskin är referens, inte kodbas att importera rakt av
+
+För tunga restriktioner:
+
+- alla guards för varje skiva
+- full pytest som standard
+- ADR som default för allt “off-limits”
+- naming-dictionary som blocker för vanliga pedagogiska ord
+- stoppa agenten vid varje ny term i docs
+
+Byt från:
+
+“detta är förbjudet”
+
+till:
+
+“detta får inte bli canonical/runtime/artefakt utan beslut”
+
+Det är stor skillnad.
+
+Min konkreta ändring av 04-builder-profil.md
+
+Jag skulle ersätta rubriken:
+
+## 3. Off-limits (rör inte utan operatörs-OK + ADR)
+
+med:
+
+## 3. Kräver uttryckligt operatörsbeslut
+
+Och skriva:
+
+ADR krävs bara om ändringen skapar ny canonical term/artefakt,
+ändrar runtime-kontrakt, flyttar mappgränser eller påverkar flera lager.
+Små additiva fält, testhelpers och read-only routers kräver normalt inte ADR.
+
+Detta är mycket mer i linje med “governance ska skydda riktningen, inte kväva bygget”.
+
+Prompt jag skulle ge till Steward-agent nu
+Du är Steward-agent i Jakeminator123/sajtbyggaren.
+
+Uppgift:
+Revidera docs/heavy-llm-flow så körplanen blir mer dispatchbar och mindre överdefensiv.
+Detta är docs-only. Rör ingen produktkod.
+
+Läs:
+- docs/heavy-llm-flow/README.md
+- docs/heavy-llm-flow/04-builder-profil.md
+- docs/heavy-llm-flow/kor-1-blueprint-kontrakt.md
+- docs/heavy-llm-flow/kor-3-visual-direction-mapping.md
+- docs/heavy-llm-flow/kor-4-quality-critic.md
+- docs/heavy-llm-flow/kor-7-context-assembler-patch-planner.md
+- docs/product-operating-context.md
+- arbetssätt/principen att checks ska vara scope-baserade och att onödig PR/process-friktion ska undvikas.
+
+Ändra:
+1. Gör 04-builder-profil scope-baserad:
+   - full femguards bara för större schema/generator/runtime-ändringar
+   - targeted pytest/ruff/checks för små skivor
+   - ADR bara vid ny canonical artefakt/term, runtime-kontrakt, mappgräns eller flerlagersbeslut
+
+2. Förtydliga ordregeln:
+   - “blueprint” är tillåtet som pedagogiskt samlingsnamn
+   - “patch plan” är tillåtet som transient struktur
+   - förbjudet är att göra dem till nya canonical artefakter utan beslut
+
+3. Dela upp körplanen:
+   - kor-1 -> kor-1a schema skeleton, kor-1b brief blueprint, kor-1c generationPackage blueprint
+   - kor-3 -> kor-3a JSON-migration med paritet, kor-3b visualDirection-pick
+   - kor-4 -> kor-4a deterministic critic, kor-4b verifierModel critic
+   - kor-7 -> kor-7a context assembler, kor-7b dry-run patch planner, kor-7c artifact apply/version, kor-7d targeted rebuild
+
+4. Uppdatera README sprintsekvens enligt den nya ordningen:
+   - kor-6a och kor-1a först
+   - renderer efter blueprint
+   - critic före repair
+   - targeted rebuild sist
+
+Definition of done:
+- docs-only diff
+- ingen produktkod rörd
+- körplanen kan ges till Cursor-agent en skiva i taget
+- mindre överdefensiv men fortfarande trygg mot verkliga blockers
+Slutrekommendation
+
+Behåll zippen som bas. Den är bra.
+
+Men ge inte kor-1 eller kor-7 direkt till en Builder-agent i nuvarande form. De är för breda.
+
+Gör först en docs-only revision som:
+
+- slankar checks
+- gör governance mindre absolut
+- delar stora kor i mindre skivor
+- förtydligar att förbjudna namn inte är förbjudna ord, utan förbjudna canonicaliseringar
+
+Efter det skulle jag köra:
+
+1. OpenClaw Router deterministic
+2. Blueprint schema skeleton
+3. Brief blueprint
+4. GenerationPackage contentBlocks
+5. Renderer consumes blueprint
+
+Det är den snabbaste vägen från “mallgenerator med LLM-hjälp” till “agentisk hemsidebyggare” utan att dra tillbaka gamla Sajtmaskin-kaoset."

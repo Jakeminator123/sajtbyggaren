@@ -59,6 +59,18 @@ EXCLUDE_DIRS = {
     # Operator-only reference workspace (gitignored) - never scan as product source
     "MIN_IDE",
     "övrigt",
+    # Coach-built OpenClaw Core MVP spike (gitignored, openclaw-mvp/). A
+    # standalone FastAPI service kept local until its placement is decided
+    # (see docs/heavy-llm-flow/kor-o1-openclaw-core-contract.md). Its internal
+    # symbols are spike-local implementation names, not canonical Sajtbyggaren
+    # domain terms - same treatment as the MIN_IDE workspace above.
+    "openclaw-mvp",
+    # Local Cursor canvas mirror (gitignored, docs/heavy-llm-flow/canvases/).
+    # Cursor only renders canvases from ~/.cursor/projects/<ws>/canvases/; we
+    # keep a portable copy in-repo so it survives folder-jumps/restarts. The
+    # .canvas.tsx files carry Cursor SDK component identifiers, not canonical
+    # Sajtbyggaren domain terms - same treatment as MIN_IDE / openclaw-mvp above.
+    "canvases",
 }
 
 # Vanliga ord som inte ska räknas som domänbegrepp.
@@ -256,6 +268,20 @@ COMMON_WORDS = {
     # Scaffold, Variant) are already registered in naming-dictionary.v1.
     "PlanResult", "PlanningChoice", "PlanningModelResolutionError",
     "RejectedCapability",
+    # kor-1c: SectionPlanEntry is the Pydantic list-entry model for the Site
+    # Plan blueprint's sectionPlan (one '<routeId>.<sectionId>' intent line on
+    # PlanningChoice). The canonical field name `sectionPlan` is already
+    # registered in naming-dictionary.v1 (kor-1a); this is just its
+    # implementation class, same treatment as PlanningChoice / RejectedCapability.
+    "SectionPlanEntry",
+    # kor-2: RenderBlueprint is the read-only render-side view over the
+    # Generation Package blueprint (contentBlocks/visualDirection) + Site Brief
+    # honesty fields that the deterministic renderer consumes. It is a transient
+    # implementation class, NOT a new canonical artefact/field — the canonical
+    # fields (contentBlocks, visualDirection, businessFacts, conversion,
+    # qualityRisks) are already registered in naming-dictionary.v1 (kor-1a).
+    # Same treatment as PlanningChoice / SectionPlanEntry above.
+    "RenderBlueprint",
     # Discovery Resolver module (B121 PR A) internal implementation symbols.
     # The canonical domain terms (Discovery Payload, Discovery Decision,
     # Discovery Taxonomy, Discovery Resolver, Field Source) are registered
@@ -279,11 +305,42 @@ COMMON_WORDS = {
     "CodegenSource", "CodegenFileSource", "CodegenFileRole",
     "QualityStatus", "CheckStatus", "CheckName",
     "RepairStatus",
+    # kor-4a deterministic Quality Critic (critic v0) implementation symbols
+    # (packages/generation/quality_gate/critic.py). CriticIssue / CriticResult
+    # are the Pydantic models embedded in quality-result.json:critic;
+    # CriticSeverity / CriticIssueType / CriticSource are the Literal type
+    # aliases that name the issue severity/type/source enums. Same treatment as
+    # the QualityStatus / CheckName / CodegenSource family directly above -
+    # implementation symbols, not separate canonical domain terms (the additive
+    # schema field names critic/score/issues/etc. live in quality-result.schema.json).
+    "CriticIssue", "CriticResult",
+    "CriticSeverity", "CriticIssueType", "CriticSource",
+    # kor-4b verifierModel critic (read-only taste lane) implementation symbols
+    # (packages/generation/quality_gate/verifier.py). VerifierFinding /
+    # VerifierFindings are the Pydantic structured-output models the
+    # verifierModel call parses into; VerifierIssueType is the Literal alias for
+    # the taste-finding subset; VerifierModelResolutionError mirrors
+    # RepairModelResolutionError / BriefModelResolutionError. The canonical role
+    # verifierModel is registered in llm-models.v1.json; these are local
+    # implementation symbols, not separate canonical domain terms - same
+    # treatment as the Critic* / Codegen* / Repair* families above.
+    "VerifierFinding", "VerifierFindings", "VerifierIssueType",
+    "VerifierModelResolutionError",
     # Sprint 3B mechanical fix dispatcher metadata. ``MechanicalFixSpec``
     # is a Python dataclass that mirrors fix-registry.v1.json entries;
     # it is not a separate domain term. Same treatment as
     # PlanningChoice / RepairFix (Sprint 2B / 3A).
     "MechanicalFixSpec",
+    # kor-5 blueprint-repair implementation symbols
+    # (packages/generation/repair/blueprint_repair.py + model_resolver.py).
+    # The canonical domain term Blueprint Repair is registered in
+    # naming-dictionary.v1; these are local Pydantic models / type aliases /
+    # error classes around the repairModel structured-output call, the bounded
+    # loop outcome and the re-render callback - implementation symbols, not
+    # separate canonical terms (same treatment as Critic* / Codegen* above).
+    "BlueprintRepairOutcome", "BlueprintRepairStatus",
+    "HeroCopyPatch", "OfferItemPatch", "OfferListPatch",
+    "RepairModelResolutionError", "RerenderFn",
     # Sprint 3B-next codegenModel implementation symbols (ADR 0017).
     # CodegenLLMResponse is the narrow Pydantic schema the OpenAI call
     # parses into; CodegenUsage is a token-usage stub mirroring
@@ -340,6 +397,10 @@ COMMON_WORDS = {
     "FetchedRunsPayload",
     "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
     "StackblitzFileMap",
+    # Bite C (ADR 0033) — vercel-sandbox preview wiring TS-symboler. Lokala
+    # viewser/preview-identifierare (route-response-shape + session-registry),
+    # inte domänbegrepp. Samma behandling som PreviewServerInfo / FilesPayload.
+    "PreviewStartOk", "PreviewStartResponse", "SandboxSession",
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
     "GameState", "KeyboardEvent", "PacmanGame",
     "Snake", "Tetris", "ThreeCanvasShell",
@@ -510,6 +571,9 @@ COMMON_WORDS = {
     "ErrorBubble", "ErrorKind", "MessageBubble",
     "BuildChange", "BuildChangeCategory", "CategoryLabel",
     "KeywordRule", "ChevronUp", "ChevronDown", "ChevronLeft",
+    # UI-gap-fix (juni 2026): exakt change-set i FloatingChat ("Ändrat")
+    # härledd ur run-diff istället för prompt-heuristik ("Troligen ändrat").
+    "RunChangeSet",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",
@@ -578,6 +642,17 @@ COMMON_WORDS = {
     # CopyFeedback är intern TS-type i versions-tab.tsx för
     # clipboard-feedback-state (M1 från bug-hunt).
     "CopyFeedback",
+    # KÖR-6a RouterDecision-readiness — interna TS-alias i
+    # apps/viewser/components/builder/floating-chat.tsx som speglar enum-
+    # litteralerna i governance/schemas/router-decision.schema.json. De
+    # canonical termerna (RouterDecision, MessageKind, BuildRequirement) bor i
+    # backend-schemat; dessa är viewser-lokala UI-symboler, inte nya domain terms.
+    "RouterMessageKind", "RouterBuildRequirement", "RouterDecisionView",
+    # KÖR-6a routerDecision-bridge — interna TS-alias i
+    # apps/viewser/lib/router-classify-runner.ts (Fas 1, skiva 1a). Lokala
+    # bridge-/option-typer för spawn-helpern; de canonical termerna bor i
+    # router-decision.schema.json, dessa är viewser-lokala symboler.
+    "ClassifyMessageOptions", "RouterDecisionPayload",
     # GAP-viewser-side-by-side-preview — interna TS-symboler i
     # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
     # Lokala UI-komponentnamn och prop-typer, inte domain terms.
@@ -789,8 +864,8 @@ COMMON_WORDS = {
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
     "AbortSignal",  # browser/Node API i local-preview-server JSDoc-prose
-    # PowerShell CIM + Windows-API-termer i B157-incident-docs och kod
-    # (B157-WINDOWS-PROCESS-TREE-FYND.md + local-preview-server.ts).
+    # PowerShell CIM + Windows-API-termer i kill-dev-trees.py +
+    # local-preview-server.ts.
     "CimInstance",  # Get-CimInstance — PowerShell CIM cmdlet result-typ
     "CommandLine",  # Win32_Process-property som CIM exponerar
     "ProcessId",  # Win32_Process-filter-property
@@ -824,6 +899,34 @@ COMMON_WORDS = {
     "ErrorBoundaryState",
     "ErrorInfo",  # React-typ från `import type { ErrorInfo } from "react"`
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
+    "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
+    "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
+    "RunHistorySkeleton",  # lokal Skeleton-komponent i run-history.tsx (Wave 3 Steg 8)
+    # Marknadssajt (2026-06-01, scout-marketing-site) — nya lokala UI-/route-
+    # symboler i apps/viewser/app/(marketing|console) + components/marketing/*.
+    # Viewser-implementation, inte canonical domain terms. (Auth/billing-
+    # symboler är medvetet UTELÄMNADE här — den ytan är parkerad i denna PR.)
+    "MarketingHeader", "MarketingFooter", "MarketingHome", "MarketingLayout",
+    "ConsoleLayout", "PlaceholderPage", "ProductPage", "CookiesPage",
+    "PrivacyPage", "TermsPage", "CookieBanner",
+    # Startsidans sektioner + hero + interaktiv living wall (Web Platform-API).
+    "HeroVideo", "ProfessionGrid", "IntersectionObserver",
+    # Per-yrke-landningssidor + Om oss/grundare.
+    "ProfessionLandingPage", "FounderCard",
+    # Cookie-consent + legal-sidor.
+    "CookieConsentProvider", "CookieConsent", "CookieConsentValue",
+    "ManageCookiesButton", "LegalPageLayout", "ActionButtons",
+    # SEO-finish: Next MetadataRoute för sitemap/robots.
+    "MetadataRoute",
+    # Hero-prompt-handoff (juni 2026): besökaren beskriver sin sajt direkt på
+    # heron och landar i bygg-flödet. PromptBuildern = bestämd form i prosa.
+    # WizardHandoff = sessionStorage-payloaden hero→studio (hela wizard-svaret).
+    "HeroPromptForm", "PromptBuildern", "WizardHandoff",
+    # Starters-banan (juni 2026): yrkessidor + hero-chips + studio-onboarding
+    # som förifyller DiscoveryWizarden via en lätt seed. Lokala viewser-symboler.
+    "StarterCta", "StarterPreset", "WizardSeed",
+    "SELECT",  # HTML-tagName-konstant i ⌘K-skip (studio + test) — inte domänbegrepp
+    "SyntaxError",  # JS-built-in exception-namn i prompt-builder NDJSON-comment + test
     # Toast-system (eget mini-system, ingen extern dep):
     "ToastContext",
     "ToastContextValue",
@@ -990,6 +1093,99 @@ COMMON_WORDS = {
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
     "SandboxStopResult",
+    # Heavy-LLM-flow run-plan docs (docs/heavy-llm-flow/, commit 8c0e7c4).
+    # These docs were pushed directly to jakob-be without a CI run, so
+    # term-coverage first surfaced them on later PRs. They are NOT canonical
+    # domain terms - per the run-plan's own rule ("forbjud canonicalisering,
+    # inte ord"): proposed OpenClaw-router design types shown as code
+    # identifiers (MessageKind/BuildRequirement/EditKind/ContextLevel),
+    # architecture working-names (OpenClaw, OpenClaw Router, Sajtagenten,
+    # LLM Orchestrator, Deterministic Foundation, Orchestration snapshot),
+    # and a few bold/backtick prose-emphasis phrases. Same allowlist
+    # treatment as the many TS-symbol / Swedish-prose entries above. A real
+    # router/orchestrator runtime term gets registered in naming-dictionary.v1
+    # with an ADR when the code lands (see docs/heavy-llm-flow/kor-6a/6b).
+    "MessageKind", "BuildRequirement", "EditKind", "ContextLevel",
+    "OpenClaw", "OpenClaw Router", "Sajtagenten", "LLM Orchestrator",
+    "Deterministic Foundation", "Orchestration snapshot",
+    "Detta README", "Huvudsekvensen", "Full femguards", "Ingen LLM",
+    "F2 vs F3 lifecycle", "Pausad", "Section", "Inte",
+    # KÖR-6a router runtime symbols (packages/generation/orchestration/router/):
+    # the Pydantic model class names + the RouterContext input shape + the
+    # SubtaskScope Literal alias. The router *design* terms shared with the
+    # heavy-llm-flow docs (MessageKind / BuildRequirement / EditKind /
+    # ContextLevel / OpenClaw) are already allowlisted in the block directly
+    # above (#160) - not duplicated here. Same implementation-symbol treatment
+    # as the QualityResult / CodegenResult / RepairResult families above.
+    "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
+    "RouterContext", "SubtaskScope",
+    # KÖR-6b router LLM-fallback (packages/generation/orchestration/router/
+    # llm_fallback.py). ``RouterModelResolutionError`` is the local error class
+    # raised when llm-models.v1.json does not declare a usable ``routerModel``
+    # role - an implementation symbol that mirrors the existing
+    # RepairModelResolutionError / PlanningModelResolutionError /
+    # CodegenModelResolutionError family above, not a canonical domain term.
+    # The Model Role itself (``routerModel``) is camelCase and registered in
+    # llm-models.v1.json (v7) + naming-dictionary.v1.json modelRole.aliasesAllowed.
+    "RouterModelResolutionError",
+    # KÖR-7a Context Assembler runtime symbols
+    # (packages/generation/orchestration/context/). Sibling read-only module to
+    # the KÖR-6a router above: ``AssembledContext`` is the result envelope,
+    # ``PriorContext`` / ``ReferencePermission`` / ``ManifestEntry`` /
+    # ``SelectedFile`` are its Pydantic input/output shapes, ``ContextPaths`` is
+    # the read-only path-config dataclass and ``FetchReference`` is a Callable
+    # type alias for the injected external-reference fetch tool. Implementation
+    # symbols, not canonical domain terms - same treatment as the
+    # RouterDecision / RouterContext family above. ``ContextLevel`` is reused
+    # from the router and already allowlisted in the heavy-llm-flow block.
+    "AssembledContext", "ContextPaths", "FetchReference", "ManifestEntry",
+    "PriorContext", "ReferencePermission", "SelectedFile",
+    # KÖR-7b Artifact Patch Planner runtime symbols
+    # (packages/generation/orchestration/patch/). Sibling dry-run module to the
+    # KÖR-6a router + KÖR-7a context assembler above: ``PatchPlan`` is the
+    # transient result envelope, ``ArtifactPatch`` / ``RejectedPatch`` are its
+    # Pydantic shapes, ``PatchRails`` is the context-projected rails object and
+    # ``PatchOp`` is the closed "set" Literal alias. Transient implementation
+    # symbols (never persisted as a patch-plan.json), not canonical domain
+    # terms - same treatment as the RouterDecision / AssembledContext families.
+    "ArtifactPatch", "PatchOp", "PatchPlan", "PatchRails", "RejectedPatch",
+    # KÖR-7c Artifact patch apply runtime symbols
+    # (packages/generation/orchestration/apply/). Sibling to the KÖR-7b patch
+    # planner above: ``ApplyResult`` is the transient outcome envelope,
+    # ``AppliedCapability`` / ``UnmappedPatch`` are its Pydantic shapes and
+    # ``PatchApplyError`` is the hard-stop exception for a rejected/invalid
+    # plan. Transient implementation symbols (apply only writes the next
+    # Project Input version snapshot, never a new canonical artefakt) - same
+    # treatment as the RouterDecision / PatchPlan families above.
+    "AppliedCapability", "ApplyResult", "PatchApplyError", "UnmappedPatch",
+    # KÖR-7d Targeted render + version-build runtime symbols
+    # (packages/generation/build/targeted_render.py). Sibling to the KÖR-7c
+    # apply above: ``TargetedRenderPlan`` is the transient pre-build plan,
+    # ``TargetedRenderResult`` the transient outcome envelope and
+    # ``TargetedRenderError`` the STOP-and-report exception for a version that
+    # did not come from the internal kor-7b->kor-7c chain. Transient
+    # implementation symbols (kor-7d reuses build()'s immutable build +
+    # current.json swap, mints no new canonical artefakt) - same treatment as
+    # the PatchPlan / ApplyResult families above.
+    "TargetedRenderError", "TargetedRenderPlan", "TargetedRenderResult",
+    # KÖR-O1 OpenClaw Core Contract design types (docs/heavy-llm-flow/
+    # kor-o1-openclaw-core-contract.md). Transient working-names for the
+    # orchestrator decision/action shape that composes RouterDecision +
+    # AssembledContext - NOT canonical artefakts (no saved file, no ADR yet);
+    # same local-allowlist treatment as the RouterDecision / AssembledContext
+    # families above. A real type gets registered in naming-dictionary.v1 with
+    # an ADR if/when it becomes a persisted runtime contract (see kor-o2).
+    "OpenClawDecision", "OpenClawAction",
+    # KÖR-O2 OpenClaw Core V0 runtime symbols
+    # (packages/generation/orchestration/openclaw/). The V0 module that binds
+    # the KÖR-6a router + KÖR-7a context assembler into one transient
+    # ``OpenClawDecision`` (already allowlisted above). ``PatchPlanRequest`` is
+    # the honest "patch needed, apply path missing (kor-7c)" marker embedded in
+    # the decision; ``ToolCall`` is the proposed-tool shape (always
+    # requiresApproval in V0, never auto-run). Transient implementation symbols
+    # (no saved file, no ADR) - same local-allowlist treatment as the
+    # OpenClawDecision / RouterDecision families above.
+    "PatchPlanRequest", "ToolCall",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

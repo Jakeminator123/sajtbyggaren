@@ -14,7 +14,7 @@ kärnflödet: `prompt -> företagshemsida -> preview -> följdprompt -> ny versi
 
 ## Varför
 
-Vi bygger om `Jakeminator123/sajtmaskin` (referensbranch `master`) eftersom det gamla repot blev för spritt, för många namnskuggor och svår att styra. Detaljerad bedömning i [`docs/migration-plan.md`](migration-plan.md) och i de externa utlåtandena under [`referens/utlatanden/`](../referens/utlatanden/).
+Vi bygger om `Jakeminator123/sajtmaskin` (referensbranch `master`) eftersom det gamla repot blev för spritt, för många namnskuggor och svår att styra. Detaljerad bedömning i [`docs/migration-plan.md`](migration-plan.md) och i de externa utlåtandena som låg under `referens/utlatanden/` (borttaget i #191, finns i git-historiken).
 
 ## Hur
 

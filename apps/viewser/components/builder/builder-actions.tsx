@@ -228,13 +228,19 @@ export function BuilderActions({
   const handleMenuKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-      event.preventDefault();
-      const node = containerRef.current;
-      if (!node) return;
+      // Scope:a sökningen till elementet handlern sitter på
+      // (event.currentTarget) i st.f. containerRef: i "inline"-varianten
+      // renderas Verktyg-modalen i en Base UI-portal UTANFÖR containerRef,
+      // så querySelectorAll(containerRef) hittade inga knappar och
+      // piltangenterna var döda i just den modal operatören använder.
+      // currentTarget pekar på rätt subträd i båda varianterna (fixed
+      // dropdown = container-diven, inline = grid-diven i dialogen).
+      const node = event.currentTarget;
       const buttons = Array.from(
         node.querySelectorAll<HTMLButtonElement>("[data-action-button]"),
       );
       if (buttons.length === 0) return;
+      event.preventDefault();
       const currentIndex = buttons.findIndex(
         (button) => button === document.activeElement,
       );
@@ -362,10 +368,17 @@ export function BuilderActions({
             <DialogHeader>
               <DialogTitle>Verktyg</DialogTitle>
               <DialogDescription>
-                Välj en åtgärd. Klicka utanför rutan för att stänga.
+                Välj en åtgärd — ↑/↓ flyttar fokus, Esc stänger.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {/* onKeyDown här (inte bara på container-diven): den inline
+                modalen portaleras utanför containerRef, så piltangent-
+                handlern måste sitta på ett element som faktiskt innehåller
+                grid-knapparna. */}
+            <div
+              onKeyDown={handleMenuKeyDown}
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+            >
               {actions.map((action) => {
                 const Icon = iconComponent(action.icon);
                 return (

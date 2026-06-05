@@ -160,3 +160,30 @@ data/taxonomies/**/*.csv
 # (som är den committade delade utility-versionen).
 tree_v[0-9]*.py
 .vercel
+
+# Per-machine editor/OS junk that showed up as untracked in operator SCM
+# views: multi-root workspace files and Windows shortcuts. Local-only,
+# never committed (e.g. *.code-workspace, kill-dev-trees.bat shortcuts).
+*.code-workspace
+*.lnk
+
+# OpenClaw Core MVP (coach-built spike, openclaw-mvp/). Standalone FastAPI
+# service held LOCAL until its placement is decided — in-repo module under
+# packages/generation/orchestration/openclaw/ vs separate service/repo (see
+# docs/heavy-llm-flow/kor-o1-openclaw-core-contract.md "Var koden hamnar").
+# Kept untracked so no monorepo mapgräns is locked before that decision.
+openclaw-mvp/
+
+# Coach raw advice transcript (non-canonical). Referenced by kor-o1 as optional
+# ("läs som riktning om filen finns"). Kept local so it stops showing as
+# untracked; commit or move to docs/heavy-llm-flow/references/raw/ if it should
+# live in the repo.
+docs/open_claw.txt
+
+# Lokal canvas-spegel. Cursor renderar bara canvas-filer från
+# ~/.cursor/projects/<workspace>/canvases/, men de ligger djupt i
+# användarprofilen och tappas vid folder-jump/omstart. Vi håller en
+# kanonisk kopia här (lätt att hitta i repot, överlever omstart) och
+# speglar in den i Cursor-mappen varje omgång. Hålls gitignored för att
+# undvika .tsx-lint/governance-brus; ta bort raden om den ska versionas.
+docs/heavy-llm-flow/canvases/

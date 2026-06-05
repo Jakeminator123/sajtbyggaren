@@ -40,6 +40,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from packages.generation.orchestration.section_treatments import (
+    load_section_treatments,
+)
+from packages.generation.orchestration.section_treatments import (
+    load_section_treatments_catalogue as load_section_treatments_catalogue,
+)
+
 _SECTION_RENDERERS: dict[str, Callable[..., str]] = {}
 """Section-id → renderer registry.
 
@@ -132,110 +139,63 @@ def _call_section_renderer(
 # Phase 3 (ADR 0032, post-B146; ADR 0031 on origin/main pre-port,
 # 2026-05-25) layered operator-pin
 # (``dossier.directives.sectionTreatments``) on top via
-# ``_treatment_for_section(operator_pin=...)`` without changing the
-# section-renderer signatures. A future Phase 4 will add an LLM-pick
-# step in front of operator-pin; the helper signature is designed to
-# absorb that without touching renderers.
+# ``_treatment_for_section(operator_pin=...)``. kor-3b (2026-06-03)
+# then added the blueprint-driven ``visual_direction_pick`` tier
+# BETWEEN operator-pin and variant-default (final order:
+# operator-pin > visualDirection > variant-default > section-default).
+# The pick value is read from the Generation Package
+# ``visualDirection.sectionTreatments`` by
+# ``blueprint_render.RenderBlueprint.section_treatment_pick`` and threaded
+# into ``_treatment_for_section(visual_direction_pick=...)`` by the five
+# treatment-dispatch section renderers; it is validated against the
+# section's supported treatments here so an unsupported treatment can
+# never be chosen.
 #
 # Renderers that opt in declare ``variant_id: str | None = None`` in
 # their signature and call ``_treatment_for_section`` to pick the
 # treatment id; ``_call_section_renderer`` already threads
 # ``variant_id`` through the dispatcher (Path B native scaffolds
 # pass it from ``_render_dispatched_route``).
-_SECTION_TREATMENTS_BY_VARIANT: dict[str, dict[str, str]] = {
-    # agency-studio (Phase 1 pilot + Phase 2 expansion)
-    #
-    # ``studio-monochrome`` swaps the home selected-work-preview from
-    # the editorial-stack baseline to an asymmetric-grid where every
-    # other card is offset vertically. Same data, deliberately broken
-    # rhythm — gives the monochrome studio a visually distinct front
-    # page from the warm and electric agency variants without changing
-    # any sections.json.
-    "studio-monochrome": {"selected-work-preview": "asymmetric-grid"},
-    # ``editorial-warm`` inherits ``editorial-stack`` (the section
-    # default) so the warm agency reads as a calm magazine spread
-    # rather than competing for attention with the other two
-    # variants.
-    #
-    # ``bold-electric`` swaps to ``marquee-row`` (Phase 2): a
-    # horizontal scroll-snap rail with six tight cards instead of
-    # four wide ones. Reads as a motion-led studio reel; the
-    # auto-animation is intentionally left out of Phase 2 so a
-    # reduced-motion user gets the same scroll-able rail without
-    # any movement. Phase 3 may layer scroll-snap auto-rotation
-    # behind ``prefers-reduced-motion: no-preference`` if operator
-    # feedback wants it.
-    "bold-electric": {"selected-work-preview": "marquee-row"},
-    # clinic-healthcare (Phase 2) — treatment-list × 3 treatments
-    #
-    # ``clinic-calm`` keeps the byte-identical default
-    # (``minimal-rows``); not registered in the map so the
-    # section's own default kicks in. Calm clinics keep the
-    # pre-Phase-2 rounded-card menu.
-    #
-    # ``warm-care`` swaps to ``split-cards``: a 2-col grid of
-    # warmer cards with an accent-tinted left rail. Reads as a
-    # warmer brochure rather than a clinical menu.
-    "warm-care": {"treatment-list": "split-cards"},
-    # ``modern-precision`` swaps to ``numbered-stack``: large mono
-    # numerals + thin separators. Reads as a clinical sequence
-    # appropriate for a precision-focused practice.
-    "modern-precision": {"treatment-list": "numbered-stack"},
-    # professional-services (Phase 2) — practice-grid × 3 treatments
-    #
-    # ``consulting-modern`` keeps the byte-identical ``dense-grid``
-    # default (3-col compact card grid). Not registered in the map
-    # so the section default kicks in.
-    #
-    # ``legal-classic`` swaps to ``tabular``: formal row listing
-    # without card chrome, thin ``border-b`` separators, column
-    # header. Reads as a court-filing index rather than a
-    # marketing brochure.
-    "legal-classic": {"practice-grid": "tabular"},
-    # ``accounting-trust`` swaps to ``grouped``: 2-col feature
-    # columns with numbered eyebrows. Reads as "this is how we
-    # organise our practice" rather than a dense menu.
-    "accounting-trust": {"practice-grid": "grouped"},
-    # consulting-modern (Phase 2) — expertise-areas treatment.
-    #
-    # The /expertis route already has consulting-modern on
-    # ``dense-grid`` (the section default) for practice-grid; the
-    # home page expertise-areas section flips to ``tag-cluster``
-    # so the modern consulting variant reads as an associative
-    # "what we do"-cloud rather than a numbered list.
-    #
-    # Note: variant-key already exists in the map for selected-
-    # work-preview... but consulting-modern is a PS variant, not
-    # an agency variant. Each scaffold has its own variants, so
-    # the same variant-id never serves two scaffolds.
-    "consulting-modern": {"expertise-areas": "tag-cluster"},
-    # legal-classic and accounting-trust inherit ``numbered-2col``
-    # (the section default) for expertise-areas so the home page
-    # eyebrows stay calmly numbered. The PS variation lives on
-    # /expertis (practice-grid) instead.
-    # local-service-business (Phase 2) — service-list × 4 treatments
-    #
-    # ``nordic-trust`` swaps to ``tabular``: a formal service
-    # catalogue with a column header and thin ``border-b``
-    # separators. Matches the calm Scandinavian-formality the
-    # variant leans into.
-    "nordic-trust": {"service-list": "tabular"},
-    # ``warm-craft`` swaps to ``alternating-rows``: vertical
-    # sequence where odd rows put the icon on the left and even
-    # rows flip via ``md:flex-row-reverse``. Reads as a
-    # back-and-forth rhythm appropriate for a craft-led service
-    # business.
-    "warm-craft": {"service-list": "alternating-rows"},
-    # ``clinical-calm`` swaps to ``icon-strip``: compact horizontal
-    # pill row with summaries on a quiet grid underneath. Reads as
-    # a minimalist contents bar.
-    "clinical-calm": {"service-list": "icon-strip"},
-    # ``midnight-counsel`` and ``pulse-fit`` inherit ``card-grid``
-    # (the section default) so the LSB look most operators expect
-    # stays stable in pilot. Phase 3 may flip pulse-fit to
-    # ``alternating-rows`` if the energetic gym variant wants more
-    # movement.
-}
+#
+# kor-3a (2026-06-03): the variant->treatment truth used to live in a
+# hardcoded Python dict here and was mirrored, by hand, by
+# ``_SECTION_TREATMENTS_CATALOGUE`` in ``packages/generation/planning/
+# plan.py``. Both tables now read ONE declarative source on disk --
+# ``orchestration/scaffolds/<id>/section-treatments.json`` -- so the
+# dispatcher and the planning prompt can never drift again.
+#
+# Pushvakt P1 (2026-06-03): the loaders (``load_section_treatments`` /
+# ``load_section_treatments_catalogue``) were moved out of this build
+# module into ``packages/generation/orchestration/section_treatments.py``
+# so fas-2 ``planning`` no longer imports fas-3 ``build`` (repo-boundaries
+# v10). They are imported at the top of this module and re-exported, so
+# the resolver, the parity tests and external callers keep the same
+# ``packages.generation.build.dispatcher`` import path. The flat
+# variant->{section: treatment} view ``_SECTION_TREATMENTS_BY_VARIANT`` is
+# still built here from that single source (byte-for-byte parity, asserted
+# in ``tests/test_section_treatments_json_parity.py``).
+
+
+def _build_section_treatments_by_variant() -> dict[str, dict[str, str]]:
+    """Flatten the per-section JSON into the variant→{section: treatment} map.
+
+    Section ids are scaffold-unique and each variant belongs to exactly
+    one scaffold, so the flattening is collision-free.
+    """
+    by_variant: dict[str, dict[str, str]] = {}
+    for section_id, block in load_section_treatments().items():
+        for variant_id, treatment_id in block["byVariant"].items():
+            by_variant.setdefault(variant_id, {})[section_id] = treatment_id
+    return by_variant
+
+
+# Thin module-level wrapper around the JSON read above, kept so the
+# resolver (``_treatment_for_section``) and the long-standing tests /
+# external callers can keep using the ``_SECTION_TREATMENTS_BY_VARIANT``
+# spelling. It is no longer a source of truth — the JSON is.
+_SECTION_TREATMENTS_BY_VARIANT: dict[
+    str, dict[str, str]
+] = _build_section_treatments_by_variant()
 
 
 def _operator_pin_for_section(dossier: dict, section_id: str) -> str | None:
@@ -276,43 +236,110 @@ def _operator_pin_for_section(dossier: dict, section_id: str) -> str | None:
     return pin or None
 
 
+def _supported_treatments_for_section(section_id: str) -> tuple[str, ...]:
+    """Return the treatment ids the renderer supports for ``section_id``.
+
+    Reads the same declarative JSON truth (kor-3a,
+    ``scaffolds/<id>/section-treatments.json``) that the variant table and the
+    planning catalogue consume, via :func:`load_section_treatments`. Because
+    every consumer reads one source on disk, the "supported set" used to gate
+    the kor-3b visual-direction pick can never drift from what the renderers
+    can actually emit. Returns an empty tuple for a section that declares no
+    treatments — then no visual-direction pick is ever accepted for it.
+    """
+    block = load_section_treatments().get(section_id)
+    if not isinstance(block, dict):
+        return ()
+    treatments = block.get("treatments")
+    if not isinstance(treatments, list):
+        return ()
+    return tuple(item for item in treatments if isinstance(item, str))
+
+
+def _visual_direction_pick_for_section(
+    section_id: str, candidate: str | None
+) -> str | None:
+    """Validate a blueprint visual-direction treatment pick for ``section_id``.
+
+    kor-3b: the Generation Package ``visualDirection.sectionTreatments`` may
+    name the treatment a section should render (see
+    ``blueprint_render.RenderBlueprint.section_treatment_pick`` for how the
+    address-keyed map is read). The pick is honoured ONLY when it is a
+    treatment the renderer actually supports for THAT section — i.e. it is in
+    the section-specific ``treatments`` list of the kor-3a JSON. A candidate
+    that is empty, unknown, or only valid for a *different* section (e.g.
+    ``tag-cluster`` belongs to ``expertise-areas``, never ``service-list``) is
+    rejected by returning ``None`` so the resolver falls through to the
+    variant/section default.
+
+    This is the runtime half of the "an unsupported treatment can never be
+    chosen" guarantee; the ``generation-package.schema.json``
+    ``visualDirection.sectionTreatments`` enum is the static half (it rejects
+    treatment ids unknown to every section before the artefakt is even built).
+    """
+    if not isinstance(candidate, str):
+        return None
+    candidate = candidate.strip()
+    if not candidate:
+        return None
+    if candidate not in _supported_treatments_for_section(section_id):
+        return None
+    return candidate
+
+
 def _treatment_for_section(
     variant_id: str | None,
     section_id: str,
     *,
     default: str,
     operator_pin: str | None = None,
+    visual_direction_pick: str | None = None,
 ) -> str:
     """Resolve which design treatment a section should render.
 
-    Resolution order (Phase 3, ADR 0032):
+    Resolution order (kor-3b, layered on Phase 3 / ADR 0032):
 
     1. ``operator_pin`` — explicit per-section treatment pinned by
        the operator in the wizard's visual step
        (``directives.sectionTreatments[section_id]``). Wins over
        everything because the operator has expressed intent.
-    2. ``_SECTION_TREATMENTS_BY_VARIANT[variant_id][section_id]`` —
+    2. ``visual_direction_pick`` — the blueprint's
+       ``visualDirection.sectionTreatments`` choice (from kor-1c),
+       validated against the section's supported treatments via
+       :func:`_visual_direction_pick_for_section`. This is where the
+       same scaffold+variant gets a different feel from a different
+       blueprint without any new CSS. An unsupported / unknown pick is
+       ignored here (it never shadows the variant default).
+    3. ``_SECTION_TREATMENTS_BY_VARIANT[variant_id][section_id]`` —
        the variant's curated default. Phase 2 baseline.
-    3. ``default`` — the section's own fall-back treatment. Used
-       when neither the operator nor the variant has an opinion, or
-       when a future variant is introduced before its treatments
-       are registered.
+    4. ``default`` — the section's own fall-back treatment. Used
+       when none of the above has an opinion, or when a future
+       variant is introduced before its treatments are registered.
 
     The same ``default`` is returned for an unknown variant or for a
     variant that does not register the requested section so a
     section that opts into treatment dispatch never has to know
     which variants exist.
 
+    Regression guarantee (kor-3a parity): with ``visual_direction_pick``
+    left at its default ``None``, this function behaves byte-identically
+    to the pre-kor-3b resolver — operator-pin → variant-default →
+    section-default — so a build without a blueprint is unchanged.
+
     The operator pin is treated as opaque here: validation is done
     by ``project-input.schema.json`` before the dossier loads. A pin
     coming from a hand-edited dossier that bypassed the schema may
     therefore route to an unknown treatment id, but that is the
     section renderer's contract to handle (treat unknown ids as the
-    section default). We deliberately keep this helper trivial so
-    the resolution order stays auditable at a glance.
+    section default). The visual-direction pick, by contrast, IS
+    validated against the supported set here because it originates from
+    a model-produced artefakt rather than an explicit operator choice.
     """
     if operator_pin:
         return operator_pin
+    vd_pick = _visual_direction_pick_for_section(section_id, visual_direction_pick)
+    if vd_pick:
+        return vd_pick
     if not variant_id:
         return default
     bucket = _SECTION_TREATMENTS_BY_VARIANT.get(variant_id)

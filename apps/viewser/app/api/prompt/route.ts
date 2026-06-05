@@ -8,6 +8,8 @@ import {
 } from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
+import { classifyMessage } from "@/lib/router-classify-runner";
+import { readRunChangeSet } from "@/lib/run-change-set";
 import { readAppliedCopyDirectives } from "@/lib/runs";
 
 // Operator-prototype: keep the prompt small enough that an accidental
@@ -138,6 +140,18 @@ function extractBuildStatus(buildResult: Record<string, unknown>): string | null
   return typeof value === "string" ? value : null;
 }
 
+// Read build-result.json's `appliedVisibleEffect` without trusting its type.
+// build_site.py writes this boolean on follow-up builds (B155). It is the
+// signal we use to decide whether the legacy copy/edit path already landed a
+// visible change for this follow-up — see the routerDecision honesty gate in
+// runPromptBuildOnce. Returns null on init builds / field-drift.
+function extractAppliedVisibleEffect(
+  buildResult: Record<string, unknown>,
+): boolean | null {
+  const value = buildResult.appliedVisibleEffect;
+  return typeof value === "boolean" ? value : null;
+}
+
 /**
  * runPromptBuildOnce — kör Phase 1 (prompt → Project Input) och Phase 2
  * (build_site.py via runBuild) sekventiellt. Den frivilliga
@@ -151,6 +165,18 @@ async function runPromptBuildOnce(
   payload: z.infer<typeof PromptPayloadSchema>,
   options?: { onPhase1Done?: () => void },
 ) {
+  // KÖR-6a (Fas 1, skiva 1a): classify the incoming message with the
+  // DETERMINISTIC router so the operator UI can honestly show what the router
+  // thought ("fråga", "plan", "ändring"). This is READ-ONLY metadata: it runs
+  // concurrently with the build, never gates it, and never starts a preview.
+  // shouldStartPreview / the build path stay EXACTLY as before. Failures
+  // degrade to null (no routerDecision on the wire) so the build flow can never
+  // break. Wiring the full follow-up chain (router -> context -> patch -> apply)
+  // is a separate slice (1b); here we only expose the decision.
+  const routerDecisionPromise = classifyMessage(payload.prompt, {
+    siteId: payload.siteId,
+  }).catch(() => null);
+
   // Phase 1: prompt -> Project Input on disk (data/prompt-inputs/<siteId>.*).
   const helper = await runPromptToProjectInput(payload.prompt, {
     mode: payload.mode,
@@ -181,6 +207,44 @@ async function runPromptBuildOnce(
     appliedCopyDirectives = [];
   }
 
+  // UI-gap-fix (2026-06-02, Jakobs flagga): exponera en EXAKT change-set
+  // för follow-ups så FloatingChat kan visa bekräftade deltas (routes
+  // tillagda/borttagna, variant-byten) under "Ändrat" istället för
+  // prompt-heuristiken under "Troligen ändrat". Härleds genom att diffa
+  // den nya runen mot föregående run (eller baseRunId). Init-builds har
+  // ingen föregående run → null. Aldrig en throw: artefakt-läsfel landar
+  // som null och UI:t faller tillbaka på heuristiken.
+  let changeSet: Awaited<ReturnType<typeof readRunChangeSet>> = null;
+  if (payload.mode === "followup") {
+    try {
+      changeSet = await readRunChangeSet(
+        build.runId,
+        payload.baseRunId ? { baseRunId: payload.baseRunId } : {},
+      );
+    } catch {
+      changeSet = null;
+    }
+  }
+
+  // KÖR-6a honesty gate (skiva 1a): expose the router's read-only opinion
+  // alongside runId/siteId/buildStatus, BUT never let it preempt a visible
+  // change the (unchanged) legacy copy/edit path actually landed for this
+  // follow-up. FloatingChat's summarizeRouterDecision (#177) honestly reframes
+  // non-build outcomes (question/plan/unclear) but would, for the
+  // artifact_patch_only / unclear classifications, wrongly say "not built yet"
+  // over a copy change that DID apply. So when this follow-up applied copy
+  // directives or reported a visible effect, we send routerDecision=null and
+  // the existing authoritative build summary stands alone ("Ingen påhittad
+  // effekt"). Init builds and genuine no-op follow-ups carry the full decision.
+  const routerDecisionRaw = await routerDecisionPromise;
+  const legacyPathAppliedVisibleChange =
+    payload.mode === "followup" &&
+    (appliedCopyDirectives.length > 0 ||
+      extractAppliedVisibleEffect(build.buildResult) === true);
+  const routerDecision = legacyPathAppliedVisibleChange
+    ? null
+    : routerDecisionRaw;
+
   return {
     runId: build.runId,
     siteId: helper.siteId,
@@ -196,6 +260,10 @@ async function runPromptBuildOnce(
     buildStatus: extractBuildStatus(build.buildResult),
     buildResult: build.buildResult,
     appliedCopyDirectives,
+    changeSet,
+    // Read-only KÖR-6a router decision (deterministic classify_message).
+    // Sibling of runId/siteId/buildStatus; never controls build/preview.
+    routerDecision,
   };
 }
 

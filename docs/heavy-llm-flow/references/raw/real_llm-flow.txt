@@ -1,0 +1,1557 @@
+
+
+Jag: "Jag skulle vilja att du lite noggrannare bara plockar ut från ditt förra svar det som du vill ha sagt utifrån det LLM-flödet som jag menar på. Alltså det som är det där ett LLM-agent i princip tillsammans i massor av olika steg eller olika jobbar tillsammans eller i olika faser för att mer likt V0, lovable och sajtmaskin skapar en hemsida. Men jag skulle också vilja ha förslag på hur man dels ska tänka där man bör kunna sammanbinda den här grunden som är byggd tillsammans med det här tyngre LLM-flödet. Finns en noga plan för hur detta ska gå till? Eller finns bara egna antaganden utifrån någon form av grund som är satt? Men cokså. Kan du resonera lite nu när vi verkar ha ett mallar automatiskt och determinaerat system för en grund samt ett flöde som "härmar" det, fast görs av en LLM? Eller missförstår jg här? Hur kommer då den tyngre kedjan in, och hur kan dessa komplettera varandra? Finns plan för detta?"
+
+
+---
+
+
+Coach:
+
+"I’ll separate what exists now, what the project plan actually commits to, and my recommended bridge from the deterministic foundation to a heavier multi-step LLM agent flow.
+
+Thought for 3m 28s
+Det centrala jag vill ha sagt om LLM-flödet
+
+Det du efterfrågar är inte bara “använd OpenAI i prompten”. Det du menar är ett riktigt LLM-orchestration layer där flera specialiserade steg samarbetar för att skapa en hemsida mer som v0/Lovable/Sajtmaskin-idén:
+
+fri användarprompt
+→ förstå företaget
+→ välja vinkel
+→ planera sidan
+→ skriva copy
+→ välja sektioner/layout
+→ skapa visuell riktning
+→ bygga artefakter
+→ verifiera kvalitet
+→ reparera svagheter
+→ rendera/preview
+→ iterera med följdprompt
+
+Det är inte fullt ut det som finns idag. Det som finns idag är mer kontrollerat och deterministiskt:
+
+prompt + wizard/overlays
+→ Project Input / brief
+→ scaffold / mall / renderer
+→ generated Next.js-site
+→ preview
+→ följdprompt-version
+
+Alltså: grunden är bra, men den beter sig fortfarande mycket som en stark mallmotor med LLM-assisterad input, inte som en “creative web-building agent” som v0/Lovable.
+
+Det stämmer med projektets egen målbild: Sajtbyggaren ska inte kopiera Lovable/v0, men ska ha dem som kvalitetsribba för enkelhet, iteration och finish, samtidigt som den är mer kontrollerad och företagsnära.
+
+Min tolkning: du har två olika motorer som behöver komplettera varandra
+
+Jag skulle tänka på det som två lager:
+
+1. Deterministic Foundation
+   = trygg motor, regler, scaffolds, renderers, routes, preview, versioner, quality gate.
+
+2. LLM Orchestrator
+   = smak, strategi, förståelse, branschlogik, copy, story, struktur, designriktning.
+
+Det deterministiska lagret är inte fel. Det är tvärtom det som gör att Sajtbyggaren inte blir gamla Sajtmaskin-kaoset igen. Gamla Sajtmaskin är uttryckligen referens/baslinje, inte arkitektur som ska återinföras rakt av. Nya repot är också Jakeminator123/sajtbyggaren, inte en fortsättning där man bara importerar allt gammalt.
+
+Men det deterministiska lagret kan inte ensamt skapa den där känslan av:
+
+“Den här sajten verkar faktiskt skriven och designad för just mitt företag.”
+
+Där måste LLM-orchestratorn in.
+
+Vad grunden gör bra
+
+Den nuvarande grunden är stark på saker som gamla breda agentbyggen ofta blir dåliga på:
+
+- tydliga artefakter
+- versionshantering
+- preview-flöde
+- kontrollerbara renderers
+- scaffold-val
+- follow-up som inte börjar om från noll
+- quality gates
+- governance och naming
+- möjlighet att testa regressioner
+
+Det är viktigt. För om man går direkt till “LLM-agent skriver hemsida fritt” får man snabbt:
+
+- hallucinerade claims
+- konstiga routes
+- trasig build
+- olika outputs varje gång
+- svårt att testa
+- svårt att följa upp versioner
+- svårt att veta vad användaren faktiskt ändrade
+
+Så jag skulle inte kasta mall-/renderer-grunden. Jag skulle använda den som “rails”.
+
+Vad det tunga LLM-flödet ska göra
+
+Det tunga LLM-flödet ska inte ersätta allt. Det ska ta över de delar där dagens system blir generiskt:
+
+- Vad är företagets unika vinkel?
+- Vilken typ av sida behöver just detta företag?
+- Vad ska hero:n säga?
+- Vilka tjänster bör lyftas fram?
+- Vilken trovärdighet finns utan att hitta på?
+- Vilken ton passar?
+- Vilken lokal kontext ska synas?
+- Vilken visuell känsla passar branschen?
+- Vilken CTA-strategi är bäst?
+- Vad saknas för att sidan ska kännas 8–9/10?
+
+Dagens mallmotor kan bygga en sida.
+LLM-orchestratorn ska göra att sidan känns avsiktlig.
+
+Missförstår du om “mallar automatiskt och deterministiskt” vs “LLM härmar det”?
+
+Lite, men på ett begripligt sätt.
+
+Jag tror inte att dagens system “härmar Lovable/v0” i egentlig mening. Det härmar mer formen av ett AI-byggflöde:
+
+skriv prompt
+→ se byggsteg
+→ få preview
+→ ändra med följdprompt
+
+Men det härmar inte fullt ut den skapande intelligensen i ett v0/Lovable-liknande flöde.
+
+Dagens flöde verkar ungefär vara:
+
+LLM hjälper till att tolka input
+→ systemet väljer/bygger inom ganska fasta ramar
+
+Det du vill åt är mer:
+
+LLM analyserar intentionen
+→ flera specialiserade LLM-steg skapar plan/copy/designriktning
+→ deterministic system bygger säkert från detta
+
+Det är en viktig skillnad.
+
+Hur de två systemen bör komplettera varandra
+
+Jag skulle inte göra detta:
+
+LLM skriver hela Next.js-projektet fritt
+
+Inte än. Det vore för riskabelt.
+
+Jag skulle göra detta:
+
+LLM skriver ett rikt, strukturerat “Site Blueprint”
+→ renderer bygger Next.js från blueprintet
+→ verifier kontrollerar output
+→ repair-pass förbättrar blueprint/render-input
+
+Alltså:
+
+User Prompt
+  ↓
+LLM Orchestrator
+  ↓
+Structured Site Blueprint
+  ↓
+Deterministic Renderer
+  ↓
+Generated Site
+  ↓
+Quality Verifier
+  ↓
+Repair / Follow-up
+
+Det gör att LLM:en får vara smart där den är smartast, medan systemet fortfarande är testbart.
+
+Föreslaget tungt LLM-flöde
+
+Jag skulle dela upp det i faser. Det behöver inte vara olika modeller från början; det kan vara samma modell med olika systemprompter. Men konceptuellt är det olika roller.
+
+1. Fact Extractor
+
+Tar användarens prompt, wizard-data och eventuell scrape.
+
+Output:
+
+{
+  "business": {
+    "name": null,
+    "industry": "elektriker",
+    "location": "Malmö",
+    "audience": ["villaägare", "bostadsrättsföreningar", "småföretag"],
+    "servicesMentioned": ["felsökning", "installation", "jour"],
+    "facts": [],
+    "unknowns": ["telefon", "adress", "certifieringar"]
+  }
+}
+
+Syfte: skilja fakta från antaganden.
+
+Detta är viktigt eftersom trovärdighet är ett känt gap. Nuvarande audit pekade på problem som placeholder-kontakt, tomma trust-signaler och generisk story/tagline/FAQ.
+
+2. Brand / Positioning Strategist
+
+Skapar företagets vinkel.
+
+Output:
+
+{
+  "positioning": {
+    "oneLiner": "Elektriker i Malmö för trygga installationer, felsökning och snabb hjälp i hem och lokaler.",
+    "differentiator": "lokal, tydlig och trygg elektriker utan krångliga offerter",
+    "tone": "trygg, kunnig, rak",
+    "avoid": ["överdrivet techig", "påhittade certifieringar", "generiska superlativ"]
+  }
+}
+
+Detta är där “sidan får själ”.
+
+3. Site Architect
+
+Bestämmer struktur, sidor och sektioner.
+
+Output:
+
+{
+  "pages": [
+    {
+      "slug": "/",
+      "sections": ["hero", "services", "trust", "process", "areas", "faq", "contact"]
+    },
+    {
+      "slug": "/tjanster",
+      "sections": ["service-grid", "service-detail", "cta"]
+    },
+    {
+      "slug": "/kontakt",
+      "sections": ["contact", "map", "opening-hours"]
+    }
+  ]
+}
+
+Här ska LLM:en inte välja fritt från universum. Den ska välja från tillåtna section-typer som renderer stödjer.
+
+4. Conversion Planner
+
+Bestämmer CTA-logik.
+
+Output:
+
+{
+  "conversion": {
+    "primaryAction": "request_quote",
+    "primaryCta": "Be om offert",
+    "secondaryCta": "Se våra tjänster",
+    "contactPriority": ["phone_if_real", "form", "email_if_real"],
+    "ctaRules": [
+      "Visa inte telefon om telefon saknas",
+      "Använd inte bokning om booking saknas"
+    ]
+  }
+}
+
+Detta binder ihop LLM-intelligens med de deterministiska reglerna.
+
+5. Copywriter
+
+Skriver faktiskt innehåll, men bara inom fakta och plan.
+
+Output:
+
+{
+  "hero": {
+    "headline": "Trygg elektriker i Malmö när jobbet måste bli rätt",
+    "subheadline": "Vi hjälper privatpersoner, föreningar och mindre företag med installationer, felsökning och elservice.",
+    "proofLine": "Tydlig rådgivning, säkra lösningar och snabb återkoppling."
+  },
+  "services": [
+    {
+      "title": "Elinstallationer",
+      "summary": "Installation av uttag, belysning och eldragning för hem och lokaler.",
+      "bullets": ["Planerad installation", "Tydlig genomgång", "Säker montering"]
+    }
+  ]
+}
+
+Det är här dagens generiska känsla ska dö.
+
+6. Art Director / Visual Direction
+
+Den ska inte nödvändigtvis generera CSS fritt. Den ska generera designintentioner som mappar mot tokens, komponentvarianter och layoutval.
+
+Output:
+
+{
+  "visualDirection": {
+    "mood": "trygg, modern, lokal service",
+    "density": "medium",
+    "heroStyle": "split_with_image",
+    "colorIntent": "warm_neutral_with_electric_accent",
+    "imageBriefs": [
+      "Elektriker i modern lägenhet i Malmö, naturligt ljus, professionell men varm känsla"
+    ],
+    "layoutSignals": {
+      "useTrustBandNearHero": true,
+      "useProcessSection": true,
+      "avoidOverlyPlayfulShapes": true
+    }
+  }
+}
+
+Här kan Sajtbyggaren bli starkare än ren mall: samma scaffold kan få olika känsla beroende på LLM-planen.
+
+7. Component Mapper
+
+Tar blueprintet och mappar till faktiska renderers/scaffolds.
+
+visualDirection.heroStyle = split_with_image
+→ använd HeroVariant.B
+
+conversion.primaryAction = request_quote
+→ CTA label = "Be om offert"
+→ CTA route = /kontakt eller formsektion
+
+industry = elektriker
+→ services renderer får service-card-layout
+→ trust renderer får säkerhet/tydlighet utan fake-cert
+
+Det här steget är nyckeln mellan “LLM-kreativitet” och “deterministisk stabilitet”.
+
+8. Critic / Quality Verifier
+
+En separat verifier ska läsa blueprint + renderad output och säga:
+
+{
+  "score": 7.2,
+  "issues": [
+    {
+      "severity": "high",
+      "type": "generic_copy",
+      "message": "Hero could apply to almost any service business."
+    },
+    {
+      "severity": "high",
+      "type": "thin_offer",
+      "message": "Only one concrete service is described."
+    },
+    {
+      "severity": "medium",
+      "type": "trust_missing",
+      "message": "Prompt suggests local service, but no trust-building section exists."
+    }
+  ]
+}
+
+Detta knyter an direkt till projektets 9/10-mål och scorecard-idén. Projektets arbetsmodell säger också att riktningen ska hållas mot produktvärdet prompt -> hemsida -> preview -> följdprompt -> ny version, inte fastna i intern arkitekturstädning.
+
+9. Repair Agent
+
+Inte “gör om allt”. Bara reparera tydliga svagheter.
+
+Verifier: hero är generisk
+→ Repair Agent skriver om hero + proofLine
+
+Verifier: tjänster är tunna
+→ Repair Agent lägger till 2–3 grundade tjänster
+
+Verifier: trust saknas
+→ Repair Agent skapar ärlig trust utan fake claims
+
+Detta är mycket mer Lovable/v0-likt: systemet bygger, granskar, förbättrar.
+
+Finns en noga plan för detta idag?
+
+Min bedömning: det finns en produktmässig plan, men inte en tillräckligt konkret teknisk plan för hela tunga LLM-kedjan.
+
+Det som finns tydligt:
+
+- Målet är 9/10 företagshemsidor.
+- Lovable/v0 är kvalitetsreferenser, inte arkitekturmallar.
+- Gamla Sajtmaskin är referens/baslinje, inte kodbas att importera.
+- Kärnflödet är prompt → hemsida → preview → följdprompt → ny version.
+- Nuvarande generator ska vara kontrollerad och seriös.
+- OpenClaw/Sajtagent-idén är strategiskt viktig, men ska inte kapa grundflödet för tidigt.
+
+Det stöds av den uppladdade projektbeskrivningen och arbetsmodellen.
+
+Det som bara finns delvis:
+
+- exakt LLM-orchestrator-arkitektur
+- exakta artefakter mellan LLM-stegen
+- vilka fält renderers ska konsumera
+- verifier/repair-loop
+- human quality scorecard som styr generation
+- skillnad mellan “mall-val” och “LLM-designbeslut”
+
+Current-focus/handoff pekar mot nästa kvalitetssteg: trustSignals/credentials via wizard och branschnära story/tagline/service-mallar. Men det är fortfarande mer en trovärdighets-slice än en full multi-agent-orchestrator.
+
+Så svaret är:
+
+Nej, det verkar inte finnas en helt färdig, noggrant specificerad plan för det tunga LLM-flödet ännu.
+Ja, det finns en stark grund och flera tydliga antaganden/produktprinciper som pekar exakt dit.
+
+Hur den tunga kedjan bör komma in utan att förstöra grunden
+
+Jag skulle göra det i fyra nivåer.
+
+Nivå 1 — “Blueprint före renderer”
+
+Lägg in ett nytt artefaktsteg:
+
+prompt-input.json
+→ site-blueprint.json
+→ build_site.py/renderers
+
+site-blueprint.json blir bron mellan LLM och deterministic system.
+
+Den ska innehålla:
+
+- positioning
+- page plan
+- section plan
+- hero copy
+- service copy
+- trust plan
+- CTA plan
+- visual direction
+- quality risks
+
+Detta är den viktigaste arkitekturförändringen.
+
+Nivå 2 — Renderer konsumerar blueprint, inte bara mall/defaults
+
+I början behöver bara några fält användas:
+
+hero.headline
+hero.subheadline
+hero.primaryCta
+services[]
+story
+faq[]
+trustSignals[]
+visualDirection.heroStyle
+visualDirection.density
+
+Då får man snabb effekt utan att riva hela systemet.
+
+Nivå 3 — Quality verifier + repair
+
+Efter första render:
+
+blueprint + generated files
+→ verifier
+→ repair blueprint
+→ render igen
+
+Detta är där systemet börjar kännas agentiskt på riktigt.
+
+Inte för att det “chattar mer”, utan för att det bedömer sin egen output och förbättrar den.
+
+Nivå 4 — Sajtagent / OpenClaw 2.0
+
+Först när init-generationen blir bra bör Sajtagenten komma in tyngre.
+
+Sajtagenten ska förstå:
+
+- aktuell siteId/projectId/version
+- senaste promptar
+- nuvarande blueprint
+- genererade filer
+- quality findings
+- användarens följdprompt
+
+Då kan följdpromptar bli mer än “byt tagline”:
+
+“Gör sidan mer premium”
+→ Sajtagenten ser nuvarande design/copy
+→ föreslår plan
+→ ändrar visualDirection + copy + layout-intent
+→ verifierar att sidan faktiskt blev mer premium
+
+Det är då Sajtbyggaren börjar närma sig v0/Lovable/Sajtmaskin-agentkänslan.
+
+Min föreslagna konkreta plan
+Sprint A — Definiera site-blueprint.v1
+
+Skapa kontraktet, inte stort UI.
+
+Input:
+- userPrompt
+- discovery/wizard
+- existing project input
+- scaffold candidates
+
+Output:
+- site-blueprint.json
+
+Innehåll:
+
+business facts
+positioning
+site architecture
+sections
+hero
+services/products
+trust
+faq
+cta
+visual direction
+quality risks
+
+Definition of done:
+
+- fyra baseline prompts skapar fyra tydligt olika blueprints
+- inga fake-certifieringar
+- ingen placeholder-kontakt i copy
+- blueprint sparas som artefakt per run
+Sprint B — Konsumera blueprint i hero/services/story/FAQ
+
+Målet är inte hela systemet. Bara de delar som märks direkt.
+
+- hero blir prompt-specifik
+- services blir flera och konkreta
+- story blir branschnära
+- FAQ blir relevant
+- CTA följer conversion-plan
+
+Definition of done:
+
+Elektriker, frisör, naprapat och keramik-ehandel ska kännas som fyra olika företagstyper,
+inte samma mall med ändrade ord.
+Sprint C — Visual Direction Mapping
+
+LLM får inte skriva CSS fritt. Den får välja bland säkra designparametrar.
+
+visualDirection:
+- mood
+- density
+- hero style
+- section rhythm
+- image brief
+- accent intent
+- trust placement
+
+Renderer mappar detta till befintliga tokens/varianter.
+
+Sprint D — Quality Critic V1
+
+Skapa verifier som mäter:
+
+- generic copy
+- thin offer
+- missing local context
+- fake/ungrounded trust
+- missing CTA
+- weak hero
+- placeholder leakage
+- too template-like
+
+Det ska inte bara bli ett score. Det ska ge reparerbara issues.
+
+Sprint E — Repair Pass V1
+
+Repair Agent får bara ändra blueprint-fält, inte skriva fria filer.
+
+high severity issue
+→ repair relevant blueprint section
+→ render again
+
+Detta blir första riktiga “agent-loop”.
+
+Sprint F — Follow-up Orchestrator
+
+Följdpromptar ska inte bara vara copyDirectives.
+
+De ska kunna påverka:
+
+- positioning
+- tone
+- hero
+- service emphasis
+- visual direction
+- section order
+- CTA
+- trust
+
+Men fortfarande via blueprint och verifier, inte fri kodpatch.
+
+Den viktigaste designprincipen
+
+LLM:en ska inte ersätta grunden.
+LLM:en ska fylla grunden med intelligenta beslut.
+
+Så här:
+
+Deterministic system:
+“Jag vet hur man bygger en giltig sajt.”
+
+LLM orchestrator:
+“Jag vet vilken sajt just den här användaren borde få.”
+
+Det är kombinationen som är produkten.
+
+Lovable/v0-känslan kommer från att systemet verkar förstå intention och förbättrar output snabbt.
+Sajtbyggaren bör få den känslan, men med hårdare rails:
+
+- inga påhittade claims
+- stabil build
+- tydliga artefakter
+- versioner
+- företagsnära struktur
+- seriös copy
+- kontrollerad preview
+Min tydliga slutsats
+
+Du har rätt i att något stort saknas. Det som saknas är inte “mer UI” och inte “fler mallar”. Det som saknas är ett site-blueprint-baserat LLM-orchestrator-lager mellan prompten och den deterministiska generatorn.
+
+Det finns en plan på visionsnivå. Det finns en bra teknisk grund. Det finns gap-audits som pekar på exakt rätt problem. Men jag ser inte att det redan finns en full, implementeringsklar plan för ett v0/Lovable-liknande multi-step LLM-flöde.
+
+Min rekommendation är därför:
+
+Bygg inte en fri kodagent först.
+Bygg inte fler overlays först.
+Bygg inte auth/billing först.
+
+Bygg site-blueprint.v1 + LLM Quality Orchestrator V1.
+
+Det är bron mellan “deterministisk mallgenerator” och “riktig AI-hemsidebyggare”."
+
+
+---
+
+
+Jag:
+
+"Kan du fortsätta att tala om detta och hur du skulle vilja se det? Kolla gärna in både om det är så att det finns typer av dokuemtnation som berör detta i sajten idag, och om det är tdärför som det känns som det inte går frammåt? Jag vill cokså ha reda på om olika typer av delar som finns i tex variants och/eller dossiers och eller schaffolds eller andra delar direkt går att mappa till olika typer av jsonfiler som dessa (därför jag ville jobba runt dessa delvis). En annansak jag märkte vad att min openclaw från sajtmaskin fungerade oerhört bra, med djup förståelse och jag kan inte nog uttrycka min häpnad för hur denne faktist kunde se buggar och fel. men också påpeka de mest inteligenta sakerna. Denna bör ha en given plats, men särskild i hela llm-flödet. Dock måste den utmärka sig mycket och som mest integrerat jobba som aknske en orchistrerare för hur allt ska kunna fungera. men med kanske tool calls om nödvändgt då detta skulle kunna vara lite av en game changer. Om du nu försöker att strukturera ett komplett llm-flöde, utifrån där vi står idag. Du ska ta med grunden men nu bygga ut och på det vi har som du precis nämnt på ett eller annat sätt. Tänk också på att v tycks ha byggt ett delvis enklare fristående parrallellt llm-flöde (kanske itne helt dumt dock), där init och "follow-up" bevaras som komcept. men cokså mycket från "Sajtmaskin" - men smartare och bättre strukturerat. hur skulle det vara? En sak jag också vill påpeka (kanske skulle openclaw som orchistrator kuna göra detta) är att vi skulle behöva någonting som urskiljer en tex "follow up" i chatten beroende på vilken typ av "fråga/uppmaning/multifråga/etc" som skapa (tänk "vad är klockan", "jag vill ha en klcoka på andra sektionene till vänter", "vilka klockorfinns att tillgå att placetra någonstans", "jag vill ha samma klcoka som på www.aftonbladet.se" osv... där frågor itne alltid behöver vara uppmaningar till att släcka ner heal sajten för att lä'gga in någonting och starta upp en adapter för att skcika till vår iframe"
+
+---
+
+
+Coach: "I’m checking the existing docs/contracts and code artifacts around OpenClaw/Sajtagent, variants, dossiers, scaffolds, init/follow-up, and where they can map into a concrete blueprint-based orchestration layer.
+
+I’m seeing an older Understand/Plan/Build-style contract and README artifact chain, but OpenClaw appears strategic rather than implemented as the active orchestrator; that mismatch may explain the stalled feeling.
+
+Called tool
+Thought for 11m 18s
+
+Ja. Jag tror nu ännu tydligare att du pekar på den viktigaste produktfrågan i hela projektet:
+
+Hur går Sajtbyggaren från “kontrollerad mall-/scaffold-generator med LLM-hjälp” till “riktig AI-hemsidebyggare med flera LLM-roller, agentisk förståelse, verktyg, kontext och smart follow-up”?
+
+Min bedömning efter att ha tittat i docs och kod är:
+
+Det finns redan en plan-skugga för detta. Den är inte tom. Men den är delvis arkiverad, delvis smalnad av, och inte längre aktivt uttryckt som nästa stora byggspår. Därför kan det kännas som att det finns mycket grund, mycket governance och många artefakter, men att den riktiga “wow, den förstår och bygger”-kedjan inte kommer fram.
+
+1. Det finns faktiskt dokumentation som beskriver nästan exakt detta
+
+Det mest relevanta jag hittade är LLM Golden Path v1-materialet. Där står uttryckligen att användarupplevelsen ska kännas som en rak v0/Lovable-liknande linje, men att det internt ska vara en pipeline med tydliga artefakter och deterministiska beslut där reproducerbarhet behövs. Det står också att fri prompt, wizard, starter-val, scaffold-val, variant-val, dossier-val, follow-up, asset-upload och scrape inte ska bli separata motorer, utan mata in i samma pipeline, samma artefakter, samma versionering och samma preview.
+
+Den föreslagna interna kedjan är redan formulerad så här:
+
+request intake
+→ context assembler
+→ discovery resolver
+→ project input
+→ site brief
+→ site plan
+→ dossier/capability assembly
+→ generation package
+→ file generation / patch application
+→ quality gate + repair
+→ preview snapshot
+→ version/run history
+
+Detta finns dokumenterat som längre vision i handoffen.
+
+Och i de mer detaljerade coach-anteckningarna står samma sak ännu tydligare: olika ingångar ska inte bli separata engines, utan gå in i samma pipeline; exempelvis fri prompt, wizard, starter, scaffold, variant, dossier, follow-up och assets ska alla landa i samma kontextobjekt.
+
+Så: du hittar inte på ett nytt behov. Det här är redan identifierat som rätt riktning.
+
+2. Men det som faktiskt byggdes var mycket smalare
+
+Den avgörande detaljen är att LLM Golden Path v1 inte byggde den tunga LLM-kedjan. Den låste i stället det befintliga flödet med tester.
+
+Handoff-dokumentet säger att hela kedjan prompt → företagshemsida → preview → följdprompt → ny version redan fanns wired, och att sprinten lade till smoke-test, multi-intent-chain-test, real-build-test och runbook. Den ändrade inte generation-koden eller governance-modellen.
+
+Det står också uttryckligen vad som inte ingick:
+
+- real codegenModel-LLM-anrop
+- Path B / section-driven renderer
+- lane 2 LLM contract propagation
+- Sajtagent 2.0
+
+Och när nästa naturliga steg listas är Sprint 3B real codegenModel fortfarande en framtida bite: riktig LLM-call i codegen-steget, utbyggd repair-svit, tydligt scope i packages/generation/codegen/ och packages/generation/repair/.
+
+Så min tolkning är:
+
+Projektet har dokumenterat den stora LLM-arkitekturen, men den praktiska sprinten valde att säkra skelettet först. Sedan har mycket energi gått till preview, follow-up-säkerhet, branch/PR-scope, UI-lanes, trust/contact och andra nödvändiga saker. Det gör att “riktiga LLM-agentflödet” fortfarande inte känns produktmässigt närvarande.
+
+3. Varför det känns som att det inte går framåt
+
+Det är inte för att inget finns. Det är för att mycket av det som finns är förberedande.
+
+Nya Sajtbyggaren har en tydlig åttastegsmodell:
+
+Init Prompt
+→ Project Input
+→ Starter
+→ Scaffold
+→ Variant
+→ Dossier
+→ Generation Package
+→ Build
+
+Det finns redan i README som operatorflöde.
+
+Engine Run-policy:n säger också att en run har tre faser: understand, plan, build, och att de skriver artefakter som input.json, site-brief.json, site-plan.json, generation-package.json, quality-result.json, repair-result.json, build-result.json och trace.ndjson.
+
+Men när man tittar på vad LLM:en faktiskt får göra i praktiken just nu blir det mycket smalare:
+
+briefModel kan skapa Site Brief.
+planningModel kan välja scaffold/variant/dossiers, men inom hårda rails.
+codegenModel är extremt smalt: fil-listan är deterministisk och LLM:en får i den slicen bara berika med rationale och riskNotes, inte injicera filer.
+Även codegen-filerna byggs deterministiskt i alla paths.
+
+Det är alltså rimligt att upplevelsen känns som:
+
+LLM hjälper till runt kanterna
+men den kreativa hemsidebyggaren är inte riktigt inkopplad
+
+Det är också därför du känner: “vi har byggt ett deterministiskt system, och ett enklare LLM-flöde som mest härmar det.”
+
+Det är en ganska korrekt observation.
+
+4. Går variants, dossiers och scaffolds att mappa direkt till JSON-filer?
+
+Ja. Och det är en av de stora styrkorna i nuvarande grund.
+
+Scaffold
+
+Ett scaffold är redan en mapp med flera JSON-kontrakt. load_scaffold_registry() läser exempelvis:
+
+scaffold.json
+routes.json
+sections.json
+selection-profile.json
+compatible-dossiers.json
+variants/*.json
+
+och returnerar dem som registry-data till planningModel.
+
+För local-service-business beskriver scaffold.json exempelvis sajttypens syfte: lokal tjänstefirma, trust, tjänster, lokal förankring och offert/kontakt-konvertering.
+
+routes.json säger vilka routes som finns: home, tjänster, om oss och kontakt.
+
+sections.json säger vilka sektioner varje route ska ha. Home har exempelvis hero, service-summary, trust-proof, contact-cta och optional sektioner som story, gallery, testimonials, FAQ, reviews och certifications.
+
+Det betyder att det redan finns en direkt bro:
+
+LLM planerar route/section-intent
+→ scaffold/sections.json avgör vad som faktiskt får renderas
+Variant
+
+Variant är också JSON. nordic-trust har exempelvis tokens för färg, typografi, radius, spacing, motion och tone/vibe.
+
+Det betyder:
+
+LLM kan säga “trygg, lokal, premium men inte lyxig”
+→ planning/variant resolver väljer nordic-trust
+→ renderer får tokens
+
+Det som fortfarande är lite splittrat är section treatments. En del variant-till-section-treatment-logik ligger i Python-kod i dispatcher.py, inte i variant-JSON. Dispatchern har redan en trestegsordning: operator-pin vinner, sedan variant-default, sedan section-default. Den kommenterar dessutom att en framtida LLM-pick kan läggas framför utan att röra renderers.
+
+Min rekommendation: flytta gradvis mer av detta till variant-JSON eller en section-treatments.json, så LLM-orchestratorn kan välja visuella treatments deklarativt.
+
+Dossier
+
+Dossier är redan mappbart via capability map. capability-map.v1.json säger uttryckligen att capability-sluggen är kontraktet och att dossiern är implementationen. Dossier-ID ska matcha mappnamn under packages/generation/orchestration/dossiers/{soft,hard}/.
+
+Exempel:
+
+contact-form → mailto-contact-form
+menu → menu-display
+booking → booking-cta
+gallery → image-gallery
+hours → opening-hours
+reviews → reviews-display
+location → map-embed
+pricing → pricing-table
+faq-section → faq-accordion
+
+Ett dossier-manifest finns också som JSON. interactive-game-loop är exempelvis en soft dossier med capability interactive-game, rewritable code fidelity och sammanfattning av vad den ska garantera.
+
+Så ja: du hade rätt i att det är meningsfullt att jobba runt dessa JSON-artefakter. De är exakt rätt lager att låta LLM:en resonera över, men inte fritt förstöra.
+
+5. Den viktiga slutsatsen om “mallmotor” + “LLM-flöde”
+
+Jag skulle formulera systemet så här:
+
+Scaffold = vad sajten får vara
+Variant = hur den får kännas
+Dossier = vilka extra förmågor den får ha
+Sections = vilka byggblock den kan använda
+Project Input = vad kunden faktiskt sagt och valt
+Site Brief = vad LLM förstår om kunden
+Site Plan = hur sajten ska struktureras
+Generation Package = arbetsordern till generatorn
+OpenClaw = agenten som håller ihop allt, klassar intention och väljer nästa steg
+
+Deterministiska systemet ska inte ersättas. Det ska bli plattformen som LLM-agenten arbetar ovanpå.
+
+En bra mental modell:
+
+Deterministisk grund:
+“Jag vet vilka byggblock som finns och hur man bygger utan att krascha.”
+
+LLM-orchestrator:
+“Jag förstår vad användaren försöker åstadkomma och vilka byggblock som bör användas.”
+
+Det är kombinationen som gör Sajtbyggaren starkare än både ren mallmotor och fri kodagent.
+
+6. Var OpenClaw bör sitta
+
+Jag håller helt med dig: OpenClaw/Sajtagenten bör ha en given plats, men inte som en vanlig chatt-widget.
+
+Den ska bli orchestratorn ovanför init/follow-up-flödet.
+
+Gamla projektbeskrivningen säger att OpenClaw hade just den kontextförmåga Sajtbyggaren behöver: läsa builder-kontext, genererad kod, skrivbara textfält, senaste meddelanden, aktiv version och filmanifest/full filtext beroende på frågan. Den hade också en policy för lätt kodkontext, manifest eller full kodkontext.
+
+Det är exakt rätt idé, men den ska byggas renare i nya Sajtbyggaren.
+
+Jag skulle inte kalla den bara “chat”. Jag skulle kalla den:
+
+Sajtagent / OpenClaw Orchestrator
+
+Dess jobb:
+
+1. förstå användarens meddelande
+2. avgöra om det är fråga, instruktion, ändring, buggrapport, referens, mixed request
+3. välja hur mycket kontext som behövs
+4. välja om build/preview ska startas eller inte
+5. föreslå eller skapa patch plan
+6. kalla rätt tools
+7. bevara version/DNA
+8. verifiera att ändringen faktiskt syntes
+9. svara begripligt till användaren
+7. OpenClaw ska alltså inte alltid bygga om
+
+Det här är väldigt viktigt utifrån dina klock-exempel.
+
+Dagens follow-up-risk är ungefär:
+
+Användaren skriver något i chatten
+→ systemet antar att det är en site-edit
+→ kör prompt/build
+→ preview adapter startas
+→ iframe uppdateras
+
+Men många meddelanden ska inte trigga build.
+
+OpenClaw behöver därför en första klassificering:
+
+type MessageKind =
+  | "answer_only"
+  | "site_review"
+  | "edit_instruction"
+  | "component_discovery"
+  | "reference_analysis"
+  | "bug_report"
+  | "multi_intent"
+  | "unclear";
+
+Och separat:
+
+type BuildRequirement =
+  | "none"
+  | "plan_only"
+  | "artifact_patch_only"
+  | "targeted_rebuild"
+  | "full_rebuild";
+
+Det är den sak som saknas i dagens enkla follow-up-modell.
+
+I nuvarande kod är follow-up-intent deterministiskt, litet och whitelist-baserat. Okända prompts blir konservativa för att undvika läckage/regressioner. Intent-värdena är i princip tone-shift, story-emphasize, tagline-update, positioning-shift, no-semantic-change, clarify.
+
+Det är bra som säker V1, men för dina exempel är det för primitivt.
+
+8. Dina klock-exempel som riktig OpenClaw-routing
+Exempel A: “vad är klockan?”
+
+Detta ska bli:
+
+{
+  "messageKind": "answer_only",
+  "editKind": null,
+  "buildRequirement": "none",
+  "contextLevel": "none",
+  "toolCalls": ["time_tool_if_available"]
+}
+
+Ingen site patch. Ingen preview. Ingen adapter. Inget iframe-omstart.
+
+Svar: aktuell tid.
+
+Exempel B: “jag vill ha en klocka på andra sektionen till vänster”
+
+Detta är en faktisk ändring.
+
+{
+  "messageKind": "edit_instruction",
+  "editKind": "component_add",
+  "target": {
+    "route": "home",
+    "sectionOrdinal": 2,
+    "position": "left"
+  },
+  "componentIntent": "clock_widget",
+  "buildRequirement": "targeted_rebuild",
+  "contextLevel": "artifacts_plus_sections"
+}
+
+OpenClaw bör då:
+
+1. läsa aktuell Site Plan
+2. mappa “andra sektionen” till faktisk section id
+3. kolla om component/capability finns
+4. om inte: föreslå ny soft dossier eller inline component-patch
+5. skapa patch plan
+6. ändra bara relevant artefakt/filer
+7. köra quality/smoke
+8. uppdatera preview
+
+Inte “släck ner hela sajten och börja om”.
+
+Exempel C: “vilka klockor finns att tillgå att placera någonstans?”
+
+Detta är inte en byggorder. Det är discovery/guidance.
+
+{
+  "messageKind": "component_discovery",
+  "editKind": "none",
+  "buildRequirement": "none",
+  "contextLevel": "component_registry"
+}
+
+Svar bör vara något i stil med:
+
+Vi kan lägga in:
+- enkel digital klocka
+- öppettider/status-klocka
+- countdown till event/erbjudande
+- lokal tid för flera kontor
+- dekorativ analog klocka
+
+Vill du placera den i hero, andra sektionen, footer eller kontaktsidan?
+
+Ingen build förrän användaren väljer.
+
+Exempel D: “jag vill ha samma klocka som på aftonbladet.se”
+
+Detta är en reference-analysis request.
+
+{
+  "messageKind": "reference_analysis",
+  "editKind": "component_add",
+  "reference": {
+    "url": "aftonbladet.se",
+    "object": "clock"
+  },
+  "buildRequirement": "plan_only_first",
+  "contextLevel": "external_reference_plus_current_artifacts",
+  "risk": "do_not_copy_exact_design_or_code"
+}
+
+OpenClaw bör:
+
+1. hämta/analysera referensen med tool call om tillåtet
+2. beskriva vad som menas visuellt/funktionellt
+3. skapa en liknande men egen variant
+4. fråga om placering om oklart
+5. först därefter patcha
+
+Viktigt: den ska inte kopiera Aftonbladets exakta design/kod. Den ska skapa en inspirerad, egen komponent.
+
+Exempel E: “gör sidan mer premium, lägg in en klocka i andra sektionen och ändra inte texterna”
+
+Detta är multi-intent.
+
+{
+  "messageKind": "multi_intent",
+  "subtasks": [
+    {
+      "editKind": "visual_style",
+      "scope": "global",
+      "instruction": "more premium"
+    },
+    {
+      "editKind": "component_add",
+      "component": "clock",
+      "target": "home.section[2].left"
+    },
+    {
+      "constraint": "preserve_copy"
+    }
+  ],
+  "buildRequirement": "targeted_rebuild"
+}
+
+Detta är exakt där en OpenClaw-orchestrator kan bli game changer. Den ska kunna dela upp användarens text i flera deluppgifter, bevara constraints och köra patchar i rätt ordning.
+
+9. Komplett LLM-flöde som jag skulle vilja se
+
+Jag skulle bygga hela systemet så här, med dagens grund kvar.
+
+A. User Message
+   ↓
+B. OpenClaw Request Router
+   - answer only?
+   - init?
+   - follow-up?
+   - site review?
+   - component discovery?
+   - reference analysis?
+   - bug report?
+   - mixed?
+   ↓
+C. Context Assembler
+   - ingen kontext
+   - bara artifacts
+   - artifacts + section map
+   - manifest
+   - relevanta filer
+   - preview/DOM snapshot
+   - extern referens
+   ↓
+D. Mode-specific orchestration
+   - Init Orchestrator
+   - Follow-up Orchestrator
+   - Review Orchestrator
+   - Reference Orchestrator
+   ↓
+E. Existing pipeline
+   - Project Input
+   - Site Brief
+   - Site Plan
+   - Generation Package
+   - Deterministic renderer/codegen
+   - Quality Gate
+   - Repair
+   - Preview
+   - Run History
+
+Det viktiga är att OpenClaw inte ersätter pipelinen. Den står ovanför och väljer hur pipelinen ska användas.
+
+10. Init-flöde: hur det borde se ut
+
+För första generationen:
+
+Fri prompt / wizard
+→ OpenClaw intake
+→ business facts extraction
+→ Site Brief v2
+→ Discovery Resolver
+→ scaffold/variant/dossier decision
+→ content strategy
+→ section-level content blocks
+→ visual direction
+→ Generation Package v2
+→ deterministic build
+→ quality critic
+→ repair pass
+→ preview
+
+Här bör LLM:en vara starkast i:
+
+- affärsförståelse
+- positioning
+- copy
+- målgrupp
+- trust
+- tjänster/produkter
+- CTA-strategi
+- visuell riktning
+- section-prioritering
+
+Men deterministic rails ska fortfarande äga:
+
+- vilka scaffolds som finns
+- vilka variants som är tillåtna
+- vilka dossiers som kan mountas
+- vilka sections som kan renderas
+- vilka routes som får skapas
+- build/test
+- versionering
+- file path safety
+
+Det stämmer med coach-anteckningarnas princip: LLM får tolka, skriva, prioritera, förbättra och föreslå; resolver, planning, versionering, validering och quality gates äger beslut som måste vara reproducerbara.
+
+11. Follow-up-flöde: hur det borde se ut
+
+För follow-up ska OpenClaw alltid börja med:
+
+Är detta ens en ändring?
+
+Sedan:
+
+user message
+→ OpenClaw Followup Router
+→ context level decision
+→ target resolution
+→ patch plan
+→ artifact patch
+→ affected files only
+→ quality/visible-effect verifier
+→ preview update only if needed
+
+Coach-dokumentet säger redan att init och follow-up ska skilja sig. Init är Generation Package -> full generated site, medan follow-up är current snapshot + user message -> followup intent -> patch plan -> changed artifacts -> affected files only.
+
+Det är precis rätt. Det behöver bara bli mycket mer verkligt och agentiskt.
+
+12. Vad jag skulle ändra i artefakterna
+
+Jag skulle inte införa massor av nya canonical namn, eftersom repo:t redan varnar för dubblering. Handoffen säger att namn som “request envelope”, “patch plan”, “project version” och “preview snapshot” inte ska bli nya canonical typer eftersom befintliga artefakter redan täcker mycket av det.
+
+Men jag skulle utöka de befintliga artefakterna.
+
+Site Brief v2 bör få mer strategiskt innehåll
+
+Lägg till ungefär:
+
+{
+  "positioning": {
+    "oneLiner": "...",
+    "differentiator": "...",
+    "audienceNeed": "...",
+    "localAngle": "..."
+  },
+  "contentStrategy": {
+    "heroAngle": "...",
+    "trustStrategy": "...",
+    "offerStrategy": "...",
+    "avoidGenericClaims": true
+  }
+}
+
+Dagens Site Brief-schema har redan språk, rawPrompt, tone, targetAudience, requestedCapabilities, conversionGoals, servicesMentioned, contact och notesForPlanner. Det är bra, men för tunt för “sajt med själ”.
+
+Site Plan v2 bör få section-level intent
+
+Dagens Site Plan har scaffoldId, variantId, starterId, routePlan, selectedDossiers och buildSpec.
+
+Jag skulle lägga till:
+
+{
+  "sectionPlan": {
+    "home.hero": {
+      "goal": "position fast",
+      "copyIntent": "trygg lokal elektriker",
+      "visualTreatment": "split-proof",
+      "ctaRole": "primary"
+    },
+    "home.trust-proof": {
+      "goal": "build credibility without fake claims",
+      "proofSources": ["prompt", "wizard"]
+    }
+  }
+}
+
+Detta ska mappa till sections.json.
+
+Generation Package v2 bör få riktiga content blocks
+
+Dagens Generation Package-schema är väldigt tunt. Det beskriver sig som “the only payload that enters codegen-LLM”, men innehåller i praktiken mest refs och id:n: runId, siteBriefRef, sitePlanRef, scaffoldId, variantId, starterId, language, engineMode och createdAt.
+
+Det är inte tillräckligt för en tung LLM-kedja.
+
+Jag skulle lägga till:
+
+{
+  "contentBlocks": {
+    "home.hero": {
+      "headline": "...",
+      "subheadline": "...",
+      "proofLine": "...",
+      "primaryCta": "..."
+    },
+    "services.service-list": [
+      {
+        "title": "...",
+        "summary": "...",
+        "bullets": ["...", "..."]
+      }
+    ]
+  },
+  "visualDirection": {
+    "mood": "...",
+    "density": "...",
+    "sectionTreatments": {
+      "service-list": "alternating-rows"
+    }
+  },
+  "qualityRisks": [
+    "No fake certifications",
+    "Do not show phone if missing"
+  ]
+}
+
+Det skulle vara bron mellan “LLM-förståelse” och “deterministisk renderer”.
+
+13. Hur variants/dossiers/scaffolds kompletterar detta
+
+Jag skulle låta LLM:en göra detta:
+
+“Den här prompten beskriver en varm familjär frisörsalong i Göteborg.
+Rekommenderad struktur: local-service-business.
+Rekommenderad variant: warm-craft/family-warmth om den finns.
+Rekommenderade sections: hero, service-summary, story, gallery, trust-proof, contact.
+Rekommenderad CTA: Boka tid / Kontakta salongen.
+Dossier: gallery om bilder finns, booking bara om faktisk bokningsväg finns.
+Content blocks: skriv branschspecifik copy.”
+
+Men LLM:en ska inte själv få säga:
+
+“Skapa ett nytt scaffold X”
+“Montera en dossier som inte finns”
+“Använd checkout/auth bara för att det låter bra”
+“Skapa en fake Google-recension”
+“Byt starter utan resolver”
+
+Så här kompletterar de varandra:
+
+LLM:
+väljer avsikt, vinkel, copy, prioritet, förslag.
+
+Resolver:
+validerar scaffold/variant/dossier.
+
+Renderer:
+bygger säkert.
+
+Quality:
+säger om resultatet är bra.
+
+OpenClaw:
+håller kontexten och väljer rätt nästa steg.
+14. OpenClaw som tool-calling-agent
+
+Jag skulle ge OpenClaw tools som ungefär:
+
+readCurrentProject()
+readRunArtifacts(runId)
+readProjectInput(siteId, version?)
+readSiteBrief(runId)
+readSitePlan(runId)
+readGenerationPackage(runId)
+listRoutesAndSections(siteId)
+listAvailableScaffolds()
+listAvailableVariants(scaffoldId)
+listAvailableCapabilities()
+listAvailableDossiers(capability?)
+readFileManifest(runId)
+readRelevantFiles(paths)
+inspectPreview(route?, selector?)
+fetchReferenceUrl(url)
+proposeArtifactPatch(plan)
+validatePatch(patch)
+runQualityGate(scope)
+runTargetedBuild(scope)
+startPreviewIfNeeded()
+
+OpenClaw ska alltså inte vara “en LLM som kan göra allt”. Den ska vara:
+
+LLM + verktyg + hårda kontrakt + trace
+
+Varje tool-call ska kunna hamna i trace.ndjson eller motsvarande, så man i efterhand kan se:
+
+Varför ändrade agenten detta?
+Vilken kontext läste den?
+Varför startades build?
+Varför startades inte build?
+Vilka filer/artifacts påverkades?
+
+Detta matchar även gamla OpenClaw-idén, men gör den mer styrbar. Gamla Sajtmaskin är uttryckligen referens/baslinje, inte arkitektur att importera rakt av. Nya repo:t är Sajtbyggaren.
+
+15. Föreslagen OpenClaw-output
+
+Jag skulle göra att varje OpenClaw-svar producerar ett strukturerat beslut, inte bara text:
+
+{
+  "messageKind": "edit_instruction",
+  "intent": "component_add",
+  "buildRequirement": "targeted_rebuild",
+  "contextLevel": "artifacts_plus_sections",
+  "target": {
+    "routeId": "home",
+    "sectionId": "service-summary",
+    "position": "left"
+  },
+  "actions": [
+    {
+      "type": "artifact_patch",
+      "artifact": "generation-package.json",
+      "field": "contentBlocks.home.service-summary.accessoryComponent",
+      "value": {
+        "component": "clock-widget",
+        "variant": "minimal-digital"
+      }
+    }
+  ],
+  "requiresUserConfirmation": false,
+  "shouldStartPreview": true,
+  "rationale": "The user requested a visible component placement in the current page."
+}
+
+För “vad är klockan”:
+
+{
+  "messageKind": "answer_only",
+  "buildRequirement": "none",
+  "contextLevel": "none",
+  "actions": [],
+  "shouldStartPreview": false
+}
+
+Detta är den sak som gör att chatten blir smart på riktigt.
+
+16. Min föreslagna implementation i faser
+Fas 1 — OpenClaw Router utan filändringar
+
+Bygg bara klassificeringen.
+
+Input:
+
+userMessage
+current siteId/runId/version
+selected route/section if inspector has focus
+
+Output:
+
+answer_only / edit / component_discovery / reference / bug / mixed / unclear
+buildRequirement
+contextLevel
+
+Testa med 30–50 prompts, inklusive dina klock-exempel.
+
+Detta kan byggas utan att röra renderern.
+
+Fas 2 — Context Assembler
+
+Bygg verktygen som hämtar rätt kontextnivå:
+
+none
+project DNA
+artifacts
+routes/sections
+manifest
+selected files
+preview/DOM
+external reference
+
+Gamla OpenClaw hade just denna styrka: den hämtade lagom kontext beroende på frågan. Det ska tillbaka, men mer formellt.
+
+Fas 3 — Artifact Patch Plan
+
+Låt OpenClaw skapa patch-planer mot artefakter, inte fria filer först.
+
+Exempel:
+
+- update siteBrief.positioning
+- update sitePlan.sectionPlan
+- update generationPackage.contentBlocks
+- update directives.sectionTreatments
+- add requestedCapability
+
+Ingen fri kodpatch ännu.
+
+Fas 4 — Content/Visual Blueprint i befintliga artefakter
+
+Utöka site-brief, site-plan och generation-package så de kan bära:
+
+positioning
+content blocks
+visual direction
+section treatments
+component requests
+quality risks
+
+Detta är där första generationen börjar kännas 8/10 i stället för 5/10.
+
+Fas 5 — Targeted rebuild
+
+När patch-planen påverkar bara en route/section ska systemet inte behöva “börja om”.
+
+artifact patch
+→ affected routes/files
+→ targeted render
+→ quality check for affected route
+→ preview refresh
+Fas 6 — Quality Critic + Repair
+
+Lägg in en critic som säger:
+
+hero är generisk
+service-list är tunn
+trust är tom
+CTA är oklar
+layout känns som standardmall
+referenskomponenten syns inte
+
+Sedan en repair-agent som ändrar rätt artefakt.
+
+Quality Gate finns redan som koncept och artefakt. Engine Run-policy:n låser att Quality Gate och Repair ska finnas på centrala platser, inte utspritt som i gamla Sajtmaskin.
+
+Fas 7 — OpenClaw får begränsade file tools
+
+Först när artifact patch fungerar kan OpenClaw få läsa och patcha filer, men bara med strikt plan:
+
+- läs relevant fil
+- föreslå diff
+- kör validator
+- kör quality
+- spara ny version
+
+Inte “skriv om projektet”.
+
+17. Hur jag skulle beskriva målarkitekturen
+                    ┌─────────────────────┐
+                    │  OpenClaw Router     │
+                    │  förstå meddelandet  │
+                    └──────────┬──────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+   answer only          plan/review only        site change
+          │                    │                    │
+          ▼                    ▼                    ▼
+   svara direkt        visa förslag        Context Assembler
+                                                   │
+                                                   ▼
+                                          Artifact Patch Plan
+                                                   │
+                                                   ▼
+                                           Existing Pipeline
+                                      Project Input / Brief / Plan
+                                      Generation Package / Build
+                                      Quality / Repair / Preview
+
+Det är detta jag tror är rätt balans.
+
+18. Finns plan för detta?
+
+Mitt svar är nu mer nyanserat än tidigare:
+
+Ja, det finns en plan på arkitektur-/visionsnivå.
+Den finns i LLM Golden Path-dokumenten, Engine Run-policy:n, README, product-operating-context och coach-arkitekturanteckningar.
+
+Nej, den är inte fullt ut aktiv som produktiserad implementation.
+Den första LLM Golden Path-sprinten låste befintligt flöde, men byggde inte den tunga orchestratorn. Real codegenModel, Path B och Sajtagent 2.0 ligger uttryckligen utanför den v1-låsningen.
+
+Ja, variants/dossiers/scaffolds är redan bra JSON-ankare för det du vill göra.
+De kan och bör bli det “språk” OpenClaw använder för att välja, förklara och patcha sajten.
+
+Nej, dagens follow-up är inte tillräckligt smart ännu.
+Den är säker och konservativ, men inte en full request-router som skiljer fråga, instruktion, komponent-discovery, referensanalys, buggrapport och multi-intent.
+
+19. Min tydliga rekommendation
+
+Jag skulle inte kalla nästa stora steg “mer LLM i codegen”.
+
+Jag skulle kalla det:
+
+OpenClaw Orchestrator V1 + Artifact Patch Flow
+
+Det borde ha tre leveranser:
+
+1. Follow-up Router:
+   Klassar answer/edit/review/reference/mixed och avgör buildRequirement.
+
+2. Context Assembler:
+   Hämtar rätt artifacts/files/preview/reference beroende på fråga.
+
+3. Artifact Patch Planner:
+   Skapar ändringsplan mot Site Brief, Site Plan, Generation Package eller Project Input,
+   innan någon full build körs.
+
+När detta finns kan Sajtbyggaren börja kännas som:
+
+“Jag pratar med en agent som förstår sajten”
+
+i stället för:
+
+“Jag skickar promptar till en mallgenerator”
+20. Det jag skulle säga till nästa agent
+
+Jag skulle ge en Builder-agent ungefär detta uppdrag:
+
+Bygg OpenClaw Orchestrator V1 för Sajtbyggaren.
+
+Mål:
+Skapa ett routing- och planeringslager ovanpå befintligt init/follow-up-flöde som avgör om ett användarmeddelande är:
+- answer_only
+- site_review
+- edit_instruction
+- component_discovery
+- reference_analysis
+- bug_report
+- multi_intent
+- unclear
+
+V1 ska INTE skriva fria filer och INTE bygga om sajten automatiskt för alla meddelanden.
+
+Input:
+- userMessage
+- siteId/runId/version om vald
+- current Project Input/DNA om tillgänglig
+- Site Plan route/section map
+- optional selected route/section från UI
+
+Output:
+- messageKind
+- editKind
+- buildRequirement: none | plan_only | artifact_patch_only | targeted_rebuild | full_rebuild
+- contextLevel
+- target route/section/component om identifierbart
+- actionPlan
+- rationale
+- requiresClarification
+
+Testfall:
+1. "vad är klockan" => answer_only, buildRequirement none.
+2. "jag vill ha en klocka på andra sektionen till vänster" => edit_instruction/component_add, targeted_rebuild.
+3. "vilka klockor finns att tillgå?" => component_discovery, no build.
+4. "jag vill ha samma klocka som på aftonbladet.se" => reference_analysis, plan_only first.
+5. "gör sidan mer premium och lägg in en klocka men ändra inte texterna" => multi_intent med preserve_copy constraint.
+
+Scope:
+- Lägg till router/typer/tester.
+- Läs befintliga artifacts men ändra inte build_site.py i denna slice.
+- Starta inte PreviewRuntime i answer_only eller plan_only.
+- Dokumentera hur detta senare kopplas till Artifact Patch Planner.
+
+Definition of done:
+- Router-testsvit grön.
+- Inga befintliga follow-up-versioneringstester får regreddera.
+- OpenClaw V1 kan förklara varför den inte startar build för rena frågor.
+
+Detta är enligt mig den sak som låser upp resten.
+
+Slutbilden
+
+Sajtbyggaren ska inte välja mellan:
+
+mallgenerator
+eller
+fri LLM-agent
+
+Den ska bli:
+
+kontrollerad företagshemsidegenerator
+med OpenClaw som intelligent orchestrator ovanpå
+
+Då får du:
+
+- samma stabila Project Input / Site Brief / Site Plan / Generation Package
+- samma scaffold/variant/dossier-rails
+- samma versionering och preview
+- men en mycket smartare agent som vet när den ska svara, planera, patcha, bygga, verifiera eller fråga vidare
+
+Det är där gamla Sajtmaskins starkaste idé — OpenClaw — kan återfödas utan att dra tillbaka gamla Sajtmaskins kaos. Och det ligger helt i linje med arbetsmodellen: håll riktningen mot prompt -> hemsida -> preview -> följdprompt -> ny version, men låt inte intern arkitekturstädning vinna över verkligt produktvärde."

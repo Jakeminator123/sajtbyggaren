@@ -156,7 +156,7 @@ def build_engine_mindmap(
 
     # Preview Runtime + Quality Gate visibility.
     if preview_runtime:
-        lines.append('  previewRuntimePolicy(["Preview Runtime<br/>Local/StackBlitz/Fly"])')
+        lines.append('  previewRuntimePolicy(["Preview Runtime<br/>Vercel Sandbox/Local/Fly"])')
         if "preview_runtime" in phases_by_id:
             lines.append("  previewRuntimePolicy -.-> preview_runtime")
         lines.append('  qualityGate(["Quality Gate<br/>typecheck/build/route/preview-smoke"])')

@@ -2,6 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import {
+  consumeInitPrompt,
+  consumeWizardHandoff,
+  consumeWizardSeed,
+  type WizardHandoff,
+  type WizardSeed,
+} from "@/lib/init-prompt-handoff";
+import { STARTER_PRESETS, type StarterPreset } from "@/lib/starter-presets";
 import { DiscoveryWizard } from "@/components/discovery-wizard/discovery-wizard";
 import {
   buildDiscoveryPayload,
@@ -9,6 +17,7 @@ import {
 } from "@/components/discovery-wizard/wizard-payload";
 import type { discoveryOption } from "@/components/discovery-wizard/discovery-options";
 import type { WizardAnswers } from "@/components/discovery-wizard/wizard-types";
+import { emptyWizardAnswers } from "@/components/discovery-wizard/wizard-types";
 import type { ProjectInputOption } from "@/components/project-input-picker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -124,6 +133,13 @@ export function PromptBuilder({
    */
   const [wizardOpen, setWizardOpen] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState("");
+  // Förvalda wizard-svar från en starter-seed (yrkessida/hero-chip/tom-läge):
+  // familj + kategori + offer redan satta. null = vanlig fri prompt.
+  const [seededAnswers, setSeededAnswers] = useState<WizardAnswers | null>(null);
+  // Visar starter-onboarding i tom-läget. Sätts EN gång vid mount först när
+  // vi vet att ingen handoff/seed finns (annars hade kort-blink uppstått
+  // innan effekten hunnit öppna wizarden / starta bygget).
+  const [showStarters, setShowStarters] = useState(false);
   // Wizard session key — bumpas varje gång operatören öppnar wizarden
   // så ``DiscoveryWizard`` remountas med fresh state (answers, stepIndex,
   // isSubmitting). Etablerat mönster i kodbasen istället för set-state-
@@ -173,6 +189,130 @@ export function PromptBuilder({
   useEffect(() => {
     onStageChange?.(stage);
   }, [stage, onStageChange]);
+
+  // Hero-handoff: om besökaren beskrev sin sajt på marknads-heron och
+  // navigerade hit lämnades texten via sessionStorage (se
+  // lib/init-prompt-handoff.ts). Vi konsumerar den EN gång vid mount,
+  // förifyller textarean och öppnar DiscoveryWizarden — exakt samma
+  // ``init``-flöde som om operatören skrivit direkt i studion. Då slipper
+  // besökaren någonsin se studions tomma prompt-landning.
+  const heroHandoffRef = useRef(false);
+  useEffect(() => {
+    // Strict Mode (dev) kör effekten två gånger: setup → cleanup → setup.
+    // Vi får INTE cancel:a microtasken i cleanup (då avbryter första
+    // körningen sig själv medan ref-vakten hindrar andra körningen → inget
+    // händer). Ref-vakten markeras först NÄR en handoff faktiskt konsumerats
+    // så bara en microtask schemaläggs, och den får alltid köra klart.
+    if (heroHandoffRef.current) return;
+
+    // Rik handoff: operatören körde DiscoveryWizarden DIREKT på marknads-
+    // heron och lämnade hela resultatet. Då bygger vi DIREKT — ingen andra
+    // wizard, ingen tom-/start-sida. Detta är default-vägen in i studion.
+    const wizardHandoff = consumeWizardHandoff();
+    if (wizardHandoff) {
+      heroHandoffRef.current = true;
+      // queueMicrotask (INTE setTimeout — källåst bort här) så state inte
+      // sätts synkront i effekten (react-hooks/set-state-in-effect) och
+      // första render hinner committa innan bygget startar.
+      queueMicrotask(() => startBuildFromWizardHandoff(wizardHandoff));
+      return;
+    }
+
+    // Lätt starter-seed (yrkessida /for/[yrke] eller hero-chip): öppna
+    // DiscoveryWizarden FÖRIFYLLD med vald familj/kategori — men bygg INTE
+    // direkt (besökaren bekräftar/kompletterar i wizarden). Skiljt från den
+    // rika wizard-handoffen ovan som bygger på en gång.
+    const seed = consumeWizardSeed();
+    if (seed) {
+      heroHandoffRef.current = true;
+      queueMicrotask(() => openWizardWithSeed(seed));
+      return;
+    }
+
+    // Bakåtkompat / direktlänk: ren text-handoff → öppna wizarden förifylld
+    // i studion (samma init-flöde som om operatören skrivit här).
+    const textHandoff = consumeInitPrompt();
+    if (!textHandoff || !textHandoff.trim()) {
+      // Ingen handoff alls → riktig studio-onboarding i stället för blank
+      // canvas: visa starter-chips så besökaren kommer igång direkt.
+      // queueMicrotask (samma mönster som handoff-grenarna) så setState inte
+      // körs synkront i effekten (react-hooks/set-state-in-effect).
+      queueMicrotask(() => setShowStarters(true));
+      return;
+    }
+    heroHandoffRef.current = true;
+    queueMicrotask(() => {
+      setPrompt(textHandoff);
+      submitPrompt(textHandoff);
+    });
+    // Körs medvetet bara vid mount — handoffen är en engångssignal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Bygg direkt från ett wizard-resultat som kördes på marknads-heron.
+   * Återanvänder exakt samma payload-väg som ``handleWizardComplete`` (när
+   * wizarden i stället körs lokalt i studion): buildDiscoveryPayload +
+   * composeMasterPrompt → executeBuild i init-läge.
+   */
+  function startBuildFromWizardHandoff(handoff: WizardHandoff) {
+    const cleaned = handoff.prompt.trim();
+    let discovery: ReturnType<typeof buildDiscoveryPayload>;
+    try {
+      discovery = buildDiscoveryPayload(
+        cleaned,
+        handoff.answers,
+        handoff.discoveryOptions,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Discovery-svaren kunde inte valideras.",
+      );
+      return;
+    }
+    const masterPrompt = composeMasterPrompt(
+      cleaned,
+      handoff.answers,
+      handoff.discoveryOptions,
+    );
+    void executeBuild({
+      cleanedPrompt: masterPrompt,
+      submissionMode: "init",
+      discovery,
+    });
+  }
+
+  /**
+   * Öppna DiscoveryWizarden förifylld från en lätt starter-seed (familj +
+   * kategori + offer). Bygger INTE direkt — besökaren bekräftar/kompletterar
+   * och klickar "Skapa sajt" själv. Återanvänds av seed-handoffen vid mount
+   * och av starter-chipsen i tom-läget.
+   */
+  function openWizardWithSeed(seed: WizardSeed) {
+    const cleaned = seed.prompt.trim();
+    const base = emptyWizardAnswers();
+    base.offer = cleaned;
+    base.businessFamily = seed.businessFamily;
+    base.siteType = seed.siteType;
+    setSeededAnswers(base);
+    setShowStarters(false);
+    setPrompt(cleaned);
+    setPendingPrompt(cleaned);
+    setError(null);
+    setWizardSession((n) => n + 1);
+    setWizardOpen(true);
+  }
+
+  /** Starter-chip i studions tom-läge → öppna wizarden förvald. */
+  function openWizardFromPreset(preset: StarterPreset) {
+    openWizardWithSeed({
+      prompt: preset.promptSeed,
+      businessFamily: preset.family,
+      siteType: [preset.category],
+    });
+  }
 
   /**
    * Faktisk POST mot /api/prompt + state-uppdateringar. Anropas både
@@ -241,10 +381,27 @@ export function PromptBuilder({
         buffer = lines.pop() ?? "";
         for (const line of lines) {
           if (!line.trim()) continue;
-          const event = JSON.parse(line) as
+          // Inre try/catch så en enskild korrupt NDJSON-rad
+          // (proxy-buffring, kortvarig disconnect, mid-line abort)
+          // inte sprider en obegriplig "Unexpected token X in JSON at
+          // position N" till operatören. Den korrupta raden loggas
+          // för debugging och vi fortsätter läsa nästa rad — den
+          // riktiga ``stage: "done"`` eller ``stage: "error"`` brukar
+          // komma direkt efter.
+          let event:
             | { stage: "building" }
-            | { stage: "done" } & PromptApiPayload
+            | ({ stage: "done" } & PromptApiPayload)
             | { stage: "error"; error: string };
+          try {
+            event = JSON.parse(line);
+          } catch (parseError) {
+            console.warn(
+              "[prompt-builder] Ignorerar oparseable NDJSON-rad:",
+              parseError,
+              line.slice(0, 200),
+            );
+            continue;
+          }
           if (event.stage === "building") {
             // RIKTIG signal från route:n. Phase 1 är klar, Phase 2
             // (build_site.py) har precis startat — visa "Bygger sajt".
@@ -259,10 +416,30 @@ export function PromptBuilder({
       // Sista, eventuellt ofullständiga raden i buffern. NDJSON-
       // protokollet kräver inte trailing newline, så hantera även
       // det fall där `done`-eventet kom utan terminator.
+      //
+      // ``"building"`` tas med i typunion:en — servern skickar
+      // visserligen ``building`` mitt i streamen idag, men om en
+      // build är så snabb att Phase 1 och Phase 2 hinner emit:a inom
+      // samma chunk kan båda hamna i final-buffer:n utan terminator.
       if (buffer.trim()) {
-        const event = JSON.parse(buffer) as
-          | { stage: "done" } & PromptApiPayload
+        let event:
+          | { stage: "building" }
+          | ({ stage: "done" } & PromptApiPayload)
           | { stage: "error"; error: string };
+        try {
+          event = JSON.parse(buffer);
+        } catch (parseError) {
+          // Ofullständig final-buffer = troligtvis avbruten stream
+          // (timeout, server-restart). Behandla som "ingen slutsignal"
+          // så outer error-check tar över med rätt felmeddelande
+          // istället för att kasta SyntaxError.
+          console.warn(
+            "[prompt-builder] Final-buffer kunde inte parseas:",
+            parseError,
+            buffer.slice(0, 200),
+          );
+          event = { stage: "building" };
+        }
         if (event.stage === "done") {
           donePayload = event;
         } else if (event.stage === "error") {
@@ -309,8 +486,8 @@ export function PromptBuilder({
    * företagsinfo, kategori, sidor osv. innan StackBlitz tänds. I
    * `followup`-läge bygger vi direkt utan wizard.
    */
-  function submitPrompt() {
-    const cleaned = prompt.trim();
+  function submitPrompt(promptText?: string) {
+    const cleaned = (promptText ?? prompt).trim();
     if (!cleaned || disabled) return;
     if (mode === "followup") {
       if (runSiteIdUnknown) {
@@ -326,6 +503,10 @@ export function PromptBuilder({
       void executeBuild({ cleanedPrompt: cleaned, submissionMode: "followup" });
       return;
     }
+    // Manuell prompt i studion → ingen förvald familj (besökaren väljer i
+    // wizarden). Nollställ ev. tidigare starter-seed.
+    setSeededAnswers(null);
+    setShowStarters(false);
     setPendingPrompt(cleaned);
     setError(null);
     setWizardSession((n) => n + 1);
@@ -380,16 +561,51 @@ export function PromptBuilder({
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         initialPrompt={pendingPrompt}
+        initialAnswers={seededAnswers ?? undefined}
         onComplete={handleWizardComplete}
       />
+      {showStarters &&
+      mode !== "followup" &&
+      stage === "idle" &&
+      !error &&
+      !hidden &&
+      !wizardOpen ? (
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-5 pb-40">
+          <div className="pointer-events-auto w-full max-w-[560px] text-center">
+            <h2 className="text-foreground text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+              Vad ska vi bygga?
+            </h2>
+            <p className="text-muted-foreground mx-auto mt-3 max-w-[42ch] text-[15px] leading-relaxed">
+              Beskriv din verksamhet i rutan nedan — eller börja från en
+              vanlig bransch, så förfyller vi resten.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {STARTER_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => openWizardFromPreset(preset)}
+                  className="border-border/70 bg-card/80 text-foreground hover:bg-accent focus-visible:ring-ring/50 rounded-full border px-4 py-2 text-[14px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div
         // pb-safe-or-4 respekterar iPhone home-indicator (env safe-area-inset
         // -bottom) + minst 16px under composern. sm:pb-7 (28px) på desktop
         // där safe-area inte är relevant. Tidigare `pb-5 sm:pb-7` saknade
         // safe-area-koll och lät composer-knappar ligga 0px från home-indicator
         // på iPhone X+.
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-safe-or-4 sm:pb-7 ${hidden ? "hidden" : ""}`}
-        aria-hidden={hidden}
+        // Dölj composern även när DiscoveryWizarden är öppen — annars
+        // skvallrar den bakom popupen (operatören kommer alltid in i
+        // wizarden via marknads-heron, så den lilla prompt-baren ska inte
+        // ligga kvar i bakgrunden).
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-safe-or-4 sm:pb-7 ${hidden || wizardOpen ? "hidden" : ""}`}
+        aria-hidden={hidden || wizardOpen}
       >
       <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-2">
         {showStrip ? (

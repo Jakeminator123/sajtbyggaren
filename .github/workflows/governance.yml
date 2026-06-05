@@ -41,6 +41,9 @@ jobs:
       - name: Check term coverage (strict)
         run: python scripts/check_term_coverage.py --strict
 
+      - name: Check platform version baseline (drift)
+        run: python scripts/check_platform_baseline.py --check
+
       - name: Sprintvakt check
         run: |
           pip install -e .

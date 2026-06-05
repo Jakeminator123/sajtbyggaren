@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export type RunHistoryItem = {
   runId: string;
@@ -17,7 +18,35 @@ type RunHistoryProps = {
   selectedRunId: string | null;
   onSelect: (runId: string) => void;
   isBuilding?: boolean;
+  /**
+   * Initial /api/runs-laddning pågår. Visar en skeleton i st.f. tom-CTA:n
+   * ("Inga runs än") så operatören inte ser ett falskt "tomt"-tillstånd
+   * innan datan hunnit landa.
+   */
+  loading?: boolean;
 };
+
+function RunHistorySkeleton() {
+  return (
+    <div
+      className="divide-border/40 overflow-hidden rounded-md border border-border/60 bg-background/40"
+      aria-hidden
+    >
+      {[0, 1, 2].map((row) => (
+        <div
+          key={row}
+          className="flex flex-col gap-1.5 border-b border-border/40 px-3 py-2 last:border-b-0"
+        >
+          <div className="flex items-center gap-2">
+            <Skeleton className="size-2 rounded-full" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <Skeleton className="ml-4 h-2.5 w-28" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // STATUS_DOT_COLORS locks the per-status color mapping for the Run
 // History list. The exact constant name is asserted by
@@ -30,6 +59,10 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   degraded: "bg-amber-500",
   warning: "bg-amber-500",
   failed: "bg-destructive",
+  // `aborted` = bygget dödades innan build-result.json skrevs (lib/runs.ts
+  // stale-pending-detektion). Röd som `failed` — det är ärligt ett misslyckat
+  // bygge, inte ett pågående. Skiljer sig från grå `pending` (faktiskt pågår).
+  aborted: "bg-destructive",
   skipped: "bg-muted-foreground/40",
   unknown: "bg-muted-foreground/40",
 };
@@ -66,6 +99,7 @@ export function RunHistory({
   selectedRunId,
   onSelect,
   isBuilding = false,
+  loading = false,
 }: RunHistoryProps) {
   return (
     <Card size="sm" className="hover-lift">
@@ -85,7 +119,9 @@ export function RunHistory({
           </div>
         ) : null}
 
-        {runs.length === 0 ? (
+        {loading && runs.length === 0 ? (
+          <RunHistorySkeleton />
+        ) : runs.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-6 text-center text-xs text-muted-foreground">
             Inga runs än. Skicka en prompt i hero-fältet för att skapa en.
           </div>

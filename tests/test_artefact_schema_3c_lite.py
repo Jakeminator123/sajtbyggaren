@@ -300,6 +300,23 @@ def test_repair_result_nested_repair_fix_matches_pydantic() -> None:
     )
 
 
+@pytest.mark.governance
+def test_repair_result_nested_blueprint_repair_matches_pydantic() -> None:
+    """kor-5 nested-drift guard for BlueprintRepair - the Pydantic model that
+    backs ``blueprintRepairs[]``. If a field is added to the model without
+    updating ``$defs.blueprintRepair`` (or vice versa) the artefakt-on-disk and
+    the in-memory model silently disagree at the nested level."""
+    from packages.generation.repair import BlueprintRepair
+
+    schema = json.loads(REPAIR_SCHEMA.read_text(encoding="utf-8"))
+    _assert_no_drift(
+        schema_props=_schema_property_names(schema, defs_key="blueprintRepair"),
+        pydantic_fields=_pydantic_field_names(BlueprintRepair),
+        schema_label="repair-result.schema.json:$defs/blueprintRepair",
+        model_label="BlueprintRepair",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Validators wired into the build pipeline
 # ---------------------------------------------------------------------------

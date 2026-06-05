@@ -31,8 +31,7 @@ Användning:
 - ``python kill-dev-trees.py --dry-run`` — visa vad som skulle dödas.
 - ``python kill-dev-trees.py --verbose`` — visa även icke-matchade node.
 
-Skapad i samband med B157 round 3-fixen 2026-05-28. Se
-``B157-WINDOWS-PROCESS-TREE-FYND.md`` i repo-roten för full bakgrund.
+Skapad i samband med B157 round 3-fixen 2026-05-28 (B157 stängd).
 """
 
 from __future__ import annotations

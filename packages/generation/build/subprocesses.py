@@ -33,8 +33,39 @@ def _coerce_subprocess_text(stream: object) -> str:
     return str(stream)
 
 
-NPM_INSTALL_TIMEOUT_SECONDS = 600
-NPM_BUILD_TIMEOUT_SECONDS = 300
+NPM_INSTALL_TIMEOUT_ENV = "SAJTBYGGAREN_NPM_INSTALL_TIMEOUT_SECONDS"
+NPM_BUILD_TIMEOUT_ENV = "SAJTBYGGAREN_NPM_BUILD_TIMEOUT_SECONDS"
+
+_DEFAULT_NPM_INSTALL_TIMEOUT_SECONDS = 600
+_DEFAULT_NPM_BUILD_TIMEOUT_SECONDS = 300
+
+
+def _timeout_seconds_from_env(env_var: str, default: int) -> int:
+    """Resolve an npm-step timeout (seconds), honouring an env override.
+
+    Slow Cloud Agent VMs regularly exceed the baked-in 600 s / 300 s
+    budgets and fail builds for reasons unrelated to site correctness
+    (B86). Operators can raise the ceiling via ``env_var`` without a code
+    change. An unset, blank, non-integer or non-positive value falls back
+    to ``default`` so CI, tests and local runs keep the documented
+    behaviour when nothing is set.
+    """
+    raw = os.environ.get(env_var)
+    if raw is None:
+        return default
+    try:
+        parsed = int(raw.strip())
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
+
+
+NPM_INSTALL_TIMEOUT_SECONDS = _timeout_seconds_from_env(
+    NPM_INSTALL_TIMEOUT_ENV, _DEFAULT_NPM_INSTALL_TIMEOUT_SECONDS
+)
+NPM_BUILD_TIMEOUT_SECONDS = _timeout_seconds_from_env(
+    NPM_BUILD_TIMEOUT_ENV, _DEFAULT_NPM_BUILD_TIMEOUT_SECONDS
+)
 
 
 def _sanitized_npm_env() -> dict[str, str]:

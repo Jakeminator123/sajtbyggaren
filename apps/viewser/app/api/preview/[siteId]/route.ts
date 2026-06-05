@@ -6,22 +6,40 @@ import {
   startPreviewServer,
   stopPreviewServer,
 } from "@/lib/local-preview-server";
+import { currentViewserRuntime } from "@/lib/preview-runtime-server";
+import {
+  getSandboxSession,
+  stopSandboxSessionForSite,
+} from "@/lib/vercel-sandbox-sessions";
+import type { PreviewResult, PreviewRuntimeKind } from "@preview-runtime";
 
 /**
- * /api/preview/[siteId] — hanterar lokal preview-server för en
- * genererad sajt så ViewerPanel kan rendera den i en iframe direkt
- * mot ``http://localhost:<port>`` utan att gå via StackBlitz.
+ * /api/preview/[siteId] — hanterar preview för en genererad sajt så
+ * ViewerPanel kan rendera den i en iframe.
+ *
+ * Routen är runtime-agnostisk: den resolvar den env-styrda adaptern via
+ * ``currentViewserRuntime()`` (DI, ADR 0028/0030/0033) i stället för att
+ * hårdkoda en specifik preview-väg.
+ *
+ *   - ``local`` (``VIEWSER_PREVIEW_MODE=local-next``, default) — spawnar
+ *     ``next start -p <4100-4199>`` lokalt och iframe:ar
+ *     ``http://localhost:<port>`` (OFÖRÄNDRAT beteende, byte-identisk path).
+ *   - ``vercel-sandbox`` (``VIEWSER_PREVIEW_MODE=vercel-sandbox``, ADR 0033) —
+ *     kör en isolerad kopia i en Vercel Sandbox och iframe:ar den publika
+ *     ``…vercel.run``-URL:en. Cold-start ~28 s (POST:en blockar tills URL
+ *     svarar). Degraderar ärligt (``vercel_auth``) utan token.
  *
  * Endpoints:
  *
- *   - GET  → returnera nuvarande status (eller 404 om ingen server lever).
- *   - POST → starta servern (idempotent — återanvänder existerande).
- *   - DELETE → stoppa servern.
+ *   - GET  → returnera nuvarande status (eller 404 om ingen preview lever).
+ *   - POST → starta previewn (idempotent för local; vercel-sandbox stoppar en
+ *            ev. gammal sandbox för samma siteId och skapar en ny).
+ *   - DELETE → stoppa previewn.
  *
  * Endast tillgänglig på localhost (assertLocalhost). Vi spawnar
- * ``next start`` som ärvtsen viewser:s env — en utomstående som når
- * routen via tunnel skulle kunna trigga spawn av processer på vår
- * maskin.
+ * ``next start`` (eller drar igång en sandbox) som ärver viewser:s env — en
+ * utomstående som når routen via tunnel skulle kunna trigga spawn av processer
+ * eller kostsamma sandbox-körningar.
  *
  * Felshape (alla 4xx/5xx-svar har ``code`` så ViewerPanel kan visa rätt copy
  * istället för att tyst falla tillbaka till StackBlitz; fixar gren A av
@@ -35,9 +53,10 @@ import {
  *   }
  *
  * Codes mappar till specifika rotorsaker som ``local-preview-server.ts``
- * kan kasta. ``unknown`` är fall-back när ett oväntat fel uppstår; det
- * är bättre att UI visar "okänt fel" än att tyst route:a vidare och
- * dölja problemet.
+ * kan kasta, plus ``vercel_auth``/``sandbox_failed`` för vercel-sandbox-
+ * adapterns ärliga degradering. ``unknown`` är fall-back när ett oväntat fel
+ * uppstår; det är bättre att UI visar "okänt fel" än att tyst route:a vidare
+ * och dölja problemet.
  */
 
 export type PreviewErrorCode =
@@ -47,12 +66,67 @@ export type PreviewErrorCode =
   | "port_pool_full"
   | "spawn_failed"
   | "not_running"
+  // Vercel Sandbox-adaptern (ADR 0033) degraderar ärligt:
+  | "vercel_auth" // saknad/utgången VERCEL_OIDC_TOKEN (eller token-trio)
+  | "sandbox_failed" // sandboxen byggde/startade inte (npm install/next build/timeout)
   | "unknown";
 
 interface PreviewErrorBody {
   error: string;
   code: PreviewErrorCode;
   hint?: string;
+}
+
+interface PreviewStartOk {
+  siteId: string;
+  /** Iframe:bar URL — lokal http eller publik vercel.run https. */
+  url: string;
+  status: "ready";
+  kind: PreviewRuntimeKind;
+  /** Hållbar handle (sandbox.name) när adaptern äger en stoppbar resurs. */
+  sessionId?: string;
+}
+
+const VERCEL_AUTH_HINT =
+  "Kör `vercel env pull apps/viewser/.env.vercel.local` för en färsk " +
+  "OIDC-token (gäller ~12 h) och starta om npm run dev.";
+
+/** True om felet beror på saknad/utgången Vercel-auth (för ``vercel_auth``). */
+function isVercelAuthError(message: string): boolean {
+  return /credentials saknas|VERCEL_OIDC_TOKEN|Vercel-credentials/i.test(message);
+}
+
+/**
+ * Klassificera ett ``failed``/``unsupported`` ``PreviewResult`` från en
+ * icke-lokal adapter (idag bara ``vercel-sandbox``) till en strukturerad
+ * felshape. Saknad token → ``vercel_auth`` så UI:t kan visa ett pedagogiskt
+ * inloggningsfel i stället för en tyst fallback.
+ */
+function classifyRuntimeError(
+  kind: PreviewRuntimeKind,
+  result: PreviewResult,
+): PreviewErrorBody {
+  const message =
+    result.error ??
+    `Preview-läget '${kind}' returnerade ingen URL att visa i iframen.`;
+  if (isVercelAuthError(message)) {
+    return { error: message, code: "vercel_auth", hint: VERCEL_AUTH_HINT };
+  }
+  return {
+    error: message,
+    code: "sandbox_failed",
+    hint:
+      kind === "vercel-sandbox"
+        ? "Sandbox-bygget misslyckades. Se viewser-loggen för npm install/next build-loggar, eller försök igen."
+        : undefined,
+  };
+}
+
+/** HTTP-status för de adapter-specifika felkoderna (icke-lokala adaptrar). */
+function statusForRuntimeError(code: PreviewErrorCode): number {
+  if (code === "vercel_auth") return 503; // preview-backend inte konfigurerad
+  if (code === "sandbox_failed") return 502; // upstream sandbox-fel
+  return 500;
 }
 
 const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
@@ -134,6 +208,32 @@ export async function GET(
     return NextResponse.json(body, { status: 400 });
   }
 
+  const runtime = currentViewserRuntime();
+
+  // Non-local adaptrar (vercel-sandbox): rapportera den spårade sessionen om
+  // en finns. local-next-grenen nedan är OFÖRÄNDRAD.
+  if (runtime.kind !== "local") {
+    if (runtime.kind === "vercel-sandbox") {
+      const session = getSandboxSession(siteId);
+      if (session) {
+        const body: PreviewStartOk = {
+          siteId,
+          url: session.url,
+          status: "ready",
+          kind: "vercel-sandbox",
+          sessionId: session.sandboxId,
+        };
+        return NextResponse.json(body);
+      }
+    }
+    const body: PreviewErrorBody = {
+      error: "Ingen preview körs för denna sajt.",
+      code: "not_running",
+      hint: "Anropa POST /api/preview/<siteId> för att starta en.",
+    };
+    return NextResponse.json(body, { status: 404 });
+  }
+
   const info = getPreviewServer(siteId);
   if (!info) {
     const body: PreviewErrorBody = {
@@ -161,6 +261,44 @@ export async function POST(
       code: "validation_error",
     };
     return NextResponse.json(body, { status: 400 });
+  }
+
+  const runtime = currentViewserRuntime();
+
+  // Non-local adaptrar (vercel-sandbox m.fl.): gå via den resolvade adaptern
+  // och iframe:a den returnerade publika URL:en. local-next-grenen nedan är
+  // OFÖRÄNDRAD (byte-identisk path).
+  if (runtime.kind !== "local") {
+    // ``runtime.start`` kapslar själv alla fel i ett ``PreviewResult`` (den
+    // kastar inte), men vi vaktar ändå mot oväntade kast så routen aldrig
+    // returnerar en otydlig 500 utan ``code``.
+    let result: PreviewResult;
+    try {
+      result = await runtime.start({
+        kind: runtime.kind,
+        projectName: siteId,
+        siteId,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Okänt fel i preview-runtimen.";
+      const body = classifyRuntimeError(runtime.kind, { status: "failed", error: message });
+      return NextResponse.json(body, { status: statusForRuntimeError(body.code) });
+    }
+
+    if (result.status === "ready" && result.previewUrl) {
+      const body: PreviewStartOk = {
+        siteId,
+        url: result.previewUrl,
+        status: "ready",
+        kind: runtime.kind,
+        sessionId: result.previewSession?.id,
+      };
+      return NextResponse.json(body);
+    }
+
+    const body = classifyRuntimeError(runtime.kind, result);
+    return NextResponse.json(body, { status: statusForRuntimeError(body.code) });
   }
 
   try {
@@ -196,6 +334,16 @@ export async function DELETE(
       code: "validation_error",
     };
     return NextResponse.json(body, { status: 400 });
+  }
+
+  const runtime = currentViewserRuntime();
+
+  // Livscykel/kostnad (ADR 0033): i vercel-sandbox-läge stoppar vi den spårade
+  // sandboxen för siteId (TTL ~15 min + kostar ören — läck den inte). local-next
+  // behåller exakt sitt gamla beteende (stoppa lokal next start).
+  if (runtime.kind === "vercel-sandbox") {
+    const stopped = await stopSandboxSessionForSite(siteId);
+    return NextResponse.json({ stopped });
   }
 
   const stopped = stopPreviewServer(siteId);

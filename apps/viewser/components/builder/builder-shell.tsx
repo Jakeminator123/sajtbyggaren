@@ -21,7 +21,10 @@ import type {
   PendingBuildBegin,
   PendingBuildState,
 } from "@/components/builder/use-pending-build";
-import type { PromptBuildOutcome } from "@/components/prompt-builder";
+import type {
+  PromptBuildOutcome,
+  PromptStage,
+} from "@/components/prompt-builder";
 
 /**
  * BuilderShell är compositionen som tar över hela kant-ytan när
@@ -76,6 +79,14 @@ type BuilderShellProps = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /**
+   * Rapporterar bygg-stage uppåt så page.tsx kan driva BuildProgressCard
+   * under follow-ups. FloatingChat förfinar via trace.ndjson; alla
+   * bygg-triggers (dialoger m.fl.) återställer stage till "thinking" via
+   * handleBuildStart så stegmarkören aldrig visar föregående bygges
+   * sista stage.
+   */
+  onStageChange?: (stage: PromptStage) => void;
   /** Triggar att operatören vill börja om från intake-wizarden. */
   onNewSite: () => void;
   /** Öppnar ConsoleDrawer i fullt läge (run-historik + project inputs + token-meter). */
@@ -105,6 +116,7 @@ export function BuilderShell({
   onBuildStart,
   onBuildEnd,
   onBuildDone,
+  onStageChange,
   onNewSite,
   onOpenConsole,
   onOpenHistory,
@@ -116,13 +128,17 @@ export function BuilderShell({
   const handleBuildStart = useCallback(
     (init?: { promptSnippet?: string; estimatedVersion?: number | null }) => {
       onBuildStart();
+      // Återställ stegmarkören vid varje byggstart (FloatingChat ELLER en
+      // dialog) så BuildProgressCard inte fryser på föregående bygges
+      // sista stage. FloatingChat förfinar sedan till "building" via trace.
+      onStageChange?.("thinking");
       onPendingBuildBegin({
         siteId,
         promptSnippet: init?.promptSnippet,
         estimatedVersion: init?.estimatedVersion ?? null,
       });
     },
-    [onBuildStart, onPendingBuildBegin, siteId],
+    [onBuildStart, onStageChange, onPendingBuildBegin, siteId],
   );
 
   // Wrappar onBuildEnd så vi alltid rensar pending-state samtidigt
@@ -264,6 +280,10 @@ export function BuilderShell({
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
+        onStageChange={onStageChange}
+        // Driver "Visa versioner" i första-gångs-hinten — samma ingång
+        // som "Versioner" i Verktyg-menyn (ConsoleDrawer-historiken).
+        onShowVersions={onOpenHistory}
         tools={
           <BuilderActions
             actions={actions}
