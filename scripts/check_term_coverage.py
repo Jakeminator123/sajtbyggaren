@@ -648,6 +648,11 @@ COMMON_WORDS = {
     # canonical termerna (RouterDecision, MessageKind, BuildRequirement) bor i
     # backend-schemat; dessa är viewser-lokala UI-symboler, inte nya domain terms.
     "RouterMessageKind", "RouterBuildRequirement", "RouterDecisionView",
+    # KÖR-6a routerDecision-bridge — interna TS-alias i
+    # apps/viewser/lib/router-classify-runner.ts (Fas 1, skiva 1a). Lokala
+    # bridge-/option-typer för spawn-helpern; de canonical termerna bor i
+    # router-decision.schema.json, dessa är viewser-lokala symboler.
+    "ClassifyMessageOptions", "RouterDecisionPayload",
     # GAP-viewser-side-by-side-preview — interna TS-symboler i
     # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
     # Lokala UI-komponentnamn och prop-typer, inte domain terms.
