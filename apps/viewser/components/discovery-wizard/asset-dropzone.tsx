@@ -84,7 +84,9 @@ function uploadOne(
       const ratio = event.total > 0 ? event.loaded / event.total : 0;
       // 0-95 % under bytes-fasen så vi inte sitter på 100 % medan
       // server fortfarande kör sharp/Vision.
-      onProgress(Math.min(UPLOAD_PHASE_MAX_PERCENT, ratio * UPLOAD_PHASE_MAX_PERCENT));
+      onProgress(
+        Math.min(UPLOAD_PHASE_MAX_PERCENT, ratio * UPLOAD_PHASE_MAX_PERCENT),
+      );
     });
 
     xhr.upload.addEventListener("load", () => {
@@ -103,8 +105,7 @@ function uploadOne(
       }
       reject(
         new Error(
-          payload.error ??
-            `Uppladdning misslyckades (HTTP ${status || "?"}).`,
+          payload.error ?? `Uppladdning misslyckades (HTTP ${status || "?"}).`,
         ),
       );
     });
@@ -171,7 +172,9 @@ export function AssetDropzone({
       setBusy(true);
       setError(null);
       setProgressPercent(0);
-      setBatchCounter(files.length > 1 ? { current: 1, total: files.length } : null);
+      setBatchCounter(
+        files.length > 1 ? { current: 1, total: files.length } : null,
+      );
       const uploaded: AssetRef[] = [];
       try {
         for (let index = 0; index < files.length; index += 1) {
@@ -193,6 +196,12 @@ export function AssetDropzone({
         onUploaded(uploaded);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "Okänt fel.");
+        // Partiellt fel: filerna FÖRE den som föll har redan landat på
+        // servern. Lyft dem ändå så klient-state matchar disken — annars
+        // blir de föräldralösa (finns på servern men osynliga i UI:t) och
+        // en retry laddar upp dubbletter. onUploaded är additivt
+        // (galleri-spread), så detta är säkert.
+        if (uploaded.length > 0) onUploaded(uploaded);
       } finally {
         setBusy(false);
         // Liten timeout så 100 %-tillståndet är synligt en frame
@@ -267,11 +276,13 @@ export function AssetDropzone({
           className="sr-only"
           aria-label={emptyLabel}
         />
-        <div className="text-[13px] font-medium text-foreground">
+        <div className="text-foreground text-[13px] font-medium">
           {busy ? "Laddar upp och analyserar…" : emptyLabel}
         </div>
         {hintLabel && !busy ? (
-          <div className="text-[11px] text-muted-foreground/80">{hintLabel}</div>
+          <div className="text-muted-foreground/80 text-[11px]">
+            {hintLabel}
+          </div>
         ) : null}
         {busy && progressPercent !== null ? (
           <UploadProgress
@@ -294,7 +305,9 @@ export function AssetDropzone({
         </Button>
       </div>
       {error ? (
-        <p className="text-[11px] text-amber-600 dark:text-amber-300">{error}</p>
+        <p className="text-[11px] text-amber-600 dark:text-amber-300">
+          {error}
+        </p>
       ) : null}
     </div>
   );

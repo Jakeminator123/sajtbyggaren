@@ -10,13 +10,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 import { DEMO_PROFILES } from "./demo-answers";
 import { MoreInfoDialog, type MoreInfoTabId } from "./more-info-dialog";
@@ -140,7 +135,9 @@ export function DiscoveryWizard({
       resolveContentBranchFromOptions(
         answers.siteType,
         discoveryOptions,
-        answers.businessFamily ? branchForFamily(answers.businessFamily) : undefined,
+        answers.businessFamily
+          ? branchForFamily(answers.businessFamily)
+          : undefined,
       ),
     [answers.siteType, answers.businessFamily, discoveryOptions],
   );
@@ -162,16 +159,52 @@ export function DiscoveryWizard({
     setStepIndex((idx) => Math.min(WIZARD_STEP_ORDER.length - 1, idx + 1));
   }, [validationError]);
 
-  const goToStep = useCallback((targetIdx: number) => {
-    setStepIndex(
-      Math.min(
+  // Första steget (i ordning) som ännu inte är giltigt-ifyllt = gränsen för
+  // hur långt fram man får hoppa. Bakåt är alltid fritt. Detta hindrar att
+  // operatören klickar/pilar/⌥-hoppar förbi t.ex. ett halvfyllt foundation-
+  // steg och hamnar på "Skapa sajt" med ogiltig payload.
+  const maxReachableStep = useMemo(() => {
+    for (let i = 0; i < WIZARD_STEP_ORDER.length; i++) {
+      const err = validateWizardStep(WIZARD_STEP_ORDER[i], answers, branch);
+      if (err) return i;
+    }
+    return WIZARD_STEP_ORDER.length - 1;
+  }, [answers, branch]);
+
+  // Lös ut vilket steg ett hopp faktiskt får landa på: bakåt/samma = fritt,
+  // framåt klampas till maxReachableStep (= det första ogiltiga steget) så
+  // operatören förs till just det steg som behöver åtgärdas.
+  const resolveReachableStep = useCallback(
+    (target: number, current: number) => {
+      const clamped = Math.min(
         WIZARD_STEP_ORDER.length - 1,
-        Math.max(0, Math.floor(targetIdx)),
-      ),
-    );
-  }, []);
+        Math.max(0, Math.floor(target)),
+      );
+      return clamped <= current ? clamped : Math.min(clamped, maxReachableStep);
+    },
+    [maxReachableStep],
+  );
+
+  const goToStep = useCallback(
+    (targetIdx: number) => {
+      setStepIndex((current) => resolveReachableStep(targetIdx, current));
+    },
+    [resolveReachableStep],
+  );
 
   const [helpOpen, setHelpOpen] = useState(false);
+  // Kortkommando-overlay:n är en custom role="dialog" (inte base-ui Dialog) så
+  // den saknar inbyggd focus-trap. Fånga Tab inom panelen + flytta fokus dit
+  // när den öppnas så tangentbordsanvändaren inte tabbar ut bakom overlay:n.
+  const helpPanelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(helpPanelRef, helpOpen);
+  useEffect(() => {
+    if (!helpOpen) return;
+    const raf = requestAnimationFrame(() => {
+      helpPanelRef.current?.querySelector<HTMLElement>("button")?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [helpOpen]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
   // Submit-overlayn väntar 700 ms innan onComplete (bygg-start) körs. Spara
@@ -295,10 +328,7 @@ export function DiscoveryWizard({
           return;
         }
       }
-      if (
-        ((isMod && event.key === "/") || event.key === "?") &&
-        !inEditable
-      ) {
+      if (((isMod && event.key === "/") || event.key === "?") && !inEditable) {
         event.preventDefault();
         setHelpOpen((prev) => !prev);
         return;
@@ -376,7 +406,7 @@ export function DiscoveryWizard({
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Stäng"
-          className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground min-tap sm:min-tap-0 absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full transition-colors active:scale-95 sm:top-4 sm:right-4 sm:h-8 sm:w-8"
+          className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring/50 min-tap sm:min-tap-0 absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95 sm:top-4 sm:right-4 sm:h-8 sm:w-8"
         >
           <X className="h-4 w-4" />
         </button>
@@ -404,6 +434,38 @@ export function DiscoveryWizard({
         <div
           role="tablist"
           aria-label="Steg i guiden"
+          // WAI-ARIA tabs-tangentbord: vänster/höger flyttar OCH aktiverar
+          // (automatic activation, samma effekt som klick), Home/End hoppar
+          // till första/sista. Roving tabindex (nedan) gör att bara aktiv
+          // flik är i tab-ordningen; pilarna flyttar fokus inom listan.
+          onKeyDown={(event) => {
+            const last = WIZARD_STEP_ORDER.length - 1;
+            let next: number | null = null;
+            if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+              next = stepIndex >= last ? 0 : stepIndex + 1;
+            } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+              next = stepIndex <= 0 ? last : stepIndex - 1;
+            } else if (event.key === "Home") {
+              next = 0;
+            } else if (event.key === "End") {
+              next = last;
+            }
+            if (next === null) return;
+            event.preventDefault();
+            // Gate framåt-hopp (samma regel som tab-klick/⌥-hopp): pilarna
+            // får inte aktivera ett steg bortom maxReachableStep.
+            const resolved = resolveReachableStep(next, stepIndex);
+            setStepIndex(resolved);
+            // Flytta fokus till den faktiskt aktiverade fliken efter att DOM
+            // uppdaterats (roving tabindex byter vilken knapp som är fokuserbar).
+            const list = event.currentTarget;
+            requestAnimationFrame(() => {
+              const target = list.querySelector<HTMLElement>(
+                `[data-tab-index="${resolved}"]`,
+              );
+              target?.focus();
+            });
+          }}
           className="border-border/60 flex w-full items-stretch gap-0 border-b px-5 sm:justify-center sm:gap-1 sm:px-8"
         >
           {WIZARD_STEP_ORDER.map((id, idx) => {
@@ -414,11 +476,20 @@ export function DiscoveryWizard({
                 key={id}
                 type="button"
                 role="tab"
+                id={`wizard-tab-${id}`}
+                aria-controls="wizard-tabpanel"
+                data-tab-index={idx}
+                // Roving tabindex: bara aktiv flik når via Tab; pilarna
+                // sköter navigeringen inom listan (APG tabs-mönster).
+                tabIndex={isActive ? 0 : -1}
                 aria-current={isActive ? "step" : undefined}
                 aria-selected={isActive}
-                onClick={() => setStepIndex(idx)}
+                onClick={() =>
+                  setStepIndex((current) => resolveReachableStep(idx, current))
+                }
                 className={[
                   "min-tap sm:min-tap-0 relative -mb-px inline-flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-medium tracking-tight transition-colors sm:flex-none sm:px-5",
+                  "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
                   isActive
                     ? "text-foreground border-foreground"
                     : "text-muted-foreground hover:text-foreground border-transparent",
@@ -426,7 +497,7 @@ export function DiscoveryWizard({
               >
                 <span
                   className={[
-                    "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9.5px] font-mono transition-colors",
+                    "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full font-mono text-[9.5px] transition-colors",
                     isActive
                       ? "bg-foreground text-background"
                       : isPast
@@ -446,7 +517,12 @@ export function DiscoveryWizard({
           })}
         </div>
 
-        <section className="bg-background relative flex min-h-0 flex-col overflow-hidden">
+        <section
+          id="wizard-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`wizard-tab-${step}`}
+          className="bg-background relative flex min-h-0 flex-col overflow-hidden"
+        >
           <div
             ref={contentRef}
             className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-8"
@@ -495,7 +571,9 @@ export function DiscoveryWizard({
                             Inget telefonnummer angivet
                           </p>
                           <p className="text-muted-foreground text-[11.5px] leading-relaxed">
-                            Utan nummer får sajten ingen Ring-knapp — besökarna ser bara en allmän kontaktknapp. Lägg till ditt riktiga nummer så når kunderna er direkt.
+                            Utan nummer får sajten ingen Ring-knapp — besökarna
+                            ser bara en allmän kontaktknapp. Lägg till ditt
+                            riktiga nummer så når kunderna er direkt.
                           </p>
                         </div>
                       </div>
@@ -526,7 +604,9 @@ export function DiscoveryWizard({
                       Ange information till hemsidan
                     </Button>
                     <p className="text-muted-foreground/70 mt-2 text-[11.5px] leading-relaxed">
-                      Innehåll, kontaktuppgifter, favicon och fler detaljer — fylls i automatiskt vid skrapning, men du kan granska eller komplettera här.
+                      Innehåll, kontaktuppgifter, favicon och fler detaljer —
+                      fylls i automatiskt vid skrapning, men du kan granska
+                      eller komplettera här.
                     </p>
                   </div>
                 </>
@@ -535,7 +615,7 @@ export function DiscoveryWizard({
           </div>
         </section>
 
-        <div className="border-border/60 bg-background/95 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 pb-safe-or-4 sm:px-6 sm:py-4">
+        <div className="border-border/60 bg-background/95 pb-safe-or-4 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -647,7 +727,10 @@ export function DiscoveryWizard({
               }
             }}
           >
-            <div className="bg-card border-border/70 w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl">
+            <div
+              ref={helpPanelRef}
+              className="bg-card border-border/70 w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl"
+            >
               <div className="border-border/60 flex items-center justify-between border-b px-5 py-3">
                 <div className="flex items-center gap-2">
                   <Keyboard className="text-foreground/70 h-4 w-4" />
@@ -659,7 +742,7 @@ export function DiscoveryWizard({
                   type="button"
                   onClick={() => setHelpOpen(false)}
                   aria-label="Stäng"
-                  className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 rounded-md p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -675,7 +758,10 @@ export function DiscoveryWizard({
                     </dt>
                     <dd className="flex shrink-0 items-center gap-1">
                       {shortcut.keys.map((key, idx) => (
-                        <span key={`${shortcut.label}-${idx}`} className="contents">
+                        <span
+                          key={`${shortcut.label}-${idx}`}
+                          className="contents"
+                        >
                           {idx > 0 ? (
                             <span className="text-muted-foreground text-[10px]">
                               eller
@@ -703,10 +789,13 @@ export function DiscoveryWizard({
             <div className="flex max-w-sm flex-col items-center gap-5 px-8 text-center">
               <div className="relative inline-flex h-14 w-14 items-center justify-center">
                 <span
-                  className="border-emerald-500/40 absolute inset-0 rounded-full border-2 motion-safe:animate-ping"
+                  className="absolute inset-0 rounded-full border-2 border-emerald-500/40 motion-safe:animate-ping"
                   aria-hidden
                 />
-                <span className="bg-emerald-500/15 absolute inset-2 rounded-full" aria-hidden />
+                <span
+                  className="absolute inset-2 rounded-full bg-emerald-500/15"
+                  aria-hidden
+                />
                 <Check
                   className="relative h-6 w-6 text-emerald-600 dark:text-emerald-400"
                   strokeWidth={3}

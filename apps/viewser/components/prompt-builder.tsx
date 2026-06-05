@@ -56,7 +56,11 @@ type PromptBuilderProps = {
   selectedSiteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome, siteId: string) => void;
+  onBuildDone: (
+    runId: string,
+    outcome: PromptBuildOutcome,
+    siteId: string,
+  ) => void;
   /**
    * Lyfter prompt-stage upp till page.tsx så ViewerPanel kan visa
    * en central laddnings-card under "thinking" och "building".
@@ -96,7 +100,7 @@ export function classifyBuildStatus(
   return "unknown";
 }
 
-function outcomeToStage(outcome: PromptBuildOutcome): PromptStage {
+export function outcomeToStage(outcome: PromptBuildOutcome): PromptStage {
   if (outcome === "ok") return "success";
   if (outcome === "failed") return "failed";
   return "degraded";
@@ -135,7 +139,9 @@ export function PromptBuilder({
   const [pendingPrompt, setPendingPrompt] = useState("");
   // Förvalda wizard-svar från en starter-seed (yrkessida/hero-chip/tom-läge):
   // familj + kategori + offer redan satta. null = vanlig fri prompt.
-  const [seededAnswers, setSeededAnswers] = useState<WizardAnswers | null>(null);
+  const [seededAnswers, setSeededAnswers] = useState<WizardAnswers | null>(
+    null,
+  );
   // Visar starter-onboarding i tom-läget. Sätts EN gång vid mount först när
   // vi vet att ingen handoff/seed finns (annars hade kort-blink uppstått
   // innan effekten hunnit öppna wizarden / starta bygget).
@@ -154,12 +160,11 @@ export function PromptBuilder({
     !!selectedRunId &&
     !!selectedRun &&
     (!selectedRun.siteId || selectedRun.siteId === "unknown");
-  const targetSiteId =
-    runSiteIdUnknown
-      ? ""
-      : selectedRun?.siteId && selectedRun.siteId !== "unknown"
-        ? selectedRun.siteId
-        : selectedSiteId;
+  const targetSiteId = runSiteIdUnknown
+    ? ""
+    : selectedRun?.siteId && selectedRun.siteId !== "unknown"
+      ? selectedRun.siteId
+      : selectedSiteId;
   const targetInput = projectInputs.find(
     (input) => input.siteId === targetSiteId,
   );
@@ -449,8 +454,7 @@ export function PromptBuilder({
 
       if (!donePayload || !donePayload.runId || !donePayload.siteId) {
         throw new Error(
-          donePayload?.error ??
-            "Prompt-anropet returnerade ingen slutsignal.",
+          donePayload?.error ?? "Prompt-anropet returnerade ingen slutsignal.",
         );
       }
 
@@ -539,7 +543,11 @@ export function PromptBuilder({
       );
       return;
     }
-    const masterPrompt = composeMasterPrompt(cleaned, answers, discoveryOptions);
+    const masterPrompt = composeMasterPrompt(
+      cleaned,
+      answers,
+      discoveryOptions,
+    );
     void executeBuild({
       cleanedPrompt: masterPrompt,
       submissionMode: "init",
@@ -576,8 +584,8 @@ export function PromptBuilder({
               Vad ska vi bygga?
             </h2>
             <p className="text-muted-foreground mx-auto mt-3 max-w-[42ch] text-[15px] leading-relaxed">
-              Beskriv din verksamhet i rutan nedan — eller börja från en
-              vanlig bransch, så förfyller vi resten.
+              Beskriv din verksamhet i rutan nedan — eller börja från en vanlig
+              bransch, så förfyller vi resten.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {STARTER_PRESETS.map((preset) => (
@@ -604,63 +612,67 @@ export function PromptBuilder({
         // skvallrar den bakom popupen (operatören kommer alltid in i
         // wizarden via marknads-heron, så den lilla prompt-baren ska inte
         // ligga kvar i bakgrunden).
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-safe-or-4 sm:pb-7 ${hidden || wizardOpen ? "hidden" : ""}`}
+        className={`pb-safe-or-4 pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 sm:pb-7 ${hidden || wizardOpen ? "hidden" : ""}`}
         aria-hidden={hidden || wizardOpen}
       >
-      <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-2">
-        {showStrip ? (
-          <PromptStatusStrip stage={stage} error={error} lastResult={lastResult} />
-        ) : null}
+        <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-2">
+          {showStrip ? (
+            <PromptStatusStrip
+              stage={stage}
+              error={error}
+              lastResult={lastResult}
+            />
+          ) : null}
 
-        <div className="hover-lift relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 shadow-2xl backdrop-blur-xl">
-          <Textarea
-            ref={textareaRef}
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            placeholder={
-              mode === "followup"
-                ? "Beskriv ändringen du vill göra på den valda sajten…"
-                : "Beskriv din sajt — företag, känsla, mål, ton…"
-            }
-            rows={2}
-            maxLength={4000}
-            disabled={disabled}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                event.preventDefault();
-                void submitPrompt();
+          <div className="hover-lift border-border/70 bg-card/90 relative overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl">
+            <Textarea
+              ref={textareaRef}
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder={
+                mode === "followup"
+                  ? "Beskriv ändringen du vill göra på den valda sajten…"
+                  : "Beskriv din sajt — företag, känsla, mål, ton…"
               }
-            }}
-            className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
-          />
-          <div className="flex items-center justify-end gap-2 border-t border-border/40 px-2 py-2">
-            <div className="flex items-center gap-2">
-              <span className="hidden font-mono text-[10px] text-muted-foreground/70 sm:inline">
-                ⌘ + ↵
-              </span>
-              <Button
-                disabled={
-                  disabled ||
-                  prompt.trim().length === 0 ||
-                  (mode === "followup" && !followupReady)
+              rows={2}
+              maxLength={4000}
+              disabled={disabled}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  void submitPrompt();
                 }
-                onClick={() => void submitPrompt()}
-                variant="default"
-                size="sm"
-                className="min-tap sm:min-tap-0 rounded-full p-0 active:scale-95 sm:size-9"
-                aria-label={localBusy ? "Bygger sajt" : "Bygg sajt"}
-              >
-                {localBusy ? (
-                  <span className="inline-block size-2 animate-pulse rounded-full bg-background" />
-                ) : (
-                  <ArrowUpIcon />
-                )}
-              </Button>
+              }}
+              className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
+            />
+            <div className="border-border/40 flex items-center justify-end gap-2 border-t px-2 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground/70 hidden font-mono text-[10px] sm:inline">
+                  ⌘ + ↵
+                </span>
+                <Button
+                  disabled={
+                    disabled ||
+                    prompt.trim().length === 0 ||
+                    (mode === "followup" && !followupReady)
+                  }
+                  onClick={() => void submitPrompt()}
+                  variant="default"
+                  size="sm"
+                  className="min-tap sm:min-tap-0 rounded-full p-0 active:scale-95 sm:size-9"
+                  aria-label={localBusy ? "Bygger sajt" : "Bygg sajt"}
+                >
+                  {localBusy ? (
+                    <span className="bg-background inline-block size-2 animate-pulse rounded-full" />
+                  ) : (
+                    <ArrowUpIcon />
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
@@ -773,7 +785,7 @@ function shortRun(runId: string): string {
 
 function PulseDot() {
   return (
-    <span className="inline-block size-1.5 animate-pulse rounded-full bg-foreground/70" />
+    <span className="bg-foreground/70 inline-block size-1.5 animate-pulse rounded-full" />
   );
 }
 

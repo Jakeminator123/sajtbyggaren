@@ -587,6 +587,13 @@ COMMON_WORDS = {
     "BriefTab", "BriefTabProps", "PagesTab", "PagesTabProps",
     "QualityTab", "QualityTabProps", "DossiersTab", "DossiersTabProps",
     "DossierEntry", "DossierGroup",
+    # P0-fix (juni 2026): quality-tab.tsx läser nu de canonical artefakt-
+    # shaparna (qualityResult.checks[] / repairResult.mechanicalFixesApplied)
+    # istället för det påhittade findings/gates/actions-schemat. QualityCheck
+    # är den lokala narrow-typen för en check-rad — samma viewser-implementation-
+    # kategori som QualityFinding / RepairAction ovan, inte ett domänbegrepp
+    # (canonical CheckResult/QualityResult bor i naming-dictionary.v1).
+    "QualityCheck",
     "RunArtefactsState", "RunArtefactsBundle",
     "FollowupBuildState", "FollowupBuildResult",
     "QuickPromptButton", "QuickPromptButtonProps",
@@ -1084,6 +1091,10 @@ COMMON_WORDS = {
     # och Lucide-typen LucideIcon är externa React-symboler.
     "PageCard", "CalendarCheck", "HelpCircle", "UtensilsCrossed",
     "LucideIcon",
+    # RefObject — React stdlib-typen som apps/viewser/lib/use-focus-trap.ts
+    # tar in i signaturen useFocusTrap(containerRef: RefObject<...>). Samma
+    # kategori som MonkeyPatch ovan (extern stdlib-typ), inget domänbegrepp.
+    "RefObject",
     # Vercel-sandbox-spike (flag-gated PoC, docs/spikes/vercel-sandbox-spike.md
     # + apps/viewser/lib/vercel-sandbox-spike.ts). Lokala TS-implementation-
     # shapes — INTE canonical domain terms och INTE PreviewResult/PreviewSession

@@ -289,17 +289,34 @@
     animation: fadeInScale 0.3s ease-out;
   }
 
-  .stagger-1 { animation-delay: 0.05s; }
-  .stagger-2 { animation-delay: 0.1s; }
-  .stagger-3 { animation-delay: 0.15s; }
-  .stagger-4 { animation-delay: 0.2s; }
-  .stagger-5 { animation-delay: 0.25s; }
-  .stagger-6 { animation-delay: 0.3s; }
+  .stagger-1 {
+    animation-delay: 0.05s;
+  }
+  .stagger-2 {
+    animation-delay: 0.1s;
+  }
+  .stagger-3 {
+    animation-delay: 0.15s;
+  }
+  .stagger-4 {
+    animation-delay: 0.2s;
+  }
+  .stagger-5 {
+    animation-delay: 0.25s;
+  }
+  .stagger-6 {
+    animation-delay: 0.3s;
+  }
 
   /* Subtle pulse for status dots */
   @keyframes subtlePulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
   .animate-subtle-pulse {
@@ -308,16 +325,24 @@
 
   /* Shimmer (loading states) */
   @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   /* Indeterminate progress bar — used in viewer-panel top strip
      while loading a run or starting StackBlitz. Travels left to right
      across the canvas without ever stopping. */
   @keyframes viewer-progress {
-    0%   { transform: translateX(-100%); }
-    100% { transform: translateX(400%); }
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(400%);
+    }
   }
 
   /* Soft edge-pulse — used by the FloatingChat side-tab when the chat
@@ -424,6 +449,17 @@
     }
   }
 
+  /* `md:min-tap-0` opts out at >=768px instead of >=640px. Use it on controls
+     that still render in a touch-first bottom-sheet/mobile layout up to the
+     md breakpoint (FloatingChat, inspector tabs) so 640-767px keeps 44px
+     targets — `sm:min-tap-0` released them too early. */
+  @media (min-width: 768px) {
+    .md\:min-tap-0 {
+      min-height: 0;
+      min-width: 0;
+    }
+  }
+
   /* Bottom-sheet drag handle — used by FloatingChat and SiteInspectorSheet
      when they render as bottom sheets on <md viewports. Centered grab pill
      with subtle contrast so it reads as "drag me" without being loud. */
@@ -470,8 +506,16 @@
   inset: -10% -10% auto -10%;
   height: 60%;
   background:
-    radial-gradient(50% 60% at 18% 30%, oklch(0.901 0.013 84 / 0.55), transparent 70%),
-    radial-gradient(45% 55% at 82% 25%, oklch(0.94 0.007 87 / 0.7), transparent 70%);
+    radial-gradient(
+      50% 60% at 18% 30%,
+      oklch(0.901 0.013 84 / 0.55),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 55% at 82% 25%,
+      oklch(0.94 0.007 87 / 0.7),
+      transparent 70%
+    );
   filter: blur(40px);
   z-index: -2;
   pointer-events: none;
@@ -486,18 +530,34 @@
     linear-gradient(to bottom, oklch(0.158 0 0 / 0.025) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    black 30%,
+    transparent 75%
+  );
   z-index: -1;
   pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Custom keyframe-klasser. */
   .animate-fadeIn,
   .animate-fadeInUp,
   .animate-fadeInScale,
   .animate-subtle-pulse,
   .animate-shimmer,
-  .animate-fc-edge-pulse {
+  .animate-fc-edge-pulse,
+  /* Tailwinds inbyggda animationer + tw-animate-css enter/exit. Att stänga
+     av dem här i ETT block är mer robust än att sätta motion-safe: på 20+
+     Loader2/StatusDot/dialog-anrop. animation:none lämnar elementet i sitt
+     vilo-läge (fullt synligt) — spinners blir statiska, dialoger dyker upp
+     direkt utan zoom/fade. */
+  .animate-spin,
+  .animate-pulse,
+  .animate-ping,
+  .animate-in,
+  .animate-out,
+  [class*="viewer-progress"] {
     animation: none !important;
   }
   .hover-lift:hover {

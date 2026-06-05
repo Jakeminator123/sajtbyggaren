@@ -75,6 +75,12 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   degraded: "bg-amber-500",
   warning: "bg-amber-500",
   failed: "bg-destructive",
+  // `aborted` = dödat bygge (stale-pending). Röd som failed; speglar
+  // run-history.tsx-paletten så de två versionsvyerna är konsekventa.
+  aborted: "bg-destructive",
+  // `pending` = bygget pågår faktiskt. Egen sky-färg + puls (se dotClass)
+  // så det inte ser ut som de grå terminal-statusarna.
+  pending: "bg-sky-400",
   skipped: "bg-muted-foreground/40",
   unknown: "bg-muted-foreground/40",
 };
@@ -90,6 +96,17 @@ function formatRelative(createdAt: string): string {
   if (hours < 48) return `${hours}h sedan`;
   const days = Math.round(hours / 24);
   return `${days}d sedan`;
+}
+
+// Absolut tidsstämpel för title-tooltip på relativa tiden (samma mönster
+// som run-history.tsx). Operatören hovrar och ser exakt datum/tid.
+function formatAbsolute(createdAt: string): string {
+  const ts = Date.parse(createdAt);
+  if (!Number.isFinite(ts)) return "";
+  return new Date(ts).toLocaleString("sv-SE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 function shortRunId(runId: string): string {
@@ -324,7 +341,10 @@ export function VersionsTab({
       const prefix = `Utgå från version ${versionLabel}: `;
       let kind: "success" | "failure" = "failure";
       try {
-        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.clipboard?.writeText
+        ) {
           await navigator.clipboard.writeText(prefix);
           kind = "success";
         }
@@ -392,6 +412,9 @@ export function VersionsTab({
   const handleResetCompare = useCallback(() => {
     setCompareA(null);
     setCompareB(null);
+    // Stäng den visuella jämförelsen också — annars står comparePreviewOpen
+    // kvar true och modalen poppar upp igen så fort A+B väljs på nytt.
+    setComparePreviewOpen(false);
   }, []);
 
   // Quick-action: Jämför de två senaste runs för aktuell sajt.
@@ -461,7 +484,7 @@ export function VersionsTab({
             isBuilding={isBuilding}
             onRefresh={refresh}
           />
-          <ul className="border-border/60 overflow-hidden rounded-lg border bg-card">
+          <ul className="border-border/60 bg-card overflow-hidden rounded-lg border">
             <PendingRunRow pending={pendingForThisSite} />
           </ul>
         </div>
@@ -533,10 +556,7 @@ export function VersionsTab({
           currentBundle={bundle}
         />
       ) : (
-        <CompareEmptyHint
-          hasA={compareA !== null}
-          hasB={compareB !== null}
-        />
+        <CompareEmptyHint hasA={compareA !== null} hasB={compareB !== null} />
       )}
 
       {canOpenComparePreview && compareA && compareB ? (
@@ -578,8 +598,8 @@ function HeaderBar({
           {siteId}
         </code>
         . Klicka en rad för att markera den som <strong>A</strong>, eller
-        högerkolumnen för <strong>B</strong>. När båda är valda visas en
-        diff längst ned.
+        högerkolumnen för <strong>B</strong>. När båda är valda visas en diff
+        längst ned.
         {isBuilding ? (
           <span className="ml-1 inline-flex items-center gap-1 text-amber-700 dark:text-amber-300">
             <Sparkles aria-hidden className="h-3 w-3 animate-pulse" />
@@ -621,7 +641,7 @@ function CompareControls({
   onOpenComparePreview: () => void;
 }) {
   return (
-    <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2">
+    <div className="border-border/60 bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 text-[11.5px]">
         <CompareBadge label="A" value={compareA} tone="rose" />
         <ArrowRight
@@ -708,9 +728,7 @@ function CompareBadge({
       <span className="text-[9px] tracking-[0.18em] uppercase opacity-80">
         {label}
       </span>
-      <span className="truncate">
-        {value ? shortRunId(value) : "ej valt"}
-      </span>
+      <span className="truncate">{value ? shortRunId(value) : "ej valt"}</span>
     </span>
   );
 }
@@ -753,7 +771,7 @@ function RunList({
   isBuilding: boolean;
 }) {
   return (
-    <ul className="border-border/60 divide-y divide-border/40 overflow-hidden rounded-lg border bg-card">
+    <ul className="border-border/60 divide-border/40 bg-card divide-y overflow-hidden rounded-lg border">
       {pending ? <PendingRunRow pending={pending} /> : null}
       {runs.map((run) => {
         const isCurrent = run.runId === currentRunId;
@@ -806,7 +824,10 @@ function PendingRunRow({ pending }: { pending: PendingBuildState }) {
     }, 5_000);
     return () => window.clearInterval(handle);
   }, []);
-  const elapsedSeconds = Math.max(1, Math.round((now - pending.startedAt) / 1000));
+  const elapsedSeconds = Math.max(
+    1,
+    Math.round((now - pending.startedAt) / 1000),
+  );
   const elapsedLabel =
     elapsedSeconds < 60
       ? `${elapsedSeconds}s sedan`
@@ -819,20 +840,20 @@ function PendingRunRow({ pending }: { pending: PendingBuildState }) {
     <li
       aria-live="polite"
       aria-busy="true"
-      className="border-amber-400/30 bg-amber-500/[0.06] flex items-stretch gap-0 border-b border-dashed last:border-b-0"
+      className="flex items-stretch gap-0 border-b border-dashed border-amber-400/30 bg-amber-500/[0.06] last:border-b-0"
     >
       <div className="min-w-0 flex-1 px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <span
             aria-hidden
-            className="bg-amber-500 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full"
+            className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500"
           />
           <span className="text-foreground/85 text-[12px] font-medium">
             {versionLabel}
           </span>
           <Loader2
             aria-hidden
-            className="text-amber-600 dark:text-amber-400 h-3 w-3 shrink-0 animate-spin"
+            className="h-3 w-3 shrink-0 animate-spin text-amber-600 dark:text-amber-400"
           />
           <span className="text-muted-foreground ml-auto inline-flex items-center gap-1 text-[11px]">
             <Clock aria-hidden className="h-3 w-3" />
@@ -885,6 +906,10 @@ function RunRow({
   onIterateFrom: () => void;
 }) {
   const dotClass = STATUS_DOT_COLORS[run.status] ?? "bg-muted-foreground/40";
+  // Bara `pending` pulserar (faktiskt pågående bygge). motion-safe så
+  // reduced-motion-användare ser en stilla prick.
+  const dotPulse =
+    run.status === "pending" ? "motion-safe:animate-pulse" : undefined;
   // Spärra "Iterera" under pågående bygge: pendingBaseRunId rensas av
   // page.tsx när bygget är klart, så ett klick mitt i bygget skulle
   // sättas och sedan tystas. Bättre att hindra interaktionen helt än
@@ -905,7 +930,7 @@ function RunRow({
           ? "bg-emerald-500/[0.10] dark:bg-emerald-400/[0.08]"
           : "",
         isActiveBase
-          ? "ring-1 ring-inset ring-sky-500/40 bg-sky-500/[0.08]"
+          ? "bg-sky-500/[0.08] ring-1 ring-sky-500/40 ring-inset"
           : "",
       )}
     >
@@ -913,7 +938,11 @@ function RunRow({
         <div className="flex min-w-0 items-center gap-2">
           <span
             aria-label={`status: ${run.status}`}
-            className={cn("inline-block size-2 rounded-full", dotClass)}
+            className={cn(
+              "inline-block size-2 rounded-full",
+              dotClass,
+              dotPulse,
+            )}
           />
           <span className="text-foreground/90 truncate font-mono text-[11px]">
             {shortRunId(run.runId)}
@@ -925,7 +954,7 @@ function RunRow({
             </span>
           ) : null}
           {isActiveBase ? (
-            <span className="border-sky-500/50 text-sky-700 dark:text-sky-300 bg-sky-500/[0.10] inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[9px] tracking-wider uppercase">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-sky-500/50 bg-sky-500/[0.10] px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-sky-700 uppercase dark:text-sky-300">
               <GitBranch aria-hidden className="h-2.5 w-2.5" />
               Iterera
             </span>
@@ -933,12 +962,14 @@ function RunRow({
         </div>
         <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 pl-4 text-[10.5px]">
           <Clock aria-hidden className="h-2.5 w-2.5" />
-          {formatRelative(run.createdAt)}
+          <span title={formatAbsolute(run.createdAt)}>
+            {formatRelative(run.createdAt)}
+          </span>
           {run.version ? ` · v${run.version}` : ""}
           {run.status ? ` · ${run.status}` : ""}
         </div>
         {rationale ? (
-          <p className="text-muted-foreground mt-1 line-clamp-2 pl-4 text-[10.5px] italic leading-snug">
+          <p className="text-muted-foreground mt-1 line-clamp-2 pl-4 text-[10.5px] leading-snug italic">
             {rationale}
           </p>
         ) : null}
@@ -988,7 +1019,7 @@ function RunRow({
             iterateDisabled
               ? "text-muted-foreground/40 cursor-not-allowed"
               : isActiveBase
-                ? "text-sky-700 dark:text-sky-300 bg-sky-500/[0.12] hover:bg-sky-500/[0.18]"
+                ? "bg-sky-500/[0.12] text-sky-700 hover:bg-sky-500/[0.18] dark:text-sky-300"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
           )}
         >
@@ -1088,6 +1119,18 @@ function CompareSection({
     currentBundleRef.current = currentBundle;
   });
 
+  // Signal som ändrar identitet när den AKTIVA runens bundle byggs om/
+  // refreshas OCH den deltar i jämförelsen. Tidigare re-kördes fetch-effekten
+  // bara på id-byten → om ena sidan var aktiv run och dess bundle uppdaterades
+  // (manuell refresh / klart bygge med samma runId) visade diffen den gamla
+  // bundlen. När ingen sida är aktiv run förblir signalen null så vi behåller
+  // optimeringen (ingen onödig laddnings-flash vid parent-refresh).
+  const activeBundleSignal = useMemo(
+    () =>
+      runIdA === currentRunId || runIdB === currentRunId ? currentBundle : null,
+    [runIdA, runIdB, currentRunId, currentBundle],
+  );
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -1114,7 +1157,10 @@ function CompareSection({
     return () => {
       cancelled = true;
     };
-  }, [runIdA, runIdB, currentRunId]);
+    // activeBundleSignal: re-fetcha diffen när den aktiva runens bundle
+    // ändrats (annars stale diff). currentBundleRef läses inuti, så vi
+    // behöver inte själva bundle-objektet i deps utöver signalen.
+  }, [runIdA, runIdB, currentRunId, activeBundleSignal]);
 
   if (state.status === "loading" || state.status === "idle") {
     return (
@@ -1122,7 +1168,7 @@ function CompareSection({
         role="status"
         aria-live="polite"
         aria-busy="true"
-        className="border-border/40 flex flex-col gap-2 rounded-lg border bg-muted/10 p-3"
+        className="border-border/40 bg-muted/10 flex flex-col gap-2 rounded-lg border p-3"
       >
         <span className="sr-only">Räknar diff…</span>
         <Skeleton className="h-3 w-28" />

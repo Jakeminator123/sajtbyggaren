@@ -1,7 +1,14 @@
 "use client";
 
 import { ExternalLink, Check, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
@@ -63,6 +70,28 @@ type BrowserKind = "chromium" | "safari" | "firefox" | "unknown";
  * knapp som anropar `sdk.openProject()` (top-level navigation till
  * stackblitz.com, fungerar i alla browsers eftersom det inte är embeddat).
  */
+// prefers-reduced-motion-prenumeration för studio-hero-videorna. Speglar
+// marketing-sajtens `hero-video.tsx`: via useSyncExternalStore (Reacts
+// kanoniska väg att läsa en extern store) i st.f. useEffect+setState — ger
+// en deterministisk SSR-snapshot (rörelse OK) som matchar första klient-
+// render och undviker react-hooks/set-state-in-effect.
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
+  mq.addEventListener("change", callback);
+  return () => mq.removeEventListener("change", callback);
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+function getReducedMotionServerSnapshot() {
+  return false;
+}
+
 function getBrowserKind(): BrowserKind {
   if (typeof navigator === "undefined") return "chromium";
   const ua = navigator.userAgent;
@@ -187,9 +216,7 @@ function unavailableForPreviewError(
   if (code === "sandbox_failed") {
     return {
       title: "Molnförhandsvisningen kunde inte startas",
-      message:
-        errMsg ??
-        "Vercel Sandbox byggde inte den genererade sajten.",
+      message: errMsg ?? "Vercel Sandbox byggde inte den genererade sajten.",
       hint:
         errHint ??
         "Försök igen, eller kontrollera viewser-loggen för install/build-loggar.",
@@ -302,6 +329,13 @@ export function ViewerPanel({
   // och same-machine-iframen tar emot postMessage från Site Inspector
   // för Sprint 5:s live token-editor.
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  // Iframe-dokumentets laddningsstatus. När ``localPreviewUrl`` precis
+  // satts (första preview ELLER byte av vald run) är iframen vit tills
+  // Next.js hunnit hydrera. ``iframeLoaded`` flippas av iframens onLoad
+  // och styr en subtil skelett-overlay (se render) så operatören ser en
+  // laddningsindikator i stället för en blank vit canvas. Återställs till
+  // false varje gång URL:en ändras.
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   // När browsern inte stödjer embed sparar vi hämtade filer + den
   // detekterade browser-kinden i ett gemensamt state-objekt.
   // Knappen anropar `sdk.openProject()` med samma payload (utan att
@@ -315,6 +349,10 @@ export function ViewerPanel({
     kind: BrowserKind;
   } | null>(null);
   const [openingExternal, setOpeningExternal] = useState(false);
+  // Bumpas av "Försök igen"-knappen i otillgänglig-bannern. Ingår i preview-
+  // effektens deps så ett klick kör om hela hämtningen (samma reset-väg som
+  // ett runId-byte) utan att operatören måste välja om runen.
+  const [retryNonce, setRetryNonce] = useState(0);
 
   // Device-preset hämtas från DevicePresetProvider (page.tsx → provider →
   // ViewerPanel + FloatingChat). Tidigare hade ViewerPanel lokal state
@@ -323,6 +361,15 @@ export function ViewerPanel({
   // Hydration-mönstret (initial = "full", post-mount-läs från storage)
   // har följt med dit oförändrat så vi slipper SSR-mismatch.
   const { devicePreset } = useDevicePreset();
+
+  // Studio-hero-videorna är dekorativa (aria-hidden). Under reduced-motion
+  // pausar vi dem på första framen (ingen autoplay/loop) i st.f. att rulla
+  // en oönskad bakgrundsanimation — samma a11y-kontrakt som marketing-hero:n.
+  const reducedMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot,
+  );
 
   /**
    * Iframe-wrapper-stil. När devicePreset != "full" får wrappern en
@@ -385,6 +432,7 @@ export function ViewerPanel({
     setUnavailable(null);
     setFallback(null);
     setLocalPreviewUrl(null);
+    setIframeLoaded(false);
     setLoading(true);
     node.replaceChildren();
 
@@ -437,6 +485,7 @@ export function ViewerPanel({
             // publik …vercel.run-https-URL. Båda iframe:as identiskt.
             const info = (await previewResponse.json()) as PreviewStartResponse;
             if (cancelled) return;
+            setIframeLoaded(false);
             setLocalPreviewUrl(info.url);
             setLoading(false);
             return;
@@ -705,7 +754,9 @@ export function ViewerPanel({
       cancelled = true;
       if (node) node.replaceChildren();
     };
-  }, [runId, siteId]);
+    // retryNonce: bumpas av "Försök igen" i otillgänglig-bannern → kör om
+    // effekten med full state-reset (samma väg som ett runId-byte).
+  }, [runId, siteId, retryNonce]);
 
   const showEmpty = !runId;
   const showUnavailable = unavailable && !!runId;
@@ -763,8 +814,8 @@ export function ViewerPanel({
         // hero där är absolute-positioned overlay (ingen scroll-behov).
         "viewer-canvas relative flex h-full w-full flex-col md:flex-row md:overflow-hidden",
         showHero
-          ? "overflow-y-auto bg-[#f0f2ed] md:bg-background"
-          : "overflow-hidden bg-background",
+          ? "md:bg-background overflow-y-auto bg-[#f0f2ed]"
+          : "bg-background overflow-hidden",
       )}
     >
       {/* Hero-bakgrundsvideo. Två separata videos: SM_hero.mp4
@@ -789,9 +840,9 @@ export function ViewerPanel({
           <video
             key="sm-hero-mobile"
             className="pointer-events-none relative z-0 mx-auto mt-6 block aspect-square w-[min(280px,70vw)] object-contain md:hidden"
-            autoPlay
+            autoPlay={!reducedMotion}
             muted
-            loop
+            loop={!reducedMotion}
             playsInline
             preload="auto"
             aria-hidden
@@ -803,9 +854,9 @@ export function ViewerPanel({
           <video
             key="sm-hero"
             className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover [object-position:78%_center] md:block"
-            autoPlay
+            autoPlay={!reducedMotion}
             muted
-            loop
+            loop={!reducedMotion}
             playsInline
             preload="auto"
             aria-hidden
@@ -851,7 +902,7 @@ export function ViewerPanel({
           fungerar samma backdrop ovanpå tom canvas utan visuell
           skillnad. */}
       {showBuildCard ? (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/85 px-6 backdrop-blur-sm">
+        <div className="bg-background/85 pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6 backdrop-blur-sm">
           <div className="pointer-events-auto">
             {/* key={buildStage} forces a full remount on every stage
                 transition so elapsedSec restarts at 0 via useState(0)
@@ -894,8 +945,8 @@ export function ViewerPanel({
               <span className="text-foreground/60">så bygger vi den.</span>
             </h1>
             <p className="text-foreground/75 max-w-md text-[13.5px] leading-relaxed text-balance sm:text-[14px] md:text-[15px]">
-              Berätta kort vad sajten ska göra. Vi planerar, bygger och visar
-              en förhandsvisning du kan klicka runt i direkt här.
+              Berätta kort vad sajten ska göra. Vi planerar, bygger och visar en
+              förhandsvisning du kan klicka runt i direkt här.
             </p>
           </div>
         </div>
@@ -915,8 +966,12 @@ export function ViewerPanel({
           banner med titel/message/hint istället för den tidigare hårdkodade
           mock-run-strängen. */}
       {showUnavailable && unavailable ? (
+        // pointer-events-none på overlayn så den inte fångar klick i tomma
+        // ytan, men kortet självt är pointer-events-auto så "Försök igen"
+        // går att trycka på. Tidigare saknades retry helt — operatören var
+        // tvungen att välja om runen för att trigga om hämtningen.
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6">
-          <div className="max-w-md rounded-xl border border-amber-500/40 bg-amber-500/10 px-5 py-4 text-sm text-amber-800 dark:text-amber-300">
+          <div className="pointer-events-auto max-w-md rounded-xl border border-amber-500/40 bg-amber-500/10 px-5 py-4 text-sm text-amber-800 dark:text-amber-300">
             {unavailable.title ? (
               <div className="mb-1 font-medium">{unavailable.title}</div>
             ) : null}
@@ -926,6 +981,15 @@ export function ViewerPanel({
                 {unavailable.hint}
               </div>
             ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setRetryNonce((n) => n + 1)}
+              className="mt-3 border-amber-500/50 bg-transparent text-amber-800 hover:bg-amber-500/15 dark:text-amber-200"
+            >
+              Försök igen
+            </Button>
           </div>
         </div>
       ) : null}
@@ -1053,6 +1117,10 @@ export function ViewerPanel({
             src={localPreviewUrl}
             title="Sajt-preview"
             className="h-full w-full border-0 bg-white"
+            // onLoad flippar iframeLoaded → skelett-overlayn nedan döljs.
+            // Fångar både första render och byte av vald run. (Hanterar
+            // inte fel inuti iframen — det är ett separat, framtida steg.)
+            onLoad={() => setIframeLoaded(true)}
             // Tillåt scripts (Next.js client-side hydration) och
             // same-origin (sajten behåller sin egen origin —
             // localhost:<port> som vi spawnat, eller vercel.run-sandboxen
@@ -1062,6 +1130,25 @@ export function ViewerPanel({
             // och behövs så den genererade sajtens egna fetch/hydration fungerar.
             sandbox="allow-scripts allow-same-origin allow-forms"
           />
+          {/*
+            Skelett-overlay tills iframens dokument laddat. Dödar den vita
+            blixten mellan att URL:en sätts och Next.js hydrerat. Gate:ad
+            mot isBuilding/isFinalizing så den inte dubblerar
+            BuildProgressCard (som redan äger ytan under bygge).
+          */}
+          {!iframeLoaded && !isBuilding && !isFinalizing ? (
+            <div
+              className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center bg-white"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="sr-only">Laddar preview…</span>
+              <Loader2
+                aria-hidden
+                className="text-muted-foreground/50 h-6 w-6 motion-safe:animate-spin"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 

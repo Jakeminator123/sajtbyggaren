@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CheckCircle2,
-  Info,
-  TriangleAlert,
-  X,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Info, TriangleAlert, X, XCircle } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -74,6 +68,11 @@ const DEFAULT_DURATIONS: Record<ToastVariant, number> = {
 // nästa toast slidar in.
 const CLOSE_ANIMATION_MS = 280;
 
+// Tak för hur många toaster som visas samtidigt. När en ny pushas över
+// taket stängs den äldsta aktiva (med close-animation) så stacken inte
+// växer obegränsat vid t.ex. upprepade retry-fel.
+const MAX_VISIBLE_TOASTS = 4;
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
   // Vi håller alla aktiva timeouts i en ref så de kan rensas vid manuell
@@ -82,6 +81,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const timeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
   );
+  // Synk-spegel av `toasts` så `show` kan läsa aktuell stack synkront
+  // (dedupe + max-stack) utan att stänga över stale state.
+  const toastsRef = useRef<ToastEntry[]>([]);
+  useEffect(() => {
+    toastsRef.current = toasts;
+  }, [toasts]);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -137,6 +142,27 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const show = useCallback(
     (input: ToastInput): string => {
       const variant = input.variant ?? "info";
+
+      // Dedupe: en identisk (variant + titel + beskrivning), ännu icke-
+      // stängande toast finns redan → returnera dess id i st.f. att stapla
+      // en dubblett. Fångar t.ex. upprepade "Kunde inte ladda runs"-retrys.
+      const duplicate = toastsRef.current.find(
+        (toast) =>
+          !toast.closing &&
+          (toast.variant ?? "info") === variant &&
+          toast.title === input.title &&
+          toast.description === input.description,
+      );
+      if (duplicate) return duplicate.id;
+
+      // Max-stack: stäng äldsta aktiva toasten innan vi lägger till en ny
+      // över taket (med close-animation via dismiss, inte hård slice — så
+      // timers städas och transitionen syns).
+      const active = toastsRef.current.filter((toast) => !toast.closing);
+      if (active.length >= MAX_VISIBLE_TOASTS) {
+        dismiss(active[0].id);
+      }
+
       const id =
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
@@ -233,7 +259,7 @@ function ToastViewport({
       aria-label="Aviseringar"
       className={cn(
         "pointer-events-none fixed inset-x-0 top-20 z-[80] mx-auto flex w-full max-w-md flex-col gap-2 px-4",
-        "sm:right-4 sm:top-20 sm:left-auto sm:mx-0 sm:max-w-sm sm:px-0",
+        "sm:top-20 sm:right-4 sm:left-auto sm:mx-0 sm:max-w-sm sm:px-0",
       )}
     >
       {toasts.map((toast) => (
@@ -267,11 +293,7 @@ function ToastItem({
           : "animate-in slide-in-from-top-2 fade-in",
       )}
     >
-      <Icon
-        data-variant-icon
-        className="mt-0.5 h-4 w-4 shrink-0"
-        aria-hidden
-      />
+      <Icon data-variant-icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
       <div className="flex-1 text-[13px] leading-snug">
         {toast.title ? (
           <p className="text-foreground font-medium">{toast.title}</p>
@@ -303,7 +325,7 @@ function ToastItem({
         type="button"
         onClick={() => onDismiss(toast.id)}
         aria-label="Stäng avisering"
-        className="text-muted-foreground hover:text-foreground -mr-1 -mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors"
+        className="text-muted-foreground hover:text-foreground -mt-1 -mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors"
       >
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>

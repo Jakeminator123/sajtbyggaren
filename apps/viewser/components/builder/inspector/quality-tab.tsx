@@ -13,26 +13,31 @@ import type { RunArtefactBundle } from "@/components/builder/inspector/use-run-a
 import { cn } from "@/lib/utils";
 
 /**
- * Kvalitet & Bygg-tab: visar status från build-result.json (status,
- * duration, exit code), quality-result.json (findings per gate), och
- * repair-result.json (om/hur Repair Pipeline försökte fixa något).
- * Vi narrowar shapes lokalt med små helpers istället för att hård-
- * typa hela artefakten — formatet är fortfarande pre-1.0 i builder
- * MVP:n och vi vill inte bryta inspectorn varje gång engine byter
- * fält-namn.
+ * Kvalitet & Bygg-tab: visar status från build-result.json
+ * (status + runDurationMs), quality-result.json (status, summary, checks[])
+ * och repair-result.json (status, iterations, mechanicalFixesApplied[],
+ * remainingErrors[]).
+ *
+ * Fälten speglar de canonical pydantic-shaparna i
+ * `packages/generation/quality_gate/models.py` (QualityResult.checks[] med
+ * name/status/findings/severity) och `packages/generation/repair/models.py`
+ * (RepairResult.mechanicalFixesApplied[] / remainingErrors). Vi narrowar
+ * shapes lokalt med små helpers istället för att hård-typa hela artefakten —
+ * äldre runs som saknar fälten faller naturligt ur defensiv parsing.
  */
 
-type QualityFinding = {
-  gate?: string;
+type QualityCheck = {
+  name?: string;
+  status?: string;
+  detail?: string;
   severity?: string;
-  message?: string;
-  file?: string;
+  findings: string[];
 };
 
-type RepairAction = {
-  id?: string;
-  status?: string;
-  description?: string;
+type RepairFix = {
+  name?: string;
+  detail?: string;
+  success?: boolean;
 };
 
 function asString(value: unknown): string | null {
@@ -46,34 +51,40 @@ function asNumber(value: unknown): number | null {
   return value;
 }
 
-function asFindings(value: unknown): QualityFinding[] {
+function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  const out: QualityFinding[] = [];
+  return value.filter(
+    (entry): entry is string => typeof entry === "string" && entry.length > 0,
+  );
+}
+
+function asChecks(value: unknown): QualityCheck[] {
+  if (!Array.isArray(value)) return [];
+  const out: QualityCheck[] = [];
   for (const entry of value) {
     if (!entry || typeof entry !== "object") continue;
     const obj = entry as Record<string, unknown>;
-    const finding: QualityFinding = {};
-    if (typeof obj.gate === "string") finding.gate = obj.gate;
-    if (typeof obj.severity === "string") finding.severity = obj.severity;
-    if (typeof obj.message === "string") finding.message = obj.message;
-    if (typeof obj.file === "string") finding.file = obj.file;
-    out.push(finding);
+    const check: QualityCheck = { findings: asStringList(obj.findings) };
+    if (typeof obj.name === "string") check.name = obj.name;
+    if (typeof obj.status === "string") check.status = obj.status;
+    if (typeof obj.detail === "string") check.detail = obj.detail;
+    if (typeof obj.severity === "string") check.severity = obj.severity;
+    out.push(check);
   }
   return out;
 }
 
-function asRepairActions(value: unknown): RepairAction[] {
+function asRepairFixes(value: unknown): RepairFix[] {
   if (!Array.isArray(value)) return [];
-  const out: RepairAction[] = [];
+  const out: RepairFix[] = [];
   for (const entry of value) {
     if (!entry || typeof entry !== "object") continue;
     const obj = entry as Record<string, unknown>;
-    const action: RepairAction = {};
-    if (typeof obj.id === "string") action.id = obj.id;
-    if (typeof obj.status === "string") action.status = obj.status;
-    if (typeof obj.description === "string")
-      action.description = obj.description;
-    out.push(action);
+    const fix: RepairFix = {};
+    if (typeof obj.name === "string") fix.name = obj.name;
+    if (typeof obj.detail === "string") fix.detail = obj.detail;
+    if (typeof obj.success === "boolean") fix.success = obj.success;
+    out.push(fix);
   }
   return out;
 }
@@ -83,7 +94,13 @@ function statusBadge(status: string | null): {
   classes: string;
   Icon: typeof CheckCircle2;
 } {
-  if (status === "ok" || status === "mock-complete" || status === "skipped") {
+  if (
+    status === "ok" ||
+    status === "mock-complete" ||
+    status === "skipped" ||
+    status === "not-needed" ||
+    status === "fixed"
+  ) {
     return {
       label: status,
       classes:
@@ -91,7 +108,11 @@ function statusBadge(status: string | null): {
       Icon: CheckCircle2,
     };
   }
-  if (status === "degraded") {
+  if (
+    status === "degraded" ||
+    status === "partial-fix" ||
+    status === "no-fix-applied"
+  ) {
     return {
       label: status,
       classes:
@@ -113,12 +134,11 @@ function statusBadge(status: string | null): {
   };
 }
 
-function severityClasses(severity: string | undefined): string {
-  if (severity === "error" || severity === "blocking") {
-    return "text-destructive border-destructive/40 bg-destructive/5";
-  }
-  if (severity === "warning" || severity === "warn") {
-    return "text-amber-700 dark:text-amber-400 border-amber-400/30 bg-amber-50/40 dark:bg-amber-950/10";
+function checkTone(check: QualityCheck): string {
+  if (check.status === "failed") {
+    return check.severity === "warning"
+      ? "text-amber-700 dark:text-amber-400 border-amber-400/30 bg-amber-50/40 dark:bg-amber-950/10"
+      : "text-destructive border-destructive/40 bg-destructive/5";
   }
   return "text-muted-foreground border-border/40 bg-card/40";
 }
@@ -141,30 +161,26 @@ export function QualityTab({
   const repairResult = bundle.repairResult ?? {};
 
   const buildStatus = asString(buildResult.status);
-  const buildDuration = asNumber(buildResult.durationMs);
-  const exitCode = asNumber(buildResult.exitCode);
+  const buildDuration = asNumber(buildResult.runDurationMs);
   const buildBadge = statusBadge(buildStatus);
   const BuildIcon = buildBadge.Icon;
 
-  // Quality artefakten har inget perfekt schema än. Acceptera både
-  // `findings` (flat) och `gates: [{ findings: [] }]` (grouped).
-  const flatFindings = asFindings(qualityResult.findings);
-  const groupedFindings: QualityFinding[] = [];
-  if (Array.isArray(qualityResult.gates)) {
-    for (const gate of qualityResult.gates as unknown[]) {
-      if (!gate || typeof gate !== "object") continue;
-      const obj = gate as Record<string, unknown>;
-      const sub = asFindings(obj.findings);
-      const gateLabel = typeof obj.id === "string" ? obj.id : undefined;
-      for (const f of sub) {
-        groupedFindings.push({ ...f, gate: f.gate ?? gateLabel });
-      }
-    }
-  }
-  const findings = [...flatFindings, ...groupedFindings];
+  // quality-result.json: canonical shape är { status, summary, checks[] }
+  // (packages/generation/quality_gate/models.py). Varje check har name,
+  // status (ok/failed/skipped), severity (blocking/warning) och findings[].
+  const gateStatus = asString(qualityResult.status);
+  const gateSummary = asString(qualityResult.summary);
+  const checks = asChecks(qualityResult.checks);
+  const failedChecks = checks.filter((check) => check.status === "failed");
 
-  const repairActions = asRepairActions(repairResult.actions);
+  // repair-result.json: { status, iterations, mechanicalFixesApplied[],
+  // remainingErrors[], qualityStatusBefore } (packages/generation/repair).
   const repairStatus = asString(repairResult.status);
+  const repairFixes = asRepairFixes(repairResult.mechanicalFixesApplied);
+  const remainingErrors = asStringList(repairResult.remainingErrors);
+  const repairIterations = asNumber(repairResult.iterations);
+  const qualityBefore = asString(repairResult.qualityStatusBefore);
+  const hasRepair = bundle.repairResult !== null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -187,55 +203,85 @@ export function QualityTab({
               {(buildDuration / 1000).toFixed(1)}s
             </span>
           ) : null}
-          {exitCode !== null ? (
-            <span className="text-muted-foreground text-[10.5px]">
-              exit {exitCode}
-            </span>
-          ) : null}
         </div>
       </div>
 
-      {/* Quality findings */}
+      {/* Quality Gate */}
       <div>
         <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10.5px] tracking-[0.16em] uppercase">
           <ShieldCheck className="h-3 w-3" aria-hidden />
-          Quality Gate ({findings.length})
+          Quality Gate
+          {gateStatus ? ` · ${gateStatus}` : ""}
+          {checks.length > 0
+            ? ` (${failedChecks.length}/${checks.length})`
+            : ""}
         </div>
-        {findings.length === 0 ? (
+        {gateSummary ? (
+          <p className="text-muted-foreground mb-1.5 text-[11px] leading-snug">
+            {gateSummary}
+          </p>
+        ) : null}
+        {bundle.qualityResult === null ? (
           <p className="text-muted-foreground text-[11.5px] italic">
-            Inga findings — Quality Gate gick rent.
+            quality-result.json saknas i denna run.
+          </p>
+        ) : checks.length === 0 ? (
+          <p className="text-muted-foreground text-[11.5px] italic">
+            Inga checks rapporterade i denna run.
           </p>
         ) : (
           <ul className="flex flex-col gap-1.5">
-            {findings.map((finding, idx) => {
-              const fixPrompt = `Fixa Quality Gate-finding i ${finding.file ?? "okänd fil"} (gate: ${finding.gate ?? "—"}): ${finding.message ?? "—"}`;
+            {checks.map((check, idx) => {
+              const failed = check.status === "failed";
+              const fixContext =
+                check.detail ||
+                (check.findings.length > 0
+                  ? check.findings.join("; ")
+                  : "se findings");
+              const fixPrompt = `Fixa Quality Gate-check "${check.name ?? "okänd"}"${
+                check.severity ? ` (${check.severity})` : ""
+              }: ${fixContext}`;
               return (
                 <li
-                  key={`${finding.gate ?? "gate"}-${idx}`}
+                  key={`${check.name ?? "check"}-${idx}`}
                   className={cn(
                     "rounded-md border p-2 text-[11.5px]",
-                    severityClasses(finding.severity),
+                    checkTone(check),
                   )}
                 >
                   <div className="mb-0.5 flex items-baseline justify-between gap-2">
                     <span className="font-mono text-[10.5px]">
-                      {finding.gate ?? "—"} · {finding.severity ?? "info"}
+                      {check.name ?? "—"} · {check.status ?? "okänd"}
                     </span>
-                    <QuickPromptButton
-                      label="Be om fix"
-                      prompt={fixPrompt}
-                      isBuilding={isBuilding}
-                      isPending={pendingPrompt === fixPrompt}
-                      onSelect={onPrompt}
-                    />
+                    {failed ? (
+                      <QuickPromptButton
+                        label="Be om fix"
+                        prompt={fixPrompt}
+                        isBuilding={isBuilding}
+                        isPending={pendingPrompt === fixPrompt}
+                        onSelect={onPrompt}
+                      />
+                    ) : null}
                   </div>
-                  {finding.message ? (
-                    <p className="leading-snug">{finding.message}</p>
+                  {check.detail ? (
+                    <p className="leading-snug">{check.detail}</p>
                   ) : null}
-                  {finding.file ? (
-                    <code className="text-muted-foreground mt-0.5 inline-block font-mono text-[10px]">
-                      {finding.file}
-                    </code>
+                  {check.findings.length > 0 ? (
+                    <ul className="mt-1 ml-3.5 list-disc space-y-0.5">
+                      {check.findings.slice(0, 5).map((finding, fIdx) => (
+                        <li
+                          key={`${check.name ?? "check"}-finding-${fIdx}`}
+                          className="leading-snug break-words"
+                        >
+                          {finding}
+                        </li>
+                      ))}
+                      {check.findings.length > 5 ? (
+                        <li className="text-muted-foreground italic">
+                          … och {check.findings.length - 5} till
+                        </li>
+                      ) : null}
+                    </ul>
                   ) : null}
                 </li>
               );
@@ -244,44 +290,81 @@ export function QualityTab({
         )}
       </div>
 
-      {/* Repair actions */}
-      {repairActions.length > 0 || repairStatus ? (
+      {/* Repair Pipeline */}
+      {hasRepair ? (
         <div>
           <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10.5px] tracking-[0.16em] uppercase">
             <Hammer className="h-3 w-3" aria-hidden />
             Repair Pipeline
             {repairStatus ? ` · ${repairStatus}` : ""}
           </div>
-          {repairActions.length === 0 ? (
+          {repairIterations !== null || qualityBefore ? (
+            <p className="text-muted-foreground mb-1.5 text-[10.5px]">
+              {repairIterations !== null
+                ? `iterationer: ${repairIterations}`
+                : ""}
+              {qualityBefore ? ` · gate innan: ${qualityBefore}` : ""}
+            </p>
+          ) : null}
+          {repairFixes.length === 0 ? (
             <p className="text-muted-foreground text-[11.5px] italic">
-              Repair Pipeline har inga actions att rapportera.
+              Inga mekaniska fixes körda.
             </p>
           ) : (
             <ul className="flex flex-col gap-1">
-              {repairActions.map((action, idx) => (
+              {repairFixes.map((fix, idx) => (
                 <li
-                  key={`${action.id ?? "action"}-${idx}`}
+                  key={`${fix.name ?? "fix"}-${idx}`}
                   className="border-border/40 bg-card/40 rounded-md border p-2 text-[11.5px]"
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <code className="text-foreground bg-muted/40 rounded px-1.5 py-0.5 font-mono text-[10.5px]">
-                      {action.id ?? "—"}
+                      {fix.name ?? "—"}
                     </code>
-                    {action.status ? (
-                      <span className="text-muted-foreground font-mono text-[10.5px]">
-                        {action.status}
+                    {fix.success !== undefined ? (
+                      <span
+                        className={cn(
+                          "font-mono text-[10.5px]",
+                          fix.success
+                            ? "text-emerald-700 dark:text-emerald-400"
+                            : "text-destructive",
+                        )}
+                      >
+                        {fix.success ? "fixad" : "misslyckades"}
                       </span>
                     ) : null}
                   </div>
-                  {action.description ? (
+                  {fix.detail ? (
                     <p className="text-muted-foreground mt-1 leading-snug">
-                      {action.description}
+                      {fix.detail}
                     </p>
                   ) : null}
                 </li>
               ))}
             </ul>
           )}
+          {remainingErrors.length > 0 ? (
+            <div className="mt-1.5">
+              <p className="text-muted-foreground text-[10.5px]">
+                Kvarstående fel:
+              </p>
+              <ul className="text-destructive mt-0.5 ml-3.5 list-disc space-y-0.5 text-[11px]">
+                {remainingErrors.slice(0, 5).map((err, idx) => (
+                  <li
+                    key={`remaining-${idx}`}
+                    className="leading-snug break-words"
+                  >
+                    {err}
+                  </li>
+                ))}
+                {remainingErrors.length > 5 ? (
+                  <li className="text-muted-foreground italic">
+                    … och {remainingErrors.length - 5} till
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

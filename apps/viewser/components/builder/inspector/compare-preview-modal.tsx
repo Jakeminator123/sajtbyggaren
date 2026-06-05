@@ -1,12 +1,7 @@
 "use client";
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import {
-  AlertTriangle,
-  ExternalLink,
-  Loader2,
-  X as XIcon,
-} from "lucide-react";
+import { AlertTriangle, ExternalLink, Loader2, X as XIcon } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -141,7 +136,7 @@ export function ComparePreviewModal({
         />
         <DialogPrimitive.Popup
           className={cn(
-            "bg-background fixed inset-2 z-50 flex flex-col overflow-hidden rounded-2xl shadow-2xl ring-1 ring-foreground/10 outline-none sm:inset-4",
+            "bg-background ring-foreground/10 fixed inset-2 z-50 flex flex-col overflow-hidden rounded-2xl shadow-2xl ring-1 outline-none sm:inset-4",
             "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
             "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           )}
@@ -163,8 +158,8 @@ export function ComparePreviewModal({
           <div
             ref={scrollerRef}
             className={cn(
-              "min-h-0 flex-1 bg-muted/30 p-2",
-              "flex snap-x snap-mandatory gap-2 overflow-x-auto scrollbar-hidden",
+              "bg-muted/30 min-h-0 flex-1 p-2",
+              "scrollbar-hidden flex snap-x snap-mandatory gap-2 overflow-x-auto",
               "lg:grid lg:grid-cols-2 lg:overflow-hidden",
             )}
           >
@@ -207,7 +202,7 @@ function ModalHeader({
   onPaneSelect: (pane: "A" | "B") => void;
 }) {
   return (
-    <header className="border-border/60 bg-background/95 flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3 pt-safe">
+    <header className="border-border/60 bg-background/95 pt-safe flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <DialogPrimitive.Title className="text-foreground text-[14px] font-semibold tracking-tight">
           Visuell jämförelse
@@ -364,6 +359,13 @@ const PreviewPane = forwardRef<
               hideDevTools: true,
               clickToLoad: false,
               height: 1200,
+              // Paritet med ViewerPanel-embedden: utan denna flagga delegeras
+              // inte cross-origin-isolation till stackblitz.com-origin:en →
+              // `window.crossOriginIsolated` blir false och WebContainern
+              // bootar inte ("Unable to run Embedded Project"). Tillsammans
+              // med `credentialless`-attributet (createElement-patchen ovan)
+              // ger detta full isolation åt jämförelse-embedden i BÅDA panelerna.
+              crossOriginIsolated: true,
             },
           );
         } finally {
@@ -477,7 +479,7 @@ const PreviewPane = forwardRef<
 
         {status.kind === "unavailable" ? (
           <PaneOverlay>
-            <div className="border-amber-500/40 bg-amber-500/10 max-w-xs rounded-lg border px-3 py-2 text-center text-[11.5px] text-amber-800 dark:text-amber-300">
+            <div className="max-w-xs rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center text-[11.5px] text-amber-800 dark:text-amber-300">
               Preview saknas för denna run (mock-runs eller misslyckade builds
               skriver inte filer).
             </div>

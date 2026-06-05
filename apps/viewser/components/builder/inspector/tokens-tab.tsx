@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleCheck, Palette, RotateCcw, Sparkles, Wand2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   broadcastTokenChange,
@@ -95,7 +95,11 @@ function clearStoredTokens(): void {
   }
 }
 
-export function TokensTab({ isBuilding, pendingPrompt, onPrompt }: TokensTabProps) {
+export function TokensTab({
+  isBuilding,
+  pendingPrompt,
+  onPrompt,
+}: TokensTabProps) {
   // Lazy state-init så sessionStorage-läsningen sker inom render-
   // closure:n (SSR-safe — readStoredTokens returnerar null på server).
   const [tokens, setTokens] = useState<Record<TokenId, string>>(
@@ -169,16 +173,48 @@ export function TokensTab({ isBuilding, pendingPrompt, onPrompt }: TokensTabProp
     }
   }, []);
 
-  const commitPrompt = useMemo(
-    () => buildTokenCommitPrompt(tokens),
-    [tokens],
-  );
+  const commitPrompt = useMemo(() => buildTokenCommitPrompt(tokens), [tokens]);
   const hasOverrides = commitPrompt.length > 0;
+
+  // Prompten vi senast committat — så settle-effekten nedan vet när bygget
+  // konsumerat den och buffern kan tömmas.
+  const committedPromptRef = useRef<string | null>(null);
 
   const handleCommit = useCallback(() => {
     if (!hasOverrides || isBuilding) return;
+    committedPromptRef.current = commitPrompt;
+    // Rensa sessionStorage DIREKT vid commit. Annars överlevde de pågående
+    // overrides:en i sessionStorage och återuppväcktes vid nästa reload —
+    // trots att färgerna redan bakats in i sajten av bygget — så tabben
+    // visade dem som "ej committade" och erbjöd om samma commit i all
+    // oändlighet. State behålls tills bygget är klart (preview + pending-
+    // knappen ska visa de committade färgerna under bygget).
+    clearStoredTokens();
     void onPrompt(commitPrompt);
   }, [commitPrompt, hasOverrides, isBuilding, onPrompt]);
+
+  // Settle efter commit: när den committade prompten har konsumerats
+  // (pendingPrompt pekar inte längre på den) och inget bygge pågår, töm
+  // buffern till canonical. De committade färgerna är nu sajtens nya
+  // baseline och syns i preview-iframen efter reload — annars hade tabben
+  // fortsatt erbjuda samma commit. Async-IIFE så setState körs efter en
+  // mikrotask (React 19:s set-state-in-effect-mönster, samma som
+  // use-run-artefacts.ts).
+  useEffect(() => {
+    if (committedPromptRef.current === null) return;
+    if (isBuilding) return;
+    if (pendingPrompt === committedPromptRef.current) return;
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      committedPromptRef.current = null;
+      setTokens({ ...TOKEN_DEFAULTS });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingPrompt, isBuilding]);
 
   const isPending = pendingPrompt === commitPrompt && pendingPrompt !== null;
 
@@ -188,8 +224,8 @@ export function TokensTab({ isBuilding, pendingPrompt, onPrompt }: TokensTabProp
         <Palette className="text-foreground/70 mt-0.5 h-3.5 w-3.5 shrink-0" />
         <div className="text-foreground/85 flex-1 text-[12px] leading-relaxed">
           Experimentera med färgerna här. Mini-preview:n nedan uppdateras
-          direkt. Klicka <strong>Använd dessa färger</strong> för att
-          committa till sajten via ett nytt bygge.
+          direkt. Klicka <strong>Använd dessa färger</strong> för att committa
+          till sajten via ett nytt bygge.
         </div>
         {/* Live-badge: tänds när vi får ett ack från preview-iframens
             runtime-listener. Med lokal preview-server (same-machine
@@ -198,7 +234,7 @@ export function TokensTab({ isBuilding, pendingPrompt, onPrompt }: TokensTabProp
             degraderar tystlåtet: mini-preview:n + commit-knappen
             fungerar fortfarande. */}
         {isLive ? (
-          <span className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium dark:text-emerald-400">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
             <CircleCheck className="h-2.5 w-2.5" />
             Live i preview
           </span>
@@ -310,7 +346,7 @@ function TokenRow({
         value={value}
         onChange={(event) => onChange(event.target.value.toLowerCase())}
         aria-label={`Välj ${meta.label.toLowerCase()}`}
-        className="h-9 w-9 shrink-0 cursor-pointer rounded-md border-0 bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border-0"
+        className="h-9 w-9 shrink-0 cursor-pointer rounded-md border-0 bg-transparent p-0 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
       />
       <div className="min-w-0 flex-1">
         <div className="text-foreground text-[12.5px] font-medium tracking-tight">
@@ -374,8 +410,8 @@ function TokenPreview({ tokens }: { tokens: Record<TokenId, string> }) {
           className="text-[11.5px] leading-relaxed"
           style={{ color: tokens.foreground, opacity: 0.78 }}
         >
-          Vi hjälper små företag att synas online med moderna, snabba
-          hemsidor som ger resultat.
+          Vi hjälper små företag att synas online med moderna, snabba hemsidor
+          som ger resultat.
         </p>
         <div className="flex items-center gap-2">
           <button

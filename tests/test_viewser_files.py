@@ -3267,9 +3267,12 @@ def test_builder_followup_drives_buildstage_via_real_trace_signal() -> None:
     assert 'onStageChange("building")' in chat, (
         "FloatingChat måste rapportera 'building' när trace når build-fasen"
     )
-    # Avslut: success/failed rapporteras när bygget landar.
-    assert 'onStageChange?.(outcome === "failed" ? "failed" : "success")' in chat, (
-        "FloatingChat måste rapportera success/failed när bygget landar"
+    # Avslut: success/degraded/failed rapporteras när bygget landar. Mappningen
+    # delas med PromptBuilder via outcomeToStage (P2-fix #26: degraded/unknown
+    # → "degraded", inte "success", så progress-cardet inte visar grönt medan
+    # chatten rapporterar varning).
+    assert "onStageChange?.(outcomeToStage(outcome));" in chat, (
+        "FloatingChat måste rapportera stage via outcomeToStage när bygget landar"
     )
 
 
@@ -4029,4 +4032,443 @@ def test_floating_chat_first_run_hint_surfaces_core_loop() -> None:
     )
     assert "onShowVersions={onOpenHistory}" in shell, (
         "BuilderShell ska koppla 'Visa versioner' till historik-ingången"
+    )
+
+
+# ---------------------------------------------------------------------------
+# UX-batch (versionssynlighet / preview-tillstånd / FloatingChat / a11y).
+# Source-lock-tester som låser de fyra in-lane-förbättringarna så de inte
+# tyst tas bort i framtida UI-refactor.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_run_history_pending_dot_is_distinct_and_pulses() -> None:
+    """S1: `pending` (faktiskt pågående bygge) ska ha en egen färg + puls
+    så det inte konflateras med de grå terminal-statusarna skipped/unknown.
+    """
+    text = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(encoding="utf-8")
+    assert 'pending: "bg-sky-400"' in text, (
+        "Run History ska ge pending en egen sky-färg, inte falla igenom "
+        "till den grå muted-foreground-pricken."
+    )
+    assert 'status === "pending"' in text and "motion-safe:animate-pulse" in text, (
+        "pending-pricken ska pulsera (motion-safe) för att signalera pågående bygge."
+    )
+    assert "formatAbsolute" in text and "toLocaleString" in text, (
+        "Relativa tider ska ha en absolut tidsstämpel-tooltip (title) via formatAbsolute."
+    )
+
+
+@pytest.mark.tooling
+def test_versions_tab_status_palette_and_absolute_timestamp() -> None:
+    """S1: Versioner-tabbens status-palett ska vara konsekvent med
+    run-history (pending + aborted) och visa absolut tidsstämpel-tooltip.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'pending: "bg-sky-400"' in text and 'aborted: "bg-destructive"' in text, (
+        "Versioner-tabben ska spegla run-history-paletten (pending + aborted) "
+        "så de två versionsvyerna är konsekventa."
+    )
+    assert "formatAbsolute" in text, (
+        "Versioner-tabben ska ha samma absolut-tidsstämpel-tooltip som run-history."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_iframe_has_load_state_overlay() -> None:
+    """S2: preview-iframen ska flippa ett iframeLoaded-state via onLoad och
+    visa en skelett-overlay tills dokumentet laddat, gate:ad mot
+    isBuilding/isFinalizing så den inte dubblerar BuildProgressCard.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    assert "iframeLoaded" in text and "setIframeLoaded" in text, (
+        "ViewerPanel ska spåra iframens laddningsstatus."
+    )
+    assert "onLoad={() => setIframeLoaded(true)}" in text, (
+        "Iframens onLoad ska flippa iframeLoaded → overlayn döljs."
+    )
+    assert "!iframeLoaded && !isBuilding && !isFinalizing" in text, (
+        "Skelett-overlayn ska gate:as mot build-tillstånd så den inte dubblerar BuildProgressCard."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_failed_build_offers_retry() -> None:
+    """S3: ett pipeline-failed bygge (summary.variant === 'error') ska
+    sätta retryPrompt så ErrorBubble visar 'Försök igen'. Tidigare fick
+    bara HTTP/network-fel en retry-knapp, inte själva bygg-felet.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'summary.variant === "error" ? trimmed || undefined : undefined' in text, (
+        "Failed-bygget ska sätta retryPrompt så retry-knappen dyker upp."
+    )
+
+
+@pytest.mark.tooling
+def test_wizard_tab_strip_is_keyboard_navigable() -> None:
+    """S4: wizard-stegstripen ska följa WAI-ARIA tabs-mönstret — roving
+    tabindex, pil/Home/End-navigering och tabpanel-koppling.
+    """
+    text = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "tabIndex={isActive ? 0 : -1}" in text, (
+        "Stegstripen ska använda roving tabindex (bara aktiv flik i tab-ordningen)."
+    )
+    assert '"ArrowRight"' in text and '"Home"' in text and '"End"' in text, (
+        "Stegstripen ska hantera pil/Home/End-navigering."
+    )
+    assert 'role="tabpanel"' in text and 'aria-controls="wizard-tabpanel"' in text, (
+        "Flikarna ska peka på en tabpanel (aria-controls) och panelen ska ha role=tabpanel."
+    )
+
+
+@pytest.mark.tooling
+def test_quality_tab_reads_canonical_artefact_schema() -> None:
+    """P0: Kvalitet-tabben måste läsa de canonical artefakt-shaparna, inte
+    ett påhittat parallellt schema. Den läste tidigare qualityResult.findings
+    / qualityResult.gates och repairResult.actions — fält som inte finns —
+    vilket fick failade runs att visa "Quality Gate gick rent" och dolde
+    hela Repair Pipeline-blocket.
+
+    Sanningskällor:
+      - packages/generation/quality_gate/models.py: QualityResult har
+        status + checks[] (name/status/detail/severity/findings).
+      - packages/generation/repair/models.py: RepairResult har status,
+        iterations, mechanicalFixesApplied[], remainingErrors[],
+        qualityStatusBefore.
+      - build-result.json: runDurationMs (inte durationMs), inget exitCode.
+
+    Source-lock så en framtida refaktor inte kan återinföra fel fältnamn
+    och tysta gate-resultatet igen.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "quality-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Quality Gate: måste läsa checks[] + status + summary (canonical), inte
+    # findings/gates (det icke-existerande parallella schemat).
+    assert "qualityResult.checks" in text, (
+        "Kvalitet-tabben ska läsa qualityResult.checks[] (canonical), inte "
+        "qualityResult.findings/gates."
+    )
+    assert "qualityResult.status" in text, (
+        "Kvalitet-tabben ska visa gate-status från qualityResult.status."
+    )
+    assert "qualityResult.findings" not in text and "qualityResult.gates" not in text, (
+        "Kvalitet-tabben får inte läsa det påhittade findings/gates-schemat — "
+        "det var P0-buggen som fick failade runs att se rena ut."
+    )
+    assert 'check.status === "failed"' in text, (
+        "Kvalitet-tabben ska härleda failade checks från check.status, inte "
+        "anta att en tom findings-lista betyder rent gate."
+    )
+
+    # Repair Pipeline: canonical mechanicalFixesApplied/remainingErrors, inte actions.
+    assert "repairResult.mechanicalFixesApplied" in text, (
+        "Repair-blocket ska läsa repairResult.mechanicalFixesApplied[]."
+    )
+    assert "repairResult.remainingErrors" in text, (
+        "Repair-blocket ska läsa repairResult.remainingErrors[]."
+    )
+    assert "repairResult.actions" not in text, (
+        "Repair-blocket får inte läsa det icke-existerande repairResult.actions."
+    )
+
+    # Build: runDurationMs (inte durationMs), inget exitCode-fält.
+    assert "buildResult.runDurationMs" in text, (
+        "Build-statusen ska läsa runDurationMs (canonical), inte durationMs."
+    )
+    assert "buildResult.durationMs" not in text and "buildResult.exitCode" not in text, (
+        "Build-statusen får inte läsa durationMs/exitCode — de finns inte i build-result.json."
+    )
+
+
+@pytest.mark.tooling
+def test_dossiers_tab_handles_flat_selected_dossiers() -> None:
+    """P1: site-plan.json:selectedDossiers är ANTINGEN en platt id-lista
+    (vanligast) eller objektformen { required, recommended, conditional,
+    rejected }. Tabben castade tidigare alltid till objekt → den platta
+    listan tappade alla fält och fyra tomma grupper visades på vanliga runs.
+    Source-lock att båda formerna hanteras (Array.isArray-gren)."""
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "dossiers-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "Array.isArray(rawSelected)" in text, (
+        "Dossiers-tabben måste detektera den platta listformen av "
+        "selectedDossiers (Array.isArray), inte bara objektformen."
+    )
+    assert "isFlatList" in text, (
+        "Dossiers-tabben ska rendera en 'Valda'-grupp för den platta listan "
+        "istället för fyra tomma objekt-grupper."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_copy_directive_keeps_exact_change_set() -> None:
+    """P1: när en run har BÅDE copy-direktiv OCH en exakt change-set (routes/
+    variant) ska den strukturella change-set:en fortfarande visas under
+    'Ändrat'. Tidigare returnerade copy-grenen utan changes och dolde
+    tillagda/borttagna sidor. Source-lock att exactChanges beräknas före
+    copy-grenen och bifogas där."""
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    copy_idx = text.find("const copyLines = summarizeCopyDirectives")
+    exact_idx = text.find("const exactChanges = summarizeChangeSet")
+    assert exact_idx != -1 and copy_idx != -1, (
+        "Både exactChanges och copyLines måste härledas i build-outcome-mappningen."
+    )
+    assert exact_idx < copy_idx, (
+        "exactChanges måste beräknas FÖRE copy-grenen så copy-grenen kan "
+        "bifoga den strukturella change-set:en."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_persist_gated_on_hydration() -> None:
+    """P1: persist-effekterna i FloatingChat skrev default-värdet ('false')
+    till localStorage vid mount INNAN hydrerings-IIFE:n läst stored-värdena,
+    och nollställde därmed operatörens sparade minimized/quick-prompts-
+    preference. Source-lock att en hasHydratedRef-gate finns."""
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "hasHydratedRef" in text, (
+        "FloatingChat ska gat:a persist-effekterna mot en hasHydratedRef så "
+        "default-värden inte skriver över sparad localStorage före hydrering."
+    )
+    assert text.count("if (!hasHydratedRef.current) return;") >= 3, (
+        "Alla tre persist-effekterna (position/minimized/quick-prompts) ska "
+        "early-returna tills hydreringen läst klart."
+    )
+
+
+@pytest.mark.tooling
+def test_discovery_wizard_gates_forward_jumps() -> None:
+    """P1: tab-klick, pil-navigering och ⌥-siffra hoppade tidigare till valfritt
+    steg utan validering → operatören kunde skippa ett halvfyllt foundation-
+    steg. Source-lock att en resolveReachableStep-gate clamp:ar framåt-hopp
+    mot maxReachableStep (bakåt fortsatt fritt)."""
+    text = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "maxReachableStep" in text and "resolveReachableStep" in text, (
+        "Wizarden ska beräkna maxReachableStep och routa hopp genom resolveReachableStep."
+    )
+    assert "resolveReachableStep(idx, current)" in text, (
+        "Tab-klick ska gå genom resolveReachableStep, inte rå setStepIndex(idx)."
+    )
+
+
+@pytest.mark.tooling
+def test_visual_step_revalidates_vibe_against_scaffold() -> None:
+    """P1: vid family-byte av-/återmonteras VisualStep men auto-default-
+    effekten early-returnade så snart vibeId var truthy → ett stale vibe-id
+    från föregående family behölls (syntes ej markerat men låg kvar i
+    payloaden). Source-lock att den nu validerar mot vibes-listan."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "visual-step.tsx"
+    ).read_text(encoding="utf-8")
+    assert (
+        "currentVibeValid" in text and "vibes.some((v) => v.id === answers.vibe.vibeId)" in text
+    ), (
+        "VisualStep ska validera vald vibe mot scaffoldens vibe-lista och "
+        "byta ut en stale vibe mot familjens default."
+    )
+
+
+@pytest.mark.tooling
+def test_tokens_tab_clears_session_storage_on_commit() -> None:
+    """P1: sessionStorage-overrides överlevde en commit och återuppväcktes vid
+    reload — trots att färgerna redan bakats in i sajten — så tabben erbjöd
+    om samma commit i oändlighet. Source-lock att handleCommit rensar storage
+    och att en settle-effekt tömmer buffern efter bygget."""
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "tokens-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+    commit_idx = text.find("const handleCommit = useCallback(")
+    assert commit_idx != -1, "tokens-tab.tsx ska ha handleCommit."
+    # clearStoredTokens måste anropas inom handleCommit (före onPrompt).
+    window = text[commit_idx : commit_idx + 600]
+    assert "clearStoredTokens();" in window, (
+        "handleCommit ska rensa sessionStorage vid commit så overrides inte "
+        "återuppväcks vid reload."
+    )
+    assert "committedPromptRef" in text, (
+        "Tokens-tabben ska spåra den committade prompten och settle:a buffern "
+        "efter att bygget konsumerat den."
+    )
+
+
+@pytest.mark.tooling
+def test_focus_trap_hook_used_by_custom_dialogs() -> None:
+    """P1: de custom overlay-dialogerna (AI-bildgenerator + wizardens
+    kortkommando-overlay) saknade focus-trap trots role=dialog/aria-modal.
+    Source-lock att useFocusTrap-hooken finns och används i båda."""
+    hook = VIEWSER_DIR / "lib" / "use-focus-trap.ts"
+    assert hook.exists(), "lib/use-focus-trap.ts ska finnas."
+    hook_text = hook.read_text(encoding="utf-8")
+    assert "export function useFocusTrap" in hook_text, (
+        "use-focus-trap.ts ska exportera useFocusTrap."
+    )
+    ai_dialog = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "ai-image-generator-dialog.tsx"
+    ).read_text(encoding="utf-8")
+    wizard = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "useFocusTrap(dialogRef, open)" in ai_dialog, (
+        "AI-bilddialogen ska fånga Tab inom dialogen via useFocusTrap."
+    )
+    assert "useFocusTrap(helpPanelRef, helpOpen)" in wizard, (
+        "Wizardens kortkommando-overlay ska fånga Tab via useFocusTrap."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_unavailable_banner_has_retry() -> None:
+    """P2: otillgänglig-bannern var helt pointer-events-none utan retry —
+    operatören tvingades välja om runen för att hämta om previewn. Source-lock
+    att kortet är klickbart (pointer-events-auto) och bumpar en retryNonce som
+    ingår i preview-effektens deps."""
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    assert "retryNonce" in text and "[runId, siteId, retryNonce]" in text, (
+        "Preview-effekten ska köra om när retryNonce bumpas."
+    )
+    assert "setRetryNonce((n) => n + 1)" in text and "Försök igen" in text, (
+        "Otillgänglig-bannern ska ha en 'Försök igen'-knapp som bumpar retryNonce."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_hero_respects_reduced_motion() -> None:
+    """P2: studio-hero-videorna autoplayade alltid (ingen reduced-motion-
+    respekt). Source-lock att autoPlay/loop gat:as mot en reducedMotion-flagga
+    läst via useSyncExternalStore (samma kontrakt som marketing-hero:n)."""
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    assert "useSyncExternalStore" in text and "reducedMotion" in text, (
+        "ViewerPanel ska läsa prefers-reduced-motion via useSyncExternalStore."
+    )
+    assert text.count("autoPlay={!reducedMotion}") >= 2, (
+        "Båda hero-videorna (mobil + desktop) ska sluta autoplaya under reduced-motion."
+    )
+
+
+@pytest.mark.tooling
+def test_site_inspector_tab_controlled_and_clears_error() -> None:
+    """P2: <Tabs> använde defaultValue och av-/återmonterades vid refresh →
+    aktiv tab nollades till 'Sidor'; och buildError överlevde sheet-stängning.
+    Source-lock att tab-värdet är kontrollerat och clearError körs vid stängning."""
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "site-inspector-sheet.tsx"
+    ).read_text(encoding="utf-8")
+    assert "value={activeTab}" in text and "onValueChange={setActiveTab}" in text, (
+        "Inspector-tabbarna ska vara kontrollerade så valet överlever refresh."
+    )
+    assert "if (!open) clearError();" in text, (
+        "buildError ska rensas när inspectorn stängs."
+    )
+
+
+@pytest.mark.tooling
+def test_compare_modal_sets_cross_origin_isolated() -> None:
+    """P2: jämförelse-embedden saknade crossOriginIsolated (paritet med
+    ViewerPanel) → WebContainern kunde faila att boota. Source-lock att flaggan
+    sätts."""
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "compare-preview-modal.tsx"
+    ).read_text(encoding="utf-8")
+    assert "crossOriginIsolated: true," in text, (
+        "Compare-modalens embed ska sätta crossOriginIsolated för paritet med ViewerPanel."
+    )
+
+
+@pytest.mark.tooling
+def test_payload_popover_uses_effective_scaffold_hint() -> None:
+    """P2: popover:n härledde scaffoldHint bara från family.scaffoldHint och
+    missade sub-kategori-uppgraderingar → visade en annan hint än backend fick.
+    Source-lock att den använder deriveEffectiveScaffoldHint (samma som
+    buildDiscoveryPayload)."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "payload-alignment-popover.tsx"
+    ).read_text(encoding="utf-8")
+    assert "deriveEffectiveScaffoldHint(family, answers.siteType)" in text, (
+        "Popover:n ska härleda scaffoldHint via deriveEffectiveScaffoldHint."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_uses_outcome_to_stage() -> None:
+    """P2: onStageChange mappade degraded/unknown → 'success' så progress-cardet
+    visade grönt medan chatten rapporterade varning. Source-lock att den nu
+    delar outcomeToStage med PromptBuilder."""
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "onStageChange?.(outcomeToStage(outcome));" in text, (
+        "FloatingChat ska mappa outcome via outcomeToStage (degraded ≠ success)."
+    )
+
+
+@pytest.mark.tooling
+def test_asset_dropzone_keeps_partial_uploads() -> None:
+    """P2: vid fel på fil N i en multi-upload kastades de redan uppladdade
+    filerna 1..N-1 bort (onUploaded kördes aldrig) → föräldralösa på servern.
+    Source-lock att catch-grenen lyfter de lyckade uppladdningarna."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "asset-dropzone.tsx"
+    ).read_text(encoding="utf-8")
+    assert "if (uploaded.length > 0) onUploaded(uploaded);" in text, (
+        "Partiellt misslyckad batch ska ändå lyfta de redan uppladdade filerna."
+    )
+
+
+@pytest.mark.tooling
+def test_assets_step_auto_hero_is_decoupled() -> None:
+    """P2: auto-hero delade objektreferens med galleri-raden (alt/placement
+    forkade tyst) och en galleri-borttagning nollade inte hero. Source-lock att
+    kandidaten klonas och att hero nollas när dess källrad tas bort."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "assets-step.tsx"
+    ).read_text(encoding="utf-8")
+    assert "heroImage: { ...candidate }" in text, (
+        "Auto-hero ska klona kandidaten så den inte delar referens med galleri-raden."
+    )
+    assert "heroFromThisRow" in text, (
+        "Borttagning av en galleri-rad ska nolla hero om den auto-pickades därifrån."
+    )
+
+
+@pytest.mark.tooling
+def test_versions_tab_refetches_on_active_bundle_change() -> None:
+    """P2: compare-diffen re-fetchade bara på id-byten → om ena sidan var den
+    aktiva runen och dess bundle byggdes om visades en stale diff. Source-lock
+    att en activeBundleSignal ingår i fetch-effektens deps."""
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx"
+    ).read_text(encoding="utf-8")
+    assert "activeBundleSignal" in text, (
+        "CompareSection ska härleda en activeBundleSignal för den aktiva sidan."
+    )
+    assert "[runIdA, runIdB, currentRunId, activeBundleSignal]" in text, (
+        "Fetch-effekten ska re-köra när den aktiva runens bundle ändras."
+    )
+
+
+@pytest.mark.tooling
+def test_toast_dedupes_and_caps_stack() -> None:
+    """P2: identiska toaster (t.ex. upprepade retry-fel) staplades obegränsat.
+    Source-lock att show:en dedupar mot aktiva toaster och har ett max-stack-tak."""
+    text = (VIEWSER_DIR / "components" / "ui" / "toast.tsx").read_text(encoding="utf-8")
+    assert "MAX_VISIBLE_TOASTS" in text, (
+        "Toast-systemet ska ha ett tak (MAX_VISIBLE_TOASTS) på samtidiga toaster."
+    )
+    assert "const duplicate = toastsRef.current.find(" in text, (
+        "show() ska deduplicera identiska aktiva toaster i st.f. att stapla dubbletter."
     )
