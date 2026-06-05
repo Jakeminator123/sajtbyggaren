@@ -2222,6 +2222,16 @@ def test_floating_chat_router_decision_readiness() -> None:
         "referens/discovery/plan-only."
     )
 
+    # B1 (2026-06-05): router-preempten får BARA köra på outcome==='ok'. Annars
+    # döljer router-raden (variant 'info') den auktoritativa failed/degraded-
+    # grenen och operatören tappar 'Försök igen' (retryPrompt sätts bara på
+    # variant 'error'). Lås att gaten finns.
+    assert 'if (routerView && outcome === "ok")' in text, (
+        "Router-preempten måste vara gated på outcome==='ok' så ett misslyckat "
+        "eller degraderat bygge aldrig döljs bakom en router-info-rad (och "
+        "behåller 'Försök igen')."
+    )
+
     # Ärlighets-nyans (2026-06-05): en ``unclear``/``requiresClarification``-
     # gissning får INTE preempta när bygget faktiskt rapporterade ett
     # auktoritativt no-op-skäl (B155 ``appliedVisibleEffect.applied === false``).
@@ -4298,6 +4308,92 @@ def test_quality_tab_reads_canonical_artefact_schema() -> None:
     )
     assert "buildResult.durationMs" not in text and "buildResult.exitCode" not in text, (
         "Build-statusen får inte läsa durationMs/exitCode — de finns inte i build-result.json."
+    )
+
+    # A1 (2026-06-05): kor-4a/4b copy-kritik läses från qualityResult.critic
+    # (score/source/issues[]) — warning-lane som backend skriver men UI tidigare
+    # aldrig visade. Source-lock så en refaktor inte tappar critic-ytan igen.
+    assert "qualityResult.critic" in text, (
+        "Kvalitet-tabben måste läsa qualityResult.critic (kor-4a/4b) — score, "
+        "source och issues[] skrivs av critic-lanen men visades inte alls."
+    )
+    assert "repairHint" in text and "issue.target" in text, (
+        "Critic-blocket ska visa issue.repairHint + issue.target så operatören "
+        "ser var fyndet ligger och får ett konkret fix-förslag."
+    )
+
+    # A2 (2026-06-05): repair-telemetri som backend redan skriver men UI tappade
+    # — gate-efter, reason, blueprint-repairs (kor-5), llm-fixes och per-check
+    # severity/durationMs. Source-lock per fält.
+    assert "repairResult.qualityStatusAfter" in text, (
+        "Repair-blocket ska visa gate-status EFTER reparationen "
+        "(qualityStatusAfter), inte bara qualityStatusBefore."
+    )
+    assert "repairResult.reason" in text, (
+        "Repair-blocket ska visa repairResult.reason (operatörsförklaring av "
+        "varför pipelinen stannade på sin status)."
+    )
+    assert "repairResult.blueprintRepairs" in text, (
+        "Repair-blocket ska visa kor-5 blueprintRepairs[] (issueType/field/"
+        "success) — annars är blueprint-repair-telemetrin osynlig."
+    )
+    assert "repairResult.llmFixesApplied" in text, (
+        "Repair-blocket ska läsa llmFixesApplied[] (tomt idag, populeras "
+        "Sprint 5+) så framtida LLM-fixar syns utan ny UI-deploy."
+    )
+    assert "check.durationMs" in text and "check.severity" in text, (
+        "Check-raden ska visa severity (blocking/warning) och durationMs så "
+        "operatören ser blockerande vs varning och gate-latens per check."
+    )
+
+
+@pytest.mark.tooling
+def test_run_details_panel_repair_fix_reads_canonical_fields() -> None:
+    """B3 (2026-06-05): RepairSection läste ``fix.status`` / ``fix.description``
+    — fält som inte finns på RepairFix. Canonical shape
+    (packages/generation/repair/models.py:RepairFix + repair-result.schema.json
+    :$defs.repairFix) är ``kind``/``name``/``target``/``detail``/``success``.
+    Effekten var att mekaniska fixar renderades namn-bara (success + operatörs-
+    detalj tappades tyst). Source-lock att panelen läser de riktiga fälten.
+    """
+    text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "fix.status" not in text and "fix.description" not in text, (
+        "run-details-panel får inte läsa fix.status/fix.description — de finns "
+        "inte på RepairFix (canonical: success/detail/kind/target)."
+    )
+    assert "fix.success" in text and "fix.detail" in text, (
+        "RepairSection ska visa fix.success (fixad/misslyckades) och fix.detail "
+        "från den canonical RepairFix-shapen."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_surfaces_unapplied_followup_intents() -> None:
+    """A3 (2026-06-05): backend skriver ``unappliedFollowupIntents`` (lista av
+    {target, reason}) i build-result.json — följd-asks den deterministiska v1-
+    pipelinen kände igen men inte kunde applicera. FloatingChat ignorerade dem
+    helt; operatören såg bara den generiska no-op-raden. Source-lock att UI:t
+    läser fältet och appenderar det till no-op-/degraded-grenarna.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "function summarizeUnappliedFollowupIntents(" in text, (
+        "FloatingChat måste ha en helper som läser unappliedFollowupIntents "
+        "defensivt (samma mönster som extractAppliedVisibleEffect)."
+    )
+    assert "buildResult.unappliedFollowupIntents" in text, (
+        "Helpern måste läsa unappliedFollowupIntents från build-result-payloaden."
+    )
+    assert "const unappliedNote = summarizeUnappliedFollowupIntents(" in text, (
+        "summarizeBuildResult ska beräkna en unapplied-svans en gång och "
+        "appenda den i no-op-/degraded-grenarna."
+    )
+    assert text.count("${unappliedNote}") >= 3, (
+        "unappliedNote ska appendas i båda no-op-grenarna OCH degraded-grenen "
+        "så oapplicerade följd-asks blir synliga oavsett utfall."
     )
 
 

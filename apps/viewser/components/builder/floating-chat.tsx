@@ -806,6 +806,33 @@ function summarizeRouterDecision(
   return null;
 }
 
+// A3 (B155 honest-level-1): backend listar i ``build-result.json`` de
+// följd-asks den deterministiska v1-pipelinen KÄNDE IGEN men inte kunde
+// applicera, som ``{target, reason}``. Komplement till den globala
+// ``appliedVisibleEffect``-boolean: i stället för bara "inget syntes" kan vi
+// säga EXAKT vad som inte landade. Backend bounded:ar listan (max 20 items,
+// target<=80, reason<=400); vi cappar ändå defensivt till 5 rader i bubblan
+// och renderar alltid som textnod (React escapar payloaden).
+function summarizeUnappliedFollowupIntents(
+  buildResult: Record<string, unknown> | undefined,
+): string {
+  if (!buildResult) return "";
+  const raw = buildResult.unappliedFollowupIntents;
+  if (!Array.isArray(raw)) return "";
+  const lines: string[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const obj = entry as Record<string, unknown>;
+    const target = typeof obj.target === "string" ? obj.target.trim() : "";
+    const reason = typeof obj.reason === "string" ? obj.reason.trim() : "";
+    if (!target && !reason) continue;
+    lines.push(target && reason ? `• ${target}: ${reason}` : `• ${target || reason}`);
+    if (lines.length >= 5) break;
+  }
+  if (lines.length === 0) return "";
+  return `\n\nDetta kände jag igen men kunde inte göra än:\n${lines.join("\n")}`;
+}
+
 function summarizeBuildResult(
   payload: PromptApiResponse,
   outcome: PromptBuildOutcome,
@@ -822,8 +849,14 @@ function summarizeBuildResult(
   // (dagens läge) → extractRouterDecision = null → oförändrat beteende.
   // Edit/multi_intent som krävde ett synligt bygge faller igenom
   // (summarizeRouterDecision → null) till den vanliga summeringen.
+  // Router-preempten får BARA köra när bygget gick igenom (outcome === "ok").
+  // Annars (failed/degraded) döljer router-raden — som returnerar variant
+  // "info" — den auktoritativa fel-/varningsgrenen nedan, och eftersom
+  // ``retryPrompt`` bara sätts på variant "error" (se sendFollowupPrompt)
+  // tappar operatören "Försök igen" på ett misslyckat bygge. Router-beslutet
+  // är en förbygg-gissning; det faktiska bygg-utfallet är sanning.
   const routerView = extractRouterDecision(payload);
-  if (routerView) {
+  if (routerView && outcome === "ok") {
     // Ärlighets-nyans: routerns ``unclear``/``requiresClarification`` är en
     // förbygg-gissning som kan ha fel — operatören kan ha varit tydlig ("gör
     // hero-knappen större") fast förfrågan helt enkelt inte stöds än. När
@@ -846,6 +879,10 @@ function summarizeBuildResult(
       }
     }
   }
+  // A3: ärlig svans med följd-asks som motorn kände igen men inte applicerade.
+  // Tom sträng på init-builds och follow-ups utan oapplicerade intents → ingen
+  // påverkan på de befintliga grenarna.
+  const unappliedNote = summarizeUnappliedFollowupIntents(payload.buildResult);
   // B3 — version-progression i success-meddelandet. När payload.version
   // är t.ex. 3 visar vi "v2 → v3" så operatören får en känsla av
   // historiken utan att Inspectorn behöver öppnas. För v1 (första
@@ -886,12 +923,12 @@ function summarizeBuildResult(
     if (effect && effect.applied === false) {
       if (effect.reason === "visible_files_unchanged") {
         return {
-          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter (företagsnamn, rubrik, tagline) — större layout- och strukturändringar som att centrera hero eller lägga till en sektion stöds inte än.`,
+          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter (företagsnamn, rubrik, tagline) — större layout- och strukturändringar som att centrera hero eller lägga till en sektion stöds inte än.${unappliedNote}`,
           variant: "info",
         };
       }
       return {
-        content: `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`,
+        content: `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".${unappliedNote}`,
         variant: "info",
       };
     }
@@ -942,8 +979,7 @@ function summarizeBuildResult(
   }
   if (outcome === "degraded") {
     return {
-      content:
-        "Sajten byggdes, men Quality Gate flaggade något (typecheck, route-scan eller policy). Sajten har ändå publicerats — se Inspector för detaljer.",
+      content: `Sajten byggdes, men Quality Gate flaggade något (typecheck, route-scan eller policy). Sajten har ändå publicerats — se Inspector för detaljer.${unappliedNote}`,
       variant: "warning",
     };
   }
