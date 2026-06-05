@@ -1,9 +1,11 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half). Verifierad `main` är `dfffb65`.
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva. Verifierad `main` är `8499f85`.
 
-Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
-(skiva 1b action half).
+Nya PRs sedan föregående checkpoint: PR #198 — feat(builder): flat-layout-städning +
+POSIX-tree-kill (B157 nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b
+UI half (OpenClaw decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR
+#201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva.
 
 ## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
 
@@ -1700,6 +1702,14 @@ Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
 
 Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
 skiva 1c kor-5 rerender wiring.
+
+
+### 2026-06-05 UTC — handoff.md före `dfffb65`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half). Verifierad `main` är `dfffb65`.
+
+Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
+(skiva 1b action half).
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
