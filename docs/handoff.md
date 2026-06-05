@@ -1,10 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-05 UTC, steward-auto efter PR #203 — sync(jakob-be->main): #202 visual_style theme + farm naming. Verifierad `main` är `8ec022c`.
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #205 — sync(jakob-be->main): #204 site-mutation-layers rule. Verifierad `main` är `eff73cb`.
 
-Nya PRs sedan föregående checkpoint: PR #202 — feat(followup): visual_style restyle
-(colour + font) + nicer unnamed-business label; PR #203 — sync(jakob-be->main): #202
-visual_style theme + farm naming.
+Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
+rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
+site-mutation-layers rule.
 
 ## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
 
@@ -1719,6 +1719,15 @@ Nya PRs sedan föregående checkpoint: PR #198 — feat(builder): flat-layout-st
 POSIX-tree-kill (B157 nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b
 UI half (OpenClaw decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR
 #201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva.
+
+
+### 2026-06-05 UTC — handoff.md före `8ec022c`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #203 — sync(jakob-be->main): #202 visual_style theme + farm naming. Verifierad `main` är `8ec022c`.
+
+Nya PRs sedan föregående checkpoint: PR #202 — feat(followup): visual_style restyle
+(colour + font) + nicer unnamed-business label; PR #203 — sync(jakob-be->main): #202
+visual_style theme + farm naming.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
