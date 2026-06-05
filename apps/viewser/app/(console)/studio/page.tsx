@@ -431,9 +431,18 @@ export default function Home() {
       />
 
       <ErrorBoundary area="Förhandsvisningen" className="h-full w-full">
+        {/* C4: preview-POST:en går mot /api/preview/<siteId> medan runId
+            driver fil-/StackBlitz-fallbacken. Project Input-väljaren i
+            ConsoleDrawer kan sätta selectedSiteId UTAN att rensa
+            selectedRunId → siteId och runId pekade då på olika sajter och
+            previewen startade fel .generated/<siteId>/. runSiteId är den
+            valda runens faktiska siteId (eller null när ingen run är vald),
+            så vi låter den vinna när en run är aktiv och faller tillbaka på
+            picker-sajten i hero/pre-build-läget. I normalfallet (run vald via
+            selectRunAndSyncSiteId/handleBuildDone) är de redan identiska. */}
         <ViewerPanel
           runId={selectedRunId}
-          siteId={selectedSiteId}
+          siteId={runSiteId ?? selectedSiteId}
           isBuilding={building}
           buildStage={buildStage}
         />

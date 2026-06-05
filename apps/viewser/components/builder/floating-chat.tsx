@@ -1556,7 +1556,16 @@ export function FloatingChat({
   // /api/runs/[runId]/trace?since= för incrementala events. När
   // hookens label byts uppdaterar useEffect pending-meddelandets
   // content. Cleanup sker via enabled=false när isSending blir false.
-  const tracePolling = useBuildTracePolling(siteId, { enabled: isSending });
+  // C3: aktivera även när ett dialog-bygge driver page-level isBuilding (utan
+  // att FloatingChat självt skickar). Annars pollade vi bara trace.ndjson för
+  // FloatingChat:s egna byggen, och en variant/färg/bild/scrape-dialog lämnade
+  // BuildProgressCard kvar på "thinking" hela bygget igenom (stage-refine
+  // nedan bailade på !isSending). Label-uppdateringen är ändå no-op när ingen
+  // pending-bubbla finns (dialoger skapar ingen), så det enda nettot är att
+  // buildStage avancerar korrekt.
+  const tracePolling = useBuildTracePolling(siteId, {
+    enabled: isSending || isBuilding,
+  });
   useEffect(() => {
     const id = pendingMessageIdRef.current;
     if (!id) return;
@@ -1570,10 +1579,12 @@ export function FloatingChat({
 
   // Förfina bygg-stage från trace.ndjson-fasen: understand/plan = "thinking",
   // build = "building". page.tsx mappar detta till BuildProgressCard-steget.
-  // Bara medan vi faktiskt skickar (isSending) så vi inte rör buildStage
-  // efter att bygget landat (success/failed sätts i handleSend).
+  // C3: kör medan ett bygge pågår — antingen FloatingChat:s eget (isSending)
+  // eller ett dialog-bygge som driver page-level isBuilding. När båda är
+  // false rör vi inte buildStage (success/failed sätts i handleSend för
+  // FloatingChat-byggen; för dialog-byggen sätter handleBuildDone utfallet).
   useEffect(() => {
-    if (!isSending || !onStageChange) return;
+    if ((!isSending && !isBuilding) || !onStageChange) return;
     if (tracePolling.currentPhase === "build") {
       onStageChange("building");
     } else if (
@@ -1582,7 +1593,7 @@ export function FloatingChat({
     ) {
       onStageChange("thinking");
     }
-  }, [tracePolling.currentPhase, isSending, onStageChange]);
+  }, [tracePolling.currentPhase, isSending, isBuilding, onStageChange]);
 
   // ⌥1–⌥4 växlar preview-bredd (mobile/tablet/laptop/full) utan att lämna
   // tangentbordet under preview→följdprompt-loopen. Bara på desktop (presets

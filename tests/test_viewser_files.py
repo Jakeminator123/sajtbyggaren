@@ -210,7 +210,26 @@ def test_discovery_payload_preserves_empty_list_tombstones() -> None:
     assert "directives.requestedCapabilities = capabilities" in payload, (
         "requestedCapabilities måste skickas även när listan är tom."
     )
-    assert "directives.conversionGoals = mapCtaToConversionGoals" in payload
+    # D2 (scout-fynd, 2026-06-05): conversionGoals ligger i PRESERVE_EMPTY_KEYS,
+    # så en tom lista skickas som tombstone och NOLLAR backendens
+    # conversion_goals. Det får BARA ske när operatören tömt CTA-valet — inte
+    # när hen valt en CTA som bara inte keyword-matchar ("Läs mer"/"Registrera
+    # dig"). Tidigare ``directives.conversionGoals = mapCtaToConversionGoals(...)``
+    # nollade målen även då. Lås den nya distinktionen: mappa till en mellan-
+    # variabel och emittera bara fältet vid tom CTA (tombstone) eller faktisk
+    # matchning; omatchad icke-tom CTA utelämnar fältet så briefModel-
+    # extraktionen står kvar.
+    assert "const mappedGoals = mapCtaToConversionGoals(primaryCtaTrimmed);" in payload, (
+        "conversionGoals måste mappas till en mellan-variabel så omatchad CTA "
+        "kan utelämna fältet i stället för att nolla backendens mål."
+    )
+    assert (
+        "if (primaryCtaTrimmed.length === 0 || mappedGoals.length > 0) {" in payload
+    ), (
+        "conversionGoals-tombstonen får bara emitteras vid tom CTA eller "
+        "faktisk keyword-matchning — annars utelämnas fältet (D2)."
+    )
+    assert "directives.conversionGoals = mappedGoals;" in payload
     assert "directives.uniqueSellingPoints = answers.uniqueSellingPoints" in payload
     assert "directives.sectionTreatments = sectionPins" in payload
 
@@ -4679,4 +4698,125 @@ def test_toast_dedupes_and_caps_stack() -> None:
     )
     assert "const duplicate = toastsRef.current.find(" in text, (
         "show() ska deduplicera identiska aktiva toaster i st.f. att stapla dubbletter."
+    )
+
+
+@pytest.mark.tooling
+def test_followup_build_hook_supports_global_lock_and_base_run_id() -> None:
+    """C1 + C2 (scout-fynd 2026-06-05): useFollowupBuild ägde varken globalt
+    bygg-lås eller "Iterera från denna"-pin.
+
+    C2: varje dialog hade bara sin egen lokala isBusy → två öppna dialoger
+    (eller en dialog + FloatingChat) kunde starta parallella byggen mot samma
+    siteId. Hooken måste ta emot ett globalt ``isBuilding`` och avvisa när det
+    är sant.
+
+    C1: FloatingChat skickade redan ``baseRunId`` men dialogerna gjorde det
+    inte → en pinnad iteration tappades tyst när operatören bytte t.ex. färg.
+    Hooken måste ta emot ``baseRunId`` och inkludera den i fetch-bodyn.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "use-followup-build.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "isBuilding?: boolean;" in text, (
+        "useFollowupBuild måste exponera ett globalt isBuilding-bygg-lås (C2)."
+    )
+    assert "baseRunId?: string | null;" in text, (
+        "useFollowupBuild måste ta emot baseRunId för 'Iterera från denna' (C1)."
+    )
+    assert "if (isBusy || isBuilding) {" in text, (
+        "runFollowup måste avvisa när ett globalt bygge pågår, inte bara lokalt (C2)."
+    )
+    assert "...(baseRunId ? { baseRunId } : {})" in text, (
+        "runFollowup måste skicka baseRunId i bodyn när en pin är aktiv (C1)."
+    )
+
+
+@pytest.mark.tooling
+def test_builder_shell_threads_lock_and_base_run_id_into_dialogs() -> None:
+    """C1 + C2: BuilderShell måste skicka både det globala isBuilding-låset och
+    den aktiva baseRunId-pinnen till alla bygg-utlösande dialoger (variant/
+    färg/bild/scrape). Utan detta är hookens nya parametrar döda på dialog-
+    vägen och pin/lock gäller bara FloatingChat + Inspector.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Minst fyra dialoger (variant/color/asset/scrape) ska få bägge propsen.
+    assert text.count("baseRunId={pendingBaseRunId?.baseRunId ?? null}") >= 4, (
+        "Alla fyra bygg-dialoger måste få baseRunId från BuilderShell (C1)."
+    )
+    assert text.count("isBuilding={isBuilding}") >= 4, (
+        "Alla fyra bygg-dialoger måste få det globala isBuilding-låset (C2)."
+    )
+
+
+@pytest.mark.tooling
+def test_inspector_threads_base_run_id_into_followup_hook() -> None:
+    """C1: Inspectorns quick-prompts (t.ex. 'Be om fix' i Kvalitet) gick via
+    useFollowupBuild men skickade aldrig den pinnade baseRunId:n. Lås att
+    SiteInspectorSheet trådar pendingBaseRunId in i hooken.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "site-inspector-sheet.tsx"
+    ).read_text(encoding="utf-8")
+    assert "baseRunId: pendingBaseRunId?.baseRunId ?? null," in text, (
+        "SiteInspectorSheet måste skicka pendingBaseRunId till useFollowupBuild (C1)."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_trace_polling_covers_dialog_builds() -> None:
+    """C3 (scout-fynd 2026-06-05): trace-polling + stage-refine var gated på
+    enbart ``isSending`` (FloatingChat:s egna byggen). Ett dialog-bygge driver
+    page-level ``isBuilding`` men inte isSending → BuildProgressCard frös på
+    'thinking' hela bygget. Lås att både polling-enabled och stage-refinen
+    körs på ``isSending || isBuilding``.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "enabled: isSending || isBuilding," in text, (
+        "trace-polling måste aktiveras även för dialog-byggen (isBuilding), C3."
+    )
+    assert "if ((!isSending && !isBuilding) || !onStageChange) return;" in text, (
+        "stage-refinen måste köra för dialog-byggen (isBuilding), inte bara isSending (C3)."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_site_id_follows_selected_run() -> None:
+    """C4 (P0, scout-fynd 2026-06-05): ViewerPanel fick siteId={selectedSiteId}
+    medan runId={selectedRunId}. Project Input-väljaren kan sätta selectedSiteId
+    utan att rensa selectedRunId → previewen (/api/preview/<siteId>) startade
+    fel .generated/<siteId>/ medan runId pekade på en annan sajt. Lås att
+    siteId följer den valda runens faktiska site (runSiteId) med picker-sajten
+    som fallback.
+    """
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "siteId={runSiteId ?? selectedSiteId}" in text, (
+        "ViewerPanel:s siteId måste följa den valda runens site (runSiteId) så "
+        "preview-POST:en inte desynkar mot runId (C4)."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_builder_does_not_replay_stale_stage_on_callback_change() -> None:
+    """C5 (scout-fynd 2026-06-05): stage-rapporteringen var gated på
+    [stage, onStageChange]. onStageChange byter identitet i page.tsx
+    (builderActive ? undefined : setBuildStage), så vid 'Ny sajt' re-kördes
+    effekten med ett oförändrat stage (oftast 'success' från init-bygget) och
+    skrev över 'idle' som onNewSite precis satt → ViewerPanel visade ett stale
+    success-card. Lås att vi bara rapporterar när stage FAKTISKT ändrats sedan
+    förra rapporten (ref-vakt).
+    """
+    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
+    assert "lastReportedStageRef" in text, (
+        "PromptBuilder måste spåra senast rapporterade stage i en ref (C5)."
+    )
+    assert "if (lastReportedStageRef.current === stage) return;" in text, (
+        "stage-effekten måste bail:a när stage är oförändrat så en ren "
+        "callback-identitetsändring inte replayar ett stale stage (C5)."
     )

@@ -33,6 +33,27 @@ type FollowupBuildOptions = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /**
+   * C2 — globalt bygg-lås. Page.tsx äger ett `building`-flagga som är
+   * sant så länge NÅGOT bygge pågår (FloatingChat eller en annan dialog).
+   * Varje dialog har bara sin egen lokala `isBusy` och vet inget om
+   * syskon-byggen — utan denna kan två öppna dialoger (eller en dialog
+   * + FloatingChat) starta parallella byggen mot samma siteId och racea
+   * om versionsräkningen/preview. Vi avvisar `runFollowup` om ett globalt
+   * bygge redan kör. Valfri för bakåtkompatibilitet (default: ingen extra
+   * spärr utöver lokal `isBusy`).
+   */
+  isBuilding?: boolean;
+  /**
+   * C1 — "Iterera från denna". När operatören pinnat en historisk version
+   * i Versions-tab vill nästa bygge — oavsett om det triggas från
+   * FloatingChat ELLER en dialog (design/färg/bild/scrape) — grenas från
+   * det versionssnapshotet, inte från senaste. FloatingChat skickar redan
+   * `baseRunId` i sin egen fetch; dialogerna gjorde det inte, så en
+   * pinnad iteration tappades tyst när operatören bytte t.ex. färg.
+   * `null`/utelämnad = bygg från senaste (oförändrat beteende).
+   */
+  baseRunId?: string | null;
 };
 
 type PromptApiResponse = {
@@ -58,6 +79,8 @@ export function useFollowupBuild({
   onBuildStart,
   onBuildEnd,
   onBuildDone,
+  isBuilding = false,
+  baseRunId = null,
 }: FollowupBuildOptions) {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +95,9 @@ export function useFollowupBuild({
         setError(msg);
         return { ok: false, error: msg };
       }
-      if (isBusy) {
+      if (isBusy || isBuilding) {
+        // isBusy = denna dialogs eget bygge; isBuilding = ett globalt
+        // bygge (annan dialog/FloatingChat). Båda ska blockera.
         const msg = "Ett bygge pågår redan.";
         setError(msg);
         return { ok: false, error: msg };
@@ -94,6 +119,11 @@ export function useFollowupBuild({
             prompt: trimmed,
             mode: "followup",
             siteId,
+            // C1: opt-in baseRunId — samma kontrakt som FloatingChat. Backend
+            // (scripts/prompt_to_project_input.py --base-run-id) laddar
+            // PI-snapshotet från den pinnade runen och versionsräkningen blir
+            // max(latest, base) + 1. Utelämnas helt när ingen pin är aktiv.
+            ...(baseRunId ? { baseRunId } : {}),
           }),
         });
         const payload = (await response.json()) as PromptApiResponse;
@@ -121,7 +151,7 @@ export function useFollowupBuild({
         onBuildEnd();
       }
     },
-    [isBusy, siteId, onBuildStart, onBuildEnd, onBuildDone],
+    [isBusy, isBuilding, baseRunId, siteId, onBuildStart, onBuildEnd, onBuildDone],
   );
 
   return { runFollowup, isBusy, error, clearError };
