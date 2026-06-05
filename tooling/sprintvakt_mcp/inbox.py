@@ -52,6 +52,27 @@ TOPIC_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,79}$")
 SUBJECT_MAX = 140
 BODY_MAX = 4000
 
+# Participant aliases: the same human lane has been addressed under several ids
+# across agent sessions ("christopher" vs "christopher-ui"; "jakob" /
+# "jakob-orchestrator" / "cursor-jakob-be-orchestrator" vs "jakob-be"). Without
+# resolution a reader querying one id silently misses messages addressed to
+# another spelling. Ids are folded to a canonical lane id for *matching only*
+# (recipient filter, from filter, unreadFor, ack recipient/dedup) — stored
+# events keep their original spelling, so the append-only log is never
+# rewritten. Extend this map as new id spellings appear.
+PARTICIPANT_ALIASES: dict[str, str] = {
+    "christopher": "christopher-ui",
+    "christopher-ui-agent": "christopher-ui",
+    "jakob": "jakob-be",
+    "jakob-orchestrator": "jakob-be",
+    "cursor-jakob-be-orchestrator": "jakob-be",
+}
+
+
+def _canonical_participant(value: str) -> str:
+    """Fold a participant id to its canonical lane id (matching only)."""
+    return PARTICIPANT_ALIASES.get(value, value)
+
 
 def _inbox_path(path: Path | None = None) -> Path:
     return path or DEFAULT_INBOX
@@ -321,12 +342,12 @@ def list_messages(
     """Return inbox messages folded together with their acks."""
     payload = payload or {}
     to_filter = (
-        _sanitize_participant(payload.get("to"), "to")
+        _canonical_participant(_sanitize_participant(payload.get("to"), "to"))
         if payload.get("to") not in (None, "")
         else None
     )
     from_filter = (
-        _sanitize_participant(payload.get("from"), "from")
+        _canonical_participant(_sanitize_participant(payload.get("from"), "from"))
         if payload.get("from") not in (None, "")
         else None
     )
@@ -344,7 +365,9 @@ def list_messages(
             since_dt = _parse_iso8601(raw_since, field="since")
     unread_for = payload.get("unreadFor")
     if unread_for not in (None, ""):
-        unread_for = _sanitize_participant(unread_for, "unreadFor")
+        unread_for = _canonical_participant(
+            _sanitize_participant(unread_for, "unreadFor")
+        )
     else:
         unread_for = None
     raw_limit = payload.get("limit")
@@ -382,9 +405,16 @@ def list_messages(
 
     selected: list[dict[str, Any]] = []
     for message in messages_by_id.values():
-        if to_filter and to_filter not in message.get("to", []):
+        recipients_canon = {
+            _canonical_participant(entry)
+            for entry in message.get("to", [])
+            if isinstance(entry, str)
+        }
+        if to_filter and to_filter not in recipients_canon:
             continue
-        if from_filter and message.get("from") != from_filter:
+        if from_filter and (
+            _canonical_participant(str(message.get("from", ""))) != from_filter
+        ):
             continue
         if topic_filter and message.get("topic") != topic_filter:
             continue
@@ -399,10 +429,13 @@ def list_messages(
             if created_dt < since_dt:
                 continue
         if unread_for:
-            acked_by = {ack.get("by") for ack in message.get("acks", [])}
+            acked_by = {
+                _canonical_participant(str(ack.get("by", "")))
+                for ack in message.get("acks", [])
+            }
             if unread_for in acked_by:
                 continue
-            if unread_for not in message.get("to", []):
+            if unread_for not in recipients_canon:
                 continue
         selected.append(message)
 
@@ -435,6 +468,7 @@ def ack_message(
             "messageId must match msg-<ordinal>-<6-char-hash>."
         )
     by = _sanitize_participant(payload.get("by"), "by")
+    by_canon = _canonical_participant(by)
     at = core.utc_now()
 
     events = _read_events(inbox_path)
@@ -448,14 +482,19 @@ def ack_message(
     )
     if message is None:
         raise core.SprintvaktError(f"Unknown messageId: {message_id}")
-    if by not in (message.get("to") or []):
+    recipients_canon = {
+        _canonical_participant(entry)
+        for entry in (message.get("to") or [])
+        if isinstance(entry, str)
+    }
+    if by_canon not in recipients_canon:
         raise core.SprintvaktError(
             f"{by!r} is not a recipient of {message_id} and cannot ack it."
         )
     already_acked = any(
         event.get("type") == "ack"
         and event.get("messageId") == message_id
-        and event.get("by") == by
+        and _canonical_participant(str(event.get("by", ""))) == by_canon
         for event in events
     )
 

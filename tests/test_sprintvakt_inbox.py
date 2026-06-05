@@ -208,6 +208,69 @@ def test_list_messages_unread_for_excludes_acked(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_list_messages_resolves_recipient_aliases(tmp_path: Path) -> None:
+    """A reader querying one id sees messages addressed to an alias of the same
+    lane (christopher <-> christopher-ui), so nothing is silently missed."""
+    inbox_path = _inbox_path(tmp_path)
+    _post(inbox_path, sender="jakob-be", recipients=["christopher-ui"], subject="A")
+    _post(inbox_path, sender="jakob", recipients=["christopher"], subject="B")
+
+    as_ui = inbox.list_messages({"to": "christopher-ui"}, inbox_path=inbox_path)
+    as_short = inbox.list_messages({"to": "christopher"}, inbox_path=inbox_path)
+
+    assert {m["subject"] for m in as_ui["messages"]} == {"A", "B"}
+    assert {m["subject"] for m in as_short["messages"]} == {"A", "B"}
+
+
+@pytest.mark.tooling
+def test_list_messages_resolves_from_aliases(tmp_path: Path) -> None:
+    """from-filter folds aliases too: querying jakob-be matches jakob/jakob-orchestrator."""
+    inbox_path = _inbox_path(tmp_path)
+    _post(inbox_path, sender="jakob", recipients=["christopher-ui"], subject="A")
+    _post(inbox_path, sender="jakob-orchestrator", recipients=["christopher-ui"], subject="B")
+
+    listed = inbox.list_messages({"from": "jakob-be"}, inbox_path=inbox_path)
+    assert {m["subject"] for m in listed["messages"]} == {"A", "B"}
+
+
+@pytest.mark.tooling
+def test_ack_resolves_recipient_aliases(tmp_path: Path) -> None:
+    """christopher-ui can ack a message addressed to the 'christopher' alias."""
+    inbox_path = _inbox_path(tmp_path)
+    posted = _post(inbox_path, recipients=["christopher"], subject="X")
+
+    res = inbox.ack_message(
+        {
+            "messageId": posted["message"]["id"],
+            "by": "christopher-ui",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+    assert res.get("written") is True
+
+
+@pytest.mark.tooling
+def test_unread_for_resolves_aliases(tmp_path: Path) -> None:
+    """unreadFor 'christopher-ui' excludes a message acked under the 'christopher' alias."""
+    inbox_path = _inbox_path(tmp_path)
+    posted = _post(inbox_path, recipients=["christopher-ui"], subject="Y")
+    inbox.ack_message(
+        {
+            "messageId": posted["message"]["id"],
+            "by": "christopher",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+
+    unread = inbox.list_messages({"unreadFor": "christopher-ui"}, inbox_path=inbox_path)
+    assert unread["messages"] == []
+
+
+@pytest.mark.tooling
 def test_list_messages_since_filter(tmp_path: Path) -> None:
     inbox_path = _inbox_path(tmp_path)
     inbox_path.write_text(
