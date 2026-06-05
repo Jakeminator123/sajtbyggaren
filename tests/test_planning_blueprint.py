@@ -272,6 +272,89 @@ def test_offer_summaries_deduped_when_services_fall_back_to_generic():
 
 
 @pytest.mark.tooling
+def test_offer_card_drops_tagline_filed_as_service():
+    """Gap 3a: when briefModel files the hero offer/tagline line (the
+    positioning oneLiner) under servicesMentioned, it must NOT render as a
+    service card; the real services are kept."""
+    brief = dict(_baseline_brief("elektriker-malmo"))
+    real = list(brief["servicesMentioned"])  # elinstallationer, felsökning, laddboxar
+    tagline = brief["positioning"]["oneLiner"]
+    # briefModel slips the tagline in among the real services.
+    brief["servicesMentioned"] = [real[0], tagline, real[1], real[2]]
+
+    result = produce_site_plan(brief, run_id="gap3a-oneliner")
+    validate_site_plan(result.site_plan)
+    validate_generation_package(result.generation_package)
+
+    _, items = _offer_block(result.generation_package["contentBlocks"])
+    titles_cf = [item["title"].casefold() for item in items]
+    # The tagline never becomes a card; only the real services do.
+    assert len(items) == len(real), f"only the real services may be cards: {titles_cf}"
+    assert tagline.casefold() not in titles_cf, f"tagline leaked as a card: {titles_cf}"
+    for service in real:
+        assert service.casefold() in titles_cf, f"real service dropped: {service!r} / {titles_cf}"
+
+
+@pytest.mark.tooling
+def test_offer_card_drops_hero_subheadline_filed_as_service():
+    """Gap 3a: the hero subheadline (the differentiator tagline) filed under
+    servicesMentioned is dropped from the offer cards too."""
+    brief = dict(_baseline_brief("elektriker-malmo"))
+    real = list(brief["servicesMentioned"])
+    subheadline = brief["positioning"]["differentiator"]  # hero subheadline source
+    brief["servicesMentioned"] = [*real, subheadline]
+
+    result = produce_site_plan(brief, run_id="gap3a-subheadline")
+    validate_generation_package(result.generation_package)
+
+    _, items = _offer_block(result.generation_package["contentBlocks"])
+    titles_cf = [item["title"].casefold() for item in items]
+    assert len(items) == len(real), f"subheadline must not be a card: {titles_cf}"
+    assert subheadline.casefold() not in titles_cf
+    for service in real:
+        assert service.casefold() in titles_cf
+
+
+@pytest.mark.tooling
+def test_drop_offer_tagline_services_is_conservative_and_honest():
+    """Unit: the guard drops only ~equal offer/tagline entries (case / trailing
+    period / whitespace tolerant), keeps real services, never adds anything, and
+    is a no-op for a brief without a positioning tagline."""
+    from packages.generation.planning.blueprint import (
+        _drop_offer_tagline_services,
+        _offer_tagline_phrases,
+    )
+
+    brief = {
+        "language": "sv",
+        "positioning": {
+            "oneLiner": "Elektriker i Malmö för trygga installationer.",
+            "differentiator": "lokal och rak utan krångliga offerter",
+        },
+    }
+    phrases = _offer_tagline_phrases(brief)
+    assert phrases, "oneLiner + subheadline must seed guard phrases"
+
+    services = [
+        "elinstallationer",
+        # same oneLiner but UPPER-cased, extra spaces, no trailing period.
+        "  ELEKTRIKER  i  Malmö  för  trygga  installationer  ",
+        "Lokal och rak utan krångliga offerter",  # hero subheadline, capitalised
+        "felsökning",
+    ]
+    kept = _drop_offer_tagline_services(services, brief)
+    assert kept == ["elinstallationer", "felsökning"], kept
+    # Output is always a subset of the input - nothing fabricated.
+    assert set(kept) <= set(services)
+
+    # No-op when the brief carries no offer/tagline phrase (legacy brief).
+    legacy = {"language": "sv"}
+    assert _offer_tagline_phrases(legacy) == set()
+    untouched = ["elinstallationer", "felsökning"]
+    assert _drop_offer_tagline_services(untouched, legacy) == untouched
+
+
+@pytest.mark.tooling
 def test_service_branches_emit_distinct_grounded_faq():
     """The three branches whose scaffold surfaces a home FAQ (electrician,
     hair salon, naprapath) emit branschrelevant, grounded FAQ pairs that differ
