@@ -13,9 +13,11 @@ alwaysApply: true
 - `christopher-ui` (och `christopher-ui-backup-*`) är **fryst legacy**: de bär
   gammal historik plus parkerad auth/billing (`NEXT_PUBLIC_AUTH_ENABLED`) som
   medvetet inte ska tillbaka nu.
-- Detta åsidosätter `christopher-ui`-namnet i
-  [`branch-discipline.md`](branch-discipline.mdc) för Christopher-lanen tills
-  operatören säger annat.
+- Den här regeln är den auktoritativa källan för Christopher-lanens
+  branch-val. [`branch-discipline.md`](branch-discipline.mdc) och
+  [`team-workflow.md`](team-workflow.mdc) pekar på samma `christopher`.
+  `christopher-ui` tas in långt senare, först på operatörens uttryckliga
+  beslut.
 
 ## Vad agenten alltid gör
 

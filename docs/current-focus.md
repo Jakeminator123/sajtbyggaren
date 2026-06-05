@@ -411,7 +411,9 @@ disjunkt filscope (#158 rör `apps/viewser/**`; vår lane rör `packages/generat
 
 ## Branchmodellen (kort)
 
-- Jakob jobbar default på `jakob-be`. Christopher jobbar default på `christopher-ui`.
+- Jakob jobbar default på `jakob-be`. Christopher jobbar default på `christopher`
+  (gamla `christopher-ui` är fryst legacy med parkerad auth/billing — tas in långt
+  senare, se `governance/rules/christopher-active-branch.md`).
 - `main` är canonical/sanningsbranch. Operatören eller agenten öppnar PR
   från arbets-branchen mot `main` när "en ny officiell version ska in" —
   ingen schemalagd cadence, det är ett beslut per leveransfönster.
@@ -574,7 +576,7 @@ PR #105 / commit `fe7a9e4`.)
 
 Se [`docs/agent-handbook.md`](agent-handbook.md) under rubriken "Standard
 loop". Kort: Scout vid behov → arbete på arbets-branch (`jakob-be` eller
-`christopher-ui`) → guards gröna → push → vid behov PR mot `main` →
+`christopher`) → guards gröna → push → vid behov PR mot `main` →
 post-merge-sync.
 
 Operatörspreferens: svenska, kort och koncist. Förklara dev-uttryck med

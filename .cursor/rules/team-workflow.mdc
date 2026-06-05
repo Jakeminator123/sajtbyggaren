@@ -13,9 +13,10 @@ backend, generation, governance eller shared contract.
 
 Följ alltid `governance/rules/branch-discipline.md` för branch- och PR-flöde.
 Standardflödet är att Jakob jobbar på `jakob-be`, Christopher på
-`christopher-ui`, och PR mot `main` öppnas när en ny officiell version
-ska in. Hitta inte på egna branch-prefix utöver `cursor/<syfte>` för
-tillfälliga feature-branches.
+`christopher`, och PR mot `main` öppnas när en ny officiell version
+ska in. (`christopher-ui` är fryst legacy och tas in långt senare — se
+`governance/rules/christopher-active-branch.md`.) Hitta inte på egna
+branch-prefix utöver `cursor/<syfte>` för tillfälliga feature-branches.
 
 ## Contract-first
 

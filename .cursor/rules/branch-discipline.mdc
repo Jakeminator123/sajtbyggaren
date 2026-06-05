@@ -1,6 +1,6 @@
 <!-- AUTO-GENERATED FROM governance/rules/branch-discipline.md. Do not edit directly. Run: python scripts/rules_sync.py -->
 ---
-description: Jakob arbetar på `jakob-be`, Christopher på `christopher-ui`, `main` är canonical. PR mot `main` när en ny officiell version ska in.
+description: Jakob arbetar på `jakob-be`, Christopher på `christopher`, `main` är canonical. PR mot `main` när en ny officiell version ska in.
 alwaysApply: true
 ---
 
@@ -10,12 +10,17 @@ alwaysApply: true
 
 - **Jakob** jobbar default på arbets-branchen `jakob-be` (backend,
   generation, governance, scripts, runtime, merge-review).
-- **Christopher** jobbar default på arbets-branchen `christopher-ui`
+- **Christopher** jobbar default på arbets-branchen `christopher`
   (UI/frontend i `apps/viewser/`, presentationslagret för genererade
   sajter).
+- `christopher-ui` är **fryst legacy** och får inte röras utan operatörens
+  uttryckliga OK: den bär gammal historik plus parkerad auth/billing bakom
+  `NEXT_PUBLIC_AUTH_ENABLED` (default AV) som medvetet tas in långt senare.
+  Den auktoritativa källan för Christopher-lanens branch-val är
+  [`christopher-active-branch.md`](christopher-active-branch.mdc).
 - **`main`** är projektets canonical / sanningsbranch. Pushas aldrig med
   `--force`. Direkt-pushes till `main` är undantag, inte standard.
-- PR från `jakob-be` eller `christopher-ui` mot `main` öppnas när en ny
+- PR från `jakob-be` eller `christopher` mot `main` öppnas när en ny
   officiell version ska in — typiskt när en sprint, ett fix-batch eller en
   fas är klar och granskad. Ingen schemalagd cadence; det är ett
   operatörs- eller agentbeslut per leveransfönster.
@@ -29,14 +34,14 @@ Remote är `https://github.com/Jakeminator123/sajtbyggaren.git`.
 ## Standardflöde: commit + push på arbets-branchen
 
 1. Verifiera att aktuell branch är `jakob-be` (Jakob) eller
-   `christopher-ui` (Christopher) — `git branch --show-current`.
+   `christopher` (Christopher) — `git branch --show-current`.
 2. Verifiera att branchen är synkad med sin egen origin
    (`git status` eller `python scripts/focus_check.py`).
 3. Stage + commit med atomisk avgränsning (en commit per logiskt steg).
 4. Kör de fyra guards (se nedan). Alla ska vara gröna.
 5. Vid icke-trivial produkt- eller workflow-diff: låt Scout-agenten göra
    read-only bug review av diffen före push.
-6. `git push origin jakob-be` (eller `christopher-ui`).
+6. `git push origin jakob-be` (eller `christopher`).
 
 Detta gäller dokumentation, governance, kod, tester, scaffolds, dossiers
 och refaktoriseringar. Om ändringen är stor eller riskabel ska agenten
@@ -88,7 +93,7 @@ Efter en PR har mergats till `main`:
 1. `git fetch origin --prune`.
 2. På arbets-branchen: `git reset --hard origin/main`.
 3. `git push --force-with-lease origin <branch>` — uppdaterar
-   `origin/jakob-be` (eller `origin/christopher-ui`) till nya
+   `origin/jakob-be` (eller `origin/christopher`) till nya
    `origin/main`-spetsen.
 
 **Pulla aldrig** en redan squash-mergad branch — det skapar dubbletter.
@@ -101,7 +106,7 @@ på de permanenta arbets-branchema eftersom de är solo-ägda enligt
 Backup-branches är ett operatörsverktyg, inte en agent-rutin. Operatören
 skapar dem när hen vill ha extra säkerhet före en större operation
 (t.ex. före en stor merge eller en riskabel refactor). Agenten skapar
-inte backup-branches på eget initiativ — `jakob-be` och `christopher-ui`
+inte backup-branches på eget initiativ — `jakob-be` och `christopher`
 är själva permanenta säkerhetsnät via Git-historiken.
 
 Om operatören ber om en backup:
@@ -133,7 +138,7 @@ Cleanup efter merge:
 
 ## Vad agenten aldrig gör utan tillstånd
 
-- Skapar permanenta branches utöver `jakob-be` / `christopher-ui` /
+- Skapar permanenta branches utöver `jakob-be` / `christopher` /
   `backup-N`.
 - Arbetar på backup-branches.
 - Öppnar PR utan tydlig anledning (en sprint är klar, en officiell
@@ -147,7 +152,7 @@ Om `git push origin <branch>` avvisas (non-fast-forward, hooks, eller
 annat):
 
 1. Stoppa direkt — ingen automatisk `--force` på `main`. På
-   `jakob-be`/`christopher-ui` är `--force-with-lease` OK enligt
+   `jakob-be`/`christopher` är `--force-with-lease` OK enligt
    "Post-merge-sync" ovan, men bara när det är post-merge-syncen som är
    anledningen.
 2. Kör `git fetch origin && git status` för att förstå läget.
@@ -160,7 +165,7 @@ När flera agenter jobbar samtidigt:
 ### Jakob-agent och Christopher-agent
 
 - Jobbar på sin egen arbets-branch (`jakob-be` respektive
-  `christopher-ui`) och rör inte motpartens branch.
+  `christopher`) och rör inte motpartens branch.
 - Off-limits-paths för Christopher-agenten är listade i
   [`governance/rules/branch-scope-ui-ux.md`](branch-scope-ui-ux.mdc).
 - Jakob-agenten rör inte `apps/viewser/components/**`,
@@ -180,7 +185,7 @@ tester och stale docs. Ändrar inget.
 
 Hanterar låg-risk docs/governance/sanity. Kan jobba på:
 
-- Sin egen arbets-branch (`jakob-be` eller `christopher-ui` beroende på
+- Sin egen arbets-branch (`jakob-be` eller `christopher` beroende på
   vem hen agerar åt) för docs som hör till pågående arbete.
 - Direkt på `main` för pure docs/governance-bumpar som inte påverkar
   produktkod (se "Direkt-push till `main`" ovan).
@@ -196,7 +201,7 @@ kör `git fetch --prune` och verifierar att remote inte rört sig direkt
 före sin push; om remote rörde sig avbryts pushen och operatör beslutar
 nästa steg. Aldrig `--force` eller `--force-with-lease` på `main`.
 
-Mellan `jakob-be` och `christopher-ui` finns ingen push-race eftersom
+Mellan `jakob-be` och `christopher` finns ingen push-race eftersom
 brancherna är solo-ägda.
 
 ## Före varje commit (de fyra guards)
@@ -204,7 +209,7 @@ brancherna är solo-ägda.
 Agenten kör i denna ordning:
 
 1. `git branch --show-current` — verifiera rätt branch (`jakob-be`,
-   `christopher-ui` eller `main` för Steward-undantag).
+   `christopher` eller `main` för Steward-undantag).
 2. `python scripts/governance_validate.py`
 3. `python scripts/rules_sync.py --check`
 4. `python scripts/check_term_coverage.py --strict`

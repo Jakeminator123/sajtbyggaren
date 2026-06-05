@@ -78,7 +78,7 @@ Kort lista över det som oftast missas av agenten men fångas av en reviewer-run
    Scope-läckage är värt en blocker, inte ett godkännande med kommentar.
 6. Naming-dictionary. Nya canonical termer kräver ADR. Lokala TS/Python-symboler bor i `scripts/check_term_coverage.py:COMMON_WORDS`.
 7. Branch-disciplin. Verifiera att arbetet ligger på rätt arbets-branch
-   (`jakob-be` för Jakob, `christopher-ui` för Christopher) och att inga
+   (`jakob-be` för Jakob, `christopher` för Christopher) och att inga
    off-limits-paths är rörda (se `governance/rules/branch-scope-ui-ux.md`).
 
 ## Fasta agentroller
@@ -87,10 +87,10 @@ Projektet använder tre fasta agentroller:
 
 - **Scout-agent** - read-only. Läser, utreder, hittar risker och fungerar
   som RO-bugggranskare före push på en arbets-branch (`jakob-be` eller
-  `christopher-ui`) eller före PR mot `main`. Lämnar rekommendation eller
+  `christopher`) eller före PR mot `main`. Lämnar rekommendation eller
   Builder-prompt. Gör inga filändringar, commits eller pushar.
 - **Builder-agent** - implementation. Jobbar på sin arbets-branch
-  (`jakob-be` för Jakob, `christopher-ui` för Christopher), implementerar,
+  (`jakob-be` för Jakob, `christopher` för Christopher), implementerar,
   testar och rapporterar innan push om ändringen är stor eller riskabel.
 - **Steward-agent** - ordning och sanity. Jobbar primärt på arbets-branchen
   för docs som hör till pågående arbete; kan göra direkt-push till `main`
@@ -110,7 +110,7 @@ När flera agenter jobbar samtidigt gäller rollfördelningen i
 [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md)
 under rubriken "Parallella agenter". Sammanfattning:
 
-- Jakob-agent jobbar på `jakob-be`, Christopher-agent på `christopher-ui`.
+- Jakob-agent jobbar på `jakob-be`, Christopher-agent på `christopher`.
   Brancherna är solo-ägda; ingen rör motpartens branch.
 - Steward-agent får inte röra filer som ligger i scope för en pågående
   Builder-sprint.
@@ -128,12 +128,12 @@ varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
 1. **Scout vid behov.** Om uppdraget är stort eller oklart gör Scout-agenten
    read-only-audit och lämnar rekommenderad Builder-prompt.
 2. **Synka arbets-branchen.** Builder- eller Steward-agenten verifierar
-   att aktuell branch är `jakob-be` (Jakob) eller `christopher-ui`
+   att aktuell branch är `jakob-be` (Jakob) eller `christopher`
    (Christopher) och att den är synkad med sin egen origin. Backup-branch
    skapas bara om operatören uttryckligen ber om det — `jakob-be`/
-   `christopher-ui` är själva permanenta säkerhetsnät.
+   `christopher` är själva permanenta säkerhetsnät.
 3. **Implementation på arbets-branchen.** Builder-agenten genomför en
-   avgränsad uppgift direkt på `jakob-be` eller `christopher-ui`. Steward-
+   avgränsad uppgift direkt på `jakob-be` eller `christopher`. Steward-
    agenten gör bara låg-risk docs/governance/sanity.
 4. **RO-review.** Scout-agenten granskar diffen read-only före push och
    klassar fynd som blocker, risk, nice-to-have eller falskt fynd. Inför

@@ -99,7 +99,7 @@ Backend-kollegan pushar ofta direkt till `main`. För att slippa merge-konflikte
 
 ## Pre-commit-check
 
-Före varje commit på `christopher-ui` kör agenten:
+Före varje commit på `christopher` (Christophers aktiva branch) kör agenten:
 
 ```bash
 git diff --cached --name-only

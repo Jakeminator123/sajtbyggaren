@@ -10,7 +10,7 @@ arbetsytor utan att två agenter råkar ändra samma filer samtidigt.
 3. Kör collision-check innan arbete startar.
 4. Reservera path scopes om gapet ska bli aktivt.
 5. Generera agentprompt och arbeta bara inom scope.
-6. Efter merge till `main`: synka `jakob-be` och `christopher-ui` från
+6. Efter merge till `main`: synka `jakob-be` och `christopher` från
    `origin/main` i stället för att öppna separata PR:er mot arbetsbrancherna.
 
 ## Ägargränser

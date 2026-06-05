@@ -42,7 +42,14 @@ synkar. PR:ar från arbets-branchen till `main` när "sanningen" ska uppdateras.
 | Teammedlem | Domän | Branch | Cursor-rule som matchar |
 | --- | --- | --- | --- |
 | Jakob | Backend, governance, scripts, codegen | `jakob-be` | `branch-scope-ui-ux.md` matchar **inte** — Jakob får röra all backend |
-| Christopher | Frontend, viewser, UI/UX | `christopher-ui` | `branch-scope-ui-ux.md` (off-limits för backend) |
+| Christopher | Frontend, viewser, UI/UX | `christopher` | `branch-scope-ui-ux.md` (off-limits för backend) |
+
+> **Branch-not:** Christophers aktiva arbets-branch är `christopher` (avstamp
+> från `jakob-be`). Den gamla `christopher-ui` är **fryst legacy** — den bär
+> parkerad auth/billing (`NEXT_PUBLIC_AUTH_ENABLED`, default AV) som tas in
+> långt senare och rörs inte utan operatörens OK. Se
+> [`governance/rules/christopher-active-branch.md`](../governance/rules/christopher-active-branch.md)
+> och [ADR 0035](../governance/decisions/0035-auth-billing-scope-gate.md).
 
 ### Livscykel för arbets-branchen
 
