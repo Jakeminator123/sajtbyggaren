@@ -1166,6 +1166,29 @@ def render_section_trust_proof(
     section-driven dispatcher lands in commit 6.
     """
     trust = dossier.get("trustSignals") or []
+    if not trust:
+        # Gap 1 (trust-honesty): before falling back to the auto-extracted
+        # businessFacts narration (which reads like raw metadata, e.g.
+        # "Verksamhetstyp: elektriker"), prefer the operator's own
+        # uniqueSellingPoints. They are grounded operator claims stated in
+        # the wizard, so showing them under "Varför oss" is honest and far
+        # stronger than the metadata fallback. USPs are deliberately used
+        # ONLY by this neutral strengths section - never by the testimonials
+        # ("Sagt om oss"), clinic credentials or agency client-roster
+        # sections, which would misframe a self-claim as a quote/cert/client.
+        usps = [
+            item.strip()
+            for item in (dossier.get("uniqueSellingPoints") or [])
+            if isinstance(item, str) and item.strip()
+        ]
+        if usps:
+            trust = usps
+            # NB: do NOT call blueprint.note_applied here. USPs are dossier
+            # (operator) data, not blueprint (LLM Generation Package / Site
+            # Brief) data, so crediting the blueprint would inflate
+            # appliedVisibleEffect with an effect the blueprint never produced.
+            # note_applied below is reserved for the businessFacts fallback,
+            # which IS blueprint-derived.
     if not trust and blueprint is not None:
         facts = blueprint.honest_trust_signals()
         if facts:

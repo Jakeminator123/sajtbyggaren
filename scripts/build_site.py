@@ -47,6 +47,7 @@ import sys
 import time
 import urllib.parse
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -3647,6 +3648,7 @@ def run_phase3_quality_and_repair(
     do_typecheck: bool,
     generation_package: dict[str, Any] | None = None,
     site_brief: dict[str, Any] | None = None,
+    rerender: Callable[[dict[str, Any], dict[str, Any] | None], None] | None = None,
 ) -> tuple[dict, dict]:
     """Thin wiring around packages/generation/repair (which itself
     orchestrates quality_gate + repair).
@@ -3671,6 +3673,7 @@ def run_phase3_quality_and_repair(
         site_brief=site_brief,
         run_dir=run_dir,
         run_id=run_dir.name,
+        rerender=rerender,
     )
 
     quality_payload = final_quality.model_dump()
@@ -4205,6 +4208,31 @@ def build(
     # (Sprint 3B v1.1 fix - previously snapshotted pre-repair which
     # made the canonical artefact stale when a fix succeeded).
     do_typecheck = overall_status == "ok"
+
+    # kor-5 skiva 1c: give the Repair Pipeline a rerender callback so a
+    # blueprint-repair patch is materialised by the SAME deterministic
+    # renderer as the initial build before the critic re-runs. Without it
+    # the pass stays dormant and never claims a copy improvement the
+    # rendered site lacks. No npm rebuild here - write_pages rewrites
+    # app/*.tsx in place; the critic re-reads the patched blueprint + tree
+    # (ADR 0015/0016: render logic stays in scripts/, called via the seam).
+    def _rerender_after_repair(
+        patched_generation_package: dict[str, Any],
+        patched_site_brief: dict[str, Any] | None,
+    ) -> None:
+        patched_blueprint = RenderBlueprint.from_artifacts(
+            patched_generation_package, patched_site_brief
+        )
+        write_pages(
+            target,
+            dossier,
+            scaffold_routes,
+            dossier_routes,
+            extra_routes=wizard_extra_routes or None,
+            variant_id=variant.get("id") if isinstance(variant, dict) else None,
+            blueprint=patched_blueprint,
+        )
+
     quality_payload, repair_payload = run_phase3_quality_and_repair(
         run_dir,
         target,
@@ -4214,6 +4242,7 @@ def build(
         do_typecheck,
         generation_package=generation_package,
         site_brief=site_brief,
+        rerender=_rerender_after_repair,
     )
     trace.event(
         "build",

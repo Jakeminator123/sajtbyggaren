@@ -213,11 +213,23 @@ def test_four_baselines_emit_distinct_grounded_story():
         assert story_blocks, f"{branch}: a story block must be emitted"
         body = story_blocks[0]["body"]
         assert body, f"{branch}: story body must be non-empty"
-        # Grounded in the brief's own positioning oneLiner (never the raw prompt).
-        one_liner = _baseline_brief(branch)["positioning"]["oneLiner"]
-        assert one_liner.rstrip(".") in body, (
-            f"{branch}: story must be composed from the brief's positioning"
+        positioning = _baseline_brief(branch)["positioning"]
+        one_liner = positioning["oneLiner"]
+        # Gap 2: the hero already renders the oneLiner (headline); the story must
+        # NOT echo it verbatim - it should complement the hero, not restate it.
+        assert one_liner.rstrip(".").casefold() not in body.casefold(), (
+            f"{branch}: story must not echo the hero headline (oneLiner): {body!r}"
         )
+        # Still grounded: composed from the brief's complementary positioning
+        # angles (never the raw prompt, never fabricated).
+        complementary = [
+            value
+            for key in ("differentiator", "localAngle", "audienceNeed")
+            if isinstance((value := positioning.get(key)), str) and value
+        ]
+        assert any(
+            angle.rstrip(".").casefold() in body.casefold() for angle in complementary
+        ), f"{branch}: story must be grounded in a complementary positioning angle: {body!r}"
         stories.append(body)
     assert len(set(stories)) == 4, f"stories must differ per branch: {stories}"
 
@@ -237,6 +249,26 @@ def test_offer_items_carry_distinct_grounded_summaries():
     assert len(set(summary_sets)) == 4, (
         f"offer summaries must differ per branch: {summary_sets}"
     )
+
+
+@pytest.mark.tooling
+def test_offer_summaries_deduped_when_services_fall_back_to_generic():
+    """Gap 3: two unknown services in a known industry both fall back to the
+    same generic industry summary; the offer list must not render identical
+    copy on two cards (the duplicate is qualified with its own title)."""
+    from packages.generation.planning.blueprint import _dedupe_offer_summaries
+
+    items = [
+        {"title": "Ryggbehandling", "summary": "Behandling anpassad efter dina besvär."},
+        {"title": "Nackbehandling", "summary": "Behandling anpassad efter dina besvär."},
+    ]
+    _dedupe_offer_summaries(items)
+    summaries = [item["summary"] for item in items]
+    assert all(summaries), "every offer item must keep a non-empty summary"
+    assert len(set(summaries)) == 2, f"summaries must be distinct: {summaries}"
+    # First occurrence keeps the clean generic line; the duplicate is qualified.
+    assert summaries[0] == "Behandling anpassad efter dina besvär."
+    assert summaries[1].startswith("Nackbehandling")
 
 
 @pytest.mark.tooling
@@ -319,6 +351,40 @@ def test_derive_story_and_faq_are_pure_functions_of_the_brief():
     assert derive_faq(brief) == derive_faq(brief)
     assert derive_story({"language": "sv"}) is None
     assert derive_faq({"language": "sv"}) == []
+
+
+@pytest.mark.tooling
+def test_derive_story_does_not_echo_hero_headline_or_subheadline():
+    """Gap 2: the hero renders the positioning oneLiner (headline) +
+    differentiator (subheadline), so the story must complement - not echo -
+    the hero. With richer angles present the story uses them and drops the
+    hero-consumed sentences."""
+    brief = {
+        "language": "sv",
+        "positioning": {
+            "oneLiner": "Elektriker i Malmö med snabb service",
+            "differentiator": "Fast pris och jour dygnet runt",
+            "localAngle": "Vi kan Malmös äldre fastigheter utan och innan",
+            "audienceNeed": "Trygg el för villaägare och bostadsrättsföreningar",
+        },
+    }
+    story = derive_story(brief)
+    assert story is not None
+    # Hero headline + subheadline must not be restated verbatim in the story.
+    assert "Elektriker i Malmö med snabb service" not in story
+    assert "Fast pris och jour dygnet runt" not in story
+    # The complementary grounded angles carry the story instead.
+    assert "Malmös äldre fastigheter" in story
+    assert "villaägare" in story
+
+
+@pytest.mark.tooling
+def test_derive_story_falls_back_to_lead_when_only_hero_angles_exist():
+    """A thin brief whose only angle is the hero oneLiner still grounds a story
+    (the lead) rather than returning None - the degenerate echo is acceptable
+    because it is the only honest content available."""
+    brief = {"language": "sv", "positioning": {"oneLiner": "Naprapat i Stockholm"}}
+    assert derive_story(brief) == "Naprapat i Stockholm."
 
 
 @pytest.mark.tooling

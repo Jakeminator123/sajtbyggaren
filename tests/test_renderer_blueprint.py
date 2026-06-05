@@ -239,6 +239,71 @@ def test_trust_proof_prefers_real_dossier_signals_over_blueprint():
 
 
 @pytest.mark.tooling
+def test_trust_proof_seeded_from_usps_before_business_facts():
+    """Gap 1 (trust-honesty): with no explicit trustSignals but operator
+    uniqueSellingPoints present, the home "Varför oss" section shows the
+    operator's stated strengths instead of the auto-extracted businessFacts
+    metadata narration ("Verksamhetstyp: ...", "Verksam i Malmö"). USPs are
+    grounded operator claims, so this is honest and stronger copy.
+    """
+    dossier = _dossier("elektriker-malmo")  # trustSignals = []
+    dossier["uniqueSellingPoints"] = ["25 års erfarenhet", "Jour dygnet runt"]
+    section = render_section_trust_proof(dossier, blueprint=_blueprint("elektriker-malmo"))
+    assert "25 års erfarenhet" in section
+    assert "Jour dygnet runt" in section
+    # The businessFacts metadata fallback must NOT be used when USPs exist.
+    assert "Verksam i Malmö" not in section
+
+
+@pytest.mark.tooling
+def test_trust_proof_real_signals_win_over_usps():
+    """Explicit trustSignals keep precedence over the USP fallback."""
+    dossier = _dossier("elektriker-malmo")
+    dossier["trustSignals"] = ["Tio år i branschen"]
+    dossier["uniqueSellingPoints"] = ["25 års erfarenhet"]
+    section = render_section_trust_proof(dossier, blueprint=_blueprint("elektriker-malmo"))
+    assert "Tio år i branschen" in section
+    assert "25 års erfarenhet" not in section
+
+
+@pytest.mark.tooling
+def test_trust_proof_usp_seed_does_not_mark_blueprint_applied():
+    """USPs are dossier (operator) data, not blueprint data. Seeding the trust
+    section from uniqueSellingPoints must NOT call blueprint.note_applied,
+    otherwise appliedVisibleEffect would falsely credit the LLM blueprint for
+    an operator-data change. The businessFacts fallback DOES mark it applied.
+    """
+    bp_usp = _blueprint("elektriker-malmo")
+    dossier = _dossier("elektriker-malmo")  # trustSignals = []
+    dossier["uniqueSellingPoints"] = ["Fast pris innan vi börjar"]
+    render_section_trust_proof(dossier, blueprint=bp_usp)
+    assert "home.trust-proof" not in bp_usp.applied_addresses, (
+        "USP seeding is dossier-driven and must not mark the blueprint applied"
+    )
+
+    bp_facts = _blueprint("elektriker-malmo")
+    render_section_trust_proof(_dossier("elektriker-malmo"), blueprint=bp_facts)
+    assert "home.trust-proof" in bp_facts.applied_addresses, (
+        "businessFacts fallback is blueprint-derived and must mark it applied"
+    )
+
+
+@pytest.mark.tooling
+def test_usps_never_render_as_home_testimonials():
+    """Honesty guard: uniqueSellingPoints feed only the neutral "Varför oss"
+    strengths section, never the "Sagt om oss" testimonials cards (which would
+    misframe an operator self-claim as a customer quote). The testimonials
+    section keys off trustSignals alone, so 4 USPs with empty trustSignals
+    must NOT produce a testimonials section.
+    """
+    from packages.generation.build.renderers import _render_home_testimonials_section
+
+    dossier = _dossier("elektriker-malmo")  # trustSignals = []
+    dossier["uniqueSellingPoints"] = ["A-fakta", "B-fakta", "C-fakta", "D-fakta"]
+    assert _render_home_testimonials_section(dossier) == ""
+
+
+@pytest.mark.tooling
 def test_trust_proof_drops_facts_forbidden_by_quality_risks():
     """A fact that names a certification must not render when qualityRisks forbid
     fake certifications — honesty is structural, not decorative."""
