@@ -1183,8 +1183,12 @@ def render_section_trust_proof(
         ]
         if usps:
             trust = usps
-            if blueprint is not None:
-                blueprint.note_applied("home.trust-proof")
+            # NB: do NOT call blueprint.note_applied here. USPs are dossier
+            # (operator) data, not blueprint (LLM Generation Package / Site
+            # Brief) data, so crediting the blueprint would inflate
+            # appliedVisibleEffect with an effect the blueprint never produced.
+            # note_applied below is reserved for the businessFacts fallback,
+            # which IS blueprint-derived.
     if not trust and blueprint is not None:
         facts = blueprint.honest_trust_signals()
         if facts:

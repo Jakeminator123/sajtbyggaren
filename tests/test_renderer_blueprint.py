@@ -267,6 +267,28 @@ def test_trust_proof_real_signals_win_over_usps():
 
 
 @pytest.mark.tooling
+def test_trust_proof_usp_seed_does_not_mark_blueprint_applied():
+    """USPs are dossier (operator) data, not blueprint data. Seeding the trust
+    section from uniqueSellingPoints must NOT call blueprint.note_applied,
+    otherwise appliedVisibleEffect would falsely credit the LLM blueprint for
+    an operator-data change. The businessFacts fallback DOES mark it applied.
+    """
+    bp_usp = _blueprint("elektriker-malmo")
+    dossier = _dossier("elektriker-malmo")  # trustSignals = []
+    dossier["uniqueSellingPoints"] = ["Fast pris innan vi börjar"]
+    render_section_trust_proof(dossier, blueprint=bp_usp)
+    assert "home.trust-proof" not in bp_usp.applied_addresses, (
+        "USP seeding is dossier-driven and must not mark the blueprint applied"
+    )
+
+    bp_facts = _blueprint("elektriker-malmo")
+    render_section_trust_proof(_dossier("elektriker-malmo"), blueprint=bp_facts)
+    assert "home.trust-proof" in bp_facts.applied_addresses, (
+        "businessFacts fallback is blueprint-derived and must mark it applied"
+    )
+
+
+@pytest.mark.tooling
 def test_usps_never_render_as_home_testimonials():
     """Honesty guard: uniqueSellingPoints feed only the neutral "Varför oss"
     strengths section, never the "Sagt om oss" testimonials cards (which would
