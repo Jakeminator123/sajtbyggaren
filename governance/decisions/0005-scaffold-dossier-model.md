@@ -7,7 +7,7 @@
 
 Två centrala begrepp i Sajtbyggaren behövde definieras innan generation-runtime byggs: **Scaffold** (sajtens grammatik) och **Dossier** (capability-modul). I gamla `sajtmaskin` blandades dessa med `template`, `starter`, `pack`, `package`, `plugin`, `feature` om vartannat, och scaffold-val skedde delvis via ordmatchning (`if prompt.includes("restaurant") return "restaurant"`).
 
-Reviewerns underlag (i [`referens/scaffolds-dossiers/konversation.txt`](../../referens/scaffolds-dossiers/konversation.txt) och [`referens/scaffolds-dossiers/konversation_2.txt`](../../referens/scaffolds-dossiers/konversation_2.txt)) föreslår en strikt separation, tre dossier-klasser och embedding-driven selection.
+Reviewerns underlag (`referens/scaffolds-dossiers/konversation.txt` och `referens/scaffolds-dossiers/konversation_2.txt`, borttagna i #191, finns i git-historiken) föreslår en strikt separation, tre dossier-klasser och embedding-driven selection.
 
 ## Beslut
 

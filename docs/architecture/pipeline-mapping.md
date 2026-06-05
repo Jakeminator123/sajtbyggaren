@@ -2,7 +2,7 @@
 
 Sajtbyggaren har **en** generation-vokabulär: `understand` -> `plan` -> `build`, registrerad i [engine-run.v1.json](../../governance/policies/engine-run.v1.json) och [llm-flow-concepts.v1.json](../../governance/policies/llm-flow-concepts.v1.json). Det är repots kontrakt och får inte konkurrera med någon annan top-level lista.
 
-Reviewer-konversationen i [referens/utlatanden/utlatande-2-llm-flode.txt](../../referens/utlatanden/utlatande-2-llm-flode.txt) använder en mer detaljerad intern karta (`brief` -> `plan` -> `package` -> `generate` -> `verify` -> `repair` -> `preview` -> `release`). Det är en **läs-modell**, inte en parallell pipeline. Det här dokumentet låser hur de hänger ihop så att inget av begreppen smyger in som en konkurrerande topp-fas.
+Reviewer-konversationen som låg i `referens/utlatanden/utlatande-2-llm-flode.txt` (borttagen i #191, finns i git-historiken) använder en mer detaljerad intern karta (`brief` -> `plan` -> `package` -> `generate` -> `verify` -> `repair` -> `preview` -> `release`). Det är en **läs-modell**, inte en parallell pipeline. Det här dokumentet låser hur de hänger ihop så att inget av begreppen smyger in som en konkurrerande topp-fas.
 
 ## Mappning från intern karta till Engine Run
 

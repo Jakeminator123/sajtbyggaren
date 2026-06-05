@@ -36,5 +36,5 @@ Registret revideras formellt när tre scaffolds har körbart innehåll i `packag
 ## Referenser
 
 - `governance/policies/scaffold-contract.v1.json` (registryStatus-block)
-- `referens/utlatanden/konversation-allmant-arkitektur.txt` (reviewer-input om grupperingar)
+- `referens/utlatanden/konversation-allmant-arkitektur.txt` (reviewer-input om grupperingar; borttaget i #191, finns i git-historiken)
 - ADR 0006 (scaffold-kontraktets grundregler)
