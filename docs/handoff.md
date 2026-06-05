@@ -1,11 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-05 UTC, steward-auto efter PR #201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva. Verifierad `main` är `8499f85`.
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #203 — sync(jakob-be->main): #202 visual_style theme + farm naming. Verifierad `main` är `8ec022c`.
 
-Nya PRs sedan föregående checkpoint: PR #198 — feat(builder): flat-layout-städning +
-POSIX-tree-kill (B157 nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b
-UI half (OpenClaw decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR
-#201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva.
+Nya PRs sedan föregående checkpoint: PR #202 — feat(followup): visual_style restyle
+(colour + font) + nicer unnamed-business label; PR #203 — sync(jakob-be->main): #202
+visual_style theme + farm naming.
 
 ## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
 
@@ -1710,6 +1709,16 @@ skiva 1c kor-5 rerender wiring.
 
 Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
 (skiva 1b action half).
+
+
+### 2026-06-05 UTC — handoff.md före `8499f85`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva. Verifierad `main` är `8499f85`.
+
+Nya PRs sedan föregående checkpoint: PR #198 — feat(builder): flat-layout-städning +
+POSIX-tree-kill (B157 nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b
+UI half (OpenClaw decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR
+#201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
