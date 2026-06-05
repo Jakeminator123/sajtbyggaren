@@ -77,11 +77,15 @@ Tre April-taggar är intressanta som **inspiration** under manual port. De porta
 
 ## Källor till bedömningen
 
-- [`referens/utlatanden/utlatande-1-rebuild-vs-restore.txt`](../referens/utlatanden/utlatande-1-rebuild-vs-restore.txt)
-- [`referens/utlatanden/utlatande-2-llm-flode.txt`](../referens/utlatanden/utlatande-2-llm-flode.txt)
-- [`referens/scaffolds-dossiers/`](../referens/scaffolds-dossiers/)
-- [`referens/preview-runtime/`](../referens/preview-runtime/)
-- [`referens/llm-flode/`](../referens/llm-flode/)
+Det externa underlaget låg under `referens/` (utlåtanden, scaffold/dossier- och
+preview-runtime-konversationer, llm-flöde-diagram). Mappen togs bort i #191
+(operatörsbeslut) och finns kvar i git-historiken (`git log --all -- referens/`):
+
+- `referens/utlatanden/utlatande-1-rebuild-vs-restore.txt`
+- `referens/utlatanden/utlatande-2-llm-flode.txt`
+- `referens/scaffolds-dossiers/`
+- `referens/preview-runtime/`
+- `referens/llm-flode/`
 - Reviewerns kritik 2026-05-07 om sajtmaskin-arv och evals-ordning, vilken ledde till [ADR 0008](../governance/decisions/0008-defer-evals-until-flow-exists.md).
 
 ## Status

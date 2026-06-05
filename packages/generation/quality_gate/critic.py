@@ -50,13 +50,30 @@ from pydantic import BaseModel, Field
 
 CriticSeverity = Literal["high", "medium", "low"]
 CriticIssueType = Literal[
+    # Deterministic heuristics (kor-4a).
     "generic_copy",
     "thin_offer",
     "placeholder_leakage",
     "missing_local_context",
     "missing_cta",
+    # Taste findings the verifierModel critic adds on top (kor-4b). These are
+    # judgement calls a heuristic cannot make; the deterministic lane never
+    # emits them.
+    "fake_or_ungrounded_trust",
+    "weak_hero",
+    "too_template_like",
 ]
-CriticSource = Literal["deterministic-v0"]
+# Provenance of a CriticResult. ``deterministic-v0`` is the kor-4a heuristic
+# lane. kor-4b adds the verifierModel smell critic on top: ``verifierModel``
+# when the real model ran and its findings were merged, ``mock-no-key`` /
+# ``mock-llm-error`` when the verifier fell back to the deterministic findings
+# only (same findings as kor-4a, no regression).
+CriticSource = Literal[
+    "deterministic-v0",
+    "verifierModel",
+    "mock-no-key",
+    "mock-llm-error",
+]
 
 # Weighted-by-severity score penalties. Documented in the module docstring and
 # locked by tests/test_quality_gate_critic.py::test_score_formula_is_weighted_by_severity.
@@ -157,11 +174,14 @@ class CriticIssue(BaseModel):
 
 
 class CriticResult(BaseModel):
-    """Deterministic critic output embedded in ``quality-result.json:critic``.
+    """Critic output embedded in ``quality-result.json:critic``.
 
-    Same shape ``kor-4b``'s ``verifierModel`` critic re-uses. ``source`` is
-    locked to ``deterministic-v0`` so a consumer can tell a heuristic finding
-    from a future model finding.
+    Shared by the kor-4a deterministic lane and the kor-4b ``verifierModel``
+    smell critic. ``source`` tells a consumer which lane produced the result:
+    ``deterministic-v0`` (heuristics only), ``verifierModel`` (LLM findings
+    merged on top of the heuristics), or ``mock-no-key`` / ``mock-llm-error``
+    (verifier requested but fell back to the heuristic findings only). The
+    default stays ``deterministic-v0`` so existing callers are unchanged.
     """
 
     score: int = Field(ge=0, le=100)
@@ -547,7 +567,7 @@ def append_critic_trace_event(
         "event": "critic.evaluated",
         "status": "warning",
         "message": (
-            f"Deterministic critic score={critic.score} "
+            f"Critic score={critic.score} "
             f"issues={len(critic.issues)} (high={high}) "
             f"source={critic.source}"
         ),

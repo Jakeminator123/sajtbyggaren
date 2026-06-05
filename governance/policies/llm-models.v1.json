@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/llm-models.schema.json",
   "policyId": "llm-models.v1",
-  "version": 6,
+  "version": 8,
   "status": "draft-but-authoritative",
-  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering. Version 5 lägger till copyDirectiveModel: tolkar en följdprompt till validerade copyDirectives (ADR 0034 väg A) så fri följdprompt-text kan bli en synlig, spårbar sajt-ändring utan att rå prompt renderas som kundcopy. Egen roll (inte återanvänd briefModel) så syftet hålls separat. Version 6 (ADR 0034 väg A nivå 3a) breddar copyDirectiveModel: utöver att tolka explicit copy kan rollen i ett editPlan-läge läsa sajtens aktuella redigerbara fält (site-state) och GENERERA ny copy för about-text (company.story) och services (services[].summary) vid en rewrite-instruktion utan angivet värde. Output går alltid genom samma copy-validator + grundnings-guard; name/tagline genereras aldrig och modellen skriver aldrig direkt i renderad kod (ej väg C).",
+  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering. Version 5 lägger till copyDirectiveModel: tolkar en följdprompt till validerade copyDirectives (ADR 0034 väg A) så fri följdprompt-text kan bli en synlig, spårbar sajt-ändring utan att rå prompt renderas som kundcopy. Egen roll (inte återanvänd briefModel) så syftet hålls separat. Version 6 (ADR 0034 väg A nivå 3a) breddar copyDirectiveModel: utöver att tolka explicit copy kan rollen i ett editPlan-läge läsa sajtens aktuella redigerbara fält (site-state) och GENERERA ny copy för about-text (company.story) och services (services[].summary) vid en rewrite-instruktion utan angivet värde. Output går alltid genom samma copy-validator + grundnings-guard; name/tagline genereras aldrig och modellen skriver aldrig direkt i renderad kod (ej väg C). Version 7 (KÖR-6b router LLM-fallback) lägger till routerModel: en LLM-fallback ovanpå den deterministiska OpenClaw Router (KÖR-6a) som bara anropas när heuristiken klassar ett meddelande unclear eller det är långt/multi-intent. Den returnerar SAMMA schema-validerade RouterDecision-kontrakt som KÖR-6a (generateObject-stil via structured output). Egen roll (inte återanvänd briefModel/planningModel/copyDirectiveModel) så routningssyftet hålls separat och spårbart; utan OPENAI_API_KEY faller routern tillbaka till KÖR-6a-heuristiken (ingen regression) och shouldStartPreview omräknas alltid deterministiskt från buildRequirement + builder-coexistence (LLM:en kan aldrig starta build/preview på answer_only/plan_only). Version 8 (kor-4b) aktiverar verifierModel: rollen anropas read-only ovanpå den deterministiska Quality Critic:n (kor-4a) och producerar smak-findings (fake_or_ungrounded_trust, weak_hero, too_template_like, förfinad generic_copy) som mergas + dedupas med de deterministiska. Icke-blockerande; utan OPENAI_API_KEY faller den tillbaka till bara de deterministiska fynden.",
   "principles": [
     "Ingen kod får anropa en LLM utan att gå via en registrerad Model Role.",
     "Provider-agnostiskt: model-strängen är opaque för produktkoden. Provider-resolveren mappar mot OpenAI, Anthropic eller annan.",
@@ -25,6 +25,12 @@
     {
       "id": "planningModel",
       "purpose": "Fas 2 Plan - reasoning där det behövs (route-hints, dossier-rationale).",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "routerModel",
+      "purpose": "KÖR-6b - LLM-fallback ovanpå den deterministiska OpenClaw Router (KÖR-6a). Anropas BARA när heuristiken klassar meddelandet unclear eller det är långt/multi-intent; returnerar samma schema-validerade RouterDecision-kontrakt (messageKind/editKind/buildRequirement/contextLevel/target/...). Utan OPENAI_API_KEY faller routern tillbaka till KÖR-6a-heuristiken; shouldStartPreview omräknas alltid deterministiskt (aldrig build/preview på answer_only/plan_only).",
       "model": "gpt-5.4",
       "provider": "openai"
     },
@@ -66,7 +72,7 @@
     },
     {
       "id": "verifierModel",
-      "purpose": "Read-only granskning av Generated Files som producerar findings till Quality Gate.",
+      "purpose": "Read-only smak-critic ovanpå den deterministiska Quality Critic:n (kor-4b): läser blueprint (Generation Package contentBlocks + Site Brief positioning/ärlighetsfält) + utdrag av Generated Files och producerar findings (fake_or_ungrounded_trust, weak_hero, too_template_like, förfinad generic_copy) till Quality Gate. Findings mergas + dedupas per type+target med de deterministiska. Skriver aldrig copy och påverkar aldrig QualityResult.status (warning-lane). Faller tillbaka till bara de deterministiska fynden utan OPENAI_API_KEY.",
       "model": "gpt-5.4",
       "provider": "openai"
     },
@@ -86,7 +92,7 @@
     {
       "groupId": "smallReasoning",
       "purpose": "Light reasoning, classification, rerank.",
-      "roles": ["briefModel", "planningModel", "copyDirectiveModel", "rerankModel", "verifierModel"]
+      "roles": ["briefModel", "planningModel", "copyDirectiveModel", "routerModel", "rerankModel", "verifierModel"]
     },
     {
       "groupId": "heavyCodegen",

@@ -1,1 +1,0 @@
-Här ska all information om `rep` finnas. Vilken stack det är, vilka typer av importer, depths, och det som vanligtvis finns i `package`. Jag är inte helt säker på vad som ska inkluderas, men jag tror att det alltid ska med. Jag antar också att detta skickas till en byggande LLM, så det bör även finnas en redogörelse för vad den ska göra, vilket beror på vad som skickas med.

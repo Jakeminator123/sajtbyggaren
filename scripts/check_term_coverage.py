@@ -315,11 +315,32 @@ COMMON_WORDS = {
     # schema field names critic/score/issues/etc. live in quality-result.schema.json).
     "CriticIssue", "CriticResult",
     "CriticSeverity", "CriticIssueType", "CriticSource",
+    # kor-4b verifierModel critic (read-only taste lane) implementation symbols
+    # (packages/generation/quality_gate/verifier.py). VerifierFinding /
+    # VerifierFindings are the Pydantic structured-output models the
+    # verifierModel call parses into; VerifierIssueType is the Literal alias for
+    # the taste-finding subset; VerifierModelResolutionError mirrors
+    # RepairModelResolutionError / BriefModelResolutionError. The canonical role
+    # verifierModel is registered in llm-models.v1.json; these are local
+    # implementation symbols, not separate canonical domain terms - same
+    # treatment as the Critic* / Codegen* / Repair* families above.
+    "VerifierFinding", "VerifierFindings", "VerifierIssueType",
+    "VerifierModelResolutionError",
     # Sprint 3B mechanical fix dispatcher metadata. ``MechanicalFixSpec``
     # is a Python dataclass that mirrors fix-registry.v1.json entries;
     # it is not a separate domain term. Same treatment as
     # PlanningChoice / RepairFix (Sprint 2B / 3A).
     "MechanicalFixSpec",
+    # kor-5 blueprint-repair implementation symbols
+    # (packages/generation/repair/blueprint_repair.py + model_resolver.py).
+    # The canonical domain term Blueprint Repair is registered in
+    # naming-dictionary.v1; these are local Pydantic models / type aliases /
+    # error classes around the repairModel structured-output call, the bounded
+    # loop outcome and the re-render callback - implementation symbols, not
+    # separate canonical terms (same treatment as Critic* / Codegen* above).
+    "BlueprintRepairOutcome", "BlueprintRepairStatus",
+    "HeroCopyPatch", "OfferItemPatch", "OfferListPatch",
+    "RepairModelResolutionError", "RerenderFn",
     # Sprint 3B-next codegenModel implementation symbols (ADR 0017).
     # CodegenLLMResponse is the narrow Pydantic schema the OpenAI call
     # parses into; CodegenUsage is a token-usage stub mirroring
@@ -628,6 +649,17 @@ COMMON_WORDS = {
     # CopyFeedback är intern TS-type i versions-tab.tsx för
     # clipboard-feedback-state (M1 från bug-hunt).
     "CopyFeedback",
+    # KÖR-6a RouterDecision-readiness — interna TS-alias i
+    # apps/viewser/components/builder/floating-chat.tsx som speglar enum-
+    # litteralerna i governance/schemas/router-decision.schema.json. De
+    # canonical termerna (RouterDecision, MessageKind, BuildRequirement) bor i
+    # backend-schemat; dessa är viewser-lokala UI-symboler, inte nya domain terms.
+    "RouterMessageKind", "RouterBuildRequirement", "RouterDecisionView",
+    # KÖR-6a routerDecision-bridge — interna TS-alias i
+    # apps/viewser/lib/router-classify-runner.ts (Fas 1, skiva 1a). Lokala
+    # bridge-/option-typer för spawn-helpern; de canonical termerna bor i
+    # router-decision.schema.json, dessa är viewser-lokala symboler.
+    "ClassifyMessageOptions", "RouterDecisionPayload",
     # GAP-viewser-side-by-side-preview — interna TS-symboler i
     # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
     # Lokala UI-komponentnamn och prop-typer, inte domain terms.
@@ -1098,6 +1130,15 @@ COMMON_WORDS = {
     # as the QualityResult / CodegenResult / RepairResult families above.
     "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
     "RouterContext", "SubtaskScope",
+    # KÖR-6b router LLM-fallback (packages/generation/orchestration/router/
+    # llm_fallback.py). ``RouterModelResolutionError`` is the local error class
+    # raised when llm-models.v1.json does not declare a usable ``routerModel``
+    # role - an implementation symbol that mirrors the existing
+    # RepairModelResolutionError / PlanningModelResolutionError /
+    # CodegenModelResolutionError family above, not a canonical domain term.
+    # The Model Role itself (``routerModel``) is camelCase and registered in
+    # llm-models.v1.json (v7) + naming-dictionary.v1.json modelRole.aliasesAllowed.
+    "RouterModelResolutionError",
     # KÖR-7a Context Assembler runtime symbols
     # (packages/generation/orchestration/context/). Sibling read-only module to
     # the KÖR-6a router above: ``AssembledContext`` is the result envelope,
@@ -1146,6 +1187,16 @@ COMMON_WORDS = {
     # families above. A real type gets registered in naming-dictionary.v1 with
     # an ADR if/when it becomes a persisted runtime contract (see kor-o2).
     "OpenClawDecision", "OpenClawAction",
+    # KÖR-O2 OpenClaw Core V0 runtime symbols
+    # (packages/generation/orchestration/openclaw/). The V0 module that binds
+    # the KÖR-6a router + KÖR-7a context assembler into one transient
+    # ``OpenClawDecision`` (already allowlisted above). ``PatchPlanRequest`` is
+    # the honest "patch needed, apply path missing (kor-7c)" marker embedded in
+    # the decision; ``ToolCall`` is the proposed-tool shape (always
+    # requiresApproval in V0, never auto-run). Transient implementation symbols
+    # (no saved file, no ADR) - same local-allowlist treatment as the
+    # OpenClawDecision / RouterDecision families above.
+    "PatchPlanRequest", "ToolCall",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

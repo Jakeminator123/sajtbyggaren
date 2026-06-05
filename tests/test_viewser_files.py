@@ -2156,6 +2156,85 @@ def test_floating_chat_differentiates_layout_no_op_honestly() -> None:
 
 
 @pytest.mark.tooling
+def test_floating_chat_router_decision_readiness() -> None:
+    """KÖR-6a readiness: FloatingChat måste kunna ge en ärlig rad per
+    ``RouterDecision.messageKind`` OM/NÄR ``/api/prompt`` börjar skicka
+    ``routerDecision`` — utan att ändra dagens beteende (fältet skickas inte
+    än; classify_message konsumeras bara internt i patch/+context/, follow-up-
+    bryggan kor-7d/#176 wirar in det).
+
+    Locks (graceful degradation + ärlighet, samma mönster som
+    appliedVisibleEffect):
+      1. ``PromptApiResponse`` exponerar ett valfritt ``routerDecision``-fält.
+      2. En defensiv ``extractRouterDecision`` läser fältet utan att lita på
+         dess typ och returnerar null när det saknas → oförändrat beteende.
+      3. ``summarizeRouterDecision`` grenar på de messageKind/buildRequirement
+         som routern äger och som UI:t måste vara ärligt om.
+      4. Preempten körs INNAN success-/no-op-grenarna i summarizeBuildResult,
+         men edit/multi_intent med targeted_rebuild/full_rebuild faller igenom
+         (→ null) så den vanliga bygg-summeringen (Bug B) tar vid.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "routerDecision?: Record<string, unknown>" in text, (
+        "PromptApiResponse måste exponera ett valfritt routerDecision-fält "
+        "(speglar router-decision.schema.json) så UI:t kan tändas när backend "
+        "börjar skicka det — utan ny deploy."
+    )
+    assert "function extractRouterDecision(" in text, (
+        "FloatingChat måste läsa routerDecision defensivt (extractRouterDecision), "
+        "exakt som extractAppliedVisibleEffect, så ett saknat/okänt fält ger null."
+    )
+    assert "function summarizeRouterDecision(" in text, (
+        "FloatingChat måste härleda en ärlig rad per messageKind (summarizeRouterDecision)."
+    )
+
+    # Alla messageKind ur schemat som UI:t måste kunna bemöta ärligt.
+    for kind in (
+        '"answer_only"',
+        '"site_review"',
+        '"reference_analysis"',
+        '"component_discovery"',
+        '"multi_intent"',
+        '"unclear"',
+    ):
+        assert kind in text, (
+            f"summarizeRouterDecision måste hantera messageKind {kind} "
+            "(annars är readiness-kontraktet ofullständigt mot schemat)."
+        )
+
+    # Plan-only/patch-only edits får inte låtsas vara klara: ärlig rad om att
+    # bygget som gör ändringen synlig inte är klart än (orchestrator-punkt 5).
+    assert '"plan_only"' in text and '"artifact_patch_only"' in text, (
+        "summarizeRouterDecision måste skilja plan_only/artifact_patch_only "
+        "(plan skapad, inget synligt bygge än) från targeted_rebuild/full_rebuild."
+    )
+
+    # Preempten måste ligga FÖRE den vanliga bygg-summeringen så ett router-
+    # beslut för icke-bygg-utfall vinner över "Klart!"-raden.
+    preempt_idx = text.index("const routerView = extractRouterDecision(payload)")
+    ok_branch_idx = text.index('if (outcome === "ok") {')
+    assert preempt_idx < ok_branch_idx, (
+        "Router-preempten måste utvärderas innan outcome==='ok'-grenen så vi "
+        "aldrig visar bygg-success för det routern klassat som fråga/oklart/"
+        "referens/discovery/plan-only."
+    )
+
+    # Graceful: edit/multi_intent som krävde ett synligt bygge ska falla igenom
+    # till den vanliga summeringen (Bug B m.m.) — summarizeRouterDecision ska
+    # alltså ha en gren som returnerar null.
+    summarize_start = text.index("function summarizeRouterDecision(")
+    summarize_end = text.index("function summarizeBuildResult(")
+    summarize_body = text[summarize_start:summarize_end]
+    assert "return null;" in summarize_body, (
+        "summarizeRouterDecision måste returnera null för bygg-krävande edits "
+        "(targeted_rebuild/full_rebuild) så den vanliga bygg-summeringen tar vid."
+    )
+
+
+@pytest.mark.tooling
 def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
     """ADR 0034 väg B (B155 path B): ``lib/runs.ts`` måste exportera
     ``readAppliedCopyDirectives`` + en strikt ``AppliedCopyDirective``-typ

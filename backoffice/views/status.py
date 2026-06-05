@@ -82,6 +82,7 @@ def view_system_health() -> None:
                 health.run_governance_validate(),
                 health.run_rules_sync_check(),
                 health.run_term_coverage(strict=True),
+                health.run_platform_baseline_check(),
                 health.run_pytest_governance(),
             ]
 

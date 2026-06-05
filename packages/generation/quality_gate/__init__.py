@@ -29,6 +29,11 @@ from .critic import (
 )
 from .gate import run_quality_gate
 from .models import CheckResult, CheckStatus, QualityResult, QualityStatus
+from .verifier import (
+    VerifierModelResolutionError,
+    resolve_verifier_model,
+    run_verifier_critic,
+)
 
 __all__ = [
     "CheckResult",
@@ -37,7 +42,10 @@ __all__ = [
     "CriticResult",
     "QualityResult",
     "QualityStatus",
+    "VerifierModelResolutionError",
     "append_critic_trace_event",
+    "resolve_verifier_model",
     "run_deterministic_critic",
     "run_quality_gate",
+    "run_verifier_critic",
 ]

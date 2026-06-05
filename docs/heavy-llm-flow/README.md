@@ -1,5 +1,29 @@
 # Heavy LLM Flow — kördokument för agenter
 
+> ## ✅ Status 2026-06-04: hela kör-sekvensen är implementerad
+>
+> Alla kördokument nedan har landat som mergad kod i `jakob-be`
+> (HEAD `54055fc`): kör 0/1a/1b/1c/2/3a/3b/4a/4b/5/6a/6b/7a/7b/7c/7d/STAB/o1/o2.
+> **Dispatcha alltså inte en agent på "bygg ett nytt kör-kort" — den fasen är klar.**
+>
+> Det som återstår är **inkoppling + eval**, inte fler kort:
+>
+> 1. **rerender-wiring** — gör `kor-5` repair verklig (passet finns men är dormant
+>    tills en rerender-callback injiceras).
+> 2. **`/api/prompt` + `routerDecision`** — gör follow-up-kedjan (router → context →
+>    patch → apply → targeted render) verklig i Viewser-UI:t. Idag kör `/api/prompt`
+>    fortfarande bara `runPromptToProjectInput` → `runBuild`. Låser upp #177.
+> 3. **baseline-eval** — 4 prompter i riktig preview, för att avgöra om nästa
+>    investering är copy/trust/kontakt eller designsystem.
+> 4. **hostad körning** — `/api/prompt` ger `501` på Vercel: den lokala Python-kedjan
+>    saknar en riktig backend-runtime i den hostade vyn (separat hosting-spår).
+>
+> Innan wiringen: kör en **post-merge-härdning** av router/OpenClaw-sömmarna
+> (follow-up-classifier → LLM-fallback, RouterDecision cross-field-validering,
+> `orchestrate()` ska skicka `reference.url` + respektera reference-gating i
+> multi-intent, byt stale `blockedBy="kor-7c"`). Detaljer i `docs/current-focus.md`
+> och den externa reviewen. **Princip: ingen ny LLM-slice utan inkopplingsplan.**
+
 Den här mappen är en **byggplan** för att lyfta Sajtbyggaren från en kontrollerad
 mall-/scaffold-generator med LLM-hjälp till en **riktig AI-hemsidebyggare** i v0-/
 Lovable-/sajtmaskin-klass — utan att kasta den bra deterministiska grund som redan

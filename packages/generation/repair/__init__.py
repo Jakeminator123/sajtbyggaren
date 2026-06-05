@@ -28,22 +28,39 @@ as ``RepairFix(success=False, ...)`` so the orchestrator continues
 producing a well-formed RepairResult.
 """
 
+from .blueprint_repair import (
+    BlueprintRepairOutcome,
+    apply_blueprint_repairs,
+    run_repair_model,
+)
 from .fixes import (
     MECHANICAL_FIXES,
     MechanicalFixSpec,
     unimplemented_registry_fixes,
 )
-from .models import RepairFix, RepairResult, RepairStatus
+from .model_resolver import (
+    RepairModelResolutionError,
+    has_openai_api_key,
+    resolve_repair_model,
+)
+from .models import BlueprintRepair, RepairFix, RepairResult, RepairStatus
 from .orchestration import execute_phase3_quality_and_repair
 from .repair import run_repair_pipeline
 
 __all__ = [
     "MECHANICAL_FIXES",
+    "BlueprintRepair",
+    "BlueprintRepairOutcome",
     "MechanicalFixSpec",
     "RepairFix",
+    "RepairModelResolutionError",
     "RepairResult",
     "RepairStatus",
+    "apply_blueprint_repairs",
     "execute_phase3_quality_and_repair",
+    "has_openai_api_key",
+    "resolve_repair_model",
+    "run_repair_model",
     "run_repair_pipeline",
     "unimplemented_registry_fixes",
 ]

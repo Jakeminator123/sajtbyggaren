@@ -20,6 +20,7 @@ from .checks import (
 )
 from .critic import append_critic_trace_event, run_deterministic_critic
 from .models import CheckResult, QualityResult, QualityStatus
+from .verifier import run_verifier_critic
 
 # Severity-fältet säger "räknas mot status alls", inte "failure → failed".
 # Avbildning från severity + check-namn till QualityResult.status sker i
@@ -125,6 +126,7 @@ def run_quality_gate(
     site_brief: dict[str, Any] | None = None,
     run_dir: Path | None = None,
     run_id: str | None = None,
+    use_verifier_critic: bool = False,
 ) -> QualityResult:
     """Run all four Quality Gate checks and aggregate into a QualityResult.
 
@@ -154,6 +156,19 @@ def run_quality_gate(
       before. The critic NEVER affects ``status``.
     - ``run_dir`` / ``run_id``: when a run directory exists, the critic logs a
       non-blocking ``critic.evaluated`` event to ``<run_dir>/trace.ndjson``.
+
+    kor-4b verifierModel critic (opt-in, still a warning lane):
+
+    - ``use_verifier_critic``: when True (and a blueprint is supplied) the
+      critic runs through ``run_verifier_critic`` instead of the deterministic
+      lane - it merges read-only ``verifierModel`` taste findings on top of the
+      deterministic ones (deduped per ``(type, target)``) and sets
+      ``critic.source`` to ``verifierModel``. Without ``OPENAI_API_KEY`` (or on
+      any LLM error) it falls back to exactly the deterministic findings with
+      ``source = "mock-no-key"`` / ``mock-llm-error`` (identical findings to
+      kor-4a, no regression). Default is False so existing callers keep the
+      ``deterministic-v0`` behaviour unchanged. The verifier critic, like the
+      deterministic one, NEVER affects ``status``.
     """
     checks = [
         _with_registry_severity(run_typecheck_check(target_dir, do_typecheck=do_typecheck)),
@@ -170,11 +185,18 @@ def run_quality_gate(
 
     critic = None
     if generation_package is not None:
-        critic = run_deterministic_critic(
-            generation_package=generation_package,
-            site_brief=site_brief,
-            target_dir=target_dir,
-        )
+        if use_verifier_critic:
+            critic = run_verifier_critic(
+                generation_package=generation_package,
+                site_brief=site_brief,
+                target_dir=target_dir,
+            )
+        else:
+            critic = run_deterministic_critic(
+                generation_package=generation_package,
+                site_brief=site_brief,
+                target_dir=target_dir,
+            )
         if run_dir is not None:
             append_critic_trace_event(run_dir, run_id or "unknown", critic)
 

@@ -1,6 +1,6 @@
 # WebContainers / StackBlitz - implementationsnoteringar
 
-Underlag för att bygga `StackBlitzRuntime` när `packages/preview-runtime/stackblitz/` skapas. Originalkonversation finns i [`referens/preview-runtime/konversation.txt`](../../referens/preview-runtime/konversation.txt).
+Underlag för att bygga `StackBlitzRuntime` när `packages/preview-runtime/stackblitz/` skapas. Originalkonversationen låg i `referens/preview-runtime/konversation.txt` (borttagen i referens-städningen, finns kvar i git-historiken).
 
 > Detta är **noteringar**, inte produktkod. Implementationen sker i `packages/preview-runtime/stackblitz/` och styrs av [`preview-runtime-policy.v1.json`](../../governance/policies/preview-runtime-policy.v1.json).
 

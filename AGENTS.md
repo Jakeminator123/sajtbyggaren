@@ -58,7 +58,9 @@ On Ubuntu Noble use `sudo apt-get install -y python3-venv` when available;
 if the meta-package is missing, install `python3.12-venv` explicitly before
 the first `python3 -m venv .venv`. When neither apt package is available,
 the VM update script falls back to `pip install virtualenv` and
-`virtualenv .venv` (same outcome as `python3 -m venv`).
+`~/.local/bin/virtualenv .venv` (same outcome as `python3 -m venv`; user
+installs land in `~/.local/bin`, which may be off the shell search path in
+non-login shells).
 Activate with `source .venv/bin/activate`. The update script handles
 this automatically.
 
@@ -121,6 +123,11 @@ Commands are documented in the README under "Snabbstart". Key commands:
 - Long-running dev servers (Next.js preview, Streamlit backoffice) should run
   under tmux on Cloud Agent VMs (portal config under
   `/exec-daemon/tmux.portal.conf`).
+- Stop Viewser on port 3000 before `python -m pytest tests/`: otherwise
+  `test_api_prompt_smoke` (which starts its own Next dev server) flakes /
+  collides on an already-heavy suite. Run the full suite first, then start
+  `npm run dev` in `apps/viewser`. (Same coexistence note as the Windows
+  orphan gotcha above — applies to Cloud VMs too.)
 - Killing leftover Sajtbyggaren node processes (Windows) — the easy-fix: run
   `kill-dev-trees.bat` (repo root) **as administrator**. It tree-kills only
   Sajtbyggaren-scoped node trees (path token, or `next start`/`next dev` on the

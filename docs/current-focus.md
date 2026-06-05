@@ -5,24 +5,38 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+> **Nästa fas (uppdaterad 2026-06-05):** hela `docs/heavy-llm-flow/`-kör-sekvensen är
+> implementerad OCH **Fas 0-härdningen (router/OpenClaw-sömmarna) + #187 npm-check är klara**
+> (`jakob-be` @ `d149f23`). **Bygg inga nya kör-kort.** Nästa arbete enligt
+> [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md): **Fas 1** —
+> wira `routerDecision`/follow-up-kedjan i `/api/prompt` (låser #177, Christopher-lane) +
+> rerender-wiring (kor-5); sedan **Fas 2** baseline-eval (operatörsnärvaro: kostar tokens +
+> kräver ögon på renderingen). `referens/` borttagen (#191), `MIN_IDE/` raderad,
+> `backup_100_BRA` pushad som återställningspunkt.
+
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
-`jakob-be` @ `5b051b6`, rent träd. **Denna session mergade:** #179 (kor-3a:
+`jakob-be` @ `2033282`, rent träd. **Denna session mergade:** #179 (kor-3a:
 section-treatments Python→JSON, en deklarativ källa), #180 (kor-4a: deterministisk
 quality critic v0 — non-blocking, ingen LLM), och #183 (kor-3a follow-up: flyttar
 section-treatments-loadern till `orchestration/` så `planning` inte importerar
 `build` — Pushvakt P1; repo-boundaries v10 + fail-closed på trasig JSON + boundary-test
 som scannar riktiga imports), och #184 (kor-3b: visualDirection väljer section-treatment,
-Option A — verifierad mot kombinerat träd med #183, alla paritets-/pick-tester gröna).
-**Ärlighet:** kor-4a-critic är library-komplett men **dormant i build-vägen** (gaten
-anropas utan `generation_package` → `critic` blir null i verkliga runs) tills
-`build_site`/`dev_generate` wire:as. kor-3b är likaså aktiv bara när blueprintens
-`visualDirection` är satt (annars byte-paritet mot kor-3a).
-**Status cloud-builders:** kor-3b INNE (#184). kor-5 pushad på `feat/kor-5-repair-pass`
-(ingen PR än; hålls/dormant + no-key-inkonsekvensen kvar att fixa innan den tas).
-**Justerad ordning (orchestrator + coach, natt):** (1) ✓ kor-3b inne (#184) → (2) **NU:** wira
-critic/repair + follow-up-bryggan i build-vägen/`/api/prompt` (största hävstången; gör
-kor-4a/7 verkliga + UPPLÅSER Christophers #177) → (3) minimal E2E + read-only baseline-eval
+Option A — verifierad mot kombinerat träd med #183, alla paritets-/pick-tester gröna), och
+#186 (CLI-wiring: kor-4a critic + kor-7 follow-up-kedja i build-vägen + E2E).
+**Ärlighet:** kor-4a-critic **körs nu i CLI-builds** (#186 trådar in `generation_package` →
+`critic` ifylls i quality-result.json; var alltid null). KVAR att wira: `/api/prompt`
+(Christopher) + `dev_generate`. kor-3b är aktiv bara när blueprintens `visualDirection` är
+satt (annars byte-paritet mot kor-3a). Repair (kor-5) fortsatt dormant (#185).
+**Status cloud-builders:** kor-3b INNE (#184); CLI-wiring INNE (#186); kor-5 INNE (#185,
+dormant library — repair aktiveras bara när en rerender-callback injiceras). Reviewer-fynd
+åtgärdade vid merge (brief-schemavalidering+rollback, "bara befintliga fält", rerender try/except,
+blueprintPasses, doc-match, typfix `_combine_status` av orchestrator). **Kvar till rerender-wiring-slicen:**
+post-repair-critic ska skrivas till trace FÖRE `critic.evaluated` (annars pre-repair-score i trace
+vs post-repair i quality-result.json); per-entry `success` ska bli `false`/ej-materialiserad när rerender failar.
+**Justerad ordning (orchestrator + coach, natt):** (1) ✓ kor-3b (#184) → (2) ✓ CLI-wiring inne
+(#186): kor-4a critic + kor-7 follow-up-kedja i build-vägen + E2E; KVAR `/api/prompt` +
+routerDecision (Christopher #177) → (3) read-only baseline-eval
 → (4) kor-5 (library → wira in) → (5) kor-o2 OpenClaw Core V0 (read-only, spec:as parallellt)
 → (6) design-system-ADR + `next-shadcn-tailwind`-starter *om evalen visar att gapet är
 visuellt* (annars copy/trust/kontakt-ärlighet först) → (7) kor-4b verifier + kor-6b
@@ -30,6 +44,30 @@ router-fallback. **Princip:** ingen ny LLM-slice utan inkopplingsplan — varje 
 en användarväg eller taggas dormant + får en wiring-follow-up (#178-trion filad så).
 **Öppet (ej vår lane):** #177 (Christopher, väntar på routerDecision i `/api/prompt`),
 #181/#182 (docs→main, cloud-env), #156 (parkerad). Main-sync = operatörsbeslut.
+
+### Follow-ups filade (2026-06-03 natt)
+
+- **#186-härdning** (post-merge, reviewer-fynd): validera `--base-run-id` mot siteId (annars
+  context från fel sajt); bas-run-val ska vara aktiv/senaste `ok|degraded` med kompletta
+  artefakter (ej nyaste mtime oavsett status); lägg `--prompt-inputs-dir`-flagga; överväg
+  `applied`→`projectInputApplied`/separat `visibleEffectApplied` i CLI-svaret.
+- **kor-5 (#185)** — revisionsrunda hos D före merge: skärp "bara befintliga fält", wrappa
+  `rerender` i try/except → partial/no-fix, uppdatera kor-5-doc (high/`trust_missing`),
+  ev. `passes`→`blueprintPasses`, rebase ovanpå #186 (delar `repair/orchestration.py`).
+- **Megafil-refaktor** (backend, behavior-preserving slices, EFTER wiring/eval):
+  `renderers.py` 5518, `build_site.py` 4816, `prompt_to_project_input.py` 3535.
+- **Baseline-eval** (read-only, 4 prompter) — bevisa var upplevd kvalitet brister
+  (copy/trust/kontakt vs visuellt) innan design-system-investering.
+- **Platform-version-baseline** — steg 1-3 INNE på branch (DRAFT-PR mot `jakob-be`,
+  `cursor/platform-version-baseline-5e94`): ADR 0037 + `governance/policies/platform-baseline.v1.json`
+  (+ schema) som EN sanningskälla för Node/Next/React/UI/tooling-pins, grundad i nuvarande
+  viewser+starters-pins, + drift-checker `scripts/check_platform_baseline.py --check/--fix`
+  (wirad i guard-sviten + README). `--check` är grön nu (enforced pins uniforma) och failar
+  deterministiskt vid drift; engines/volta + `@types/node` `^20`->`^24` + varierande pins
+  markerade `pendingPropagation`. Kvar är steg 4 (granskat `--fix` operatören kör senare,
+  rör `apps/viewser/package.json` = Christophers lane + starters; kräver operatörs-OK +
+  inbox-notis till `christopher-ui`). Ingen workspace/catalog (ADR 0030). Möjliggör
+  shadcn/lucide kontrollerat (codegen-allowlist + pinnade versioner).
 
 ## Current objective (2026-06-03 kväll — follow-up-bryggan startad: kor-7b inne)
 
@@ -354,7 +392,25 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `9f638da` (2026-06-03 natt UTC, `jakob-be` HEAD — docs-pass:
+Last verified state: `d149f23` (2026-06-05 natt UTC, `jakob-be` HEAD — **POST-BUILD FAS 0 KLAR**:
+router/OpenClaw-sömmarna härdade i tre skivor — `d8ef7ea` (KÖR-6b-fallback i CLI-followup +
+RouterDecision cross-field-clamp så non-edit aldrig kan starta build), `bb94445` (OpenClaw
+reference-gating i multi_intent + `orchestrate()` skickar `reference.url` + action-bridge-label
+ersätter stale `blockedBy="kor-7c"` + `validate_assignment`-immutability + `base_run_id`→apply),
+`d149f23` (#187: npm `packageManager`-check som pendingPropagation-fält, policy v2, + EN-docstring).
+Full `pytest tests/` grön (endast väntade skips), governance/rules_sync/term_coverage gröna. Dessförinnan:
+`002045f` (#191 mergad: `referens/` borttagen + README/paths.py/repo-boundaries-rensning), `86f9df6`
+(post-build-status + plan-doc). `MIN_IDE/` raderad lokalt; `backup_100_BRA` pushad. **Nästa: Fas 1**
+(`/api/prompt`-wiring, Christopher-lane) + rerender-wiring; **Fas 2** baseline-eval (operatörsnärvaro).
+Föregående: `029f652` (#190 kor-4b verifierModel
+read-only smak-critic ovanpå kor-4a (mock=4a, dedup, icke-blockerande, llm-models v8). **HELA
+KÖR-SEKVENSEN i docs/heavy-llm-flow/ ÄR NU IMPLEMENTERAD** (0/1a/1b/1c/2/3a/3b/4a/4b/5/6a/6b/7a/7b/7c/7d/
+STAB/o1/o2). Kvar = INKOPPLING, inte fler kör-kort: rerender-wiring (gör kor-5 verklig),
+`/api/prompt`-wiring + routerDecision (gör follow-up verklig för UI, låser #177), baseline-eval.
+Föregående: #188 kor-6b router LLM-fallback + #189 kor-o2 OpenClaw Core V0 + #187 platform-baseline.
+Föregående: #185 kor-5 repairModel
+blueprint-only repair (dormant library; brief-validering+rollback, rerender try/except, blueprintPasses,
+typfix). Föregående: #186 CLI-wiring (kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Docs-pass:
 system-overview-refresh + current-focus slim-down (Föregående checkpoint → arkiv) +
 arkitektur-canvas-bump. Föregående: #184 kor-3b
 visualDirection väljer section-treatment (Option A, verifierad mot kombinerat träd) + #179 kor-3a
