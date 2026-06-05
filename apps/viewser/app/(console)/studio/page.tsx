@@ -520,13 +520,14 @@ export default function Home() {
               // i usePendingBuild (5 min) och via "Iterera"-toggle.
             }}
             onBuildDone={(runId, outcome) => {
-              // Bygget lyckades (eller hamnade i mock/degraded — alla
-              // outcomes utom hård exception). Operatörens iteration
-              // konsumerades och ska inte oavsiktligt återanvändas av
-              // nästa fri-text-prompt. Signaturen i BuilderShell skickar
-              // inte siteId vidare; det löser handleBuildDone själv via
-              // runs-listan när den re-fetchar.
-              setPendingBaseRunId(null);
+              // Bygget producerade en riktig version (ok/degraded) → iterationen
+              // konsumerades och ska inte oavsiktligt återanvändas av nästa
+              // fri-text-prompt. Vid ``failed`` BEHÅLLER vi base-run:en: error-
+              // bubblans "Försök igen" ska iterera från samma bas, inte falla
+              // tillbaka till latest (matchar onBuildEnd-kommentaren ovan).
+              // Signaturen i BuilderShell skickar inte siteId vidare; det löser
+              // handleBuildDone själv via runs-listan när den re-fetchar.
+              if (outcome !== "failed") setPendingBaseRunId(null);
               handleBuildDone(runId, outcome);
             }}
             onNewSite={() => {

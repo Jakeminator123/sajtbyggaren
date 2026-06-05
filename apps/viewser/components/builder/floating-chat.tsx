@@ -1792,7 +1792,7 @@ export function FloatingChat({
               type="button"
               onClick={() => setIsMinimized(true)}
               aria-label="Minimera"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap md:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
             >
               <Minus className="h-3.5 w-3.5" />
             </button>
@@ -1801,7 +1801,7 @@ export function FloatingChat({
               onClick={() => setIsMinimized(true)}
               aria-label="Stäng (minimera)"
               title="Stäng (öppnas igen från bubblan)"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap md:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -1839,7 +1839,7 @@ export function FloatingChat({
                 onClick={dismissLoopHint}
                 aria-label="Dölj tipset"
                 title="Dölj"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex shrink-0 items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap md:min-tap-0 inline-flex shrink-0 items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -1921,7 +1921,7 @@ export function FloatingChat({
                   aria-label="Avbryt iterera-läge"
                   title="Avbryt iterera-läge"
                   className={cn(
-                    "min-tap sm:min-tap-0 inline-flex h-5 w-5 items-center justify-center rounded-full hover:bg-sky-500/15 active:scale-95",
+                    "min-tap md:min-tap-0 inline-flex h-5 w-5 items-center justify-center rounded-full hover:bg-sky-500/15 active:scale-95",
                     "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                   )}
                 >
@@ -1947,7 +1947,7 @@ export function FloatingChat({
                 title={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
                 className={cn(
                   "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50",
-                  "min-tap sm:min-tap-0 inline-flex h-5 w-9 items-center justify-center rounded-full active:scale-95",
+                  "min-tap md:min-tap-0 inline-flex h-5 w-9 items-center justify-center rounded-full active:scale-95",
                   "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                   "transition-colors",
                 )}
@@ -1987,7 +1987,7 @@ export function FloatingChat({
                               "border-border/60 bg-background/80 text-foreground/80",
                               "hover:border-border hover:bg-card hover:text-foreground",
                               "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                              "min-tap sm:min-tap-0 rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-95 sm:px-2 sm:py-0.5 sm:text-[10.5px]",
+                              "min-tap md:min-tap-0 rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-95 sm:px-2 sm:py-0.5 sm:text-[10.5px]",
                               CHIP_INTERACTIONS,
                             )}
                           >
@@ -2019,7 +2019,7 @@ export function FloatingChat({
                     type="button"
                     onClick={() => removeAttachment(ref.assetId)}
                     aria-label={`Ta bort ${ref.filename}`}
-                    className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95"
+                    className="text-muted-foreground hover:text-foreground min-tap md:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95"
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
@@ -2068,7 +2068,7 @@ export function FloatingChat({
                   className={cn(
                     "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                     "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
-                    "min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md transition-colors sm:h-6 sm:w-6",
+                    "min-tap md:min-tap-0 inline-flex items-center justify-center rounded-md transition-colors sm:h-6 sm:w-6",
                     "active:scale-95 disabled:opacity-40 disabled:hover:bg-transparent",
                   )}
                 >

@@ -3328,6 +3328,21 @@ def test_builder_followup_drives_buildstage_via_real_trace_signal() -> None:
     )
 
 
+def test_studio_preserves_iterate_base_on_failed_build() -> None:
+    """Scout-fynd (P1, 2026-06-05): onBuildDone rensade pendingBaseRunId
+    ovillkorligt — även för outcome=failed (failed returnerar en runId, så
+    onBuildDone körs). Då tappade error-bubblans 'Försök igen' iterera-från-
+    bas-läget och nästa retry grenade från latest i stället för vald bas, vilket
+    motsäger onBuildEnd-kommentarens uttryckliga intent. Lås att base-run:en bara
+    rensas när bygget producerade en riktig version (ok/degraded), inte vid failed.
+    """
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
+    assert 'if (outcome !== "failed") setPendingBaseRunId(null);' in text, (
+        "onBuildDone måste behålla pendingBaseRunId vid failed så error-bubblans "
+        "'Försök igen' itererar från samma bas i stället för latest."
+    )
+
+
 def test_wizard_finish_timer_is_cancelled_on_close() -> None:
     """Scout-fynd (P1): submit-overlayns 700 ms-timer fyrade av onComplete
     (bygg-start) även om operatören stängde wizarden (Esc) under väntan.
@@ -3379,6 +3394,18 @@ def test_wizard_keyboard_help_lists_all_four_steps() -> None:
     ), (
         "Steg-hoppet måste matcha event.altKey + event.code (Digit1–9) så det "
         "inte krockar med webbläsarens ⌘/Ctrl+siffra-flikbyte"
+    )
+    # Scout-fynd (P1, 2026-06-05): wizardens globala genvägar ligger på document
+    # och fyrade bakom MoreInfoDialog (egen Dialog-portal ovanpå) — ⌘↵ kunde
+    # avancera/submit:a wizarden utan att operatören såg det. Handlern måste
+    # early-return:a när moreInfoOpen är true OCH ha moreInfoOpen i dep-arrayen.
+    assert "if (moreInfoOpen) return;" in content, (
+        "keydown-handlern måste lämna över tangentbordet till MoreInfoDialog "
+        "(early-return på moreInfoOpen) så wizard-genvägar inte fyrar bakom modalen."
+    )
+    assert "goToStep, helpOpen, moreInfoOpen]" in content, (
+        "moreInfoOpen måste ligga i keydown-effektens dep-array, annars läser "
+        "guarden ett stale värde."
     )
 
 
@@ -4036,6 +4063,15 @@ def test_hero_prompt_opens_wizard_and_hands_off_to_studio() -> None:
     assert "setWizardHandoff" in form and "STUDIO_HREF" in form, (
         "Heron ska lämna över hela wizard-resultatet och navigera till studion"
     )
+    # Scout-fynd (P1, 2026-06-05): hero-textarean kan vara TOM när besökaren
+    # öppnade wizarden direkt och bara fyllde "Vad gör ni?" där (answers.offer).
+    # Handoffen måste falla tillbaka på offer-svaret så discovery.rawPrompt
+    # aldrig blir "" — annars tappas "Operatörens beskrivning" ur master-prompten.
+    assert "prompt.trim() || answers.offer.trim()" in form, (
+        "Hero-handoffen måste falla tillbaka på wizardens offer-svar när hero-"
+        'textarean är tom — annars blir discovery.rawPrompt "" och '
+        "'Operatörens beskrivning' tappas ur master-prompten på /studio."
+    )
     builder = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
     assert "consumeWizardHandoff" in builder, (
         "PromptBuildern ska konsumera wizard-handoffen vid mount"
@@ -4177,6 +4213,30 @@ def test_wizard_tab_strip_is_keyboard_navigable() -> None:
     )
     assert 'role="tabpanel"' in text and 'aria-controls="wizard-tabpanel"' in text, (
         "Flikarna ska peka på en tabpanel (aria-controls) och panelen ska ha role=tabpanel."
+    )
+
+
+@pytest.mark.tooling
+def test_more_info_dialog_tab_strip_is_keyboard_navigable() -> None:
+    """Scout-fynd (P1, 2026-06-05, två oberoende agenter): MoreInfoDialog-
+    flikarna hade role=tab/aria-selected men SAKNADE pil/Home/End-tangentbord,
+    roving tabindex och tabpanel-koppling — inne i Dialog-portalen gick de inte
+    att nå med tangentbord (till skillnad från huvud-wizardens stegstrip).
+    Lås att MoreInfoDialog nu följer samma WAI-ARIA tabs-mönster.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "more-info-dialog.tsx"
+    ).read_text(encoding="utf-8")
+    assert "tabIndex={isActive ? 0 : -1}" in text, (
+        "MoreInfoDialog-flikarna ska använda roving tabindex (bara aktiv flik i "
+        "tab-ordningen)."
+    )
+    assert '"ArrowRight"' in text and '"Home"' in text and '"End"' in text, (
+        "MoreInfoDialog-flikarna ska hantera pil/Home/End-navigering."
+    )
+    assert 'role="tabpanel"' in text and 'aria-controls="more-info-tabpanel"' in text, (
+        "MoreInfoDialog-flikarna ska peka på en tabpanel (aria-controls) och "
+        "panelen ska ha role=tabpanel + aria-labelledby."
     )
 
 
