@@ -64,6 +64,12 @@ non-login shells).
 Activate with `source .venv/bin/activate`. The update script handles
 this automatically.
 
+Cloud Agent VM images often ship Node 22 while
+`governance/policies/platform-baseline.v1.json` pins Node 24. When `nvm`
+is available, run `nvm install 24 && nvm use 24` before `npm install`,
+`npm run dev`, or any `build_site.py` run that shells out to npm. Node 22
+still passes CI builder-smoke, but 24 matches the product baseline.
+
 ### Running services
 
 | Service           | Command                                                                     | Notes                                                                                                                                     |
