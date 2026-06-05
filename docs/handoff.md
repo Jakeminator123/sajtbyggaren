@@ -5,6 +5,95 @@
 Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
 (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
 
+## Orchestrator-handoff 2026-06-05 — Avslutningsrunda (status + alla öppna trådar)
+
+> Skriven som överlämning till nästa orchestrator. Läs `docs/current-focus.md` +
+> `docs/heavy-llm-flow/post-build-plan.md` först; det här samlar var vi står och
+> varje öppen tråd så du kan plocka upp där det passar.
+
+### TL;DR — var vi står
+
+`jakob-be = origin/main` (HEAD `619f692`, + några docs/inbox-commits efter). Hela
+`docs/heavy-llm-flow`-kör-sekvensen + Fas 0-härdning + Fas 1 skiva 1a (`routerDecision`
+i `/api/prompt`) + #187 platform-baseline + `referens/`-borttagning + inbox-alias-fix
+ligger nu i `main` (via #192/#193/#194). **Live-bevisat i Cursor-browsern:** prompt →
+genererad bagerisajt (Surdegshörnan, Göteborg, rätt produkter, varm känsla) i
+`npm run dev` (local-next), `POST /api/prompt 200 in 2.1min`. Christophers frontend
+(#194) är mergad till main. **Kvar för full branch-konvergens:** Christopher kör
+`git reset --hard origin/main` på `christopher` + `christopher-ui` (hans action; han
+har ack:at reconcile-planen).
+
+### Landat denna session (klart)
+
+- Fas 0-härdning av router/OpenClaw-sömmarna: KÖR-6b-fallback i CLI-followup +
+  RouterDecision cross-field-clamp; `orchestrate()` skickar `reference.url`;
+  multi-intent reference-gating; `action_bridge_missing`-etikett ersätter stale
+  `blockedBy="kor-7c"`; `validate_assignment`-immutability; `base_run_id`→apply.
+- Fas 1 skiva 1a: deterministisk `routerDecision` (read-only) i `/api/prompt` (#192).
+- #187: platform-baseline npm `packageManager`-check (policy v2).
+- `referens/` borttagen (#191) + alla dangling doc-länkar lagade.
+- Inbox-MCP alias-fix (`christopher`/`christopher-ui`/`jakob-*` = samma lane).
+- Synkar: #193 (jakob-be→main) + #194 (christopher→main) mergade; #177 stängd (superseded).
+
+### Öppna trådar (plocka upp här)
+
+**A. Produktloop (Fas 1–3, `post-build-plan.md`):**
+- `skiva 1c` —   rerender-wiring så `kor-5` repair blir verklig. Ren backend-slice
+  (`packages/generation/repair` + `build_site.py`), parallell-säker → kan tas NU.
+- `skiva 1b` — hela follow-up-kedjan i `/api/prompt` (router→context→patch→apply→
+  targeted render). Rör `apps/viewser` (Christopher-lane) → **efter** hans reset.
+  Det här är operatörens "wow": fria, effektfulla följdprompt-ändringar i UI:t.
+- Fas 2 baseline-eval — Christopher körde redan en (8.23/10), se B nedan.
+- Fas 3 — fixa det evalen visade + Steward Backoffice-"Kontrollplan" (C nedan).
+
+**B. Backend copy/trust-gap (Christophers eval, inbox `msg-0026-eval-trust-gap`) — högst värde/insats:**
+- gap 1 (störst, tydligaste fejk-signalen): `trustSignals` seedas ALDRIG från
+  `uniqueSellingPoints` → "Varför oss" dumpar rå metadata ("Verksamhetstyp:
+  elektriker") som kundtext. Rotorsak: `prompt_to_project_input.py:1544`
+  (`'trustSignals': []`), `renderers.py:1168` fallback. Fix: seeda `trustSignals`
+  från operatörens `uniqueSellingPoints` (grundade fakta, aldrig påhittade).
+- gap 2: `company.story` = hero-konkatenering → upprepning (backend story-gen).
+- gap 3: offer/tagline läcker som dubblerat tjänstekort (backend services-gen).
+- Kontakt = eval-artefakt, inte bugg; operatörsbeslut "dölj vid render" står.
+
+**C. Externa reviewers/coach (de fyra `viktig-input*.txt`, syntetiserade i `post-build-plan.md`):**
+- `viktig-input.txt` (teknisk, 7.6/10): 9 router/OpenClaw-punkter → Fas 0 klar.
+  Riktning: deterministisk grund + LLM ovanpå; OpenClaw = dirigent, inte motor.
+- `viktig-input-2.txt`/`-3.txt` (governance): gör Backoffice till en yta som visar
+  generatorns beslut (router/OpenClaw/critic) + begränsad policy-edit — inget nytt
+  parallellt beslutslager. → Fas 3 Steward-slice.
+- `viktig-input-4.txt`: hostad `/api/prompt` 501 = bevis för hosting-gapet (D).
+
+**D. Hosting (eget spår, `docs/vercel-sandbox-migration` P0–P5 + ADR 0033):**
+Generering kör bara lokalt (Python-kedjan); hostad `/api/prompt` ger `501` by-design.
+Kräver bygg-i-sandbox + blob-lagring + auth innan publik. Vänta tills loopen är bra
+(produktkompassen: auth/billing/domäner sist). Sekvens-not: gör `skiva 1b` (lokal
+wiring) FÖRE hosting-P2, så sandbox-bygget ärver den wirade kedjan.
+
+**E. Småtrådar / hygien:**
+- Christopher: `reset --hard origin/main` på sina två brancher (slutför konvergens).
+- #156 (hosted `/live`) parkerad (säkerhet).
+- #187: lockfile-check + hårt core-deps-krav lämnades som follow-up.
+- Inbox: duplicerade ordinaler efter #194:s union-merge (kosmetiskt). Alias-läsning
+  kräver MCP-restart per läsare. Skrivna meddelanden måste committas + pushas.
+- `.cursorignore`/`.vscode/settings.json`: döda men ofarliga `referens`-poster kvar.
+- Hydration-varning i `components/marketing/profession-grid.tsx` (Christopher-lane,
+  dev-only, förvärras av Cursor-browserns `data-cursor-ref`-injektion).
+- `jakob-be` ligger några docs/inbox-commits före `main` → en sista jakob-be→main-sync
+  stänger loopen (gör gärna tillsammans med Christophers reset).
+
+### Operating rules / lanes
+- Lanes: `jakob-be` (backend/governance/scripts/docs), `christopher-ui` + `christopher`
+  (`apps/viewser`). Cross-lane bara med operatörs-OK.
+- `main` = canonical; sync via PR; efter merge `reset --hard origin/main`.
+- Inbox = MCP (`project-0-...-sprintvakt`) över git-trackad `docs/agent-inbox.jsonl`.
+
+### Rekommenderat nästa steg
+1. (nu, parallellt) `skiva 1c` rerender-wiring (backend).
+2. (parallellt, högst värde) gap 1 `trustSignals`-seedning — störst lyft för äkthetskänslan.
+3. (när Christopher resettat) `skiva 1b` → operatörens "wow"-demo (fria följdprompt-ändringar).
+4. Fas 2 eval med operatören → Fas 3.
+
 ## Orchestrator-handoff 2026-06-02 SEN KVÄLL #2 (hela loopen live-bevisad i browsern + worktree committad/pushad)
 
 > Jag tog över för att VERIFIERA (inte bygga nytt) att hela kärnloopen
