@@ -2283,6 +2283,162 @@ def test_floating_chat_router_decision_readiness() -> None:
 
 
 @pytest.mark.tooling
+def test_openclaw_runner_spawns_followup_seam() -> None:
+    """Skiva 1b (UI half): ``lib/openclaw-runner.ts`` måste shella till
+    ``scripts/run_openclaw_followup.py`` med exakt samma spawn-mönster som
+    ``router-classify-runner.ts`` — och ALDRIG kunna krascha /api/prompt.
+
+    Locks:
+      1. Exporterar ``runOpenClawFollowup`` + ``OpenClawDecisionPayload``.
+      2. Spawnar rätt scripts/-seam (repo-boundaries: viewser importerar aldrig
+         packages/ direkt — Python-scriptet äger importen).
+      3. ``--`` -separatorn finns så en prompt som börjar med ``-`` inte tolkas
+         som ett CLI-flagga, och --site-id/--base-run-id skickas vidare.
+      4. En timeout + degradering till ``null`` (read-only metadata får aldrig
+         bli en 500 på bygg-routen).
+    """
+    text = (VIEWSER_DIR / "lib" / "openclaw-runner.ts").read_text(encoding="utf-8")
+
+    assert "export async function runOpenClawFollowup" in text, (
+        "openclaw-runner.ts måste exportera runOpenClawFollowup så /api/prompt "
+        "kan konsumera OpenClaw-beslutet."
+    )
+    assert "export type OpenClawDecisionPayload" in text, (
+        "Exportera OpenClawDecisionPayload-typen (loose record som speglar "
+        "OpenClawDecision.model_dump())."
+    )
+    assert "run_openclaw_followup.py" in text, (
+        "Runnern måste spawna scripts/run_openclaw_followup.py (skiva-1b-seamen)."
+    )
+    assert 'args.push("--", trimmed)' in text, (
+        "``--``-separatorn måste finnas så en prompt som börjar med - inte "
+        "tolkas som ett argparse-flagga."
+    )
+    assert '"--site-id"' in text and '"--base-run-id"' in text, (
+        "siteId + baseRunId måste skickas till seamen för RouterContext/"
+        "context-assembly."
+    )
+    assert "setTimeout(" in text and "child.kill()" in text, (
+        "Runnern måste timeouta + döda subprocessen så en hängd Python inte "
+        "wedge:ar bygg-routen."
+    )
+    # Degraderingen: minst en `return null;` så fel/timeout aldrig 500:ar.
+    assert "return null;" in text, (
+        "Alla felvägar måste degradera till null (aldrig kasta upp i "
+        "/api/prompt-flödet)."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_exposes_openclaw_decision() -> None:
+    """Skiva 1b: ``/api/prompt`` måste konsumera seamen och exponera
+    ``openClawDecision`` på samma ärlighetsgrind som ``routerDecision`` —
+    bara på follow-ups, och aldrig över en ändring den gamla vägen faktiskt
+    applicerade.
+
+    Locks:
+      1. Routen importerar + anropar runOpenClawFollowup.
+      2. Anropet är gated på ``payload.mode === "followup"`` (init-flödet är
+         byte-för-byte oförändrat).
+      3. Samma legacyPathAppliedVisibleChange-grind nollar beslutet när den
+         deterministiska copyDirective-vägen redan landade en synlig ändring
+         (annars vore "action bridge saknas" en lögn).
+      4. ``openClawDecision`` ligger i return-objektet (NDJSON-vägen sprider
+         ``...result`` så båda transporterna bär fältet).
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'import { runOpenClawFollowup } from "@/lib/openclaw-runner"' in text, (
+        "route.ts måste importera runOpenClawFollowup-seamen."
+    )
+    assert "runOpenClawFollowup(payload.prompt" in text, (
+        "Routen måste anropa seamen med prompten."
+    )
+    # Gated på follow-up: init-flödet ska inte spawna OpenClaw-seamen.
+    call_idx = text.index("runOpenClawFollowup(payload.prompt")
+    gate_region = text[text.index("openClawDecisionPromise") : call_idx]
+    assert 'payload.mode === "followup"' in gate_region, (
+        "OpenClaw-beslutet får bara köras på follow-ups (init-flödet "
+        "oförändrat)."
+    )
+    assert "const openClawDecision = legacyPathAppliedVisibleChange" in text, (
+        "Samma honesty-gate som routerDecision: nolla beslutet när den gamla "
+        "vägen redan applicerade en synlig ändring."
+    )
+    # Fältet måste ligga i return-objektet (efter routerDecision).
+    return_idx = text.index("routerDecision,\n")
+    assert text.index("openClawDecision,", return_idx) > return_idx, (
+        "openClawDecision måste returneras (NDJSON sprider ...result så båda "
+        "transporterna bär fältet)."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_renders_openclaw_decision_honestly() -> None:
+    """Skiva 1b (UI half): FloatingChat måste rendera OpenClaw-beslutet ärligt
+    och preempta FÖRE routerDecision (rikare superset), med samma
+    failed/degraded-grind.
+
+    Locks:
+      1. ``PromptApiResponse`` exponerar ett valfritt ``openClawDecision``-fält.
+      2. Defensiv ``extractOpenClawDecision`` (okänd action → null →
+         oförändrat beteende, faller tillbaka på routerDecision).
+      3. ``summarizeOpenClawDecision`` hanterar alla fyra actions inkl. den
+         ärliga patch_plan_request-raden ("inte inkopplad än").
+      4. Preempten ligger FÖRE routerView och är gated på outcome === "ok".
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "openClawDecision?: Record<string, unknown>" in text, (
+        "PromptApiResponse måste exponera ett valfritt openClawDecision-fält."
+    )
+    assert "function extractOpenClawDecision(" in text, (
+        "FloatingChat måste läsa openClawDecision defensivt (extractOpenClawDecision)."
+    )
+    assert "function summarizeOpenClawDecision(" in text, (
+        "FloatingChat måste härleda en ärlig rad per action (summarizeOpenClawDecision)."
+    )
+    assert "OPENCLAW_ACTIONS" in text, (
+        "En allowlist av kända actions måste finnas så en okänd action ger null."
+    )
+    # Alla fyra actions ur OpenClawAction-enumen måste vara kända (allowlist)
+    # och bemötas i besluts-regionen (patch_plan_request via fall-through).
+    decision_start = text.index("const OPENCLAW_ACTIONS")
+    decision_end = text.index("function summarizeBuildResult(")
+    decision_body = text[decision_start:decision_end]
+    for action in (
+        '"answer_only"',
+        '"clarification"',
+        '"plan_only"',
+        '"patch_plan_request"',
+    ):
+        assert action in decision_body, (
+            f"OpenClaw-beslutsregionen måste känna till action {action}."
+        )
+    # patch_plan_request måste vara ärlig om att action-bryggan saknas.
+    summarize_start = text.index("function summarizeOpenClawDecision(")
+    summarize_body = text[summarize_start:decision_end]
+    assert "inte inkopplad än" in summarize_body, (
+        "patch_plan_request-raden måste ärligt säga att funktionen som utför "
+        "ändringen inte är inkopplad än (V0 fejkar aldrig en success)."
+    )
+    # Preempten måste ligga FÖRE routerView och vara gated på outcome === "ok".
+    openclaw_preempt_idx = text.index("const openClawView = extractOpenClawDecision(payload)")
+    router_preempt_idx = text.index("const routerView = extractRouterDecision(payload)")
+    assert openclaw_preempt_idx < router_preempt_idx, (
+        "OpenClaw-beslutet (rikare superset) måste preempta FÖRE routerDecision."
+    )
+    assert 'if (openClawView && outcome === "ok")' in text, (
+        "OpenClaw-preempten måste vara gated på outcome === 'ok' så ett "
+        "misslyckat/degraderat bygge aldrig döljs bakom en info-rad."
+    )
+
+
+@pytest.mark.tooling
 def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
     """ADR 0034 väg B (B155 path B): ``lib/runs.ts`` måste exportera
     ``readAppliedCopyDirectives`` + en strikt ``AppliedCopyDirective``-typ

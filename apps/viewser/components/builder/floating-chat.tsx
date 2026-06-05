@@ -386,6 +386,15 @@ type PromptApiResponse = {
   // härleder ``summarizeRouterDecision`` en ärlig rad per messageKind utan ny
   // UI-deploy. Renderas aldrig rått (vi läser bara kända enum-fält).
   routerDecision?: Record<string, unknown>;
+  // Skiva 1b: OpenClaw Core V0:s follow-up-beslut, speglar
+  // ``OpenClawDecision.model_dump()`` (packages/.../openclaw/models.py). En
+  // rikare superset av ``routerDecision`` med konkret answer/plan/
+  // clarifyingQuestion/patchPlanRequest. /api/prompt skickar det BARA på
+  // follow-ups där den gamla copyDirective-vägen INTE redan applicerade en
+  // synlig ändring (annars null → den auktoritativa bygg-summeringen står
+  // ensam). Utelämnat på init → ``extractOpenClawDecision`` returnerar null →
+  // oförändrat beteende. Renderas aldrig rått (bara kända enum-/textfält).
+  openClawDecision?: Record<string, unknown>;
   error?: string;
 };
 
@@ -806,6 +815,121 @@ function summarizeRouterDecision(
   return null;
 }
 
+// Skiva 1b (UI half): OpenClaw Core V0:s action-enum, speglar
+// ``OpenClawAction`` i packages/generation/orchestration/openclaw/models.py.
+type OpenClawAction =
+  | "answer_only"
+  | "clarification"
+  | "plan_only"
+  | "patch_plan_request";
+
+type OpenClawDecisionView = {
+  action: OpenClawAction;
+  answer: string | null;
+  clarifyingQuestion: string | null;
+  plan: string[];
+  patchTargetSummary: string | null;
+};
+
+const OPENCLAW_ACTIONS: ReadonlySet<string> = new Set([
+  "answer_only",
+  "clarification",
+  "plan_only",
+  "patch_plan_request",
+]);
+
+// Avläs ``openClawDecision`` defensivt — samma fält-drift-säkra mönster som
+// ``extractRouterDecision``. Returnerar null när fältet saknas (init-builds,
+// follow-ups där gamla vägen applicerade) eller har en okänd action, så
+// summarizeBuildResult faller tillbaka på routerDecision/bygg-summeringen.
+function extractOpenClawDecision(
+  payload: PromptApiResponse,
+): OpenClawDecisionView | null {
+  const raw = payload.openClawDecision;
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const action = obj.action;
+  if (typeof action !== "string" || !OPENCLAW_ACTIONS.has(action)) return null;
+  const answer = typeof obj.answer === "string" ? obj.answer.trim() : null;
+  const clarifyingQuestion =
+    typeof obj.clarifyingQuestion === "string"
+      ? obj.clarifyingQuestion.trim()
+      : null;
+  const planRaw = obj.plan;
+  const plan: string[] = Array.isArray(planRaw)
+    ? planRaw
+        .filter(
+          (item): item is string =>
+            typeof item === "string" && item.trim().length > 0,
+        )
+        .map((item) => item.trim())
+        .slice(0, 6)
+    : [];
+  let patchTargetSummary: string | null = null;
+  const ppr = obj.patchPlanRequest;
+  if (ppr && typeof ppr === "object") {
+    const target = (ppr as Record<string, unknown>).targetSummary;
+    patchTargetSummary =
+      typeof target === "string" && target.trim() ? target.trim() : null;
+  }
+  return {
+    action: action as OpenClawAction,
+    answer: answer || null,
+    clarifyingQuestion: clarifyingQuestion || null,
+    plan,
+    patchTargetSummary,
+  };
+}
+
+// Ärlig rad per OpenClaw-beslut. answer_only/clarification/plan_only ekar det
+// konkreta svaret/frågan/planen (rikare än routerDecisions generiska rad).
+// patch_plan_request är V0:s ärliga "ändringen förstods men action-bryggan som
+// utför den är inte inkopplad än" — route:n har redan skickat null när den
+// gamla copyDirective-vägen FAKTISKT applicerade ändringen, så ett kvarvarande
+// patch_plan_request betyder att ändringen INTE landade (t.ex. layout/sektion
+// som v1 inte stöder). Renderas alltid som textnod ({message.content}) →
+// React escapar payloaden. Okänd action → null (faller tillbaka på router).
+function summarizeOpenClawDecision(
+  view: OpenClawDecisionView,
+): { content: string; variant: ChatMessage["variant"] } | null {
+  if (view.action === "answer_only") {
+    return {
+      content:
+        view.answer ??
+        "Det här tolkade jag som en fråga, inte en ändring — så jag byggde inte om något.",
+      variant: "info",
+    };
+  }
+  if (view.action === "clarification") {
+    return {
+      content:
+        view.clarifyingQuestion ??
+        'Jag är inte säker på vad du vill ändra. Beskriv exakt vilken text, sektion eller sida du menar — t.ex. "byt rubriken i hero till X".',
+      variant: "info",
+    };
+  }
+  if (view.action === "plan_only") {
+    if (view.plan.length > 0) {
+      const bullets = view.plan.map((step) => `• ${step}`).join("\n");
+      return {
+        content: `Jag har en plan – men jag har inte byggt om något än:\n${bullets}`,
+        variant: "info",
+      };
+    }
+    return {
+      content: "Jag har en plan, men jag har inte byggt om något än.",
+      variant: "info",
+    };
+  }
+  // patch_plan_request
+  return {
+    content: view.patchTargetSummary
+      ? `Jag tolkade det här som en ändring (${view.patchTargetSummary}), men funktionen som faktiskt utför den är inte inkopplad än. Previewen visar därför fortfarande föregående version.`
+      : "Jag tolkade det här som en ändring, men funktionen som faktiskt utför den är inte inkopplad än. Previewen visar därför fortfarande föregående version.",
+    variant: "info",
+  };
+}
+
 // A3 (B155 honest-level-1): backend listar i ``build-result.json`` de
 // följd-asks den deterministiska v1-pipelinen KÄNDE IGEN men inte kunde
 // applicera, som ``{target, reason}``. Komplement till den globala
@@ -849,6 +973,28 @@ function summarizeBuildResult(
   // (dagens läge) → extractRouterDecision = null → oförändrat beteende.
   // Edit/multi_intent som krävde ett synligt bygge faller igenom
   // (summarizeRouterDecision → null) till den vanliga summeringen.
+  // Skiva 1b: OpenClaw-beslutet preemptar FÖRE routerDecision (det är en rikare
+  // superset med konkret answer/plan/fråga). Samma outcome === "ok"-grind som
+  // routern: på failed/degraded får den auktoritativa fel-/varningsgrenen nedan
+  // stå för meddelandet (annars tappar operatören "Försök igen"). När bygget
+  // rapporterade en auktoritativ no-op (appliedVisibleEffect.applied === false)
+  // OCH OpenClaw bara bad om förtydligande låter vi B155-grenen ta vid (dess
+  // "kan bara ändra texter, layout stöds ej än" är ärligare än en generisk
+  // fråga) — exakt samma deferToBuildTruth-nyans som routerDecision. För
+  // patch_plan_request vinner OpenClaw (dess targetSummary är mer specifik).
+  const openClawView = extractOpenClawDecision(payload);
+  if (openClawView && outcome === "ok") {
+    const buildReportedNoOp =
+      extractAppliedVisibleEffect(payload.buildResult)?.applied === false;
+    const deferToBuildTruth =
+      buildReportedNoOp && openClawView.action === "clarification";
+    if (!deferToBuildTruth) {
+      const openClawLine = summarizeOpenClawDecision(openClawView);
+      if (openClawLine) {
+        return openClawLine;
+      }
+    }
+  }
   // Router-preempten får BARA köra när bygget gick igenom (outcome === "ok").
   // Annars (failed/degraded) döljer router-raden — som returnerar variant
   // "info" — den auktoritativa fel-/varningsgrenen nedan, och eftersom
