@@ -599,24 +599,53 @@ def derive_story(brief: dict[str, Any]) -> str | None:
     positioning = _obj(brief, "positioning")
     content_strategy = _obj(brief, "contentStrategy")
 
-    lead = _str(positioning.get("oneLiner"))
-    if lead is None:
-        hero_angle = _str(content_strategy.get("heroAngle"))
-        lead = _capitalise(hero_angle) if hero_angle else None
+    # Gap 2 (story-vs-hero repetition): the hero already renders the headline
+    # (``oneLiner``/``heroAngle``) and the subheadline (``differentiator`` ->
+    # ``audienceNeed`` -> ``localAngle`` -> ``offerStrategy``). The old story
+    # led with the same ``oneLiner`` + ``differentiator``, so the /om-oss and
+    # home "story" card echoed the hero nearly verbatim. Build the story from
+    # the COMPLEMENTARY grounded angles instead - exclude whatever the hero
+    # already consumed so the story deepens the page rather than restating it.
+    def _key(text: str | None) -> str:
+        return (text or "").strip().rstrip(".").casefold()
 
+    hero_used = {_key(_hero_headline(brief)), _key(_hero_subheadline(brief))}
+    hero_used.discard("")
+
+    # Only customer-safe positioning angles feed the story. ``offerStrategy``
+    # is deliberately excluded: it is an INTERNAL content-strategy instruction
+    # ("Lyft tre till fem konkreta tjänster") that must never render as
+    # customer copy, even though the hero subheadline may use it as a last
+    # resort.
+    hero_angle = _str(content_strategy.get("heroAngle"))
+    candidates = [
+        _str(positioning.get("differentiator")),
+        _str(positioning.get("localAngle")),
+        _str(positioning.get("audienceNeed")),
+        _str(positioning.get("oneLiner")),
+        _capitalise(hero_angle) if hero_angle else None,
+    ]
     sentences: list[str] = []
-    if lead:
-        sentences.append(_sentence(lead))
-    differentiator = _str(positioning.get("differentiator"))
-    if differentiator:
-        sentences.append(_sentence(differentiator))
-    local_angle = _str(positioning.get("localAngle"))
-    if local_angle:
-        sentences.append(_sentence(local_angle))
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        key = _key(candidate)
+        if key in hero_used or key in seen:
+            continue
+        seen.add(key)
+        sentences.append(_sentence(candidate))
+        if len(sentences) >= 3:
+            break
 
-    if not sentences:
-        return None
-    return " ".join(sentences)
+    if sentences:
+        return " ".join(sentences)
+
+    # Every grounded angle collapsed into the hero: ground the story on the
+    # lead so a thin brief still gets a story instead of None (it may echo the
+    # hero, but that is the only honest content available).
+    lead = _hero_headline(brief)
+    return _sentence(lead) if lead else None
 
 
 def derive_faq(brief: dict[str, Any]) -> list[dict[str, str]]:
