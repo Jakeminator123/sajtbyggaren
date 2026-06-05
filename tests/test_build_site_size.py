@@ -165,6 +165,73 @@ def test_build_site_snapshot_runs_after_phase3_quality_and_repair():
 
 
 @pytest.mark.tooling
+def test_build_site_wires_rerender_into_phase3():
+    """kor-5 skiva 1c: ``build()`` must pass a ``rerender`` callback into
+    ``run_phase3_quality_and_repair`` so the blueprint-repair pass can
+    materialise a patch via the deterministic renderer before the critic
+    re-runs. Without this seam the pass stays dormant (it only activates
+    when ``rerender is not None`` in
+    ``packages/generation/repair/orchestration.py``), so dropping the
+    wiring would silently regress kor-5 back to no-op in real builds.
+
+    Source-level lock (the live path needs npm so we cannot exercise it
+    cheaply): assert build() defines the rerender closure that calls
+    ``write_pages`` and forwards it into the phase-3 wiring, and that the
+    thin wiring helper forwards ``rerender`` to the package orchestrator.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    build_body = inspect.getsource(build_site.build)
+    assert "def _rerender_after_repair(" in build_body, (
+        "build() must define the kor-5 rerender closure (skiva 1c). "
+        "Without it blueprint-repair stays dormant in real builds."
+    )
+    closure_idx = build_body.find("def _rerender_after_repair(")
+    call_idx = build_body.find(
+        "quality_payload, repair_payload = run_phase3_quality_and_repair("
+    )
+    assert closure_idx > 0 and call_idx > closure_idx
+    # Extract the EXACT call via balanced-paren matching rather than a fixed
+    # window so a future arg reorder (which could push rerender past any
+    # hard-coded slice length) cannot make this guard silently misfire.
+    open_paren = build_body.index("(", call_idx)
+    depth = 0
+    end = open_paren
+    for k in range(open_paren, len(build_body)):
+        if build_body[k] == "(":
+            depth += 1
+        elif build_body[k] == ")":
+            depth -= 1
+            if depth == 0:
+                end = k
+                break
+    call_block = build_body[call_idx : end + 1]
+    assert "rerender=_rerender_after_repair" in call_block, (
+        "build() must pass rerender=_rerender_after_repair into "
+        "run_phase3_quality_and_repair so kor-5 blueprint-repair can "
+        "re-render a patched blueprint before the critic re-runs."
+    )
+    # The closure is defined immediately before the call, so [closure:call]
+    # bounds its body exactly. It must re-render via the deterministic
+    # renderer (RenderBlueprint.from_artifacts + write_pages), not npm.
+    closure_block = build_body[closure_idx:call_idx]
+    assert "write_pages(" in closure_block and "RenderBlueprint.from_artifacts(" in closure_block, (
+        "_rerender_after_repair must materialise the patched blueprint via "
+        "RenderBlueprint.from_artifacts + write_pages (the same deterministic "
+        "renderer as the initial build)."
+    )
+
+    wiring = inspect.getsource(build_site.run_phase3_quality_and_repair)
+    assert "rerender=rerender" in wiring, (
+        "run_phase3_quality_and_repair must forward rerender to "
+        "execute_phase3_quality_and_repair (the package orchestrator gates "
+        "blueprint-repair on rerender is not None)."
+    )
+
+
+@pytest.mark.tooling
 def test_build_site_phase3_orchestration_is_thin():
     """The phase 3 wiring helper ``run_phase3_quality_and_repair`` exists
     and stays under ~50 lines. If it grows past that, Quality Gate or

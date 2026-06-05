@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-06-05T10:50:00Z",
-  "updatedBy": "branch-rename-christopher-active",
+  "updatedAt": "2026-06-05T12:00:00Z",
+  "updatedBy": "skiva-1b-coordination",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -137,7 +137,7 @@
         "python -m ruff check .",
         "python -m pytest tests/ -q"
       ],
-      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknades i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'. STATUS 2026-06-02: lösning A nivå 1-3a är i main via PR #153 (copyDirectives targets company-name|tagline|about-text|services, operation replace-text|include-token; deterministisk extraktor + copyDirectiveModel-roll llm-models v6 inkl. editPlan-generering för about-text/services vid rewrite utan angivet värde). Lösning B FloatingChat-UI är i main (PR #139). Acceptans 'byt namnet i headern' + 'inkludera TEST-JAKOB i hero' gröna i tests/test_followup_copy_directives.py. Kvar (håller gapet queued): bredare/multi-target editPlan, ärligare nivå-1-avvisning i stället för tyst tagline-remap, väg C (modell-patch av .generated/). Behålls queued tills hela gapet stängs."
+      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknades i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'. STATUS 2026-06-02: lösning A nivå 1-3a är i main via PR #153 (copyDirectives targets company-name|tagline|about-text|services, operation replace-text|include-token; deterministisk extraktor + copyDirectiveModel-roll llm-models v6 inkl. editPlan-generering för about-text/services vid rewrite utan angivet värde). Lösning B FloatingChat-UI är i main (PR #139). Acceptans 'byt namnet i headern' + 'inkludera TEST-JAKOB i hero' gröna i tests/test_followup_copy_directives.py. Kvar (håller gapet queued): bredare/multi-target editPlan, ärligare nivå-1-avvisning i stället för tyst tagline-remap, väg C (modell-patch av .generated/). Behålls queued tills hela gapet stängs. SKIVA-1B-TRACK (2026-06-05): detta är backend-spåret som matar skiva 1b (OpenClaw follow-up MVP i /api/prompt). Lane-split: christopher äger väg B-UI (klar A/B) + FloatingChat-ärlighet; jakob äger bredare copy-targets, remapped/requestedTarget-signalen (punkt C, LLM-extraktor-yta — deterministisk tjänst→tagline no-op:ar redan) samt OpenClaw action-bridge (router→context→patch→apply→targeted render). Seam = /api/prompt-kontraktet. Stängs när skiva 1b landar follow-up-kedjan."
     }
   ],
   "activeGaps": [],
