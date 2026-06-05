@@ -21,6 +21,15 @@ path. It maps:
 ``patch_globals_css`` re-applies both on the follow-up rebuild, so the change is
 visible in the preview after one prompt.
 
+Canonical model (governance/rules/site-mutation-layers.md + project-dna.v1.json):
+this IS the ``restyle`` follow-up intent (router ``editKind`` ``visual_style`` ==
+DNA intent ``restyle``). ``brand.primaryColorHex`` / ``tone.primary`` on
+``Project Input`` is the sanctioned PER-SITE override surface until the
+``Project DNA`` ``themeTokens`` field is implemented at runtime; when it lands,
+this seam moves to ``themeTokens`` (same intent, canonical field). We never edit
+the shared ``Variant`` to restyle a single site - that would restyle every site
+on that variant.
+
 Honest by construction:
 
 * Returns ``None`` when the prompt carries no colour/font intent, so a non-theme
