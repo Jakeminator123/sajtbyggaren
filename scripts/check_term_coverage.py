@@ -904,6 +904,13 @@ COMMON_WORDS = {
     # Allowlistas här så christopher-ui:s sync-PR går igenom term-coverage
     # --strict utan att vi behöver röra governance/policies från UI-lanen.
     "AppliedCopyDirective",
+    # visual_style follow-up (theme directives, 2026-06-05) — ``ThemeDirective``
+    # är den lokala helper-dataclassen i packages/generation/followup/
+    # theme_directives.py som bär en härledd färg/font-ändring (brand.
+    # primaryColorHex + tone.primary, båda redan i project-input-schemat). Inte
+    # ett canonical domain term (domänkoncepten heter brand/tone); samma
+    # local-allowlist-logik som AppliedCopyDirective ovan.
+    "ThemeDirective",
     # Tier 1 robusthet (2026-06-01) — christopher-ui frontend-paket A+B+C:
     # ErrorBoundary-komponent (klass, React 19) + lokalt toast-system. Alla
     # är apps/viewser-interna UI-helpers — varken canonical domain terms

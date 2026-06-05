@@ -65,6 +65,7 @@ from packages.generation.discovery.resolve import (  # noqa: E402
     _offer_looks_like_ui_directive,
 )
 from packages.generation.followup import copy_directives as _copy_directives  # noqa: E402
+from packages.generation.followup import theme_directives as _theme_directives  # noqa: E402
 from packages.generation.followup.text import (  # noqa: E402
     _contains_any,
     _contains_any_word,
@@ -87,6 +88,15 @@ _extract_copy_directives_via_llm = _copy_directives._extract_copy_directives_via
 _plan_copy_directives_via_llm = _copy_directives._plan_copy_directives_via_llm
 _is_content_rewrite_request = _copy_directives._is_content_rewrite_request
 _validate_copy_directive_candidate = _copy_directives._validate_copy_directive_candidate
+
+# Theme (colour + font/style) follow-up directives. A `visual_style` follow-up
+# ("gör färgen rosa och typsnittet snyggt") was a silent no-op before this:
+# neither the copyDirective path (text targets only) nor the KÖR-7 patch planner
+# (component_add/copy_change only) acted on it. extract_theme_directive maps the
+# prompt to brand.primaryColorHex + tone.primary - both already rendered by the
+# builder - so the rebuild shows the restyle. Honest no-op when no theme intent.
+extract_theme_directive = _theme_directives.extract_theme_directive
+apply_theme_directive = _theme_directives.apply_theme_directive
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
 DEFAULT_RUNS_DIR = REPO_ROOT / "data" / "runs"
@@ -177,6 +187,17 @@ _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "ecommerce-store": "webbshop",
     "boat-dealer": "båthandel",
     "egg-farm": "äggproducent",
+    # Farm/agriculture slugs briefModel emits for gård-prompts (e.g. "en liten
+    # getgård där getterna äter gräs" -> businessTypeGuess "farm"). Without these
+    # the H1 fell through to "företag som arbetar med farm". A bare "farm" reads
+    # as the honest descriptive label "gård" (no fabricated brand name; the
+    # operator still sets a real name before sharing).
+    "farm": "gård",
+    "goat-farm": "getgård",
+    "goat-farm-business": "getgård",
+    "dairy-farm": "mejerigård",
+    "ranch": "gård",
+    "agriculture": "lantbruk",
     # B93 (2026-05-26): common multi-word English business slugs that
     # briefModel emits but were not covered before, which made
     # _company_business_label fall through to the
@@ -2710,6 +2731,12 @@ def merge_followup_project_input(
                 company_now.pop("story", None)
             elif company_now.get("story") != pre_patch_story:
                 company_now["story"] = pre_patch_story
+    # visual_style follow-up: a colour/font restyle request ("gör färgen rosa
+    # och typsnittet snyggt") sets brand.primaryColorHex + tone.primary, which
+    # the builder already renders via patch_globals_css on rebuild. Honest
+    # no-op when the prompt carries no theme intent (most follow-ups), so the
+    # deterministic copyDirective/semantic behaviour above is unchanged.
+    apply_theme_directive(merged, extract_theme_directive(follow_up_prompt, language=language))
     return merged
 
 

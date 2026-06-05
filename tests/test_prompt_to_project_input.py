@@ -3217,6 +3217,39 @@ def test_b93_common_multi_word_english_slugs_map_to_swedish(
 
 
 @pytest.mark.tooling
+@pytest.mark.parametrize(
+    "slug, expected",
+    [
+        ("farm", "gård"),
+        ("goat-farm", "getgård"),
+        ("dairy-farm", "mejerigård"),
+        ("ranch", "gård"),
+        ("agriculture", "lantbruk"),
+    ],
+)
+def test_farm_slugs_map_to_swedish_label(slug: str, expected: str) -> None:
+    """A 'getgård'-prompt makes briefModel emit businessTypeGuess 'farm';
+    without a mapping the H1 fell through to 'företag som arbetar med farm'.
+    These slugs now read as honest Swedish labels (no fabricated brand name).
+    """
+    assert _company_business_label(slug, "sv") == expected
+
+
+@pytest.mark.tooling
+def test_farm_company_name_no_longer_leaks_generic_phrase() -> None:
+    """Integration: the goat-farm live-test case. Before the mapping the name
+    read 'Företag som arbetar med farm i Småland'; now it is 'Gård i Småland'.
+    """
+    name = _derive_company_name(
+        business_type="farm",
+        location_hint="Småland",
+        language="sv",
+    )
+    assert name == "Gård i Småland"
+    assert "arbetar med" not in name
+
+
+@pytest.mark.tooling
 def test_b93_pet_grooming_h1_no_longer_leaks_english_slug() -> None:
     """B93 integration: the reviewer's specific example. Before the fix,
     H1 read "Företag som arbetar med pet grooming i Stockholm" — English
