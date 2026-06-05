@@ -286,7 +286,7 @@ function ToastItem({
       aria-live={variant === "error" ? "assertive" : "polite"}
       className={cn(
         "pointer-events-auto flex items-start gap-3 rounded-xl border px-3.5 py-3 shadow-sm backdrop-blur-sm",
-        "transition-all duration-200 ease-out",
+        "transition-all duration-200 ease-out motion-reduce:transition-none",
         VARIANT_CLASSES[variant],
         toast.closing
           ? "-translate-y-1 opacity-0"
@@ -325,7 +325,7 @@ function ToastItem({
         type="button"
         onClick={() => onDismiss(toast.id)}
         aria-label="Stäng avisering"
-        className="text-muted-foreground hover:text-foreground -mt-1 -mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 min-tap sm:min-tap-0 -mt-1 -mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>

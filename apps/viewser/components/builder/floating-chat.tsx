@@ -386,6 +386,15 @@ type PromptApiResponse = {
   // härleder ``summarizeRouterDecision`` en ärlig rad per messageKind utan ny
   // UI-deploy. Renderas aldrig rått (vi läser bara kända enum-fält).
   routerDecision?: Record<string, unknown>;
+  // Skiva 1b: OpenClaw Core V0:s follow-up-beslut, speglar
+  // ``OpenClawDecision.model_dump()`` (packages/.../openclaw/models.py). En
+  // rikare superset av ``routerDecision`` med konkret answer/plan/
+  // clarifyingQuestion/patchPlanRequest. /api/prompt skickar det BARA på
+  // follow-ups där den gamla copyDirective-vägen INTE redan applicerade en
+  // synlig ändring (annars null → den auktoritativa bygg-summeringen står
+  // ensam). Utelämnat på init → ``extractOpenClawDecision`` returnerar null →
+  // oförändrat beteende. Renderas aldrig rått (bara kända enum-/textfält).
+  openClawDecision?: Record<string, unknown>;
   error?: string;
 };
 
@@ -398,9 +407,12 @@ type PromptApiResponse = {
  * egen client-bundle-säkra typ.
  */
 type AppliedCopyDirective = {
-  target: "company-name" | "tagline";
+  target: "company-name" | "tagline" | "about-text" | "services";
   operation: "replace-text" | "include-token";
   payload: string;
+  // Pekar ut vilken tjänst (services[].id|label) ett services-direktiv träffar.
+  // Krävs av schemat när target=services, utelämnas annars.
+  targetRef?: string;
   source?: "prompt-rule" | "llm" | "explicit";
 };
 
@@ -427,13 +439,14 @@ function extractAppliedVisibleEffect(
  * ADR 0034 väg B (B155 path B): bygg en svensk success-rad per applicerat
  * copy-direktiv. Renderingen i FloatingChat-bubblan sker via
  * ``{message.content}`` (textnod) — payload escapas alltid av React.
- * Vi mappar bara de tre kombinationer som schema-enumen på
+ * Vi mappar alla fyra targets som schema-enumen på
  * ``governance/schemas/project-input.schema.json:directives.copyDirectives``
- * tillåter idag (target=company-name | tagline; operation=replace-text |
- * include-token). Andra kombinationer faller tillbaka på en neutral
- * "uppdaterades"-rad så framtida schema-bumps inte tystar UI:t — men
- * payloaden är redan validerad mot guards på write-sidan, så det är
- * säkert att rendera även den okända varianten.
+ * tillåter (company-name | tagline | about-text | services). Kort copy
+ * (namn/rubrik/tjänstnamn) ekas i citat så operatören känner igen ändringen;
+ * lång copy (om oss-texten, upp till 600 tecken) ekas INTE i bubblan — den
+ * syns i previewen — så vi bara bekräftar att fältet uppdaterades. Okända
+ * kombinationer faller tillbaka på en neutral "uppdaterades"-rad så framtida
+ * schema-bumps inte tystar UI:t.
  */
 function summarizeCopyDirectives(
   directives: AppliedCopyDirective[] | undefined,
@@ -448,13 +461,28 @@ function summarizeCopyDirectives(
       continue;
     }
     if (directive.target === "tagline") {
-      if (directive.operation === "replace-text") {
-        lines.push(`Jag uppdaterade rubriken till "${payload}".`);
-      } else if (directive.operation === "include-token") {
+      if (directive.operation === "include-token") {
         lines.push(`Jag la in "${payload}" i hero-texten.`);
       } else {
         lines.push(`Jag uppdaterade rubriken till "${payload}".`);
       }
+      continue;
+    }
+    if (directive.target === "about-text") {
+      // Om oss-texten kan vara upp till 600 tecken → eka inte hela payloaden
+      // i chat-bubblan, bekräfta bara ändringen (operatören ser den i preview).
+      lines.push("Jag skrev om om oss-texten.");
+      continue;
+    }
+    if (directive.target === "services") {
+      // targetRef pekar ut vilken tjänst som ändrades; eka tjänstnamnet (kort,
+      // max 80 tecken) men inte den nya summaryn (upp till 300 tecken).
+      const ref = directive.targetRef?.trim();
+      lines.push(
+        ref
+          ? `Jag uppdaterade tjänsten "${ref}".`
+          : "Jag uppdaterade en tjänst.",
+      );
       continue;
     }
   }
@@ -787,6 +815,148 @@ function summarizeRouterDecision(
   return null;
 }
 
+// Skiva 1b (UI half): OpenClaw Core V0:s action-enum, speglar
+// ``OpenClawAction`` i packages/generation/orchestration/openclaw/models.py.
+type OpenClawAction =
+  | "answer_only"
+  | "clarification"
+  | "plan_only"
+  | "patch_plan_request";
+
+type OpenClawDecisionView = {
+  action: OpenClawAction;
+  answer: string | null;
+  clarifyingQuestion: string | null;
+  plan: string[];
+  patchTargetSummary: string | null;
+};
+
+const OPENCLAW_ACTIONS: ReadonlySet<string> = new Set([
+  "answer_only",
+  "clarification",
+  "plan_only",
+  "patch_plan_request",
+]);
+
+// Avläs ``openClawDecision`` defensivt — samma fält-drift-säkra mönster som
+// ``extractRouterDecision``. Returnerar null när fältet saknas (init-builds,
+// follow-ups där gamla vägen applicerade) eller har en okänd action, så
+// summarizeBuildResult faller tillbaka på routerDecision/bygg-summeringen.
+function extractOpenClawDecision(
+  payload: PromptApiResponse,
+): OpenClawDecisionView | null {
+  const raw = payload.openClawDecision;
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const action = obj.action;
+  if (typeof action !== "string" || !OPENCLAW_ACTIONS.has(action)) return null;
+  const answer = typeof obj.answer === "string" ? obj.answer.trim() : null;
+  const clarifyingQuestion =
+    typeof obj.clarifyingQuestion === "string"
+      ? obj.clarifyingQuestion.trim()
+      : null;
+  const planRaw = obj.plan;
+  const plan: string[] = Array.isArray(planRaw)
+    ? planRaw
+        .filter(
+          (item): item is string =>
+            typeof item === "string" && item.trim().length > 0,
+        )
+        .map((item) => item.trim())
+        .slice(0, 6)
+    : [];
+  let patchTargetSummary: string | null = null;
+  const ppr = obj.patchPlanRequest;
+  if (ppr && typeof ppr === "object") {
+    const target = (ppr as Record<string, unknown>).targetSummary;
+    patchTargetSummary =
+      typeof target === "string" && target.trim() ? target.trim() : null;
+  }
+  return {
+    action: action as OpenClawAction,
+    answer: answer || null,
+    clarifyingQuestion: clarifyingQuestion || null,
+    plan,
+    patchTargetSummary,
+  };
+}
+
+// Ärlig rad per OpenClaw-beslut. answer_only/clarification/plan_only ekar det
+// konkreta svaret/frågan/planen (rikare än routerDecisions generiska rad).
+// patch_plan_request är V0:s ärliga "ändringen förstods men action-bryggan som
+// utför den är inte inkopplad än" — route:n har redan skickat null när den
+// gamla copyDirective-vägen FAKTISKT applicerade ändringen, så ett kvarvarande
+// patch_plan_request betyder att ändringen INTE landade (t.ex. layout/sektion
+// som v1 inte stöder). Renderas alltid som textnod ({message.content}) →
+// React escapar payloaden. Okänd action → null (faller tillbaka på router).
+function summarizeOpenClawDecision(
+  view: OpenClawDecisionView,
+): { content: string; variant: ChatMessage["variant"] } | null {
+  if (view.action === "answer_only") {
+    return {
+      content:
+        view.answer ??
+        "Det här tolkade jag som en fråga, inte en ändring — så jag byggde inte om något.",
+      variant: "info",
+    };
+  }
+  if (view.action === "clarification") {
+    return {
+      content:
+        view.clarifyingQuestion ??
+        'Jag är inte säker på vad du vill ändra. Beskriv exakt vilken text, sektion eller sida du menar — t.ex. "byt rubriken i hero till X".',
+      variant: "info",
+    };
+  }
+  if (view.action === "plan_only") {
+    if (view.plan.length > 0) {
+      const bullets = view.plan.map((step) => `• ${step}`).join("\n");
+      return {
+        content: `Jag har en plan – men jag har inte byggt om något än:\n${bullets}`,
+        variant: "info",
+      };
+    }
+    return {
+      content: "Jag har en plan, men jag har inte byggt om något än.",
+      variant: "info",
+    };
+  }
+  // patch_plan_request
+  return {
+    content: view.patchTargetSummary
+      ? `Jag tolkade det här som en ändring (${view.patchTargetSummary}), men funktionen som faktiskt utför den är inte inkopplad än. Previewen visar därför fortfarande föregående version.`
+      : "Jag tolkade det här som en ändring, men funktionen som faktiskt utför den är inte inkopplad än. Previewen visar därför fortfarande föregående version.",
+    variant: "info",
+  };
+}
+
+// A3 (B155 honest-level-1): backend listar i ``build-result.json`` de
+// följd-asks den deterministiska v1-pipelinen KÄNDE IGEN men inte kunde
+// applicera, som ``{target, reason}``. Komplement till den globala
+// ``appliedVisibleEffect``-boolean: i stället för bara "inget syntes" kan vi
+// säga EXAKT vad som inte landade. Backend bounded:ar listan (max 20 items,
+// target<=80, reason<=400); vi cappar ändå defensivt till 5 rader i bubblan
+// och renderar alltid som textnod (React escapar payloaden).
+function summarizeUnappliedFollowupIntents(
+  buildResult: Record<string, unknown> | undefined,
+): string {
+  if (!buildResult) return "";
+  const raw = buildResult.unappliedFollowupIntents;
+  if (!Array.isArray(raw)) return "";
+  const lines: string[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const obj = entry as Record<string, unknown>;
+    const target = typeof obj.target === "string" ? obj.target.trim() : "";
+    const reason = typeof obj.reason === "string" ? obj.reason.trim() : "";
+    if (!target && !reason) continue;
+    lines.push(target && reason ? `• ${target}: ${reason}` : `• ${target || reason}`);
+    if (lines.length >= 5) break;
+  }
+  if (lines.length === 0) return "";
+  return `\n\nDetta kände jag igen men kunde inte göra än:\n${lines.join("\n")}`;
+}
+
 function summarizeBuildResult(
   payload: PromptApiResponse,
   outcome: PromptBuildOutcome,
@@ -803,13 +973,62 @@ function summarizeBuildResult(
   // (dagens läge) → extractRouterDecision = null → oförändrat beteende.
   // Edit/multi_intent som krävde ett synligt bygge faller igenom
   // (summarizeRouterDecision → null) till den vanliga summeringen.
-  const routerView = extractRouterDecision(payload);
-  if (routerView) {
-    const routerLine = summarizeRouterDecision(routerView);
-    if (routerLine) {
-      return routerLine;
+  // Skiva 1b: OpenClaw-beslutet preemptar FÖRE routerDecision (det är en rikare
+  // superset med konkret answer/plan/fråga). Samma outcome === "ok"-grind som
+  // routern: på failed/degraded får den auktoritativa fel-/varningsgrenen nedan
+  // stå för meddelandet (annars tappar operatören "Försök igen"). När bygget
+  // rapporterade en auktoritativ no-op (appliedVisibleEffect.applied === false)
+  // OCH OpenClaw bara bad om förtydligande låter vi B155-grenen ta vid (dess
+  // "kan bara ändra texter, layout stöds ej än" är ärligare än en generisk
+  // fråga) — exakt samma deferToBuildTruth-nyans som routerDecision. För
+  // patch_plan_request vinner OpenClaw (dess targetSummary är mer specifik).
+  const openClawView = extractOpenClawDecision(payload);
+  if (openClawView && outcome === "ok") {
+    const buildReportedNoOp =
+      extractAppliedVisibleEffect(payload.buildResult)?.applied === false;
+    const deferToBuildTruth =
+      buildReportedNoOp && openClawView.action === "clarification";
+    if (!deferToBuildTruth) {
+      const openClawLine = summarizeOpenClawDecision(openClawView);
+      if (openClawLine) {
+        return openClawLine;
+      }
     }
   }
+  // Router-preempten får BARA köra när bygget gick igenom (outcome === "ok").
+  // Annars (failed/degraded) döljer router-raden — som returnerar variant
+  // "info" — den auktoritativa fel-/varningsgrenen nedan, och eftersom
+  // ``retryPrompt`` bara sätts på variant "error" (se sendFollowupPrompt)
+  // tappar operatören "Försök igen" på ett misslyckat bygge. Router-beslutet
+  // är en förbygg-gissning; det faktiska bygg-utfallet är sanning.
+  const routerView = extractRouterDecision(payload);
+  if (routerView && outcome === "ok") {
+    // Ärlighets-nyans: routerns ``unclear``/``requiresClarification`` är en
+    // förbygg-gissning som kan ha fel — operatören kan ha varit tydlig ("gör
+    // hero-knappen större") fast förfrågan helt enkelt inte stöds än. När
+    // bygget FAKTISKT kördes och rapporterade ett auktoritativt no-op-skäl
+    // (B155 ``appliedVisibleEffect.applied === false``) är det skälet ärligare
+    // än gissningen, så vi låter B155-grenen nedan ta vid (den skiljer
+    // "kan bara ändra texter, layout stöds ej än" från "var mer specifik").
+    // Övriga utfall (fråga/referens/discovery/bug/plan-only) preemptar fortsatt
+    // eftersom deras rad är mer specifik än den generiska bygg-summeringen.
+    const buildReportedNoOp =
+      extractAppliedVisibleEffect(payload.buildResult)?.applied === false;
+    const deferToBuildTruth =
+      buildReportedNoOp &&
+      (routerView.requiresClarification ||
+        routerView.messageKind === "unclear");
+    if (!deferToBuildTruth) {
+      const routerLine = summarizeRouterDecision(routerView);
+      if (routerLine) {
+        return routerLine;
+      }
+    }
+  }
+  // A3: ärlig svans med följd-asks som motorn kände igen men inte applicerade.
+  // Tom sträng på init-builds och follow-ups utan oapplicerade intents → ingen
+  // påverkan på de befintliga grenarna.
+  const unappliedNote = summarizeUnappliedFollowupIntents(payload.buildResult);
   // B3 — version-progression i success-meddelandet. När payload.version
   // är t.ex. 3 visar vi "v2 → v3" så operatören får en känsla av
   // historiken utan att Inspectorn behöver öppnas. För v1 (första
@@ -850,12 +1069,12 @@ function summarizeBuildResult(
     if (effect && effect.applied === false) {
       if (effect.reason === "visible_files_unchanged") {
         return {
-          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter (företagsnamn, rubrik, tagline) — större layout- och strukturändringar som att centrera hero eller lägga till en sektion stöds inte än.`,
+          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter (företagsnamn, rubrik, tagline) — större layout- och strukturändringar som att centrera hero eller lägga till en sektion stöds inte än.${unappliedNote}`,
           variant: "info",
         };
       }
       return {
-        content: `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`,
+        content: `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".${unappliedNote}`,
         variant: "info",
       };
     }
@@ -906,8 +1125,7 @@ function summarizeBuildResult(
   }
   if (outcome === "degraded") {
     return {
-      content:
-        "Sajten byggdes, men Quality Gate flaggade något (typecheck, route-scan eller policy). Sajten har ändå publicerats — se Inspector för detaljer.",
+      content: `Sajten byggdes, men Quality Gate flaggade något (typecheck, route-scan eller policy). Sajten har ändå publicerats — se Inspector för detaljer.${unappliedNote}`,
       variant: "warning",
     };
   }
@@ -1484,7 +1702,16 @@ export function FloatingChat({
   // /api/runs/[runId]/trace?since= för incrementala events. När
   // hookens label byts uppdaterar useEffect pending-meddelandets
   // content. Cleanup sker via enabled=false när isSending blir false.
-  const tracePolling = useBuildTracePolling(siteId, { enabled: isSending });
+  // C3: aktivera även när ett dialog-bygge driver page-level isBuilding (utan
+  // att FloatingChat självt skickar). Annars pollade vi bara trace.ndjson för
+  // FloatingChat:s egna byggen, och en variant/färg/bild/scrape-dialog lämnade
+  // BuildProgressCard kvar på "thinking" hela bygget igenom (stage-refine
+  // nedan bailade på !isSending). Label-uppdateringen är ändå no-op när ingen
+  // pending-bubbla finns (dialoger skapar ingen), så det enda nettot är att
+  // buildStage avancerar korrekt.
+  const tracePolling = useBuildTracePolling(siteId, {
+    enabled: isSending || isBuilding,
+  });
   useEffect(() => {
     const id = pendingMessageIdRef.current;
     if (!id) return;
@@ -1498,10 +1725,12 @@ export function FloatingChat({
 
   // Förfina bygg-stage från trace.ndjson-fasen: understand/plan = "thinking",
   // build = "building". page.tsx mappar detta till BuildProgressCard-steget.
-  // Bara medan vi faktiskt skickar (isSending) så vi inte rör buildStage
-  // efter att bygget landat (success/failed sätts i handleSend).
+  // C3: kör medan ett bygge pågår — antingen FloatingChat:s eget (isSending)
+  // eller ett dialog-bygge som driver page-level isBuilding. När båda är
+  // false rör vi inte buildStage (success/failed sätts i handleSend för
+  // FloatingChat-byggen; för dialog-byggen sätter handleBuildDone utfallet).
   useEffect(() => {
-    if (!isSending || !onStageChange) return;
+    if ((!isSending && !isBuilding) || !onStageChange) return;
     if (tracePolling.currentPhase === "build") {
       onStageChange("building");
     } else if (
@@ -1510,7 +1739,7 @@ export function FloatingChat({
     ) {
       onStageChange("thinking");
     }
-  }, [tracePolling.currentPhase, isSending, onStageChange]);
+  }, [tracePolling.currentPhase, isSending, isBuilding, onStageChange]);
 
   // ⌥1–⌥4 växlar preview-bredd (mobile/tablet/laptop/full) utan att lämna
   // tangentbordet under preview→följdprompt-loopen. Bara på desktop (presets
@@ -1756,7 +1985,7 @@ export function FloatingChat({
               type="button"
               onClick={() => setIsMinimized(true)}
               aria-label="Minimera"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap md:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
             >
               <Minus className="h-3.5 w-3.5" />
             </button>
@@ -1765,7 +1994,7 @@ export function FloatingChat({
               onClick={() => setIsMinimized(true)}
               aria-label="Stäng (minimera)"
               title="Stäng (öppnas igen från bubblan)"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap md:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -1803,7 +2032,7 @@ export function FloatingChat({
                 onClick={dismissLoopHint}
                 aria-label="Dölj tipset"
                 title="Dölj"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex shrink-0 items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap md:min-tap-0 inline-flex shrink-0 items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -1885,7 +2114,7 @@ export function FloatingChat({
                   aria-label="Avbryt iterera-läge"
                   title="Avbryt iterera-läge"
                   className={cn(
-                    "min-tap sm:min-tap-0 inline-flex h-5 w-5 items-center justify-center rounded-full hover:bg-sky-500/15 active:scale-95",
+                    "min-tap md:min-tap-0 inline-flex h-5 w-5 items-center justify-center rounded-full hover:bg-sky-500/15 active:scale-95",
                     "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                   )}
                 >
@@ -1911,7 +2140,7 @@ export function FloatingChat({
                 title={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
                 className={cn(
                   "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50",
-                  "min-tap sm:min-tap-0 inline-flex h-5 w-9 items-center justify-center rounded-full active:scale-95",
+                  "min-tap md:min-tap-0 inline-flex h-5 w-9 items-center justify-center rounded-full active:scale-95",
                   "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                   "transition-colors",
                 )}
@@ -1951,7 +2180,7 @@ export function FloatingChat({
                               "border-border/60 bg-background/80 text-foreground/80",
                               "hover:border-border hover:bg-card hover:text-foreground",
                               "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                              "min-tap sm:min-tap-0 rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-95 sm:px-2 sm:py-0.5 sm:text-[10.5px]",
+                              "min-tap md:min-tap-0 rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-95 sm:px-2 sm:py-0.5 sm:text-[10.5px]",
                               CHIP_INTERACTIONS,
                             )}
                           >
@@ -1983,7 +2212,7 @@ export function FloatingChat({
                     type="button"
                     onClick={() => removeAttachment(ref.assetId)}
                     aria-label={`Ta bort ${ref.filename}`}
-                    className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95"
+                    className="text-muted-foreground hover:text-foreground min-tap md:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95"
                   >
                     <X className="h-2.5 w-2.5" />
                   </button>
@@ -2032,7 +2261,7 @@ export function FloatingChat({
                   className={cn(
                     "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                     "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
-                    "min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md transition-colors sm:h-6 sm:w-6",
+                    "min-tap md:min-tap-0 inline-flex items-center justify-center rounded-md transition-colors sm:h-6 sm:w-6",
                     "active:scale-95 disabled:opacity-40 disabled:hover:bg-transparent",
                   )}
                 >

@@ -61,7 +61,12 @@ export function HeroPromptForm() {
   ) {
     setWizardOpen(false);
     setHandingOff(true);
-    setWizardHandoff({ prompt: prompt.trim(), answers, discoveryOptions });
+    // Hero-textarean kan vara TOM när besökaren öppnade wizarden direkt och
+    // bara fyllde "Vad gör ni?" där (answers.offer). Faller hero-prompten
+    // tillbaka på offer-svaret så ``discovery.rawPrompt`` aldrig blir "" —
+    // annars tappas "Operatörens beskrivning" ur master-prompten på /studio.
+    const handoffPrompt = prompt.trim() || answers.offer.trim();
+    setWizardHandoff({ prompt: handoffPrompt, answers, discoveryOptions });
     router.push(STUDIO_HREF);
   }
 

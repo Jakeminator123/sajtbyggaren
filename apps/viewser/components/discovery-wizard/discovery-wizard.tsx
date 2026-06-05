@@ -287,6 +287,11 @@ export function DiscoveryWizard({
     if (!open) return;
     const handler = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
+      // MoreInfoDialog är en egen Dialog-portal OVANPÅ wizarden. Wizardens
+      // globala genvägar (⌘↵/⌘→ avancera/submit, ⌥1–4 steg-hopp) ligger på
+      // document och skulle annars fyra bakom modalen — operatören kunde
+      // submit:a wizarden utan att se det. Låt modalen äga tangentbordet.
+      if (moreInfoOpen) return;
       const isMod = event.metaKey || event.ctrlKey;
       const target = event.target as HTMLElement | null;
       const inEditable =
@@ -342,7 +347,7 @@ export function DiscoveryWizard({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, isLast, goNext, goBack, finish, goToStep, helpOpen]);
+  }, [open, isLast, goNext, goBack, finish, goToStep, helpOpen, moreInfoOpen]);
 
   const isScraping = scrapeState?.status === "loading";
 

@@ -76,6 +76,9 @@ type AssetUploaderDialogProps = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /** C2 globalt bygg-lås + C1 "Iterera från denna"-pin (från BuilderShell). */
+  isBuilding?: boolean;
+  baseRunId?: string | null;
 };
 
 export function AssetUploaderDialog({
@@ -85,6 +88,8 @@ export function AssetUploaderDialog({
   onBuildStart,
   onBuildEnd,
   onBuildDone,
+  isBuilding = false,
+  baseRunId = null,
 }: AssetUploaderDialogProps) {
   const [role, setRole] = useState<AssetRole>("hero");
   const [file, setFile] = useState<File | null>(null);
@@ -102,6 +107,8 @@ export function AssetUploaderDialog({
     onBuildStart,
     onBuildEnd,
     onBuildDone,
+    isBuilding,
+    baseRunId,
   });
 
   const reset = useCallback(() => {
