@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-05 UTC, steward-auto efter PR #195 — feat: gap 1 trust-proof USP seeding + skiva 1c kor-5 rerender wiring. Verifierad `main` är `cc7ddc8`.
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half). Verifierad `main` är `dfffb65`.
 
-Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
-skiva 1c kor-5 rerender wiring.
+Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
+(skiva 1b action half).
 
 ## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
 
@@ -1692,6 +1692,14 @@ module extraction + P2 grounding + contact honesty.
 
 Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
 (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
+
+
+### 2026-06-05 UTC — handoff.md före `cc7ddc8`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #195 — feat: gap 1 trust-proof USP seeding + skiva 1c kor-5 rerender wiring. Verifierad `main` är `cc7ddc8`.
+
+Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
+skiva 1c kor-5 rerender wiring.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 

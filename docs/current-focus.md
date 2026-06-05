@@ -392,9 +392,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `cc7ddc8` (2026-06-05 UTC, steward-auto efter PR #195 — feat: gap 1 trust-proof USP seeding + skiva 1c kor-5 rerender wiring).
-Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
-skiva 1c kor-5 rerender wiring.
+Last verified state: `dfffb65` (2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half)).
+Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
+(skiva 1b action half).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -642,3 +642,9 @@ Nya PRs sedan föregående checkpoint: #169, #170, #171, #172, #173, #174, #175,
 Last verified state: `647ac25` (2026-06-05 UTC, steward-auto efter PR #194 — feat(viewser): UI/UX-batch (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main).
 Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
 (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
+
+### 2026-06-05 UTC — current-focus.md före `cc7ddc8`
+
+Last verified state: `cc7ddc8` (2026-06-05 UTC, steward-auto efter PR #195 — feat: gap 1 trust-proof USP seeding + skiva 1c kor-5 rerender wiring).
+Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
+skiva 1c kor-5 rerender wiring.
