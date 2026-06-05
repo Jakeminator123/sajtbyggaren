@@ -597,21 +597,29 @@ export async function readAppliedCopyDirectives(
     // capparna (company-name 80, tagline 140, about-text 600, services 300) görs
     // redan på write-sidan i packages/generation.
     if (candidate.payload.length > 600) continue;
-    // services kräver targetRef per schemat; övriga targets utelämnar det.
-    // about-text/services stödjer bara replace-text — vi slänger inte direktiv
-    // som av misstag bär include-token (readern speglar bara, apply-sidan i
-    // packages/generation äger den semantiska valideringen).
+    // targetRef: schemat kräver en icke-tom referens (services[].id|label,
+    // max 80 tecken) när target=services och utelämnar den annars. Validera
+    // en gång och återanvänd både för drop-regeln och själva fältet.
+    const rawTargetRef =
+      typeof candidate.targetRef === "string" ? candidate.targetRef : "";
+    const targetRefValid =
+      rawTargetRef.trim().length > 0 && rawTargetRef.length <= 80;
+    // services UTAN giltig targetRef bryter mot schemat
+    // (project-input.schema.json:226-234, ``then.required: targetRef``).
+    // Utan den kan UI:t inte säga VILKEN tjänst som ändrades och apply-sidan
+    // no-op:ar ändå — släng direktivet i stället för att visa den generiska
+    // "uppdaterade en tjänst"-raden som tappar operatörskontext.
+    if (candidate.target === "services" && !targetRefValid) continue;
+    // about-text/services stödjer bara replace-text per schemat; readern
+    // speglar dock bara — apply-sidan i packages/generation äger den semantiska
+    // operation-valideringen, så vi normaliserar inte operation här.
     const directive: AppliedCopyDirective = {
       target: candidate.target,
       operation: candidate.operation,
       payload: candidate.payload,
     };
-    if (
-      typeof candidate.targetRef === "string" &&
-      candidate.targetRef.length > 0 &&
-      candidate.targetRef.length <= 80
-    ) {
-      directive.targetRef = candidate.targetRef;
+    if (targetRefValid) {
+      directive.targetRef = rawTargetRef;
     }
     if (isStringIn(candidate.source, COPY_DIRECTIVE_SOURCES)) {
       directive.source = candidate.source;

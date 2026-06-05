@@ -2299,6 +2299,21 @@ def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
         "så ett services-direktiv kan peka ut vilken tjänst som ändrades — "
         "schemat kräver fältet när target=services."
     )
+    # Schemat (project-input.schema.json:226-234) gör targetRef OBLIGATORISK när
+    # target=services. Läsaren måste enforca det och SLÄNGA services-direktiv som
+    # saknar giltig targetRef — annars läcker de igenom och UI:t faller tillbaka
+    # på den generiska "Jag uppdaterade en tjänst."-raden som tappar VILKEN
+    # tjänst som ändrades (operatörskontext).
+    drop_guard = re.compile(
+        r'candidate\.target\s*===\s*"services"\s*&&\s*!targetRefValid',
+        re.MULTILINE,
+    )
+    assert drop_guard.search(text), (
+        "readAppliedCopyDirectives måste droppa services-direktiv utan giltig "
+        "targetRef (schema-required) i stället för att visa den generiska "
+        '"uppdaterade en tjänst"-raden. Saknas drop-guarden bryter UI:t mot '
+        "schema-kontraktet och tappar operatörskontext."
+    )
     assert 'path.resolve(root, "data", "prompt-inputs")' in text and (
         'path.resolve(root, "examples")' in text
     ), (
