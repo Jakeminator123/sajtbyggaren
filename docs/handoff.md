@@ -5,6 +5,88 @@
 Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
 skiva 1c kor-5 rerender wiring.
 
+## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
+
+> Skriven som överlämning till nästa orchestrator. Läs först: detta block,
+> `docs/current-focus.md`, `docs/open_claw.txt` (coachens OpenClaw-vägledning,
+> vägledande ej gospel), `AGENTS.md`, `docs/heavy-llm-flow/post-build-plan.md`.
+
+### TL;DR — var vi står
+`main` = `cc7ddc8` (PR #195) + steward-bumpar + docs/inbox-commits. `jakob-be`
+ligger strax före main med **PR #196 öppen** (OpenClaw action-bridge). `christopher`
+är konvergerad (= main + ev. egna UI-commits, han ska `git reset --hard origin/main`).
+`christopher-ui` = **fryst legacy/parkerad** på `8c1b6da` (auth/billing bakom
+`NEXT_PUBLIC_AUTH_ENABLED`, default AV — tas in långt senare; rör den ALDRIG utan
+operatörs-OK). Aktiv frontend-branch = `christopher` (ADR-mässigt kodifierat i
+`governance/rules/christopher-active-branch.md`).
+
+### Landat i main denna session (PR #195, cc7ddc8)
+- **gap 1**: home "Varför oss" seedas från operatörens `uniqueSellingPoints`
+  i stället för rå `businessFacts`-metadata; USP-seedning markerar inte
+  blueprint-applied (annars falsk `appliedVisibleEffect`).
+- **gap 2**: `derive_story` (planning/blueprint.py) komplementerar hero i stället
+  för att eka `oneLiner`+`differentiator`; `offerStrategy` exkluderad (intern
+  instruktion, ej kundcopy).
+- **gap 3 (del b)**: offer-kort-summaries de-dupas (inga identiska
+  tjänstebeskrivningar för okända tjänster i känd bransch).
+- **skiva 1c**: kör-5 rerender-callback wirad i `build_site.py` (blueprint-repair
+  re-renderar via deterministiska renderern).
+- **skiva 1b scaffold**: `scripts/run_openclaw_followup.py` (read-only beslutsseam).
+- Hygien: 12 avslutade gap-filer → `docs/gaps/archive/`; `Powershell-7`-regel
+  (miljöscopad till operatörens Windows); branch-governance-rename.
+
+### I flykten — PR #196 (jakob-be → main): OpenClaw action-bridge
+`scripts/run_openclaw_followup.py --apply`. OpenClaw Core V0 är grinden: bara
+`edit_instruction` (`action=patch_plan_request`) delegeras till befintliga
+KÖR-7 `run_followup_chain` (router→context→patch→apply→targeted render). Läs/plan/
+fråga bygger aldrig. Ärligt: `applied`/`previewShouldRefresh` kommer från kedjan,
+no-op fejkar aldrig. **Additivt + opt-in** — ändrar INTE `/api/prompt` idag.
+
+### NÄR funkar det tunga LLM-flödet i frontend? (operatörens fråga)
+Backend-halvan är klar när PR #196 mergas. Det tänds i frontend när **Christopher
+wirar UI-halvan**: `apps/viewser/lib/openclaw-runner.ts` shellar till
+`scripts/run_openclaw_followup.py` (samma mönster som `router-classify-runner.ts`)
+och `/api/prompt` rutar följdprompter genom action-bridgen i stället för att
+alltid bygga. Då: frågor bygger inte om, edits kör KÖR-7-kedjan. **Viktig nyans:**
+KÖR-7 `apply` (kor-7c) hanterar idag främst capability-patchar (component_add),
+INTE fri copy-edit — copy-edits (namn/tagline/about/services) landar fortfarande
+via den LEGACY copyDirective-vägen i `prompt_to_project_input.py` som `/api/prompt`
+redan kör. Så "wow"-kedjan via OpenClaw blir helt komplett först när copy-edits
+också går genom apply (eller när bridgen medvetet använder legacy-vägen för copy).
+Sammanfattning: backend redo (PR #196); frontend "tänds" = Christophers
+openclaw-runner + /api/prompt-routing; full copy-via-OpenClaw = en följd-slice.
+
+### Lane-split (så ingen dubbeljobbar) — seam = `/api/prompt`-kontraktet
+- **Jakob (backend, jakob-be):** OpenClaw action-bridge (PR #196), copy-target-
+  applicering i kor-7c, gap 3 del a (offer/tagline-som-tjänstekort-guard),
+  punkt C (`remapped`/`requestedTarget` på copyDirective — väntar på Christophers
+  repro), `derive`-kvalitet.
+- **Christopher (UI, christopher):** först `git reset --hard origin/main`. Sedan
+  `openclaw-runner.ts` → shellar `run_openclaw_followup.py`; FloatingChat visar
+  `openClawDecision`/`bridge` ärligt; wizard "AI-förifylld kontroll"-UX.
+- Backend definierar JSON-shapen; Christopher konsumerar. Kontrakt-PR vid
+  shape-ändring. Koordineras i inboxen (`msg-0038`/`msg-0039`).
+
+### OpenClaw-notiser (operatörens filer — vägledande)
+- `docs/open_claw.txt` = coachens vägledning för VÅR OpenClaw: bygg Core i repo
+  (router→context→decide) FÖRST, hosta (Render) SIST efter auth/rate-limit/
+  trace/rollback. Bekräftar nuvarande riktning; action-bridgen = "Nivå 2 patch
+  flow / follow-up bridge". Destillera gamla Sajtmaskin-styrkor (kontextnivåer,
+  buggläsning, tool calls, självgranskning) — importera inte fri filpatch-motor.
+- `OC-kanske-bra.txt` = om EXTERNA produkten openclaw/openclaw (en extern
+  docs-MCP / `openclaw mcp serve`); inte relaterad till vår interna OpenClaw —
+  namnkrock. Använd INTE som implementationskälla; wira INTE in i Sajtbyggaren.
+
+### Öppna trådar / rekommenderad ordning
+1. Merga PR #196 (när CI grön) → action-bridge på main.
+2. Christopher: reset + UI-halvan av skiva 1b (openclaw-runner + /api/prompt-routing).
+3. Backend: copy-edit genom kor-7c apply (så OpenClaw-vägen täcker copy), gap 3 del a, punkt C.
+4. Fas 2 baseline-eval (verifiera gap 1/2/3 visuellt med --real-llm) → Fas 3.
+5. Hosting (Render/Vercel-sandbox) SIST — efter auth/rate-limit/trace/rollback.
+- Cloud-grind-kandidater (feature-branch från jakob-be → PR till jakob-be):
+  se `docs/agent-prompts/` / handoff-bilaga; bra kandidater = oberoende
+  backend-kvalitetsfixar med tester (ej cross-lane, ej OpenClaw-kärna).
+
 ## Orchestrator-handoff 2026-06-05 — Avslutningsrunda (status + alla öppna trådar)
 
 > Skriven som överlämning till nästa orchestrator. Läs `docs/current-focus.md` +
