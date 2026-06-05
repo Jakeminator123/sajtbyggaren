@@ -48,6 +48,9 @@ type ColorPickerDialogProps = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /** C2 globalt bygg-lås + C1 "Iterera från denna"-pin (från BuilderShell). */
+  isBuilding?: boolean;
+  baseRunId?: string | null;
 };
 
 export function ColorPickerDialog({
@@ -57,6 +60,8 @@ export function ColorPickerDialog({
   onBuildStart,
   onBuildEnd,
   onBuildDone,
+  isBuilding = false,
+  baseRunId = null,
 }: ColorPickerDialogProps) {
   const [color, setColor] = useState<string>("#2D5F3F");
   const [hexInput, setHexInput] = useState<string>("#2D5F3F");
@@ -65,6 +70,8 @@ export function ColorPickerDialog({
     onBuildStart,
     onBuildEnd,
     onBuildDone,
+    isBuilding,
+    baseRunId,
   });
 
   const handlePresetClick = useCallback((hex: string) => {

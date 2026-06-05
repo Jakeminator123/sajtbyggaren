@@ -39,6 +39,57 @@ const TEST_ENV_ACTIVE =
 // Det skulle ge halvskrivna artefakter och korrupta run-snapshots.
 const inFlight = new Map<string, Promise<unknown>>();
 
+/**
+ * Tree-kill the spawned ``build_site.py`` process and ALL its descendants
+ * (python -> npm install / npm run build -> next), on both Windows and POSIX.
+ *
+ * **Why this exists (B157 follow-up, GAP-windows-safe-rebuild-pipeline.md
+ * remaining "POSIX tree-kill" item):** the shared ``killProcessTree`` helper in
+ * ``local-preview-server.ts`` tree-kills on Windows (``taskkill /PID <pid> /T
+ * /F``) but on POSIX only signals the direct child PID — its JSDoc explicitly
+ * defers full POSIX tree-kill to "detached-spawn + process.kill(-pid) (killpg),
+ * own Linux-verified sprint". For the build process that direct-child-only kill
+ * is a real leak: ``child.kill()`` reaps python but leaves the ``npm`` / ``next``
+ * grandchildren running (a process + preview-port leak, and on Windows the same
+ * ``.node`` file-lock class B157 fixed for the preview server).
+ *
+ * Here we close that gap. ``build_site.py`` is spawned with ``detached: true``
+ * on POSIX (above), so it leads its own process group (pgid === pid). Signalling
+ * the NEGATIVE pid (``process.kill(-pid, signal)``) delivers to every process in
+ * that group — python and all of its npm/next descendants — i.e. a real killpg
+ * tree-kill. Windows keeps using the shared ``taskkill /T /F`` path.
+ *
+ * Non-throwing best-effort: a race where the group already exited (ESRCH) or was
+ * never created falls back to a direct ``child.kill`` and swallows errors — the
+ * caller only needs the tree gone, not a status.
+ */
+async function killBuildProcessTree(
+  child: ReturnType<typeof spawn>,
+  signal: NodeJS.Signals,
+): Promise<void> {
+  if (process.platform === "win32") {
+    // Windows: reuse the audited taskkill /T /F tree-kill (it walks the tree by
+    // PID, no process-group needed).
+    await killProcessTree(child, signal);
+    return;
+  }
+  if (typeof child.pid !== "number") return;
+  try {
+    // Negative pid => the whole process group (killpg). build_site.py is the
+    // group leader because it was spawned detached, so this reaches python +
+    // its npm/next descendants in one signal.
+    process.kill(-child.pid, signal);
+  } catch {
+    // Group gone (ESRCH) or never created: fall back to the direct child so we
+    // at least signal python itself.
+    try {
+      child.kill(signal);
+    } catch {
+      // Process already exited between the check and the kill — nothing to do.
+    }
+  }
+}
+
 function repoRoot(): string {
   // ``...up`` (spread av variabel-array) gör resultatet opakt för Turbopacks
   // statiska analys, så repo-rot-baserade path.join() (t.ex. python-spawn mot
@@ -190,6 +241,16 @@ async function runBuildOnce(
       cwd: repoRoot(),
       env: process.env,
       stdio: ["ignore", "pipe", "pipe"],
+      // POSIX tree-kill enabler (B157 follow-up, GAP-windows-safe-rebuild-
+      // pipeline.md remaining item): spawn build_site.py in its OWN process
+      // group so a timeout-kill can signal the whole tree (python -> npm ->
+      // next) via process.kill(-pid). ``detached: true`` makes Node call
+      // ``setsid()`` so the child's pid IS the new pgid and descendants
+      // inherit it. We keep a live reference (no ``unref()``) because we still
+      // await the ``close`` event. On Windows we leave detached off — a new
+      // process group there spawns a console window, and ``killProcessTree``
+      // already tree-kills by PID via ``taskkill /T /F`` without it.
+      detached: process.platform !== "win32",
     },
   );
 
@@ -217,15 +278,16 @@ async function runBuildOnce(
     // Ett plain child.kill() signalerar bara Python-PID:en och lämnar
     // npm/next vid liv — på Windows håller de kvar .node-fil-lås (samma
     // B157-klass som preview-servern), på POSIX blir det en process-läcka.
-    // Använd samma tree-kill som preview-shutdownen: på Windows ger det
-    // taskkill /T /F över hela bygg-process-trädet.
-    void killProcessTree(child, "SIGTERM");
+    // ``killBuildProcessTree`` tree-killar på BÅDA OS: Windows via
+    // ``taskkill /T /F``, POSIX via ``process.kill(-pid)`` (killpg) eftersom
+    // build_site.py spawnas detached i en egen process-grupp.
+    void killBuildProcessTree(child, "SIGTERM");
     setTimeout(() => {
       // child.exitCode === null => processen har inte exitat än; eskalera.
       // (child.killed räcker inte: det blir true direkt av kill() även om
       // trädet lever vidare, och sätts aldrig av Windows-taskkill-pathen.)
       if (child.exitCode === null) {
-        void killProcessTree(child, "SIGKILL");
+        void killBuildProcessTree(child, "SIGKILL");
       }
     }, 5_000).unref?.();
   }, BUILD_TIMEOUT_MS);

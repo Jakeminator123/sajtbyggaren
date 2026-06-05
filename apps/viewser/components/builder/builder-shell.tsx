@@ -300,6 +300,8 @@ export function BuilderShell({
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
+        isBuilding={isBuilding}
+        baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
       <ColorPickerDialog
         open={openDialog === "color"}
@@ -308,6 +310,8 @@ export function BuilderShell({
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
+        isBuilding={isBuilding}
+        baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
       <AssetUploaderDialog
         open={openDialog === "asset"}
@@ -316,6 +320,8 @@ export function BuilderShell({
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
+        isBuilding={isBuilding}
+        baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
       <ScrapeUrlDialog
         open={openDialog === "scrape"}
@@ -324,6 +330,8 @@ export function BuilderShell({
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
+        isBuilding={isBuilding}
+        baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
       <RebuildDialog
         open={openDialog === "rebuild"}

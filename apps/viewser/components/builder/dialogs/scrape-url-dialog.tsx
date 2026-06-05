@@ -141,6 +141,9 @@ type ScrapeUrlDialogProps = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /** C2 globalt bygg-lås + C1 "Iterera från denna"-pin (från BuilderShell). */
+  isBuilding?: boolean;
+  baseRunId?: string | null;
 };
 
 export function ScrapeUrlDialog({
@@ -150,6 +153,8 @@ export function ScrapeUrlDialog({
   onBuildStart,
   onBuildEnd,
   onBuildDone,
+  isBuilding = false,
+  baseRunId = null,
 }: ScrapeUrlDialogProps) {
   const [url, setUrl] = useState("");
   const [isScraping, setIsScraping] = useState(false);
@@ -168,6 +173,8 @@ export function ScrapeUrlDialog({
     onBuildStart,
     onBuildEnd,
     onBuildDone,
+    isBuilding,
+    baseRunId,
   });
 
   const reset = useCallback(() => {

@@ -107,6 +107,12 @@ export function SiteInspectorSheet({
     onBuildStart,
     onBuildEnd,
     onBuildDone,
+    // C2 + C1: Inspectorns quick-prompts (t.ex. "Be om fix" i Kvalitet)
+    // respekterar samma globala bygg-lås och "Iterera från denna"-pin som
+    // FloatingChat. handlePrompt nedan gardar redan isBuilding, men hooken
+    // äger den auktoritativa spärren så alla ingångar är konsekventa.
+    isBuilding,
+    baseRunId: pendingBaseRunId?.baseRunId ?? null,
   });
 
   // Rensa inline-byggfelet när panelen stängs. Annars överlevde ett fel

@@ -431,9 +431,18 @@ export default function Home() {
       />
 
       <ErrorBoundary area="Förhandsvisningen" className="h-full w-full">
+        {/* C4: preview-POST:en går mot /api/preview/<siteId> medan runId
+            driver fil-/StackBlitz-fallbacken. Project Input-väljaren i
+            ConsoleDrawer kan sätta selectedSiteId UTAN att rensa
+            selectedRunId → siteId och runId pekade då på olika sajter och
+            previewen startade fel .generated/<siteId>/. runSiteId är den
+            valda runens faktiska siteId (eller null när ingen run är vald),
+            så vi låter den vinna när en run är aktiv och faller tillbaka på
+            picker-sajten i hero/pre-build-läget. I normalfallet (run vald via
+            selectRunAndSyncSiteId/handleBuildDone) är de redan identiska. */}
         <ViewerPanel
           runId={selectedRunId}
-          siteId={selectedSiteId}
+          siteId={runSiteId ?? selectedSiteId}
           isBuilding={building}
           buildStage={buildStage}
         />
@@ -520,13 +529,14 @@ export default function Home() {
               // i usePendingBuild (5 min) och via "Iterera"-toggle.
             }}
             onBuildDone={(runId, outcome) => {
-              // Bygget lyckades (eller hamnade i mock/degraded — alla
-              // outcomes utom hård exception). Operatörens iteration
-              // konsumerades och ska inte oavsiktligt återanvändas av
-              // nästa fri-text-prompt. Signaturen i BuilderShell skickar
-              // inte siteId vidare; det löser handleBuildDone själv via
-              // runs-listan när den re-fetchar.
-              setPendingBaseRunId(null);
+              // Bygget producerade en riktig version (ok/degraded) → iterationen
+              // konsumerades och ska inte oavsiktligt återanvändas av nästa
+              // fri-text-prompt. Vid ``failed`` BEHÅLLER vi base-run:en: error-
+              // bubblans "Försök igen" ska iterera från samma bas, inte falla
+              // tillbaka till latest (matchar onBuildEnd-kommentaren ovan).
+              // Signaturen i BuilderShell skickar inte siteId vidare; det löser
+              // handleBuildDone själv via runs-listan när den re-fetchar.
+              if (outcome !== "failed") setPendingBaseRunId(null);
               handleBuildDone(runId, outcome);
             }}
             onNewSite={() => {

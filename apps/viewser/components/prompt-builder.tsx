@@ -191,7 +191,20 @@ export function PromptBuilder({
 
   // Lyft stage-ändringar uppåt så page.tsx kan dirigera ViewerPanel:s
   // build-progress-card. Vi rapporterar varje stage-flip exakt en gång.
+  //
+  // C5: vakt mot stale replay. ``onStageChange`` byter identitet i page.tsx
+  // (``builderActive ? undefined : setBuildStage``). När operatören klickar
+  // "Ny sajt" går builder-läget från aktivt → inaktivt: onStageChange flippar
+  // från undefined tillbaka till setBuildStage, vilket re-kör effekten med
+  // ett OFÖRÄNDRAT ``stage`` (oftast "success" från init-bygget) och skrev
+  // då över "idle" som onNewSite precis satte → ViewerPanel visade ett stale
+  // success-card i stället för ren hero. Vi rapporterar bara när stage
+  // FAKTISKT ändrats sedan förra rapporten, så en ren callback-identitets-
+  // ändring aldrig replayar ett gammalt stage.
+  const lastReportedStageRef = useRef<PromptStage | null>(null);
   useEffect(() => {
+    if (lastReportedStageRef.current === stage) return;
+    lastReportedStageRef.current = stage;
     onStageChange?.(stage);
   }, [stage, onStageChange]);
 

@@ -660,6 +660,14 @@ COMMON_WORDS = {
     # bridge-/option-typer för spawn-helpern; de canonical termerna bor i
     # router-decision.schema.json, dessa är viewser-lokala symboler.
     "ClassifyMessageOptions", "RouterDecisionPayload",
+    # Skiva 1b (UI half) openClaw-bridge — interna TS-alias i
+    # apps/viewser/lib/openclaw-runner.ts + apps/viewser/components/builder/
+    # floating-chat.tsx. Lokala spawn-/option-/view-typer för seamen mot
+    # scripts/run_openclaw_followup.py; de canonical termerna (OpenClawDecision,
+    # OpenClawAction, PatchPlanRequest) bor i packages/-modellen och är redan
+    # allowlistade nedan. Dessa är viewser-lokala UI-symboler, inte nya domain
+    # terms — samma logik som RouterDecisionPayload/RouterDecisionView ovan.
+    "OpenClawDecisionPayload", "OpenClawFollowupOptions", "OpenClawDecisionView",
     # GAP-viewser-side-by-side-preview — interna TS-symboler i
     # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
     # Lokala UI-komponentnamn och prop-typer, inte domain terms.

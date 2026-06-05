@@ -465,13 +465,21 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
  * v2-utbyggnad inte spiller obekant data ut till UI:t.
  */
 export type AppliedCopyDirective = {
-  target: "company-name" | "tagline";
+  target: "company-name" | "tagline" | "about-text" | "services";
   operation: "replace-text" | "include-token";
   payload: string;
+  // Krävs av schemat när target=services (pekar ut services[].id|label som
+  // direktivet träffar). Utelämnas för övriga targets.
+  targetRef?: string;
   source?: "prompt-rule" | "llm" | "explicit";
 };
 
-const COPY_DIRECTIVE_TARGETS = new Set(["company-name", "tagline"] as const);
+const COPY_DIRECTIVE_TARGETS = new Set([
+  "company-name",
+  "tagline",
+  "about-text",
+  "services",
+] as const);
 const COPY_DIRECTIVE_OPERATIONS = new Set([
   "replace-text",
   "include-token",
@@ -584,14 +592,35 @@ export async function readAppliedCopyDirectives(
     if (typeof candidate.payload !== "string" || candidate.payload.length === 0) {
       continue;
     }
-    // Schema cap är 200 tecken; defense-in-depth här så en framtida
-    // schema-bump inte oavsiktligt sänker UI-radens budget.
-    if (candidate.payload.length > 200) continue;
+    // Schema-cap är 600 tecken (about-text); defense-in-depth här så en
+    // framtida schema-bump inte oavsiktligt sänker UI-radens budget. Per-target-
+    // capparna (company-name 80, tagline 140, about-text 600, services 300) görs
+    // redan på write-sidan i packages/generation.
+    if (candidate.payload.length > 600) continue;
+    // targetRef: schemat kräver en icke-tom referens (services[].id|label,
+    // max 80 tecken) när target=services och utelämnar den annars. Validera
+    // en gång och återanvänd både för drop-regeln och själva fältet.
+    const rawTargetRef =
+      typeof candidate.targetRef === "string" ? candidate.targetRef : "";
+    const targetRefValid =
+      rawTargetRef.trim().length > 0 && rawTargetRef.length <= 80;
+    // services UTAN giltig targetRef bryter mot schemat
+    // (project-input.schema.json:226-234, ``then.required: targetRef``).
+    // Utan den kan UI:t inte säga VILKEN tjänst som ändrades och apply-sidan
+    // no-op:ar ändå — släng direktivet i stället för att visa den generiska
+    // "uppdaterade en tjänst"-raden som tappar operatörskontext.
+    if (candidate.target === "services" && !targetRefValid) continue;
+    // about-text/services stödjer bara replace-text per schemat; readern
+    // speglar dock bara — apply-sidan i packages/generation äger den semantiska
+    // operation-valideringen, så vi normaliserar inte operation här.
     const directive: AppliedCopyDirective = {
       target: candidate.target,
       operation: candidate.operation,
       payload: candidate.payload,
     };
+    if (targetRefValid) {
+      directive.targetRef = rawTargetRef;
+    }
     if (isStringIn(candidate.source, COPY_DIRECTIVE_SOURCES)) {
       directive.source = candidate.source;
     }

@@ -51,6 +51,9 @@ type VariantPickerDialogProps = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /** C2 globalt bygg-lås + C1 "Iterera från denna"-pin (från BuilderShell). */
+  isBuilding?: boolean;
+  baseRunId?: string | null;
 };
 
 export function VariantPickerDialog({
@@ -60,6 +63,8 @@ export function VariantPickerDialog({
   onBuildStart,
   onBuildEnd,
   onBuildDone,
+  isBuilding = false,
+  baseRunId = null,
 }: VariantPickerDialogProps) {
   const [options, setOptions] = useState<DiscoveryOption[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -69,6 +74,8 @@ export function VariantPickerDialog({
     onBuildStart,
     onBuildEnd,
     onBuildDone,
+    isBuilding,
+    baseRunId,
   });
 
   // Hämta options när dialogen öppnas. Re-fetcha inte om vi redan

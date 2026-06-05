@@ -81,8 +81,10 @@ type CheckResult = {
 
 type RepairFix = {
   name?: string;
-  status?: string;
-  description?: string;
+  kind?: string;
+  target?: string;
+  detail?: string;
+  success?: boolean;
 };
 
 type NpmStep = {
@@ -528,8 +530,11 @@ function RepairSection({ repair }: { repair: Record<string, unknown> | null }) {
               {mechanicalFixesApplied.map((fix, index) => (
                 <li key={`${fix.name ?? "fix"}-${index}`}>
                   <span className="font-mono">{fix.name ?? "?"}</span>
-                  {fix.status ? ` — ${fix.status}` : null}
-                  {fix.description ? ` (${fix.description})` : null}
+                  {typeof fix.success === "boolean"
+                    ? ` — ${fix.success ? "fixad" : "misslyckades"}`
+                    : null}
+                  {fix.target ? ` · ${fix.target}` : null}
+                  {fix.detail ? ` (${fix.detail})` : null}
                 </li>
               ))}
             </ul>
