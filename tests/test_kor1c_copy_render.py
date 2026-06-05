@@ -61,19 +61,19 @@ _EXPECT: dict[str, dict[str, Any]] = {
     },
     "frisor-goteborg": {
         "offer_renderer": "service-list",
-        "story_phrase": "Tid att lyssna och ett varmt bemötande",
+        "story_phrase": "En frisör som förstår vad kunden vill ha",
         "offer_summary": "Klippning för dam och herr.",
         "has_home_faq": True,
     },
     "naprapat-stockholm": {
         "offer_renderer": "treatment-list",
-        "story_phrase": "Tydlig behandlingsplan och uppföljning",
+        "story_phrase": "Lindra smärta och förstå orsaken",
         "offer_summary": "Behandling av besvär i muskler och leder.",
         "has_home_faq": True,
     },
     "keramik-ehandel": {
         "offer_renderer": "product-grid",
-        "story_phrase": "Varje pjäs är unik och tillverkad i liten skala",
+        "story_phrase": "Vacker keramik som tål att användas",
         "offer_summary": "Handdrejade skålar för vardagsbruk.",
         "has_home_faq": False,
     },
