@@ -398,9 +398,12 @@ type PromptApiResponse = {
  * egen client-bundle-säkra typ.
  */
 type AppliedCopyDirective = {
-  target: "company-name" | "tagline";
+  target: "company-name" | "tagline" | "about-text" | "services";
   operation: "replace-text" | "include-token";
   payload: string;
+  // Pekar ut vilken tjänst (services[].id|label) ett services-direktiv träffar.
+  // Krävs av schemat när target=services, utelämnas annars.
+  targetRef?: string;
   source?: "prompt-rule" | "llm" | "explicit";
 };
 
@@ -427,13 +430,14 @@ function extractAppliedVisibleEffect(
  * ADR 0034 väg B (B155 path B): bygg en svensk success-rad per applicerat
  * copy-direktiv. Renderingen i FloatingChat-bubblan sker via
  * ``{message.content}`` (textnod) — payload escapas alltid av React.
- * Vi mappar bara de tre kombinationer som schema-enumen på
+ * Vi mappar alla fyra targets som schema-enumen på
  * ``governance/schemas/project-input.schema.json:directives.copyDirectives``
- * tillåter idag (target=company-name | tagline; operation=replace-text |
- * include-token). Andra kombinationer faller tillbaka på en neutral
- * "uppdaterades"-rad så framtida schema-bumps inte tystar UI:t — men
- * payloaden är redan validerad mot guards på write-sidan, så det är
- * säkert att rendera även den okända varianten.
+ * tillåter (company-name | tagline | about-text | services). Kort copy
+ * (namn/rubrik/tjänstnamn) ekas i citat så operatören känner igen ändringen;
+ * lång copy (om oss-texten, upp till 600 tecken) ekas INTE i bubblan — den
+ * syns i previewen — så vi bara bekräftar att fältet uppdaterades. Okända
+ * kombinationer faller tillbaka på en neutral "uppdaterades"-rad så framtida
+ * schema-bumps inte tystar UI:t.
  */
 function summarizeCopyDirectives(
   directives: AppliedCopyDirective[] | undefined,
@@ -448,13 +452,28 @@ function summarizeCopyDirectives(
       continue;
     }
     if (directive.target === "tagline") {
-      if (directive.operation === "replace-text") {
-        lines.push(`Jag uppdaterade rubriken till "${payload}".`);
-      } else if (directive.operation === "include-token") {
+      if (directive.operation === "include-token") {
         lines.push(`Jag la in "${payload}" i hero-texten.`);
       } else {
         lines.push(`Jag uppdaterade rubriken till "${payload}".`);
       }
+      continue;
+    }
+    if (directive.target === "about-text") {
+      // Om oss-texten kan vara upp till 600 tecken → eka inte hela payloaden
+      // i chat-bubblan, bekräfta bara ändringen (operatören ser den i preview).
+      lines.push("Jag skrev om om oss-texten.");
+      continue;
+    }
+    if (directive.target === "services") {
+      // targetRef pekar ut vilken tjänst som ändrades; eka tjänstnamnet (kort,
+      // max 80 tecken) men inte den nya summaryn (upp till 300 tecken).
+      const ref = directive.targetRef?.trim();
+      lines.push(
+        ref
+          ? `Jag uppdaterade tjänsten "${ref}".`
+          : "Jag uppdaterade en tjänst.",
+      );
       continue;
     }
   }
@@ -805,9 +824,26 @@ function summarizeBuildResult(
   // (summarizeRouterDecision → null) till den vanliga summeringen.
   const routerView = extractRouterDecision(payload);
   if (routerView) {
-    const routerLine = summarizeRouterDecision(routerView);
-    if (routerLine) {
-      return routerLine;
+    // Ärlighets-nyans: routerns ``unclear``/``requiresClarification`` är en
+    // förbygg-gissning som kan ha fel — operatören kan ha varit tydlig ("gör
+    // hero-knappen större") fast förfrågan helt enkelt inte stöds än. När
+    // bygget FAKTISKT kördes och rapporterade ett auktoritativt no-op-skäl
+    // (B155 ``appliedVisibleEffect.applied === false``) är det skälet ärligare
+    // än gissningen, så vi låter B155-grenen nedan ta vid (den skiljer
+    // "kan bara ändra texter, layout stöds ej än" från "var mer specifik").
+    // Övriga utfall (fråga/referens/discovery/bug/plan-only) preemptar fortsatt
+    // eftersom deras rad är mer specifik än den generiska bygg-summeringen.
+    const buildReportedNoOp =
+      extractAppliedVisibleEffect(payload.buildResult)?.applied === false;
+    const deferToBuildTruth =
+      buildReportedNoOp &&
+      (routerView.requiresClarification ||
+        routerView.messageKind === "unclear");
+    if (!deferToBuildTruth) {
+      const routerLine = summarizeRouterDecision(routerView);
+      if (routerLine) {
+        return routerLine;
+      }
     }
   }
   // B3 — version-progression i success-meddelandet. När payload.version

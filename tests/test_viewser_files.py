@@ -2222,6 +2222,25 @@ def test_floating_chat_router_decision_readiness() -> None:
         "referens/discovery/plan-only."
     )
 
+    # Ärlighets-nyans (2026-06-05): en ``unclear``/``requiresClarification``-
+    # gissning får INTE preempta när bygget faktiskt rapporterade ett
+    # auktoritativt no-op-skäl (B155 ``appliedVisibleEffect.applied === false``).
+    # Då är B155-raden ärligare ("kan bara ändra texter, layout stöds ej än")
+    # än routerns "jag förstår inte vad du menar" över en tydlig men ej stödd
+    # förfrågan ("gör hero-knappen större" klassas deterministiskt som unclear).
+    # Preempt-regionen måste alltså konsultera bygg-sanningen innan den fyrar.
+    preempt_region = text[preempt_idx:ok_branch_idx]
+    assert "extractAppliedVisibleEffect(payload.buildResult)" in preempt_region, (
+        "Router-preempten måste läsa appliedVisibleEffect så unclear/"
+        "requiresClarification kan lämna över till den mer specifika B155-"
+        "no-op-raden när bygget redan rapporterat varför inget syntes."
+    )
+    assert "requiresClarification" in preempt_region and "unclear" in preempt_region, (
+        "Defer-till-bygg-sanningen måste vara begränsad till unclear/"
+        "requiresClarification — övriga router-utfall (fråga/referens/discovery/"
+        "bug/plan-only) ska fortsatt preempta med sin mer specifika rad."
+    )
+
     # Graceful: edit/multi_intent som krävde ett synligt bygge ska falla igenom
     # till den vanliga summeringen (Bug B m.m.) — summarizeRouterDecision ska
     # alltså ha en gren som returnerar null.
@@ -2264,14 +2283,21 @@ def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
         "payload/source-enum)."
     )
     enum_pattern = re.compile(
-        r'target:\s*"company-name"\s*\|\s*"tagline"[\s\S]{0,200}?'
+        r'target:\s*"company-name"\s*\|\s*"tagline"\s*\|\s*"about-text"'
+        r'\s*\|\s*"services"[\s\S]{0,200}?'
         r'operation:\s*"replace-text"\s*\|\s*"include-token"',
         re.MULTILINE,
     )
     assert enum_pattern.search(text), (
-        "AppliedCopyDirective-enumen måste låsa target=company-name|"
-        "tagline och operation=replace-text|include-token så schema-drift "
-        "fångas i typecheck istället för att läcka okända värden till UI:t."
+        "AppliedCopyDirective-enumen måste låsa alla fyra schema-targets "
+        "(company-name|tagline|about-text|services) och operation="
+        "replace-text|include-token så schema-drift fångas i typecheck "
+        "istället för att läcka okända värden till UI:t."
+    )
+    assert "targetRef?: string" in text, (
+        "AppliedCopyDirective måste bära ``targetRef`` (services[].id|label) "
+        "så ett services-direktiv kan peka ut vilken tjänst som ändrades — "
+        "schemat kräver fältet när target=services."
     )
     assert 'path.resolve(root, "data", "prompt-inputs")' in text and (
         'path.resolve(root, "examples")' in text
@@ -2337,6 +2363,17 @@ def test_b155_path_b_floating_chat_summarises_copy_directives() -> None:
     )
     assert "Jag la in" in text and "i hero-texten" in text, (
         "Mappningen för target=tagline + operation=include-token saknas eller har bytt form."
+    )
+    # Slice 2a/2c: about-text + services måste också ge en ärlig rad nu när
+    # backend-läsaren (lib/runs.ts) släpper igenom dem (annars syns följdprompt
+    # mot om oss-texten/tjänster aldrig i FloatingChat — current-focus #5).
+    assert "Jag skrev om om oss-texten" in text, (
+        "Mappningen för target=about-text saknas. Om oss-följdprompter måste "
+        "bekräftas i FloatingChat (utan att eka hela 600-teckens-payloaden)."
+    )
+    assert 'Jag uppdaterade tjänsten "' in text and "targetRef" in text, (
+        "Mappningen för target=services saknas. Tjänst-följdprompter måste "
+        "bekräftas med tjänstnamnet (targetRef), inte den långa summaryn."
     )
     assert "appliedCopyDirectives" in text, (
         "PromptApiResponse måste exponera ``appliedCopyDirectives`` så "
