@@ -745,7 +745,9 @@ def derive_content_blocks(
     services = _list_str(brief.get("servicesMentioned"))
     if offer is not None and services:
         industry = _detect_industry(brief) if _enrichment_enabled(brief) else None
-        blocks[offer] = [_offer_item(service, industry) for service in services]
+        items = [_offer_item(service, industry) for service in services]
+        _dedupe_offer_summaries(items)
+        blocks[offer] = items
 
     story_address = _story_block_address(scaffold, route_plan)
     story = derive_story(brief)
@@ -758,6 +760,37 @@ def derive_content_blocks(
         blocks[faq_address] = faq
 
     return blocks
+
+
+def _dedupe_offer_summaries(items: list[dict[str, Any]]) -> None:
+    """Ensure no two offer cards render an identical summary (gap 3).
+
+    Unknown services in a known industry all fall back to the same generic
+    industry summary (e.g. naprapath -> "Behandling anpassad efter dina
+    besvär."), so two such services would show identical copy on two cards - a
+    clear "fake AI" repetition (inbox msg-0026). When a summary repeats, qualify
+    the duplicate with its own service title so each card carries distinct, still
+    honest copy (no fabricated claim - only the service's own name is added).
+    The first occurrence keeps the clean generic line. Mutates ``items`` in
+    place. Known/keyed service summaries are already distinct, so the four
+    baselines are unaffected.
+    """
+    seen: set[str] = set()
+    for item in items:
+        summary = item.get("summary")
+        if not isinstance(summary, str) or not summary:
+            continue
+        key = summary.strip().casefold()
+        if key not in seen:
+            seen.add(key)
+            continue
+        title = _str(item.get("title"))
+        if not title:
+            continue
+        lowered = summary[:1].lower() + summary[1:]
+        qualified = f"{title} – {lowered}"
+        item["summary"] = qualified
+        seen.add(qualified.strip().casefold())
 
 
 def _offer_item(service: str, industry: str | None) -> dict[str, Any]:

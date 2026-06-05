@@ -252,6 +252,26 @@ def test_offer_items_carry_distinct_grounded_summaries():
 
 
 @pytest.mark.tooling
+def test_offer_summaries_deduped_when_services_fall_back_to_generic():
+    """Gap 3: two unknown services in a known industry both fall back to the
+    same generic industry summary; the offer list must not render identical
+    copy on two cards (the duplicate is qualified with its own title)."""
+    from packages.generation.planning.blueprint import _dedupe_offer_summaries
+
+    items = [
+        {"title": "Ryggbehandling", "summary": "Behandling anpassad efter dina besvär."},
+        {"title": "Nackbehandling", "summary": "Behandling anpassad efter dina besvär."},
+    ]
+    _dedupe_offer_summaries(items)
+    summaries = [item["summary"] for item in items]
+    assert all(summaries), "every offer item must keep a non-empty summary"
+    assert len(set(summaries)) == 2, f"summaries must be distinct: {summaries}"
+    # First occurrence keeps the clean generic line; the duplicate is qualified.
+    assert summaries[0] == "Behandling anpassad efter dina besvär."
+    assert summaries[1].startswith("Nackbehandling")
+
+
+@pytest.mark.tooling
 def test_service_branches_emit_distinct_grounded_faq():
     """The three branches whose scaffold surfaces a home FAQ (electrician,
     hair salon, naprapath) emit branschrelevant, grounded FAQ pairs that differ
