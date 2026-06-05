@@ -188,19 +188,35 @@ def test_build_site_wires_rerender_into_phase3():
         "build() must define the kor-5 rerender closure (skiva 1c). "
         "Without it blueprint-repair stays dormant in real builds."
     )
+    closure_idx = build_body.find("def _rerender_after_repair(")
     call_idx = build_body.find(
         "quality_payload, repair_payload = run_phase3_quality_and_repair("
     )
-    assert call_idx > 0
-    call_block = build_body[call_idx : call_idx + 400]
+    assert closure_idx > 0 and call_idx > closure_idx
+    # Extract the EXACT call via balanced-paren matching rather than a fixed
+    # window so a future arg reorder (which could push rerender past any
+    # hard-coded slice length) cannot make this guard silently misfire.
+    open_paren = build_body.index("(", call_idx)
+    depth = 0
+    end = open_paren
+    for k in range(open_paren, len(build_body)):
+        if build_body[k] == "(":
+            depth += 1
+        elif build_body[k] == ")":
+            depth -= 1
+            if depth == 0:
+                end = k
+                break
+    call_block = build_body[call_idx : end + 1]
     assert "rerender=_rerender_after_repair" in call_block, (
         "build() must pass rerender=_rerender_after_repair into "
         "run_phase3_quality_and_repair so kor-5 blueprint-repair can "
         "re-render a patched blueprint before the critic re-runs."
     )
-    # The closure must re-render via the deterministic renderer, not npm.
-    closure_idx = build_body.find("def _rerender_after_repair(")
-    closure_block = build_body[closure_idx : closure_idx + 500]
+    # The closure is defined immediately before the call, so [closure:call]
+    # bounds its body exactly. It must re-render via the deterministic
+    # renderer (RenderBlueprint.from_artifacts + write_pages), not npm.
+    closure_block = build_body[closure_idx:call_idx]
     assert "write_pages(" in closure_block and "RenderBlueprint.from_artifacts(" in closure_block, (
         "_rerender_after_repair must materialise the patched blueprint via "
         "RenderBlueprint.from_artifacts + write_pages (the same deterministic "
