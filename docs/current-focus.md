@@ -392,9 +392,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `647ac25` (2026-06-05 UTC, steward-auto efter PR #194 — feat(viewser): UI/UX-batch (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main).
-Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
-(versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
+Last verified state: `cc7ddc8` (2026-06-05 UTC, steward-auto efter PR #195 — feat: gap 1 trust-proof USP seeding + skiva 1c kor-5 rerender wiring).
+Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
+skiva 1c kor-5 rerender wiring.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -636,3 +636,9 @@ env-override) och #169 (Christopher UI-reconcile, hans lane). Plus Vercel deploy
 (`9ba29ce`) och docs-batch (kor-o1 OpenClaw Core-kontrakt + handoff-bump). `origin/main` =
 `1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
 Nya PRs sedan föregående checkpoint: #169, #170, #171, #172, #173, #174, #175, #176, #178 (alla mergade till `jakob-be`).
+
+### 2026-06-05 UTC — current-focus.md före `647ac25`
+
+Last verified state: `647ac25` (2026-06-05 UTC, steward-auto efter PR #194 — feat(viewser): UI/UX-batch (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main).
+Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
+(versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.

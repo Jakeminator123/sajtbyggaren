@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-05 UTC, steward-auto efter PR #194 — feat(viewser): UI/UX-batch (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main. Verifierad `main` är `647ac25`.
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #195 — feat: gap 1 trust-proof USP seeding + skiva 1c kor-5 rerender wiring. Verifierad `main` är `cc7ddc8`.
 
-Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
-(versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
+Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
+skiva 1c kor-5 rerender wiring.
 
 ## Orchestrator-handoff 2026-06-05 — Avslutningsrunda (status + alla öppna trådar)
 
@@ -1602,6 +1602,14 @@ near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
 
 Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
 module extraction + P2 grounding + contact honesty.
+
+
+### 2026-06-05 UTC — handoff.md före `647ac25`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #194 — feat(viewser): UI/UX-batch (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main. Verifierad `main` är `647ac25`.
+
+Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
+(versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
