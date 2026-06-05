@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC, steward-auto efter PR #153 — sync(jakob-be -> main): copyDirective module extraction + P2 grounding + contact honesty. Verifierad `main` är `366f6e9`.
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #194 — feat(viewser): UI/UX-batch (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main. Verifierad `main` är `647ac25`.
 
-Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
-module extraction + P2 grounding + contact honesty.
+Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
+(versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
 
 ## Orchestrator-handoff 2026-06-02 SEN KVÄLL #2 (hela loopen live-bevisad i browsern + worktree committad/pushad)
 
@@ -1505,6 +1505,14 @@ oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (a
 near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
 
 ### 2026-06-02 UTC — handoff.md före `8a86593`
+
+
+### 2026-06-05 UTC — handoff.md före `d149f23`
+
+**Datum:** 2026-06-02 UTC, steward-auto efter PR #153 — sync(jakob-be -> main): copyDirective module extraction + P2 grounding + contact honesty. Verifierad `main` är `366f6e9`.
+
+Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
+module extraction + P2 grounding + contact honesty.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 

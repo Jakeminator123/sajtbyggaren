@@ -392,46 +392,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `d149f23` (2026-06-05 natt UTC, `jakob-be` HEAD — **POST-BUILD FAS 0 KLAR**:
-router/OpenClaw-sömmarna härdade i tre skivor — `d8ef7ea` (KÖR-6b-fallback i CLI-followup +
-RouterDecision cross-field-clamp så non-edit aldrig kan starta build), `bb94445` (OpenClaw
-reference-gating i multi_intent + `orchestrate()` skickar `reference.url` + action-bridge-label
-ersätter stale `blockedBy="kor-7c"` + `validate_assignment`-immutability + `base_run_id`→apply),
-`d149f23` (#187: npm `packageManager`-check som pendingPropagation-fält, policy v2, + EN-docstring).
-Full `pytest tests/` grön (endast väntade skips), governance/rules_sync/term_coverage gröna. Dessförinnan:
-`002045f` (#191 mergad: `referens/` borttagen + README/paths.py/repo-boundaries-rensning), `86f9df6`
-(post-build-status + plan-doc). `MIN_IDE/` raderad lokalt; `backup_100_BRA` pushad. **Nästa: Fas 1**
-(`/api/prompt`-wiring, Christopher-lane) + rerender-wiring; **Fas 2** baseline-eval (operatörsnärvaro).
-Föregående: `029f652` (#190 kor-4b verifierModel
-read-only smak-critic ovanpå kor-4a (mock=4a, dedup, icke-blockerande, llm-models v8). **HELA
-KÖR-SEKVENSEN i docs/heavy-llm-flow/ ÄR NU IMPLEMENTERAD** (0/1a/1b/1c/2/3a/3b/4a/4b/5/6a/6b/7a/7b/7c/7d/
-STAB/o1/o2). Kvar = INKOPPLING, inte fler kör-kort: rerender-wiring (gör kor-5 verklig),
-`/api/prompt`-wiring + routerDecision (gör follow-up verklig för UI, låser #177), baseline-eval.
-Föregående: #188 kor-6b router LLM-fallback + #189 kor-o2 OpenClaw Core V0 + #187 platform-baseline.
-Föregående: #185 kor-5 repairModel
-blueprint-only repair (dormant library; brief-validering+rollback, rerender try/except, blueprintPasses,
-typfix). Föregående: #186 CLI-wiring (kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Docs-pass:
-system-overview-refresh + current-focus slim-down (Föregående checkpoint → arkiv) +
-arkitektur-canvas-bump. Föregående: #184 kor-3b
-visualDirection väljer section-treatment (Option A, verifierad mot kombinerat träd) + #179 kor-3a
-section-treatments-JSON + #180 kor-4a deterministisk critic + #183 kor-3a planning→build
-boundary-fix (Pushvakt P1: loader → orchestration, repo-boundaries v10, fail-closed,
-import-scan-test) mergade denna session. Föregående `f4d2a1e` (kväll) — #178 KÖR-7-STAB stabiliserar
-apply/targeted-render: P1 stängd (applied capability → selectedDossiers.required via filter_capabilities
-→ codegen monterar dossiern), stale provenance rensad, #176-P2:or fixade (ingen build på applied=false,
-diff mot aktiv build-snapshot, route→id via routePlan, failed-trace, runs_root). Föregående: #176 KÖR-7d targeted
-render + version-build STÄNGER follow-up-bryggan (7b→7c→7d): capability-följdprompt bygger om
-påverkad route, swap:ar current.json bara på ok/degraded, ärlig appliedVisibleEffect, gamla runs
-orörda, skipped/unmapped loggas i trace. Även inne (Christopher): #172 stale-pending-runs +
-#173 ärligt layout-no-op. Föregående: #175 KÖR-7c apply:
-validerad capability-patch → ny immutabel Project Input-version v<N+1> (requestedCapabilities),
-ingen build/current.json; copy_change+inline = unmapped (ADR-beslut). Ovanpå #174 som härdar KÖR-7b
-patch-planeraren: component_add utan namngiven komponent avvisas + _INTENT_CAPABILITY drift-låst.
-Ovanpå: #171 KÖR-7b artifact patch planner (dry-run) mergad ovanpå #170 (B86 npm-timeout
-env-override) och #169 (Christopher UI-reconcile, hans lane). Plus Vercel deploy-denylist
-(`9ba29ce`) och docs-batch (kor-o1 OpenClaw Core-kontrakt + handoff-bump). `origin/main` =
-`1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #169, #170, #171, #172, #173, #174, #175, #176, #178 (alla mergade till `jakob-be`).
+Last verified state: `647ac25` (2026-06-05 UTC, steward-auto efter PR #194 — feat(viewser): UI/UX-batch (versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main).
+Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
+(versionssynlighet, preview, retry, a11y) + scout P1/P2 — konvergens till main.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -627,3 +590,47 @@ Hela "Föregående checkpoint"-kedjan (2026-05-25 → 2026-06-02) flyttades dit
 commit-historik: `git log --oneline origin/main` eller `git log --oneline
 origin/jakob-be`.
 
+## Föregående checkpoint
+
+### 2026-06-05 UTC — current-focus.md före `d149f23`
+
+Last verified state: `d149f23` (2026-06-05 natt UTC, `jakob-be` HEAD — **POST-BUILD FAS 0 KLAR**:
+router/OpenClaw-sömmarna härdade i tre skivor — `d8ef7ea` (KÖR-6b-fallback i CLI-followup +
+RouterDecision cross-field-clamp så non-edit aldrig kan starta build), `bb94445` (OpenClaw
+reference-gating i multi_intent + `orchestrate()` skickar `reference.url` + action-bridge-label
+ersätter stale `blockedBy="kor-7c"` + `validate_assignment`-immutability + `base_run_id`→apply),
+`d149f23` (#187: npm `packageManager`-check som pendingPropagation-fält, policy v2, + EN-docstring).
+Full `pytest tests/` grön (endast väntade skips), governance/rules_sync/term_coverage gröna. Dessförinnan:
+`002045f` (#191 mergad: `referens/` borttagen + README/paths.py/repo-boundaries-rensning), `86f9df6`
+(post-build-status + plan-doc). `MIN_IDE/` raderad lokalt; `backup_100_BRA` pushad. **Nästa: Fas 1**
+(`/api/prompt`-wiring, Christopher-lane) + rerender-wiring; **Fas 2** baseline-eval (operatörsnärvaro).
+Föregående: `029f652` (#190 kor-4b verifierModel
+read-only smak-critic ovanpå kor-4a (mock=4a, dedup, icke-blockerande, llm-models v8). **HELA
+KÖR-SEKVENSEN i docs/heavy-llm-flow/ ÄR NU IMPLEMENTERAD** (0/1a/1b/1c/2/3a/3b/4a/4b/5/6a/6b/7a/7b/7c/7d/
+STAB/o1/o2). Kvar = INKOPPLING, inte fler kör-kort: rerender-wiring (gör kor-5 verklig),
+`/api/prompt`-wiring + routerDecision (gör follow-up verklig för UI, låser #177), baseline-eval.
+Föregående: #188 kor-6b router LLM-fallback + #189 kor-o2 OpenClaw Core V0 + #187 platform-baseline.
+Föregående: #185 kor-5 repairModel
+blueprint-only repair (dormant library; brief-validering+rollback, rerender try/except, blueprintPasses,
+typfix). Föregående: #186 CLI-wiring (kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Docs-pass:
+system-overview-refresh + current-focus slim-down (Föregående checkpoint → arkiv) +
+arkitektur-canvas-bump. Föregående: #184 kor-3b
+visualDirection väljer section-treatment (Option A, verifierad mot kombinerat träd) + #179 kor-3a
+section-treatments-JSON + #180 kor-4a deterministisk critic + #183 kor-3a planning→build
+boundary-fix (Pushvakt P1: loader → orchestration, repo-boundaries v10, fail-closed,
+import-scan-test) mergade denna session. Föregående `f4d2a1e` (kväll) — #178 KÖR-7-STAB stabiliserar
+apply/targeted-render: P1 stängd (applied capability → selectedDossiers.required via filter_capabilities
+→ codegen monterar dossiern), stale provenance rensad, #176-P2:or fixade (ingen build på applied=false,
+diff mot aktiv build-snapshot, route→id via routePlan, failed-trace, runs_root). Föregående: #176 KÖR-7d targeted
+render + version-build STÄNGER follow-up-bryggan (7b→7c→7d): capability-följdprompt bygger om
+påverkad route, swap:ar current.json bara på ok/degraded, ärlig appliedVisibleEffect, gamla runs
+orörda, skipped/unmapped loggas i trace. Även inne (Christopher): #172 stale-pending-runs +
+#173 ärligt layout-no-op. Föregående: #175 KÖR-7c apply:
+validerad capability-patch → ny immutabel Project Input-version v<N+1> (requestedCapabilities),
+ingen build/current.json; copy_change+inline = unmapped (ADR-beslut). Ovanpå #174 som härdar KÖR-7b
+patch-planeraren: component_add utan namngiven komponent avvisas + _INTENT_CAPABILITY drift-låst.
+Ovanpå: #171 KÖR-7b artifact patch planner (dry-run) mergad ovanpå #170 (B86 npm-timeout
+env-override) och #169 (Christopher UI-reconcile, hans lane). Plus Vercel deploy-denylist
+(`9ba29ce`) och docs-batch (kor-o1 OpenClaw Core-kontrakt + handoff-bump). `origin/main` =
+`1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
+Nya PRs sedan föregående checkpoint: #169, #170, #171, #172, #173, #174, #175, #176, #178 (alla mergade till `jakob-be`).
