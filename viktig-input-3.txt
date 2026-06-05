@@ -1,0 +1,385 @@
+I’ll treat this as an architecture and product-governance decision, not just cleanup work: what belongs in the system model, what belongs in documentation, and how the new LLM layer should connect to existing backoffice structures without becoming a side track.
+
+I’m checking the repo/current-focus state before recommending changes; early signals suggest the first cleanup is status consolidation, not a broad governance rewrite.
+
+Thought for 5m 9s
+
+According to a document from 2026-05-18, ja: det är rimligt att tänka på detta som flera kontaktytor, men jag skulle inte skapa ett nytt stort “Christoffer-lager” eller ändra governance tungt nu. Jag skulle göra en smal konsolidering: låt Backoffice/Kontrollplan bli den plats där dessa ytor syns och kan granskas, medan själva generatorns canonical-kedja fortsätter äga besluten.
+
+Min bedömning:
+
+1. Städa och konsolidera först — men bara där det skyddar huvudflödet
+
+Du är troligen i rätt fas för:
+
+städning efter LLM-lagret,
+konsolidering av namn/begrepp,
+tydligare gräns mellan LLM-beslut och deterministisk resolver/planning,
+bättre spårbarhet: “varför valdes denna scaffold, starter, variant, dossier/capability?”
+en enklare yta för mänsklig kontroll.
+
+Det ska fortfarande mätas mot North Star: prompt → hemsida → preview → följdprompt → ny version. Projektets egna riktlinjer säger att intern arkitekturstädning är bra, men inte ska vinna över produktflödet om den inte hjälper detta flöde direkt.
+
+2. Kontaktytorna är flera — men de bör inte bli flera nya system
+
+Jag skulle dela upp dem så här:
+
+Kontaktyta	Vad den betyder	Var den bör bo
+LLM-lager → Project Input	Fri prompt, wizard, scrape, hints, assets blir strukturerat underlag	prompt_to_project_input / Discovery Resolver
+Project Input → Planning	canonical validering av scaffold, variant, starter, capabilities	planning/governance
+Planning → Generation	site plan, generation package, filer	generation pipeline
+Generation → Quality Gate	build, routes, kontakt-CTA, metadata, placeholders, policybrott	Quality Gate
+Backoffice/Kontrollplan	mänsklig granskning av mappningar och beslut	backoffice
+Christoffer/operator-yta	det Christoffer behöver förstå, ändra eller godkänna	helst som vyer ovanpå Backoffice, inte ny parallell sanning
+
+Det viktiga är att Christoffer-ytan inte blir en egen beslutsmotor. Den ska visa, förklara och eventuellt tillåta begränsad policy-edit. Den ska inte själv börja välja scaffold/starter/variant/dossier på ett annat sätt än generatorn.
+
+3. Ja, sätt in det i Backoffice — men som Kontrollplan/Operator Surface, inte som ny produktfeature
+
+Det finns redan en tydlig riktning i materialet: Backoffice bör visa kedjor som:
+
+category → target scaffold,
+category → active/fallback scaffold,
+scaffold → expected starter,
+category/scaffold → default variant,
+category → requested capabilities,
+category/capability → candidate dossiers,
+support status,
+fallback warnings,
+operator review required,
+per-run-spårning från wizardAnswers/brief/DiscoveryDecision till finalProjectInput.
+
+Det är nästan exakt den typ av “kontaktyta” du beskriver. Därför skulle jag inte uppfinna en separat struktur. Jag skulle utöka Backoffice/Kontrollplan så att Christoffer kan förstå systemets val utan att behöva läsa repo:t.
+
+4. Viktig gräns: Backoffice får inte promot:a allt automatiskt
+
+Här är en central risk. Materialet säger uttryckligen att candidateDossiers inte ska bli selectedDossiers.required bara för att taxonomy föreslår dem, och att Dossier-kandidater inte är samma sak som mounted/required Dossiers.
+
+Samma tänk bör gälla variants och scaffolds:
+
+Backoffice får visa kandidater.
+Backoffice får flagga gaps.
+Backoffice får visa operator notes.
+Backoffice får kanske ändra enkla policyfält.
+Men Backoffice ska inte automatiskt montera nya Dossiers, promota variants eller skriva om gamla Project Inputs.
+
+Det är rätt balans: användbart för Christoffer/operator, men inte ett nytt kaoslager.
+
+5. Governance bör ändras minimalt
+
+Jag skulle inte göra “stor governance-reform”. Det du behöver är troligen tre små ändringar:
+
+A. Lägg till ett kort dokument: docs/operator-surfaces.md eller docs/backoffice-contact-surfaces.md
+
+Det ska beskriva:
+
+vilka ytor Christoffer/operator förväntas använda,
+vad Backoffice får visa,
+vad Backoffice får ändra,
+vad Backoffice absolut inte får ändra,
+hur beslut spåras från prompt/wizard till Project Input och vidare.
+
+B. Uppdatera naming dictionary om nya begrepp införs
+
+Om ni börjar skriva “Operator Surface”, “Contact Surface”, “Discovery Decision”, “Kontrollplan” eller liknande som domänbegrepp i docs, lägg in dem i naming-dictionary så att term-checks inte börjar bråka. Materialet varnar redan för term-risk om nya Discovery-begrepp introduceras i markdown/docs.
+
+C. Lägg till en smal Backoffice-policy eller ADR bara om ytan ska kunna skriva
+
+Om Backoffice bara visar saker: docs räcker.
+
+Om Backoffice ska kunna ändra supportStatus, operatorNotes, targetScaffoldId, fallbackScaffoldId, defaultVariantId, requestedCapabilities eller candidateDossiers: då bör det finnas en liten ADR/policy. Inte för att byråkratisera, utan för att undvika att adminytan blir en andra generator.
+
+6. Dokumentation: ja, men mindre än man tror
+
+Projektets egen riktning är redan: inte mer dokumentation i största allmänhet, utan färre och tydligare styrdokument som agenter faktiskt använder.
+
+Jag skulle därför inte skapa fem nya dokument. Jag skulle göra:
+
+En kort “Operator/Backoffice Surfaces”-spec.
+En uppdatering i docs/current-focus.md.
+Eventuellt en ADR om Backoffice write-permissions, men bara om skrivande införs.
+En handoff-notering till Christoffer, konkret och icke-teoretisk.
+
+7. Vad jag hade gjort nu
+
+Gör detta i ordning:
+
+Steg 1 — Scout/Steward: inventera nuvarande ytor
+
+Be en Scout eller Steward göra en read-only karta över:
+
+LLM-lager → Project Input,
+DiscoveryDecision/meta/sidecar,
+scaffold/starter/variant/dossier/capability-kopplingar,
+Backoffice/Kontrollplan idag,
+vilka fält som redan visas,
+vilka fält som saknas för Christoffer/operator.
+
+Steg 2 — Steward: docs-konsolidering
+
+Lägg till ett kort dokument:
+
+docs/operator-surfaces.md
+
+Innehåll:
+
+Purpose:
+Backoffice/Kontrollplan is the operator-facing surface for understanding and reviewing generation decisions.
+
+Canonical ownership:
+- Discovery Resolver owns category-to-decision mapping.
+- Planning owns final scaffold/starter/variant validation.
+- Project Input owns per-run selected inputs.
+- Backoffice displays and explains these decisions.
+- Backoffice may only edit explicitly allowed policy fields.
+
+Allowed now:
+- supportStatus
+- labelSv
+- operatorNotes
+- targetScaffoldId
+- activeScaffoldId/fallbackScaffoldId
+- defaultVariantId
+- requestedCapabilities
+- candidateDossiers as candidates only
+
+Not allowed now:
+- automatic Dossier mounting
+- automatic Variant promotion
+- new scaffold families
+- rewriting old Project Inputs
+- separate Christoffer-specific mapping logic
+
+Steg 3 — Builder: liten Backoffice-förbättring
+
+Bygg inte ett stort adminsystem. Lägg bara till en bättre Kontrollplan-vy som visar:
+
+category
+targetScaffoldId
+active/fallback scaffold
+expectedStarterId
+defaultVariantId
+requestedCapabilities
+candidateDossiers
+supportStatus
+fallbackWarnings
+operatorReviewRequired
+latest DiscoveryDecision sample / trace
+
+Steg 4 — Tester/checks
+
+För docs/städ räcker scope-baserade checks. För produktkod bör du köra relevanta tester/builds. Projektets arbetssätt säger uttryckligen att man inte ska köra allt varje gång om ändringen är liten, men att större push/merge ska ha tydlig verifiering.
+
+8. Governance-svaret i en mening
+
+Governance ska inte ändras i filosofi. Den ska bara få en liten utvidgning: “Backoffice/Operator Surface är en gransknings- och begränsad policy-edit-yta ovanpå befintliga canonical beslut.”
+
+Det ligger också i projektprincipen: governance ska skydda riktningen, inte kväva bygget.
+
+Min rekommendation: gör detta nu
+
+Ge en Steward/Scout denna prompt:
+
+Du är Scout/Steward för Sajtbyggaren. Gör en read-only inventering av vilka operator-/backoffice-kontaktytor som finns efter det nya LLM-lagret.
+
+Mål:
+Vi vill avgöra hur Christoffer/operator bäst ska kunna förstå och granska systemets val utan att skapa en ny parallell sanning.
+
+Undersök:
+1. Hur prompt/wizard/scrape/hints/assets blir Project Input.
+2. Var DiscoveryDecision/meta/sidecar skrivs eller borde skrivas.
+3. Hur scaffold, starter, variant, requestedCapabilities och candidateDossiers väljs.
+4. Vad Backoffice/Kontrollplan visar idag.
+5. Vilka fält som saknas för att visa:
+   - category -> target scaffold
+   - category -> active/fallback scaffold
+   - scaffold -> expected starter
+   - category/scaffold -> default variant
+   - category -> requested capabilities
+   - category/capability -> candidate dossiers
+   - supportStatus
+   - fallbackWarnings
+   - operatorReviewRequired
+   - per-run trace från wizardAnswers/brief/DiscoveryDecision till finalProjectInput
+6. Om några docs/governance-termer behöver läggas till i naming dictionary.
+
+Leverera:
+- Kort nuläge.
+- Lista över befintliga ytor.
+- Lista över saknade ytor.
+- Rekommenderad minimal ändring.
+- Säg tydligt vad Backoffice bör få ändra och vad det inte bör få ändra.
+- Ändra ingen kod.
+
+Efter den rapporten kan Builder få en smal implementation. Jag skulle inte starta med stor governance eller ny arkitektur. Backoffice som tydlig Kontrollplan är rätt plats.
+
+Men kan du förklara om det inte är läge att fixa med openclaw nu? Men också finns inte andra inbyggda modeller som får olika "roller" i llm-flödet för att bygga användarsidor? Ska inte OpenClaw faktist bestämma och portionera ut uppdrag åt dem? Görs det?
+
+Jag ska skilja på tre saker: OpenClaw som produktidé, LLM-roller i generationen, och om det redan finns en orchestrator som portionerar ut jobb. Det avgör om nästa steg är implementation eller bara specifikation.
+
+Det jag ser hittills: det finns redan modellroller (briefModel, variantModel, dossierModel m.fl.), men det betyder inte automatiskt att OpenClaw är en “manager-agent”. Rollen som saknas är snarare en trygg arbetsfördelare/arbetsledare med spårbarhet.
+
+Looked for available tools
+Looked for available tools
+Called tool
+Thought for 1m 2s
+
+Ja — du tänker rätt, men jag skulle formulera det så här:
+
+OpenClaw ska bli trafikledaren för användarens följdpromptar och sajt-kontext. Men OpenClaw ska inte bli en fri “superagent” som själv bestämmer allt i generationen.
+
+Nuläge: görs det redan?
+
+Delvis.
+
+Det finns redan en deterministisk OpenClaw Router i PR #159. Den klassar användarens meddelande till ett strukturerat beslut: messageKind, editKind, buildRequirement, contextLevel, target, subtasks, constraints, requiresClarification, shouldStartPreview osv. Viktigt: den PR:en var ingen LLM, ingen ny model role och inga OpenAI-anrop.
+
+Men den verkar inte fullt inkopplad i användarvägen ännu. current-focus.md säger att kor-4a critic nu körs i CLI-builds, men att /api/prompt och dev_generate fortfarande behöver wiring. Samma sektion säger också att /api/prompt + routerDecision fortfarande är kvar.
+
+Så svaret är:
+
+Fråga	Svar
+Finns OpenClaw-liknande router?	Ja
+Portionerar den redan fullt ut i produkten?	Nej, inte helt
+Finns UI-förberedelse?	Ja, men no-op tills backend skickar routerDecision
+Är det läge att fixa?	Ja, men smalt
+
+PR #177 säger uttryckligen att FloatingChat är redo att spegla routerbeslut, men att det är no-op tills backend exponerar routerDecision i /api/prompt-svaret.
+
+Finns flera inbyggda modellroller?
+
+Ja. llm-models.v1.json på jakob-be har nu många roller:
+
+Roll	Uppgift
+briefModel	tolka raw prompt till Site Brief
+planningModel	plan/reasoning där det behövs
+routerModel	LLM-fallback ovanpå OpenClaw Router
+copyDirectiveModel	tolka följdprompt till copy/edit-direktiv
+rerankModel	rerank av scaffold/dossier-kandidater
+codegenModel	generera filer
+variantModel	skapa variant-kandidater
+dossierModel	skapa dossier-kandidater
+repairModel	repair när mekaniska fixes inte räcker
+verifierModel	read-only smak-/quality critic
+embeddingModel	semantic search/index
+
+Det finns alltså ett riktigt rollsystem, inte bara “en modell som gör allt”. Policyn säger dessutom att ingen kod får anropa LLM utan registrerad Model Role. Roller syns i listan i llm-models.v1.json.
+
+Ska OpenClaw bestämma och dela ut uppdrag?
+
+Ja, men med tydliga gränser.
+
+Rätt modell tycker jag är:
+
+Lager	Ska bestämma	Ska inte bestämma
+OpenClaw Router	Vad användaren vill göra: fråga, review, copy edit, rebuild, plan, oklar fråga	Exakt scaffold/variant/dossier
+Discovery Resolver	scaffold, variant, starter, capabilities från kategori/wizard/taxonomy	Fri kreativ sajtcopy
+Planning	faktisk plan, validering, capabilities, starter/scaffold-kontrakt	UI-chat-beteende
+Model Roles	utföra smala uppgifter via schema	själva äga arkitekturen
+Quality/Verifier	hitta brister	skriva om allt okontrollerat
+OpenClaw Core V0	läsa sajtversion, filer, context level och föreslå nästa action	skriva fritt i generated code utan pipeline
+
+Så: OpenClaw ska vara dispatcher (arbetsfördelare), inte diktator.
+
+Bra arbetsfördelning:
+
+User message
+  -> OpenClaw Router
+    -> answer_only: svara utan build
+    -> site_review: läs site-state/filer och ge review
+    -> copy_change: skicka till copyDirectiveModel
+    -> component_add: skicka till capability/follow-up-kedja
+    -> targeted_rebuild: kör patch/build
+    -> unclear: fråga eller kör routerModel fallback
+Varför inte låta OpenClaw bestämma allt?
+
+För att då riskerar ni gamla Sajtmaskin-kaoset igen: många ytor, många namn, mycket “agent-magi”. Projektets mål är kontrollerad generator, där governance skyddar flödet och LLM:en är exekutor, inte fri arkitekt.
+
+OpenClaw-idén är viktig, men dokumentet säger också att den bör återuppstå som Sajtagent 2.0, inte importeras som gammal kod. Den ska minnas användarens val, förstå aktuell version, se genererade filer och föreslå nästa bästa ändring.
+
+Är det läge att fixa OpenClaw nu?
+
+Ja, men jag skulle inte börja med “full OpenClaw”.
+
+Jag skulle göra en smal slice:
+
+Nästa rätta uppgift
+
+“Wira OpenClaw RouterDecision i /api/prompt och FloatingChat.”
+
+Inte bygga ny stor agent.
+
+Målet:
+
+/api/prompt returnerar routerDecision.
+FloatingChat visar ärligt vad som hände.
+Router får styra om följdprompten är:
+svar utan build,
+plan,
+copy edit,
+component/capability edit,
+rebuild,
+unclear.
+Ingen LLM behövs först.
+routerModel används bara som fallback när heuristiken är oklar/lång/multi-intent.
+
+Det passar även modellpolicyn: routerModel finns redan som LLM-fallback ovanpå deterministisk OpenClaw Router och ska bara anropas när heuristiken är oklar eller meddelandet är långt/multi-intent. Dessutom får LLM:en aldrig själv starta build/preview på answer_only/plan_only; det räknas om deterministiskt.
+
+Min rekommendation
+
+Gör inte “OpenClaw ska bestämma allt”.
+
+Gör:
+
+OpenClaw Router -> routerDecision -> /api/prompt -> FloatingChat + follow-up chain
+
+Sedan:
+
+OpenClaw Core V0 read-only
+
+Där Core V0 får läsa:
+
+senaste promptar,
+projectId/version/run,
+site-state,
+filmanifest,
+relevanta filer vid behov,
+quality findings,
+routerDecision.
+
+Men den ska börja med att föreslå/dirigera, inte skriva fritt.
+
+Prompt till agent
+Du är Builder-agent för Jakeminator123/sajtbyggaren på jakob-be.
+
+Uppgift:
+Wira befintlig deterministisk OpenClaw RouterDecision till /api/prompt och FloatingChat utan att bygga ny agentarkitektur.
+
+Bakgrund:
+KÖR-6a OpenClaw Router finns redan och klassar userMessage till RouterDecision.
+PR #177 gjorde FloatingChat redo att visa routerDecision, men är no-op tills backend exponerar fältet.
+current-focus säger att /api/prompt + routerDecision återstår.
+
+Mål:
+1. /api/prompt ska returnera routerDecision där follow-up/chat-flödet kan klassas.
+2. FloatingChat ska kunna visa beslutet via befintlig defensiv extractRouterDecision/summarizeRouterDecision-logik.
+3. Ingen ny modellroll ska skapas.
+4. routerModel får inte användas i denna slice om inte det redan finns färdig fallback-wiring.
+5. shouldStartPreview ska fortsätta vara deterministiskt, inte LLM-styrt.
+6. Ingen ny PreviewRuntime, auth, billing, deploy eller ny scaffold-arkitektur.
+
+Granska först:
+- packages/generation/orchestration/router/
+- governance/schemas/router-decision.schema.json
+- apps/viewser/app/api/prompt/route.ts
+- apps/viewser/components/floating-chat.tsx
+- follow-up chain / patch / context-kopplingen
+- tests för router och prompt route
+
+Leverera:
+- minimal implementation
+- tester för att /api/prompt kan returnera routerDecision
+- tester för answer_only/plan_only så build/preview inte startas fel
+- rapportera ändrade filer och checks
+
+Säkerhet: 88%. Jag är säker på arkitekturbedömningen. Lite lägre säkerhet på exakt kodläge eftersom jakob-be rör sig snabbt, men GitHub-läsningen visar tydligt att router + model roles finns och att /api/prompt/routerDecision är den kvarvarande glipan.

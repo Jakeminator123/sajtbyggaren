@@ -1,0 +1,278 @@
+’ve confirmed #187–#189 are merged, but the review must include earlier KÖR work too: #186 and related steps appear to connect formerly dormant CLI/build, critic/repair, router/context, and patch/apply pieces.
+
+Called tool
+Thought for 9m 16s
+
+Ja — resultatet är tydligt bättre än ursprungsplanen på arkitektursidan, men inte ännu “Lovable/v0-känsla” i faktisk användarupplevelse. Ni har byggt mycket mer än en tunn LLM-påläggning: ni har börjat få en riktig intent → context → patch/plan → render/quality-kedja. Det är rätt riktning.
+
+Min hårda bedömning:
+
+Område	Poäng	Kommentar
+Arkitektur/riktning	8.5/10	Railsen är kvar. LLM får mer ansvar utan att bli fri filskrivare.
+Faktisk produktloop	6.8/10	CLI/build-vägen är långt framme, men Viewser /api/prompt ligger efter.
+OpenCLO/OpenClaw-roll	8/10 potential	Rätt att ge större roll, men den måste bli dirigent, inte ny motor.
+Kvalitet/taste mot Lovable/v0	6.5/10 nu	Blueprint + critic hjälper, men verifierModel och verklig visuell eval saknas.
+Governance/stabilitet	7.5/10	Bra baseline/guards, men några guards är falskt gröna.
+Helhet	7.6/10	Stort lyft. Inte produktklart. Bra läge inför OpenClaw-jobbet imorgon.
+Det bästa ni har gjort
+
+Ni har hållit fast vid huvudprincipen: deterministisk grund + LLM-intelligens ovanpå. Heavy-flow-dokumentet säger exakt att målet är v0/Lovable/sajtmaskin-klass utan att kasta den deterministiska grunden.
+
+Det viktiga är att flödet nu har fått flera saknade lager:
+
+Lager	Status
+Blueprint-fält	Inne via #157 och sedan fyllda av brief/planning.
+Renderer konsumerar blueprint	Inne via KÖR-2. PR #165 beskriver att renderern läser contentBlocks, visualDirection, honesty-fält och sätter appliedVisibleEffect.
+Context Assembler	Inne via #166, read-only och budgeterad.
+Follow-up patch/apply/render	Inne i library + CLI/build-väg via #175/#176/#178/#186. #186 säger uttryckligen att den stänger integration-gapet i CLI/build-vägen med router → context → patch → apply → targeted render.
+Deterministisk critic	Inne och faktiskt körd i CLI-builds efter #186. Current-focus säger att critic nu fylls i quality-result.json, där den tidigare var null.
+routerModel fallback	Inne via #188, men med wiring-risk.
+OpenClaw Core V0	Inne via #189, men fortfarande mest transient/read-only.
+
+Det är mycket mer seriöst än “bara lägg LLM på prompten”. Det är nästan exakt den typ av kontrollerat agentsystem som Sajtbyggaren behöver.
+
+Största positiva avvikelsen från planen
+
+OpenClaw har fått större roll. Det är bra.
+
+Det hade varit för svagt om OpenClaw bara blev en router. Nu finns en början till ett dirigentlager: #189 binder RouterDecision + AssembledContext till en transient OpenClawDecision, utan ny canonical fil och utan att själv bygga eller skriva filer.
+
+Det är rätt modell:
+
+Router = vad vill användaren?
+Context Assembler = vad behöver vi läsa?
+OpenClaw Core = vad ska systemet göra härnäst?
+Patch/Apply/Render = kontrollerad handling
+
+Det här är nära gamla Sajtmaskins OpenClaw-idé, men med bättre räls.
+
+Den största kvarvarande sanningen
+
+Ni är längre framme i backend/CLI än i Viewser-produktloopen.
+
+/api/prompt kör fortfarande runPromptToProjectInput(...) och sedan runBuild(...); den returnerar runId, siteId, buildStatus, appliedCopyDirectives och changeSet, men inget routerDecision, ingen OpenClawDecision och inte den nya kor-7 CLI-kedjan.
+
+Det betyder:
+
+Fråga	Svar
+Finns heavy-LLM-kedjan i repo?	Ja.
+Är den verklig i CLI/build-väg?	Delvis ja.
+Är den fullt verklig i användarens chat/preview-loop?	Nej, inte än.
+Är detta blocker?	Nej, men det är nästa stora produktgap.
+
+Det är den viktigaste saken att inte lura sig själv på.
+
+Viktiga risker/buggar jag skulle fixa först
+1. routerModel finns, men används inte där det mest behövs
+
+#188 lägger classify_message_with_llm_fallback ovanpå deterministiska routern och säger att fallback ska användas för unclear, långa eller komplexa multi-intent-meddelanden.
+
+Men i run_followup_chain importeras och används fortfarande classify_message, inte fallback-entrypointen.
+
+Påverkan: i verklig CLI-followup med OPENAI_API_KEY får oklara/långa följdpromptar inte LLM-fallback. KÖR-6b blir mer “finns i biblioteket” än faktisk produktförbättring.
+
+Fix: byt follow-up-kedjans classifier till fallback-varianten, men behåll no-key-paritet.
+
+2. LLM-fallback kan semantiskt slå på preview för fel messageKind
+
+Koden omräknar shouldStartPreview enbart från buildRequirement.
+
+Men RouterDecision har ingen cross-field-validering som säger “answer_only får inte ha targeted_rebuild”. Den definierar fälten, men saknar sådan semantisk validator.
+
+Påverkan: om modellen returnerar schema-giltigt men semantiskt inkonsekvent beslut, till exempel messageKind="answer_only" + buildRequirement="targeted_rebuild", kan preview flaggas trots att det är en fråga.
+
+Fix: normalisera/avvisa inkonsekventa kombinationer efter LLM-svar:
+
+messageKind	Tillåtet buildRequirement
+answer_only	none
+component_discovery	none
+site_review	none eller plan_only
+reference_analysis	plan_only
+bug_report	plan_only
+unclear	none
+edit_instruction	artifact_patch_only / targeted_rebuild / full_rebuild
+multi_intent	plan_only / targeted_rebuild / full_rebuild
+3. OpenClaw orchestrate() använder inte LLM-fallback
+
+OpenClaw Core importerar classify_message och använder den direkt.
+
+Påverkan: den nya fina OpenClaw-ingången går runt KÖR-6b. Det är inte katastrof eftersom decide(router, context) kan få en färdig router-decision från annan caller, men raw-message-vägen blir inte “senaste router”.
+
+Fix: orchestrate() bör antingen:
+
+använda classify_message_with_llm_fallback, eller
+acceptera en classifier= dependency injection (funktion som kan bytas i test/CLI/UI).
+4. OpenClaw tappar externa referens-URL:er i context assembly
+
+orchestrate() gör:
+
+router = classify_message(...)
+context = assemble_context(router.contextLevel, **context_kwargs)
+
+men skickar inte router.reference.url som url.
+
+assemble_context("external_reference") kräver url, annars returneras missing-context.
+
+Påverkan: “gör något som aftonbladet.se” kan klassas rätt av routern men OpenClaw får inte rätt referenskontext. Då blir OpenClaw-planen ytlig eller felaktigt gated.
+
+Fix: i orchestrate():
+
+if router.reference:
+    context_kwargs["url"] = router.reference.url
+5. OpenClaw multi-intent kan bryta referens-säkerheten
+
+Routern har särskild logik: multi-intent + extern referens ska bli plan_only, med reference och risk="do_not_copy_exact".
+
+Men OpenClaw _multi_intent() gör patch_plan_request om någon subtask är edit, oavsett om routerbeslutet var reference-gated.
+
+Påverkan: ett “lägg klocka som på X och ändra rubriken”-case kan gå mot patch istället för referensanalys först.
+
+Fix: i _multi_intent():
+
+if router.reference or router.buildRequirement == "plan_only" or router.risk == "do_not_copy_exact":
+    return plan_only
+6. OpenClaw säger fortfarande blockedBy="kor-7c" trots att kor-7c finns
+
+I OpenClaw Core skapas PatchPlanRequest(status="apply_missing", blockedBy="kor-7c").
+
+Men kor-7c är redan mergead som “applicera validerad patch → nästa Project Input-version”, och kor-7d är också mergead som targeted render/version-build.
+
+Påverkan: OpenClaw-statusen är nu arkitektoniskt stale. Den borde inte säga att kor-7c saknas; den borde säga att OpenClaw action bridge saknas.
+
+Fix: byt till något i stil med:
+
+status: "action_bridge_missing"
+blockedBy: "openclaw-action-bridge"
+
+eller om den ska kopplas till befintlig kedja: låt OpenClaw returnera en konkret PatchPlanRequest som körs av kor-7b/7c/7d-adaptern.
+
+7. baseRunId-vägen i CLI-followup verkar inkonsekvent
+
+apply_patch_plan har stöd för base_run_id och använder då read_base_run_snapshot(...).
+
+Men run_followup_chain skickar inte base_run_id till apply_patch_plan.
+
+Påverkan: context kan läsas från en historisk run, men apply kan ändå utgå från senaste Project Input. Det kan ge versionsförvirring.
+
+Fix: passera base_run_id=base_run_id in i apply-steget.
+
+8. Platform-baseline är rätt idé men checken är falskt trygg
+
+ADR 0037/platform-baseline är bra: en sanningskälla för Node/Next/React/starter-pins är exakt vad man vill ha inför shadcn/lucide/modernare UI. Policyn säger att Node/npm och paketen ska vara en gemensam baseline för lokalt, Vercel, sandbox och starters.
+
+Men checkern har tre svagheter:
+
+Svaghet	Varför
+Den kollar package.json, inte lockfiler	run_check laddar target-paths som package.json och kör check_package; lockfiler ingår inte.
+En Next-target utan next kan passera	Om paket saknas gör koden continue.
+runtime.npm deklareras men kontrolleras inte	Policyn har npm: 11.x, men checkern validerar bara engines.node och volta.node.
+
+Fix: gör en snabb #187-hardening:
+
+kolla package-lock.json när den finns,
+kräv core-paket (next, react, react-dom) i Viewser + starters,
+validera packageManager: npm@11 eller motsvarande npm-pin,
+översätt kod-docstrings/kommentarer i check_platform_baseline.py till engelska, eftersom filen nu har svenska kodkommentarer.
+9. Backoffice är stale mot nya verkligheten
+
+Backoffice Follow-up Flow säger fortfarande att targeted rebuild “ännu inte är implementerad” och refererar llm-models v6, trots att llm-models nu är v7 med routerModel, och targeted render finns i CLI/build-vägen.
+
+Påverkan: agenter och operatör får fel mental modell.
+
+Fix: Steward-slice:
+
+uppdatera Backoffice “Follow-up Flow” till Router → Context → Patch → Apply → Targeted Render,
+visa RouterDecision, OpenClawDecision, critic, blueprintRepairs,
+märk tydligt: “CLI/build wired, Viewser /api/prompt not fully wired”.
+Saker som är bra men behöver ärlig etikett
+RepairModel är bra byggt, men fortfarande dormant
+
+#185 är bra design: repairModel får bara patcha blueprint-fält och ska inte skriva fria filer. Men PR:n säger själv att repair aktiveras först när en rerender callback injiceras.
+
+Current-focus säger också att repair fortfarande är dormant.
+
+Min dom: bra att den är dormant hellre än falsk. Men räkna den inte som produktlyft än.
+
+Critic är rätt nivå 1, men inte “taste” ännu
+
+Deterministisk critic fångar generisk copy, tunt erbjudande, placeholder-kontakt, saknad lokal kontext och saknad CTA.
+
+Det är bra regression-skydd. Men Lovable/v0-gapet handlar också om:
+
+visuell balans,
+spacing,
+typografi,
+first impression,
+branschfinish,
+“känns detta som ett riktigt företag?”
+
+Det är kor-4b/verifierModel som bör börja täcka det. KÖR-4a ska inte överlastas med smak.
+
+PR-status: jag ser fler öppna saker än “bara kor-4b”
+
+Jag hittar två öppna PRs i GitHub-sökningen:
+
+PR	Status	Kommentar
+#177	Öppen	Viewser readiness för routerDecision; no-op tills backend exponerar fältet.
+#156	Öppen	/live, tidigare parkerad live-lane.
+
+Jag hittar däremot inte någon synlig kor-4b-PR i sökningen; kor-4b-sökningen returnerade bara kor-4a/#180.
+
+Det kan vara att kor-4b inte skapats än, har annat namn, eller ligger i Cursor utan GitHub-PR ännu.
+
+Current-focus verkar inte vara helt bumpad
+
+docs/current-focus.md börjar fortfarande med “kor-3a/4a/3b inne; våg 2 landar” och jakob-be @ 2033282, inte 8dd9984.
+
+Det kan vara en miss i docs, eller så pekar jag på GitHub-ref som inte speglar exakt din lokala state. Men utifrån repo-läsningen: be Steward verifiera focus bumpen innan nästa agent får uppdrag.
+
+Min rekommenderade ordning nu
+Prio	Åtgärd	Varför
+1	Post-merge hardening för #188/#189/#186	Router/OpenClaw ska inte få falskt beteende innan kor-4b byggs ovanpå.
+2	Wira routerDecision/OpenClaw till /api/prompt eller acceptera att det är CLI-only	Annars ser användaren inte heavy-flow-vinsten.
+3	#187 platform hardening	Lockfil/npm/core-deps innan shadcn/lucide/designsystem.
+4	Steward: current-focus + Backoffice realignment	Annars kommer agenter jobba mot gamla sanningar.
+5	kor-4b verifierModel critic	Bygg taste-critic när grunden inte ljuger.
+6	Rerender-wiring för repairModel	Annars förblir repair pass dormant.
+7	Baseline-eval med 4 prompter i riktig preview	Avgör om nästa stora investering är copy/trust eller designsystem.
+Prompt jag skulle ge imorgon före OpenCLO-jobbet
+Scout/Builder, fokuserad hardening före kor-4b/OpenClaw-fortsättning.
+
+Branch: jakob-be.
+Rör i första hand:
+- packages/generation/orchestration/router/llm_fallback.py
+- packages/generation/orchestration/openclaw/core.py
+- packages/generation/orchestration/openclaw/models.py
+- scripts/build_site.py
+- tests för router/openclaw/followup_chain
+
+Fixa:
+1. run_followup_chain använder classify_message_with_llm_fallback när OPENAI_API_KEY finns, men behåller no-key-paritet.
+2. LLM-routerbeslut normaliseras så non-edit messageKind aldrig kan starta preview/build via targeted_rebuild.
+3. OpenClaw orchestrate skickar router.reference.url vidare till assemble_context(url=...).
+4. OpenClaw multi_intent respekterar reference/risk/plan_only och går inte till patch_plan_request när referensanalys krävs.
+5. PatchPlanRequest ska inte säga blockedBy=kor-7c nu när kor-7c finns. Byt till action_bridge/openclaw-wiring eller motsvarande sann etikett.
+6. OpenClawDecision/ToolCall ska vara immutable eller validate_assignment-säkra så appliedVisibleEffect/requiresApproval inte kan muteras efter konstruktion.
+7. run_followup_chain skickar base_run_id vidare till apply_patch_plan.
+8. Lägg regressionstester för alla ovan.
+
+Checks:
+- pytest tests/test_router_llm_fallback.py tests/test_openclaw_core.py tests/test_followup_chain_cli.py -q
+- ruff på rörda moduler
+- governance_validate om policies/schemas rörs
+Slutdom
+
+Ni har tagit Sajtbyggaren från “stabil generator med lite LLM” till en början på ett riktigt LLM-orchestrerat hemsidebyggarsystem. Det är ett stort steg.
+
+Det som återstår är inte främst “mer kod”. Det är att täta sanningarna mellan lagren:
+
+CLI/build-vägen   ✅ långt framme
+OpenClaw Core     ✅ finns, men behöver action-bridge och säkerhetsfixar
+Viewser /api      ⚠️ ligger efter
+Backoffice/docs   ⚠️ delvis stale
+kor-4b taste      ⏳ saknas
+repairModel       ⚠️ dormant tills rerender
+
+Min känsla: det här är rätt väg. Det är också nu det blir farligt att rusa. Inte för att det är dåligt, utan för att ni nu har tillräckligt många lager att små fel i wiring kan ge stora missförstånd i UI:t.
+
+Säkerhet: 82%. Jag har granskat PR-status, centrala filer och flera konkreta kodvägar via GitHub, men jag har inte kört testsviten lokalt.
