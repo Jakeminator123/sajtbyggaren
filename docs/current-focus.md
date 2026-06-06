@@ -395,11 +395,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `496d605` (2026-06-06 UTC, `main` efter jakob-be→main-sync, steward-auto efter PR #208).
-Nya PRs sedan föregående checkpoint (alla mergade till `main`): #198 (windows-safe-rebuild),
-#199 (skiva 1b UI-halva), #200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style
-tema-följdprompt + farm-naming), #204 (governance-regel site-mutation-layers), #207
-(visual_style restyle genom apply-kedjan), #208 (sync).
+Last verified state: `49ef53c` (2026-06-06 UTC, steward-auto efter PR #209 — docs(handoff): orchestrator handoff 2026-06-06 + focus/plan bumps).
+Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator handoff
+2026-06-06 + focus/plan bumps.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -688,3 +686,11 @@ Last verified state: `029a18c` (2026-06-06 UTC, steward-auto efter PR #206 — s
 Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
 from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
 offer/tagline service guard (+FAQ).
+
+### 2026-06-06 UTC — current-focus.md före `496d605`
+
+Last verified state: `496d605` (2026-06-06 UTC, `main` efter jakob-be→main-sync, steward-auto efter PR #208).
+Nya PRs sedan föregående checkpoint (alla mergade till `main`): #198 (windows-safe-rebuild),
+#199 (skiva 1b UI-halva), #200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style
+tema-följdprompt + farm-naming), #204 (governance-regel site-mutation-layers), #207
+(visual_style restyle genom apply-kedjan), #208 (sync).
