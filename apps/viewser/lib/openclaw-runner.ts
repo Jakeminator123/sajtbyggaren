@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
+import { killProcessTree } from "@/lib/local-preview-server";
+
 // Skiva 1b (UI half): spawn scripts/run_openclaw_followup.py and parse its
 // stdout into a schema-stable OpenClawDecision JSON object. Mirrors
 // router-classify-runner.ts / prompt-runner.ts / build-runner.ts so apps/viewser
@@ -125,6 +127,160 @@ export async function runOpenClawFollowup(
       return parsed as OpenClawDecisionPayload;
     }
     return null;
+  } catch {
+    return null;
+  }
+}
+
+// The action-bridge build runs npm install + a targeted Next.js build inside the
+// KÖR-7 chain — the same cost class as build-runner.ts — so we mirror its
+// 10-minute budget instead of the 15-second read-only decision budget.
+const OPENCLAW_APPLY_TIMEOUT_MS = 600_000;
+
+/**
+ * OpenClaw action-bridge outcome for one follow-up. Mirrors the ``bridge``
+ * object emitted by ``scripts/run_openclaw_followup.py --apply``
+ * (apply_followup_to_json). The KÖR-7 chain stays authoritative, so ``applied``
+ * / ``previewShouldRefresh`` come straight from it — a no-op never fakes a
+ * change. ``chain`` is the transient ``run_followup_chain`` summary; when
+ * ``applied`` it carries ``runId`` / ``version`` / ``buildStatus`` / ``editKind``
+ * that /api/prompt re-surfaces as the authoritative build result.
+ */
+export type OpenClawBridge = {
+  status: string;
+  applied: boolean;
+  previewShouldRefresh: boolean;
+  chain: Record<string, unknown> | null;
+};
+
+/**
+ * The seam apps/viewser consumes from the ``--apply`` path:
+ * ``{ decision: <OpenClawDecision>, bridge: <OpenClawBridge> }``.
+ */
+export type OpenClawApplyResult = {
+  decision: OpenClawDecisionPayload;
+  bridge: OpenClawBridge;
+};
+
+export type OpenClawApplyOptions = {
+  /** Required: the apply bridge needs a concrete site to iterate on. */
+  siteId: string;
+  /** Optional baseRunId to iterate from; forwarded to the chain. */
+  baseRunId?: string;
+};
+
+function coerceBridge(raw: unknown): OpenClawBridge {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {
+      status: "unknown",
+      applied: false,
+      previewShouldRefresh: false,
+      chain: null,
+    };
+  }
+  const obj = raw as Record<string, unknown>;
+  const chain =
+    obj.chain && typeof obj.chain === "object" && !Array.isArray(obj.chain)
+      ? (obj.chain as Record<string, unknown>)
+      : null;
+  return {
+    status: typeof obj.status === "string" ? obj.status : "unknown",
+    applied: obj.applied === true,
+    previewShouldRefresh: obj.previewShouldRefresh === true,
+    chain,
+  };
+}
+
+/**
+ * OpenClaw action-bridge (skiva 1b, action half): run
+ * ``run_openclaw_followup.py --apply`` so an ``edit_instruction`` actually
+ * MATERIALISES a new version via the KÖR-7 chain (router -> context -> patch ->
+ * apply -> targeted render). Read-only kinds (answer/clarification/plan_only)
+ * and any unmapped/no-op edit NEVER build — the chain stops at an honest gate
+ * and the bridge reports ``applied=false`` BEFORE any build, so /api/prompt can
+ * fall back to the unchanged legacy build path with no double-build.
+ *
+ * Returns ``{decision, bridge}`` verbatim, or ``null`` when the message is empty
+ * / no siteId / the helper fails or times out — callers treat ``null`` as "no
+ * OpenClaw apply available" and fall back to unchanged behaviour.
+ */
+export async function runOpenClawFollowupApply(
+  message: string,
+  options: OpenClawApplyOptions,
+): Promise<OpenClawApplyResult | null> {
+  const trimmed = message.trim();
+  if (!trimmed) return null;
+  const siteId = options.siteId?.trim();
+  if (!siteId) return null;
+
+  const scriptPath = path.join(
+    repoRoot(),
+    "scripts",
+    "run_openclaw_followup.py",
+  );
+  const args = [scriptPath, "--apply", "--site-id", siteId];
+  if (options.baseRunId) args.push("--base-run-id", options.baseRunId);
+  // The `--` separator stops argparse from treating a message that starts with
+  // `-`/`--` as a CLI option (same guard as runOpenClawFollowup).
+  args.push("--", trimmed);
+
+  const child = spawn(pythonCommand(), args, {
+    cwd: repoRoot(),
+    env: process.env,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  const stdoutChunks: string[] = [];
+  let totalStdoutBytes = 0;
+  const MAX_STREAM_BYTES = 512 * 1024;
+  child.stdout.on("data", (chunk: Buffer) => {
+    if (totalStdoutBytes >= MAX_STREAM_BYTES) return;
+    totalStdoutBytes += chunk.byteLength;
+    stdoutChunks.push(chunk.toString("utf-8"));
+  });
+  child.stderr.on("data", () => {});
+
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    // Unlike the read-only path, --apply spawns npm install + next build as
+    // descendants of python. A plain child.kill() would orphan them (a
+    // process/port leak, and on Windows the same .node file-lock class B157
+    // fixed). Tree-kill via the shared helper (Windows: taskkill /T /F).
+    void killProcessTree(child, "SIGTERM");
+  }, OPENCLAW_APPLY_TIMEOUT_MS);
+
+  let exitCode: number;
+  try {
+    exitCode = await new Promise<number>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code) => resolve(code ?? 1));
+    });
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+  clearTimeout(timeout);
+
+  if (timedOut || exitCode !== 0) return null;
+
+  const stdout = stdoutChunks.join("").trim();
+  if (!stdout) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(stdout);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return null;
+    }
+    const obj = parsed as Record<string, unknown>;
+    const decision = obj.decision;
+    if (!decision || typeof decision !== "object" || Array.isArray(decision)) {
+      return null;
+    }
+    return {
+      decision: decision as OpenClawDecisionPayload,
+      bridge: coerceBridge(obj.bridge),
+    };
   } catch {
     return null;
   }

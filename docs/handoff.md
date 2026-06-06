@@ -56,12 +56,25 @@ Backend-kontraktet (`{decision, bridge:{status,applied,previewShouldRefresh,chai
 "loveable-känslan" och kräver ingen ny backend.
 
 ### Öppna trådar / rekommenderad ordning (plocka upp här)
-1. **Router-igenkänning (jakob-be, liten men regressionskänslig):** routern klassar
-   `"byt/ändra färgen/typsnittet till X"` som `visual_style` (funkar med #207), men
+> **Omprioriterat 2026-06-06 (extern review + coach):** Christopher UI-wiring är
+> största hävstången och tas **först** — sluta samla fler backend-förmågor innan
+> frontend faktiskt använder dem. Router-igenkänningen (`"gör färgen rosa"`) är
+> sekundär: egen liten slice **efter** UI-wiringen. Konkret relay skickad till
+> `christopher` i inboxen (`msg-0043-db56b0`, topic `skiva-1b-coordination`).
+1. **Christopher UI-wiring (hans lane) — STÖRSTA HÄVSTÅNGEN:** `runOpenClawFollowupApply`
+   i `openclaw-runner.ts` (shellar `run_openclaw_followup.py --apply --site-id <id>
+   [--base-run-id <id>] -- "<prompt>"`), `/api/prompt` rutar `mode=followup`-edits
+   (`edit_instruction`/`patch_plan_request`) genom bryggan i stället för alltid `runBuild`,
+   FloatingChat visar `bridge.applied`/`previewShouldRefresh`/stage ärligt (applied=true →
+   välj ny run + refresha preview; applied=false → no-op/plan/clarification, inte "klart").
+   Acceptanstest: `"ändra färgen till rosa"` → ny version → preview ändras. Dubbel-apply-
+   fälla: copy-edits går fortfarande via legacy copyDirective-vägen — routa inte samma edit
+   genom båda; behåll honesty-grinden (`legacyPathAppliedVisibleChange`, route.ts ~260-278).
+2. **Router-igenkänning (jakob-be, liten men regressionskänslig — EFTER UI-wiring):** routern
+   klassar `"byt/ändra färgen/typsnittet till X"` som `visual_style` (funkar med #207), men
    **inte** bara `"gör färgen rosa"` ("gör" är inget ändra-verb → `unclear`). Bredda
    `is_visual_style` i `packages/generation/orchestration/router/classify.py` försiktigt
    (många fix1–7-tester). Egen slice, inte blandad med annat.
-2. **Christopher UI-wiring (hans lane):** punkterna ovan — gör restyle/apply synligt.
 3. **Bredda apply (jakob-be):** `section_add`/`layout_change` genom samma mönster som
    #207 (`run_followup_chain` + `apply_patch_plan`). Nästa capability-slice.
 4. **Buggranskningens trust-blockerare (jakob-be):** #1 kor-5 rerender efter `npm build`
