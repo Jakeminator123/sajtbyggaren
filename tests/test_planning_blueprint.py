@@ -355,6 +355,27 @@ def test_drop_offer_tagline_services_is_conservative_and_honest():
 
 
 @pytest.mark.tooling
+def test_faq_drops_tagline_filed_as_service():
+    """Gap 3a (FAQ half): the same offer/tagline-as-service leak must not reach
+    the 'Vad kan ni hjälpa till med?' FAQ answer either - it would otherwise
+    read 'Vi hjälper dig bland annat med <hero-taglinen>'. Real services stay."""
+    brief = dict(_baseline_brief("elektriker-malmo"))
+    real = list(brief["servicesMentioned"])
+    tagline = brief["positioning"]["oneLiner"]
+    brief["servicesMentioned"] = [real[0], tagline, real[1], real[2]]
+
+    pairs = derive_faq(brief)
+    help_answers = [
+        pair["answer"] for pair in pairs if pair["question"] == "Vad kan ni hjälpa till med?"
+    ]
+    assert help_answers, "the services FAQ pair must still render"
+    answer_cf = help_answers[0].casefold()
+    assert tagline.casefold() not in answer_cf, f"tagline leaked into FAQ: {help_answers[0]!r}"
+    for service in real:
+        assert service.casefold() in answer_cf, f"real service missing from FAQ: {service!r}"
+
+
+@pytest.mark.tooling
 def test_service_branches_emit_distinct_grounded_faq():
     """The three branches whose scaffold surfaces a home FAQ (electrician,
     hair salon, naprapath) emit branschrelevant, grounded FAQ pairs that differ

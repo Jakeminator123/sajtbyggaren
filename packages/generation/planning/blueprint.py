@@ -726,7 +726,14 @@ def derive_faq(brief: dict[str, Any]) -> list[dict[str, str]]:
         return []
     pairs: list[dict[str, str]] = []
 
-    services = _list_str(brief.get("servicesMentioned"))
+    # Gap 3a: same offer/tagline-as-service leak the offer cards guard against -
+    # if briefModel filed the hero tagline under servicesMentioned, the "Vad kan
+    # ni hjälpa till med?" answer would read "Vi hjälper dig bland annat med
+    # <hero-taglinen>". Drop it via the same helper so the FAQ lists real
+    # services only. No-op for a brief without an offer/tagline phrase.
+    services = _drop_offer_tagline_services(
+        _list_str(brief.get("servicesMentioned")), brief
+    )
     if services:
         pairs.append(
             {
