@@ -399,6 +399,51 @@ def test_apply_empty_plan_writes_nothing(
     assert not (tmp_path / f"{SITE_ID}.v2.project-input.json").exists()
 
 
+def test_apply_theme_directive_writes_version_on_empty_plan(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A restyle (visual_style) has no capability patch, but an explicit theme
+    directive still writes the next version with brand/tone set (the empty-plan
+    no-op only fires when there is ALSO no theme)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from packages.generation.followup.theme_directives import ThemeDirective
+
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        PatchPlan(),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        theme_directive=ThemeDirective(
+            primaryColorHex="#db2777", toneVibe="editorial", colorWord="rosa"
+        ),
+    )
+    assert result.applied is True
+    assert result.version == 2
+    v2 = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    assert v2["brand"]["primaryColorHex"] == "#db2777"
+    assert v2["tone"]["primary"] == "editorial"
+
+
+def test_apply_empty_plan_with_empty_theme_is_noop(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A theme directive with no values set is not a change: still a no-op."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from packages.generation.followup.theme_directives import ThemeDirective
+
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        PatchPlan(),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        theme_directive=ThemeDirective(),
+    )
+    assert result.applied is False
+    assert not (tmp_path / f"{SITE_ID}.v2.project-input.json").exists()
+
+
 # ---------------------------------------------------------------------------
 # Iterate from a historical version (base_run_id), like today's follow-up
 # ---------------------------------------------------------------------------
