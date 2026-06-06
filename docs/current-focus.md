@@ -392,10 +392,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `eff73cb` (2026-06-05 UTC, steward-auto efter PR #205 — sync(jakob-be->main): #204 site-mutation-layers rule).
-Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
-rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
-site-mutation-layers rule.
+Last verified state: `029a18c` (2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ)).
+Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
+from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
+offer/tagline service guard (+FAQ).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -670,3 +670,10 @@ Last verified state: `8ec022c` (2026-06-05 UTC, steward-auto efter PR #203 — s
 Nya PRs sedan föregående checkpoint: PR #202 — feat(followup): visual_style restyle
 (colour + font) + nicer unnamed-business label; PR #203 — sync(jakob-be->main): #202
 visual_style theme + farm naming.
+
+### 2026-06-06 UTC — current-focus.md före `eff73cb`
+
+Last verified state: `eff73cb` (2026-06-05 UTC, steward-auto efter PR #205 — sync(jakob-be->main): #204 site-mutation-layers rule).
+Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
+rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
+site-mutation-layers rule.

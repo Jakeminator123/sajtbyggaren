@@ -1,10 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-05 UTC, steward-auto efter PR #205 — sync(jakob-be->main): #204 site-mutation-layers rule. Verifierad `main` är `eff73cb`.
+**Datum:** 2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ). Verifierad `main` är `029a18c`.
 
-Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
-rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
-site-mutation-layers rule.
+Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
+from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
+offer/tagline service guard (+FAQ).
 
 ## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
 
@@ -1728,6 +1728,15 @@ UI half (OpenClaw decision) + router/copy-honesty + build-orkestrering + scout/a
 Nya PRs sedan föregående checkpoint: PR #202 — feat(followup): visual_style restyle
 (colour + font) + nicer unnamed-business label; PR #203 — sync(jakob-be->main): #202
 visual_style theme + farm naming.
+
+
+### 2026-06-06 UTC — handoff.md före `eff73cb`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #205 — sync(jakob-be->main): #204 site-mutation-layers rule. Verifierad `main` är `eff73cb`.
+
+Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
+rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
+site-mutation-layers rule.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
