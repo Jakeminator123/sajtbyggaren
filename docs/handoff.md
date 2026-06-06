@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-06 UTC, steward-auto efter PR #209 — docs(handoff): orchestrator handoff 2026-06-06 + focus/plan bumps. Verifierad `main` är `49ef53c`.
+**Datum:** 2026-06-06 UTC, steward-auto efter PR #210 — feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action half). Verifierad `main` är `7391a28`.
 
-Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator handoff
-2026-06-06 + focus/plan bumps.
+Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
+/api/prompt follow-ups (skiva 1b action half).
 
 ## Orchestrator-handoff 2026-06-06 — restyle-genom-apply + branch/docs-städning (TA ÖVER HÄR)
 
@@ -1857,6 +1857,14 @@ PR #198 (windows-safe-rebuild), #199 (skiva 1b UI-halva: OpenClaw-beslut i Float
 #200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style tema-följdprompt + farm-naming),
 #204 (governance-regel `site-mutation-layers`), #207 (visual_style restyle genom apply-kedjan),
 #208 (sync).
+
+
+### 2026-06-06 UTC — handoff.md före `49ef53c`
+
+**Datum:** 2026-06-06 UTC, steward-auto efter PR #209 — docs(handoff): orchestrator handoff 2026-06-06 + focus/plan bumps. Verifierad `main` är `49ef53c`.
+
+Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator handoff
+2026-06-06 + focus/plan bumps.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 

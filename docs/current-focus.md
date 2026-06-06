@@ -395,9 +395,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `49ef53c` (2026-06-06 UTC, steward-auto efter PR #209 — docs(handoff): orchestrator handoff 2026-06-06 + focus/plan bumps).
-Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator handoff
-2026-06-06 + focus/plan bumps.
+Last verified state: `7391a28` (2026-06-06 UTC, steward-auto efter PR #210 — feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action half)).
+Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
+/api/prompt follow-ups (skiva 1b action half).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -694,3 +694,9 @@ Nya PRs sedan föregående checkpoint (alla mergade till `main`): #198 (windows-
 #199 (skiva 1b UI-halva), #200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style
 tema-följdprompt + farm-naming), #204 (governance-regel site-mutation-layers), #207
 (visual_style restyle genom apply-kedjan), #208 (sync).
+
+### 2026-06-06 UTC — current-focus.md före `49ef53c`
+
+Last verified state: `49ef53c` (2026-06-06 UTC, steward-auto efter PR #209 — docs(handoff): orchestrator handoff 2026-06-06 + focus/plan bumps).
+Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator handoff
+2026-06-06 + focus/plan bumps.
