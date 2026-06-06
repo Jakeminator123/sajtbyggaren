@@ -773,6 +773,49 @@ def copy_starter(starter_id: str, target: Path) -> None:
         shutil.copytree(source, target, ignore=_ignore_combined)
 
 
+def cleanup_flat_layout(site_dir: Path, *, keep: set[str]) -> list[str]:
+    """Remove legacy flat-layout artefacts that sit directly under ``site_dir``.
+
+    B157 level 4, flat-layout cleanup (the remaining non-blocking item in
+    ``docs/gaps/GAP-windows-safe-rebuild-pipeline.md``): before immutable builds
+    the Builder wrote straight into ``<generated>/<siteId>/`` (``.next``,
+    ``node_modules``, ``app``, ``package.json`` ...). After the migration the
+    active site lives under ``builds/<buildId>/`` and is pointed at by
+    ``current.json``; the old flat-layout files in the site root are dead weight
+    that only eat disk and can confuse the preview resolver's flat-``.next``
+    fallback (``apps/viewser/lib/local-preview-server.ts:resolveActivePreviewDir``).
+
+    Call this ONLY after ``current.json`` has been swapped to the new immutable
+    build, so a running preview never loses its fallback before the pointer is
+    live. Best-effort: a locked flat artefact (e.g. a not-yet-stopped preview
+    still holding the old ``.next``/``node_modules`` open on Windows) is skipped
+    and reported, never raised - cleanup must not fail an otherwise green build.
+
+    ``keep`` is the set of site-root entries to leave in place (the immutable
+    ``builds/`` directory and the ``current.json`` pointer). Returns the list of
+    removed entry names so the caller can record the cleanup in the trace.
+    """
+    removed: list[str] = []
+    if not site_dir.is_dir():
+        return removed
+    for entry in site_dir.iterdir():
+        if entry.name in keep:
+            continue
+        try:
+            if entry.is_symlink() or entry.is_file():
+                entry.unlink()
+            elif entry.is_dir():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+            removed.append(entry.name)
+        except OSError:
+            # Locked or unreadable flat artefact: skip it. The next build (or a
+            # manual sweep) retries; leaking one stale dir beats failing a build.
+            continue
+    return removed
+
+
 UPLOADS_ROOT_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
 
 
@@ -4320,6 +4363,29 @@ def build(
             "done",
             f"current.json -> {build_path} (status={overall_status})",
         )
+        # B157 level 4, flat-layout cleanup (GAP-windows-safe-rebuild-pipeline.md
+        # remaining non-blocking item): now that current.json points at the new
+        # immutable build, reclaim any legacy flat-layout artefacts left in the
+        # site root from the pre-immutable era (.next, node_modules, app, ...).
+        # Gated on the swap above so the preview's flat-.next fallback is only
+        # removed AFTER the pointer makes it redundant. Best-effort: a still
+        # locked artefact is skipped, never fatal.
+        from packages.generation.build.immutable_builds import (
+            BUILDS_DIRNAME,
+            POINTER_FILENAME,
+        )
+
+        removed_flat = cleanup_flat_layout(
+            site_dir, keep={BUILDS_DIRNAME, POINTER_FILENAME}
+        )
+        if removed_flat:
+            trace.event(
+                "build",
+                "flat_layout.cleaned",
+                "done",
+                f"Removed {len(removed_flat)} legacy flat-layout artefact(s): "
+                + ", ".join(sorted(removed_flat)),
+            )
 
     codegen_summary = {
         "source": codegen_result.source,

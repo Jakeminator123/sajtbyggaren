@@ -128,7 +128,7 @@ export function MoreInfoDialog({
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Stäng"
-          className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground min-tap sm:min-tap-0 absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full transition-colors active:scale-95 sm:top-3 sm:right-3 sm:h-8 sm:w-8"
+          className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring/50 min-tap md:min-tap-0 absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95 sm:top-3 sm:right-3 sm:h-8 sm:w-8"
         >
           <X className="h-4 w-4" />
         </button>
@@ -147,19 +147,54 @@ export function MoreInfoDialog({
         <div
           role="tablist"
           aria-label="Mer information-flikar"
+          // WAI-ARIA tabs-tangentbord (speglar wizardens stegstrip):
+          // vänster/höger + upp/ner flyttar OCH aktiverar fliken, Home/End
+          // hoppar till första/sista. Roving tabindex (nedan) håller bara aktiv
+          // flik i tab-ordningen; pilarna navigerar inom listan. Utan detta gick
+          // flikarna inte att nå med tangentbord inne i Dialog-portalen.
+          onKeyDown={(event) => {
+            const last = TABS.length - 1;
+            const current = TABS.findIndex((t) => t.id === activeTab);
+            let next: number | null = null;
+            if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+              next = current >= last ? 0 : current + 1;
+            } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+              next = current <= 0 ? last : current - 1;
+            } else if (event.key === "Home") {
+              next = 0;
+            } else if (event.key === "End") {
+              next = last;
+            }
+            if (next === null) return;
+            event.preventDefault();
+            setActiveTab(TABS[next].id);
+            const list = event.currentTarget;
+            requestAnimationFrame(() => {
+              list
+                .querySelector<HTMLElement>(`[data-tab-index="${next}"]`)
+                ?.focus();
+            });
+          }}
           className="border-border/60 flex w-full snap-x snap-mandatory items-stretch gap-0 overflow-x-auto border-b px-4 sm:px-6"
         >
-          {TABS.map((tab) => {
+          {TABS.map((tab, idx) => {
             const isActive = tab.id === activeTab;
             return (
               <button
                 key={tab.id}
                 type="button"
                 role="tab"
+                id={`more-info-tab-${tab.id}`}
+                aria-controls="more-info-tabpanel"
+                data-tab-index={idx}
+                // Roving tabindex: bara aktiv flik når via Tab; pilarna sköter
+                // navigeringen inom listan (APG tabs-mönster).
+                tabIndex={isActive ? 0 : -1}
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 className={[
-                  "min-tap sm:min-tap-0 relative -mb-px inline-flex shrink-0 snap-start items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-[12.5px] font-medium tracking-tight transition-colors sm:px-4 sm:py-2.5",
+                  "min-tap md:min-tap-0 relative -mb-px inline-flex shrink-0 snap-start items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-[12.5px] font-medium tracking-tight transition-colors sm:px-4 sm:py-2.5",
+                  "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
                   isActive
                     ? "text-foreground border-foreground"
                     : "text-muted-foreground hover:text-foreground border-transparent",
@@ -171,7 +206,12 @@ export function MoreInfoDialog({
           })}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <div
+          id="more-info-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`more-info-tab-${activeTab}`}
+          className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5"
+        >
           <div className="mx-auto max-w-xl">
             {activeTab === "about" ? (
               <AboutBlock answers={answers} onChange={onChange} />
@@ -196,7 +236,7 @@ export function MoreInfoDialog({
             type="button"
             size="sm"
             onClick={() => onOpenChange(false)}
-            className="bg-foreground text-background hover:bg-foreground/90 min-tap sm:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm"
+            className="bg-foreground text-background hover:bg-foreground/90 min-tap md:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm"
           >
             Klar
           </Button>

@@ -422,9 +422,21 @@ export function deriveWizardDirectives(
   }
   directives.requestedCapabilities = capabilities;
 
-  // conversionGoals — keyword-mappa primaryCta. Tom lista är tombstone:
-  // om operatören tömmer CTA-valet ska gamla wizard-mål rensas.
-  directives.conversionGoals = mapCtaToConversionGoals(answers.primaryCta);
+  // conversionGoals — keyword-mappa primaryCta. ``conversionGoals`` ligger i
+  // PRESERVE_EMPTY_KEYS, så en tom lista skickas som tombstone och NOLLAR
+  // backendens conversion_goals. Det är rätt NÄR operatören tömt CTA-valet
+  // (äkta tombstone) men FEL när hen valt en CTA som bara inte keyword-matchar
+  // (t.ex. "Läs mer"/"Registrera dig" finns inte i CTA_KEYWORD_MAP) — då ska
+  // vi inte radera backendens egen extraktion. Vi skiljer därför fallen:
+  //   - tom primaryCta            → tombstone ([]) = rensa mål
+  //   - matchande CTA             → de mappade slugs
+  //   - icke-tom men omatchad CTA → utelämna fältet (stripEmpty ser aldrig
+  //                                 nyckeln) så briefModel-extraktionen står kvar
+  const primaryCtaTrimmed = answers.primaryCta.trim();
+  const mappedGoals = mapCtaToConversionGoals(primaryCtaTrimmed);
+  if (primaryCtaTrimmed.length === 0 || mappedGoals.length > 0) {
+    directives.conversionGoals = mappedGoals;
+  }
 
   // tone — första toneTag som primary, resten som secondary, wordsToAvoid
   // split:as på komma till tone.avoid[]. Backend kan vidare merge:a med

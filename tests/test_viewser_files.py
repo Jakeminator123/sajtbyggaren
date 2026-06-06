@@ -210,7 +210,26 @@ def test_discovery_payload_preserves_empty_list_tombstones() -> None:
     assert "directives.requestedCapabilities = capabilities" in payload, (
         "requestedCapabilities måste skickas även när listan är tom."
     )
-    assert "directives.conversionGoals = mapCtaToConversionGoals" in payload
+    # D2 (scout-fynd, 2026-06-05): conversionGoals ligger i PRESERVE_EMPTY_KEYS,
+    # så en tom lista skickas som tombstone och NOLLAR backendens
+    # conversion_goals. Det får BARA ske när operatören tömt CTA-valet — inte
+    # när hen valt en CTA som bara inte keyword-matchar ("Läs mer"/"Registrera
+    # dig"). Tidigare ``directives.conversionGoals = mapCtaToConversionGoals(...)``
+    # nollade målen även då. Lås den nya distinktionen: mappa till en mellan-
+    # variabel och emittera bara fältet vid tom CTA (tombstone) eller faktisk
+    # matchning; omatchad icke-tom CTA utelämnar fältet så briefModel-
+    # extraktionen står kvar.
+    assert "const mappedGoals = mapCtaToConversionGoals(primaryCtaTrimmed);" in payload, (
+        "conversionGoals måste mappas till en mellan-variabel så omatchad CTA "
+        "kan utelämna fältet i stället för att nolla backendens mål."
+    )
+    assert (
+        "if (primaryCtaTrimmed.length === 0 || mappedGoals.length > 0) {" in payload
+    ), (
+        "conversionGoals-tombstonen får bara emitteras vid tom CTA eller "
+        "faktisk keyword-matchning — annars utelämnas fältet (D2)."
+    )
+    assert "directives.conversionGoals = mappedGoals;" in payload
     assert "directives.uniqueSellingPoints = answers.uniqueSellingPoints" in payload
     assert "directives.sectionTreatments = sectionPins" in payload
 
@@ -2222,6 +2241,35 @@ def test_floating_chat_router_decision_readiness() -> None:
         "referens/discovery/plan-only."
     )
 
+    # B1 (2026-06-05): router-preempten får BARA köra på outcome==='ok'. Annars
+    # döljer router-raden (variant 'info') den auktoritativa failed/degraded-
+    # grenen och operatören tappar 'Försök igen' (retryPrompt sätts bara på
+    # variant 'error'). Lås att gaten finns.
+    assert 'if (routerView && outcome === "ok")' in text, (
+        "Router-preempten måste vara gated på outcome==='ok' så ett misslyckat "
+        "eller degraderat bygge aldrig döljs bakom en router-info-rad (och "
+        "behåller 'Försök igen')."
+    )
+
+    # Ärlighets-nyans (2026-06-05): en ``unclear``/``requiresClarification``-
+    # gissning får INTE preempta när bygget faktiskt rapporterade ett
+    # auktoritativt no-op-skäl (B155 ``appliedVisibleEffect.applied === false``).
+    # Då är B155-raden ärligare ("kan bara ändra texter, layout stöds ej än")
+    # än routerns "jag förstår inte vad du menar" över en tydlig men ej stödd
+    # förfrågan ("gör hero-knappen större" klassas deterministiskt som unclear).
+    # Preempt-regionen måste alltså konsultera bygg-sanningen innan den fyrar.
+    preempt_region = text[preempt_idx:ok_branch_idx]
+    assert "extractAppliedVisibleEffect(payload.buildResult)" in preempt_region, (
+        "Router-preempten måste läsa appliedVisibleEffect så unclear/"
+        "requiresClarification kan lämna över till den mer specifika B155-"
+        "no-op-raden när bygget redan rapporterat varför inget syntes."
+    )
+    assert "requiresClarification" in preempt_region and "unclear" in preempt_region, (
+        "Defer-till-bygg-sanningen måste vara begränsad till unclear/"
+        "requiresClarification — övriga router-utfall (fråga/referens/discovery/"
+        "bug/plan-only) ska fortsatt preempta med sin mer specifika rad."
+    )
+
     # Graceful: edit/multi_intent som krävde ett synligt bygge ska falla igenom
     # till den vanliga summeringen (Bug B m.m.) — summarizeRouterDecision ska
     # alltså ha en gren som returnerar null.
@@ -2231,6 +2279,162 @@ def test_floating_chat_router_decision_readiness() -> None:
     assert "return null;" in summarize_body, (
         "summarizeRouterDecision måste returnera null för bygg-krävande edits "
         "(targeted_rebuild/full_rebuild) så den vanliga bygg-summeringen tar vid."
+    )
+
+
+@pytest.mark.tooling
+def test_openclaw_runner_spawns_followup_seam() -> None:
+    """Skiva 1b (UI half): ``lib/openclaw-runner.ts`` måste shella till
+    ``scripts/run_openclaw_followup.py`` med exakt samma spawn-mönster som
+    ``router-classify-runner.ts`` — och ALDRIG kunna krascha /api/prompt.
+
+    Locks:
+      1. Exporterar ``runOpenClawFollowup`` + ``OpenClawDecisionPayload``.
+      2. Spawnar rätt scripts/-seam (repo-boundaries: viewser importerar aldrig
+         packages/ direkt — Python-scriptet äger importen).
+      3. ``--`` -separatorn finns så en prompt som börjar med ``-`` inte tolkas
+         som ett CLI-flagga, och --site-id/--base-run-id skickas vidare.
+      4. En timeout + degradering till ``null`` (read-only metadata får aldrig
+         bli en 500 på bygg-routen).
+    """
+    text = (VIEWSER_DIR / "lib" / "openclaw-runner.ts").read_text(encoding="utf-8")
+
+    assert "export async function runOpenClawFollowup" in text, (
+        "openclaw-runner.ts måste exportera runOpenClawFollowup så /api/prompt "
+        "kan konsumera OpenClaw-beslutet."
+    )
+    assert "export type OpenClawDecisionPayload" in text, (
+        "Exportera OpenClawDecisionPayload-typen (loose record som speglar "
+        "OpenClawDecision.model_dump())."
+    )
+    assert "run_openclaw_followup.py" in text, (
+        "Runnern måste spawna scripts/run_openclaw_followup.py (skiva-1b-seamen)."
+    )
+    assert 'args.push("--", trimmed)' in text, (
+        "``--``-separatorn måste finnas så en prompt som börjar med - inte "
+        "tolkas som ett argparse-flagga."
+    )
+    assert '"--site-id"' in text and '"--base-run-id"' in text, (
+        "siteId + baseRunId måste skickas till seamen för RouterContext/"
+        "context-assembly."
+    )
+    assert "setTimeout(" in text and "child.kill()" in text, (
+        "Runnern måste timeouta + döda subprocessen så en hängd Python inte "
+        "wedge:ar bygg-routen."
+    )
+    # Degraderingen: minst en `return null;` så fel/timeout aldrig 500:ar.
+    assert "return null;" in text, (
+        "Alla felvägar måste degradera till null (aldrig kasta upp i "
+        "/api/prompt-flödet)."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_exposes_openclaw_decision() -> None:
+    """Skiva 1b: ``/api/prompt`` måste konsumera seamen och exponera
+    ``openClawDecision`` på samma ärlighetsgrind som ``routerDecision`` —
+    bara på follow-ups, och aldrig över en ändring den gamla vägen faktiskt
+    applicerade.
+
+    Locks:
+      1. Routen importerar + anropar runOpenClawFollowup.
+      2. Anropet är gated på ``payload.mode === "followup"`` (init-flödet är
+         byte-för-byte oförändrat).
+      3. Samma legacyPathAppliedVisibleChange-grind nollar beslutet när den
+         deterministiska copyDirective-vägen redan landade en synlig ändring
+         (annars vore "action bridge saknas" en lögn).
+      4. ``openClawDecision`` ligger i return-objektet (NDJSON-vägen sprider
+         ``...result`` så båda transporterna bär fältet).
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'import { runOpenClawFollowup } from "@/lib/openclaw-runner"' in text, (
+        "route.ts måste importera runOpenClawFollowup-seamen."
+    )
+    assert "runOpenClawFollowup(payload.prompt" in text, (
+        "Routen måste anropa seamen med prompten."
+    )
+    # Gated på follow-up: init-flödet ska inte spawna OpenClaw-seamen.
+    call_idx = text.index("runOpenClawFollowup(payload.prompt")
+    gate_region = text[text.index("openClawDecisionPromise") : call_idx]
+    assert 'payload.mode === "followup"' in gate_region, (
+        "OpenClaw-beslutet får bara köras på follow-ups (init-flödet "
+        "oförändrat)."
+    )
+    assert "const openClawDecision = legacyPathAppliedVisibleChange" in text, (
+        "Samma honesty-gate som routerDecision: nolla beslutet när den gamla "
+        "vägen redan applicerade en synlig ändring."
+    )
+    # Fältet måste ligga i return-objektet (efter routerDecision).
+    return_idx = text.index("routerDecision,\n")
+    assert text.index("openClawDecision,", return_idx) > return_idx, (
+        "openClawDecision måste returneras (NDJSON sprider ...result så båda "
+        "transporterna bär fältet)."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_renders_openclaw_decision_honestly() -> None:
+    """Skiva 1b (UI half): FloatingChat måste rendera OpenClaw-beslutet ärligt
+    och preempta FÖRE routerDecision (rikare superset), med samma
+    failed/degraded-grind.
+
+    Locks:
+      1. ``PromptApiResponse`` exponerar ett valfritt ``openClawDecision``-fält.
+      2. Defensiv ``extractOpenClawDecision`` (okänd action → null →
+         oförändrat beteende, faller tillbaka på routerDecision).
+      3. ``summarizeOpenClawDecision`` hanterar alla fyra actions inkl. den
+         ärliga patch_plan_request-raden ("inte inkopplad än").
+      4. Preempten ligger FÖRE routerView och är gated på outcome === "ok".
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "openClawDecision?: Record<string, unknown>" in text, (
+        "PromptApiResponse måste exponera ett valfritt openClawDecision-fält."
+    )
+    assert "function extractOpenClawDecision(" in text, (
+        "FloatingChat måste läsa openClawDecision defensivt (extractOpenClawDecision)."
+    )
+    assert "function summarizeOpenClawDecision(" in text, (
+        "FloatingChat måste härleda en ärlig rad per action (summarizeOpenClawDecision)."
+    )
+    assert "OPENCLAW_ACTIONS" in text, (
+        "En allowlist av kända actions måste finnas så en okänd action ger null."
+    )
+    # Alla fyra actions ur OpenClawAction-enumen måste vara kända (allowlist)
+    # och bemötas i besluts-regionen (patch_plan_request via fall-through).
+    decision_start = text.index("const OPENCLAW_ACTIONS")
+    decision_end = text.index("function summarizeBuildResult(")
+    decision_body = text[decision_start:decision_end]
+    for action in (
+        '"answer_only"',
+        '"clarification"',
+        '"plan_only"',
+        '"patch_plan_request"',
+    ):
+        assert action in decision_body, (
+            f"OpenClaw-beslutsregionen måste känna till action {action}."
+        )
+    # patch_plan_request måste vara ärlig om att action-bryggan saknas.
+    summarize_start = text.index("function summarizeOpenClawDecision(")
+    summarize_body = text[summarize_start:decision_end]
+    assert "inte inkopplad än" in summarize_body, (
+        "patch_plan_request-raden måste ärligt säga att funktionen som utför "
+        "ändringen inte är inkopplad än (V0 fejkar aldrig en success)."
+    )
+    # Preempten måste ligga FÖRE routerView och vara gated på outcome === "ok".
+    openclaw_preempt_idx = text.index("const openClawView = extractOpenClawDecision(payload)")
+    router_preempt_idx = text.index("const routerView = extractRouterDecision(payload)")
+    assert openclaw_preempt_idx < router_preempt_idx, (
+        "OpenClaw-beslutet (rikare superset) måste preempta FÖRE routerDecision."
+    )
+    assert 'if (openClawView && outcome === "ok")' in text, (
+        "OpenClaw-preempten måste vara gated på outcome === 'ok' så ett "
+        "misslyckat/degraderat bygge aldrig döljs bakom en info-rad."
     )
 
 
@@ -2264,14 +2468,36 @@ def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
         "payload/source-enum)."
     )
     enum_pattern = re.compile(
-        r'target:\s*"company-name"\s*\|\s*"tagline"[\s\S]{0,200}?'
+        r'target:\s*"company-name"\s*\|\s*"tagline"\s*\|\s*"about-text"'
+        r'\s*\|\s*"services"[\s\S]{0,200}?'
         r'operation:\s*"replace-text"\s*\|\s*"include-token"',
         re.MULTILINE,
     )
     assert enum_pattern.search(text), (
-        "AppliedCopyDirective-enumen måste låsa target=company-name|"
-        "tagline och operation=replace-text|include-token så schema-drift "
-        "fångas i typecheck istället för att läcka okända värden till UI:t."
+        "AppliedCopyDirective-enumen måste låsa alla fyra schema-targets "
+        "(company-name|tagline|about-text|services) och operation="
+        "replace-text|include-token så schema-drift fångas i typecheck "
+        "istället för att läcka okända värden till UI:t."
+    )
+    assert "targetRef?: string" in text, (
+        "AppliedCopyDirective måste bära ``targetRef`` (services[].id|label) "
+        "så ett services-direktiv kan peka ut vilken tjänst som ändrades — "
+        "schemat kräver fältet när target=services."
+    )
+    # Schemat (project-input.schema.json:226-234) gör targetRef OBLIGATORISK när
+    # target=services. Läsaren måste enforca det och SLÄNGA services-direktiv som
+    # saknar giltig targetRef — annars läcker de igenom och UI:t faller tillbaka
+    # på den generiska "Jag uppdaterade en tjänst."-raden som tappar VILKEN
+    # tjänst som ändrades (operatörskontext).
+    drop_guard = re.compile(
+        r'candidate\.target\s*===\s*"services"\s*&&\s*!targetRefValid',
+        re.MULTILINE,
+    )
+    assert drop_guard.search(text), (
+        "readAppliedCopyDirectives måste droppa services-direktiv utan giltig "
+        "targetRef (schema-required) i stället för att visa den generiska "
+        '"uppdaterade en tjänst"-raden. Saknas drop-guarden bryter UI:t mot '
+        "schema-kontraktet och tappar operatörskontext."
     )
     assert 'path.resolve(root, "data", "prompt-inputs")' in text and (
         'path.resolve(root, "examples")' in text
@@ -2337,6 +2563,17 @@ def test_b155_path_b_floating_chat_summarises_copy_directives() -> None:
     )
     assert "Jag la in" in text and "i hero-texten" in text, (
         "Mappningen för target=tagline + operation=include-token saknas eller har bytt form."
+    )
+    # Slice 2a/2c: about-text + services måste också ge en ärlig rad nu när
+    # backend-läsaren (lib/runs.ts) släpper igenom dem (annars syns följdprompt
+    # mot om oss-texten/tjänster aldrig i FloatingChat — current-focus #5).
+    assert "Jag skrev om om oss-texten" in text, (
+        "Mappningen för target=about-text saknas. Om oss-följdprompter måste "
+        "bekräftas i FloatingChat (utan att eka hela 600-teckens-payloaden)."
+    )
+    assert 'Jag uppdaterade tjänsten "' in text and "targetRef" in text, (
+        "Mappningen för target=services saknas. Tjänst-följdprompter måste "
+        "bekräftas med tjänstnamnet (targetRef), inte den långa summaryn."
     )
     assert "appliedCopyDirectives" in text, (
         "PromptApiResponse måste exponera ``appliedCopyDirectives`` så "
@@ -3276,6 +3513,21 @@ def test_builder_followup_drives_buildstage_via_real_trace_signal() -> None:
     )
 
 
+def test_studio_preserves_iterate_base_on_failed_build() -> None:
+    """Scout-fynd (P1, 2026-06-05): onBuildDone rensade pendingBaseRunId
+    ovillkorligt — även för outcome=failed (failed returnerar en runId, så
+    onBuildDone körs). Då tappade error-bubblans 'Försök igen' iterera-från-
+    bas-läget och nästa retry grenade från latest i stället för vald bas, vilket
+    motsäger onBuildEnd-kommentarens uttryckliga intent. Lås att base-run:en bara
+    rensas när bygget producerade en riktig version (ok/degraded), inte vid failed.
+    """
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
+    assert 'if (outcome !== "failed") setPendingBaseRunId(null);' in text, (
+        "onBuildDone måste behålla pendingBaseRunId vid failed så error-bubblans "
+        "'Försök igen' itererar från samma bas i stället för latest."
+    )
+
+
 def test_wizard_finish_timer_is_cancelled_on_close() -> None:
     """Scout-fynd (P1): submit-overlayns 700 ms-timer fyrade av onComplete
     (bygg-start) även om operatören stängde wizarden (Esc) under väntan.
@@ -3327,6 +3579,18 @@ def test_wizard_keyboard_help_lists_all_four_steps() -> None:
     ), (
         "Steg-hoppet måste matcha event.altKey + event.code (Digit1–9) så det "
         "inte krockar med webbläsarens ⌘/Ctrl+siffra-flikbyte"
+    )
+    # Scout-fynd (P1, 2026-06-05): wizardens globala genvägar ligger på document
+    # och fyrade bakom MoreInfoDialog (egen Dialog-portal ovanpå) — ⌘↵ kunde
+    # avancera/submit:a wizarden utan att operatören såg det. Handlern måste
+    # early-return:a när moreInfoOpen är true OCH ha moreInfoOpen i dep-arrayen.
+    assert "if (moreInfoOpen) return;" in content, (
+        "keydown-handlern måste lämna över tangentbordet till MoreInfoDialog "
+        "(early-return på moreInfoOpen) så wizard-genvägar inte fyrar bakom modalen."
+    )
+    assert "goToStep, helpOpen, moreInfoOpen]" in content, (
+        "moreInfoOpen måste ligga i keydown-effektens dep-array, annars läser "
+        "guarden ett stale värde."
     )
 
 
@@ -3984,6 +4248,15 @@ def test_hero_prompt_opens_wizard_and_hands_off_to_studio() -> None:
     assert "setWizardHandoff" in form and "STUDIO_HREF" in form, (
         "Heron ska lämna över hela wizard-resultatet och navigera till studion"
     )
+    # Scout-fynd (P1, 2026-06-05): hero-textarean kan vara TOM när besökaren
+    # öppnade wizarden direkt och bara fyllde "Vad gör ni?" där (answers.offer).
+    # Handoffen måste falla tillbaka på offer-svaret så discovery.rawPrompt
+    # aldrig blir "" — annars tappas "Operatörens beskrivning" ur master-prompten.
+    assert "prompt.trim() || answers.offer.trim()" in form, (
+        "Hero-handoffen måste falla tillbaka på wizardens offer-svar när hero-"
+        'textarean är tom — annars blir discovery.rawPrompt "" och '
+        "'Operatörens beskrivning' tappas ur master-prompten på /studio."
+    )
     builder = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
     assert "consumeWizardHandoff" in builder, (
         "PromptBuildern ska konsumera wizard-handoffen vid mount"
@@ -4129,6 +4402,30 @@ def test_wizard_tab_strip_is_keyboard_navigable() -> None:
 
 
 @pytest.mark.tooling
+def test_more_info_dialog_tab_strip_is_keyboard_navigable() -> None:
+    """Scout-fynd (P1, 2026-06-05, två oberoende agenter): MoreInfoDialog-
+    flikarna hade role=tab/aria-selected men SAKNADE pil/Home/End-tangentbord,
+    roving tabindex och tabpanel-koppling — inne i Dialog-portalen gick de inte
+    att nå med tangentbord (till skillnad från huvud-wizardens stegstrip).
+    Lås att MoreInfoDialog nu följer samma WAI-ARIA tabs-mönster.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "more-info-dialog.tsx"
+    ).read_text(encoding="utf-8")
+    assert "tabIndex={isActive ? 0 : -1}" in text, (
+        "MoreInfoDialog-flikarna ska använda roving tabindex (bara aktiv flik i "
+        "tab-ordningen)."
+    )
+    assert '"ArrowRight"' in text and '"Home"' in text and '"End"' in text, (
+        "MoreInfoDialog-flikarna ska hantera pil/Home/End-navigering."
+    )
+    assert 'role="tabpanel"' in text and 'aria-controls="more-info-tabpanel"' in text, (
+        "MoreInfoDialog-flikarna ska peka på en tabpanel (aria-controls) och "
+        "panelen ska ha role=tabpanel + aria-labelledby."
+    )
+
+
+@pytest.mark.tooling
 def test_quality_tab_reads_canonical_artefact_schema() -> None:
     """P0: Kvalitet-tabben måste läsa de canonical artefakt-shaparna, inte
     ett påhittat parallellt schema. Den läste tidigare qualityResult.findings
@@ -4186,6 +4483,92 @@ def test_quality_tab_reads_canonical_artefact_schema() -> None:
     )
     assert "buildResult.durationMs" not in text and "buildResult.exitCode" not in text, (
         "Build-statusen får inte läsa durationMs/exitCode — de finns inte i build-result.json."
+    )
+
+    # A1 (2026-06-05): kor-4a/4b copy-kritik läses från qualityResult.critic
+    # (score/source/issues[]) — warning-lane som backend skriver men UI tidigare
+    # aldrig visade. Source-lock så en refaktor inte tappar critic-ytan igen.
+    assert "qualityResult.critic" in text, (
+        "Kvalitet-tabben måste läsa qualityResult.critic (kor-4a/4b) — score, "
+        "source och issues[] skrivs av critic-lanen men visades inte alls."
+    )
+    assert "repairHint" in text and "issue.target" in text, (
+        "Critic-blocket ska visa issue.repairHint + issue.target så operatören "
+        "ser var fyndet ligger och får ett konkret fix-förslag."
+    )
+
+    # A2 (2026-06-05): repair-telemetri som backend redan skriver men UI tappade
+    # — gate-efter, reason, blueprint-repairs (kor-5), llm-fixes och per-check
+    # severity/durationMs. Source-lock per fält.
+    assert "repairResult.qualityStatusAfter" in text, (
+        "Repair-blocket ska visa gate-status EFTER reparationen "
+        "(qualityStatusAfter), inte bara qualityStatusBefore."
+    )
+    assert "repairResult.reason" in text, (
+        "Repair-blocket ska visa repairResult.reason (operatörsförklaring av "
+        "varför pipelinen stannade på sin status)."
+    )
+    assert "repairResult.blueprintRepairs" in text, (
+        "Repair-blocket ska visa kor-5 blueprintRepairs[] (issueType/field/"
+        "success) — annars är blueprint-repair-telemetrin osynlig."
+    )
+    assert "repairResult.llmFixesApplied" in text, (
+        "Repair-blocket ska läsa llmFixesApplied[] (tomt idag, populeras "
+        "Sprint 5+) så framtida LLM-fixar syns utan ny UI-deploy."
+    )
+    assert "check.durationMs" in text and "check.severity" in text, (
+        "Check-raden ska visa severity (blocking/warning) och durationMs så "
+        "operatören ser blockerande vs varning och gate-latens per check."
+    )
+
+
+@pytest.mark.tooling
+def test_run_details_panel_repair_fix_reads_canonical_fields() -> None:
+    """B3 (2026-06-05): RepairSection läste ``fix.status`` / ``fix.description``
+    — fält som inte finns på RepairFix. Canonical shape
+    (packages/generation/repair/models.py:RepairFix + repair-result.schema.json
+    :$defs.repairFix) är ``kind``/``name``/``target``/``detail``/``success``.
+    Effekten var att mekaniska fixar renderades namn-bara (success + operatörs-
+    detalj tappades tyst). Source-lock att panelen läser de riktiga fälten.
+    """
+    text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "fix.status" not in text and "fix.description" not in text, (
+        "run-details-panel får inte läsa fix.status/fix.description — de finns "
+        "inte på RepairFix (canonical: success/detail/kind/target)."
+    )
+    assert "fix.success" in text and "fix.detail" in text, (
+        "RepairSection ska visa fix.success (fixad/misslyckades) och fix.detail "
+        "från den canonical RepairFix-shapen."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_surfaces_unapplied_followup_intents() -> None:
+    """A3 (2026-06-05): backend skriver ``unappliedFollowupIntents`` (lista av
+    {target, reason}) i build-result.json — följd-asks den deterministiska v1-
+    pipelinen kände igen men inte kunde applicera. FloatingChat ignorerade dem
+    helt; operatören såg bara den generiska no-op-raden. Source-lock att UI:t
+    läser fältet och appenderar det till no-op-/degraded-grenarna.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "function summarizeUnappliedFollowupIntents(" in text, (
+        "FloatingChat måste ha en helper som läser unappliedFollowupIntents "
+        "defensivt (samma mönster som extractAppliedVisibleEffect)."
+    )
+    assert "buildResult.unappliedFollowupIntents" in text, (
+        "Helpern måste läsa unappliedFollowupIntents från build-result-payloaden."
+    )
+    assert "const unappliedNote = summarizeUnappliedFollowupIntents(" in text, (
+        "summarizeBuildResult ska beräkna en unapplied-svans en gång och "
+        "appenda den i no-op-/degraded-grenarna."
+    )
+    assert text.count("${unappliedNote}") >= 3, (
+        "unappliedNote ska appendas i båda no-op-grenarna OCH degraded-grenen "
+        "så oapplicerade följd-asks blir synliga oavsett utfall."
     )
 
 
@@ -4471,4 +4854,125 @@ def test_toast_dedupes_and_caps_stack() -> None:
     )
     assert "const duplicate = toastsRef.current.find(" in text, (
         "show() ska deduplicera identiska aktiva toaster i st.f. att stapla dubbletter."
+    )
+
+
+@pytest.mark.tooling
+def test_followup_build_hook_supports_global_lock_and_base_run_id() -> None:
+    """C1 + C2 (scout-fynd 2026-06-05): useFollowupBuild ägde varken globalt
+    bygg-lås eller "Iterera från denna"-pin.
+
+    C2: varje dialog hade bara sin egen lokala isBusy → två öppna dialoger
+    (eller en dialog + FloatingChat) kunde starta parallella byggen mot samma
+    siteId. Hooken måste ta emot ett globalt ``isBuilding`` och avvisa när det
+    är sant.
+
+    C1: FloatingChat skickade redan ``baseRunId`` men dialogerna gjorde det
+    inte → en pinnad iteration tappades tyst när operatören bytte t.ex. färg.
+    Hooken måste ta emot ``baseRunId`` och inkludera den i fetch-bodyn.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "use-followup-build.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "isBuilding?: boolean;" in text, (
+        "useFollowupBuild måste exponera ett globalt isBuilding-bygg-lås (C2)."
+    )
+    assert "baseRunId?: string | null;" in text, (
+        "useFollowupBuild måste ta emot baseRunId för 'Iterera från denna' (C1)."
+    )
+    assert "if (isBusy || isBuilding) {" in text, (
+        "runFollowup måste avvisa när ett globalt bygge pågår, inte bara lokalt (C2)."
+    )
+    assert "...(baseRunId ? { baseRunId } : {})" in text, (
+        "runFollowup måste skicka baseRunId i bodyn när en pin är aktiv (C1)."
+    )
+
+
+@pytest.mark.tooling
+def test_builder_shell_threads_lock_and_base_run_id_into_dialogs() -> None:
+    """C1 + C2: BuilderShell måste skicka både det globala isBuilding-låset och
+    den aktiva baseRunId-pinnen till alla bygg-utlösande dialoger (variant/
+    färg/bild/scrape). Utan detta är hookens nya parametrar döda på dialog-
+    vägen och pin/lock gäller bara FloatingChat + Inspector.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Minst fyra dialoger (variant/color/asset/scrape) ska få bägge propsen.
+    assert text.count("baseRunId={pendingBaseRunId?.baseRunId ?? null}") >= 4, (
+        "Alla fyra bygg-dialoger måste få baseRunId från BuilderShell (C1)."
+    )
+    assert text.count("isBuilding={isBuilding}") >= 4, (
+        "Alla fyra bygg-dialoger måste få det globala isBuilding-låset (C2)."
+    )
+
+
+@pytest.mark.tooling
+def test_inspector_threads_base_run_id_into_followup_hook() -> None:
+    """C1: Inspectorns quick-prompts (t.ex. 'Be om fix' i Kvalitet) gick via
+    useFollowupBuild men skickade aldrig den pinnade baseRunId:n. Lås att
+    SiteInspectorSheet trådar pendingBaseRunId in i hooken.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "site-inspector-sheet.tsx"
+    ).read_text(encoding="utf-8")
+    assert "baseRunId: pendingBaseRunId?.baseRunId ?? null," in text, (
+        "SiteInspectorSheet måste skicka pendingBaseRunId till useFollowupBuild (C1)."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_trace_polling_covers_dialog_builds() -> None:
+    """C3 (scout-fynd 2026-06-05): trace-polling + stage-refine var gated på
+    enbart ``isSending`` (FloatingChat:s egna byggen). Ett dialog-bygge driver
+    page-level ``isBuilding`` men inte isSending → BuildProgressCard frös på
+    'thinking' hela bygget. Lås att både polling-enabled och stage-refinen
+    körs på ``isSending || isBuilding``.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "enabled: isSending || isBuilding," in text, (
+        "trace-polling måste aktiveras även för dialog-byggen (isBuilding), C3."
+    )
+    assert "if ((!isSending && !isBuilding) || !onStageChange) return;" in text, (
+        "stage-refinen måste köra för dialog-byggen (isBuilding), inte bara isSending (C3)."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_site_id_follows_selected_run() -> None:
+    """C4 (P0, scout-fynd 2026-06-05): ViewerPanel fick siteId={selectedSiteId}
+    medan runId={selectedRunId}. Project Input-väljaren kan sätta selectedSiteId
+    utan att rensa selectedRunId → previewen (/api/preview/<siteId>) startade
+    fel .generated/<siteId>/ medan runId pekade på en annan sajt. Lås att
+    siteId följer den valda runens faktiska site (runSiteId) med picker-sajten
+    som fallback.
+    """
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "siteId={runSiteId ?? selectedSiteId}" in text, (
+        "ViewerPanel:s siteId måste följa den valda runens site (runSiteId) så "
+        "preview-POST:en inte desynkar mot runId (C4)."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_builder_does_not_replay_stale_stage_on_callback_change() -> None:
+    """C5 (scout-fynd 2026-06-05): stage-rapporteringen var gated på
+    [stage, onStageChange]. onStageChange byter identitet i page.tsx
+    (builderActive ? undefined : setBuildStage), så vid 'Ny sajt' re-kördes
+    effekten med ett oförändrat stage (oftast 'success' från init-bygget) och
+    skrev över 'idle' som onNewSite precis satt → ViewerPanel visade ett stale
+    success-card. Lås att vi bara rapporterar när stage FAKTISKT ändrats sedan
+    förra rapporten (ref-vakt).
+    """
+    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
+    assert "lastReportedStageRef" in text, (
+        "PromptBuilder måste spåra senast rapporterade stage i en ref (C5)."
+    )
+    assert "if (lastReportedStageRef.current === stage) return;" in text, (
+        "stage-effekten måste bail:a när stage är oförändrat så en ren "
+        "callback-identitetsändring inte replayar ett stale stage (C5)."
     )

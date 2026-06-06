@@ -6,6 +6,7 @@ import {
   Hammer,
   ShieldCheck,
   ShieldX,
+  Sparkles,
 } from "lucide-react";
 
 import { QuickPromptButton } from "@/components/builder/inspector/quick-prompt-button";
@@ -31,13 +32,46 @@ type QualityCheck = {
   status?: string;
   detail?: string;
   severity?: string;
+  durationMs?: number | null;
   findings: string[];
 };
 
 type RepairFix = {
   name?: string;
+  kind?: string;
+  target?: string;
   detail?: string;
   success?: boolean;
+};
+
+// kor-4a (deterministisk) + kor-4b (verifierModel) copy-kritik. Speglar
+// governance/schemas/quality-result.schema.json:critic. VARNING-lane: påverkar
+// aldrig top-level gate-status, så vi visar den som egen sektion utan att röra
+// gate-badgen.
+type CriticIssue = {
+  severity?: string;
+  type?: string;
+  target?: string;
+  message?: string;
+  repairHint?: string;
+};
+
+type CriticResult = {
+  score: number | null;
+  source: string | null;
+  issues: CriticIssue[];
+};
+
+// kor-5 blueprint-repair-telemetri. Speglar
+// governance/schemas/repair-result.schema.json:$defs.blueprintRepair.
+type BlueprintRepair = {
+  issueType?: string;
+  target?: string;
+  field?: string;
+  before?: string;
+  after?: string;
+  success?: boolean;
+  detail?: string;
 };
 
 function asString(value: unknown): string | null {
@@ -69,6 +103,7 @@ function asChecks(value: unknown): QualityCheck[] {
     if (typeof obj.status === "string") check.status = obj.status;
     if (typeof obj.detail === "string") check.detail = obj.detail;
     if (typeof obj.severity === "string") check.severity = obj.severity;
+    check.durationMs = asNumber(obj.durationMs);
     out.push(check);
   }
   return out;
@@ -82,9 +117,52 @@ function asRepairFixes(value: unknown): RepairFix[] {
     const obj = entry as Record<string, unknown>;
     const fix: RepairFix = {};
     if (typeof obj.name === "string") fix.name = obj.name;
+    if (typeof obj.kind === "string") fix.kind = obj.kind;
+    if (typeof obj.target === "string") fix.target = obj.target;
     if (typeof obj.detail === "string") fix.detail = obj.detail;
     if (typeof obj.success === "boolean") fix.success = obj.success;
     out.push(fix);
+  }
+  return out;
+}
+
+// quality-result.json:critic — defensiv parse (null när blueprintet inte kördes
+// genom critic-lanen, eller på äldre runs som saknar fältet).
+function asCritic(value: unknown): CriticResult | null {
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const issues: CriticIssue[] = [];
+  if (Array.isArray(obj.issues)) {
+    for (const entry of obj.issues) {
+      if (!entry || typeof entry !== "object") continue;
+      const e = entry as Record<string, unknown>;
+      const issue: CriticIssue = {};
+      if (typeof e.severity === "string") issue.severity = e.severity;
+      if (typeof e.type === "string") issue.type = e.type;
+      if (typeof e.target === "string") issue.target = e.target;
+      if (typeof e.message === "string") issue.message = e.message;
+      if (typeof e.repairHint === "string") issue.repairHint = e.repairHint;
+      issues.push(issue);
+    }
+  }
+  return { score: asNumber(obj.score), source: asString(obj.source), issues };
+}
+
+function asBlueprintRepairs(value: unknown): BlueprintRepair[] {
+  if (!Array.isArray(value)) return [];
+  const out: BlueprintRepair[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue;
+    const obj = entry as Record<string, unknown>;
+    const repair: BlueprintRepair = {};
+    if (typeof obj.issueType === "string") repair.issueType = obj.issueType;
+    if (typeof obj.target === "string") repair.target = obj.target;
+    if (typeof obj.field === "string") repair.field = obj.field;
+    if (typeof obj.before === "string") repair.before = obj.before;
+    if (typeof obj.after === "string") repair.after = obj.after;
+    if (typeof obj.detail === "string") repair.detail = obj.detail;
+    if (typeof obj.success === "boolean") repair.success = obj.success;
+    out.push(repair);
   }
   return out;
 }
@@ -143,6 +221,19 @@ function checkTone(check: QualityCheck): string {
   return "text-muted-foreground border-border/40 bg-card/40";
 }
 
+// Critic-fynd är alltid VARNING (aldrig blockerande) men severity styr
+// score-straffet (high=20/medium=10/low=5) → spegla i tonen utan att låna
+// gate-failed-rött för low/medium.
+function criticTone(severity: string | undefined): string {
+  if (severity === "high") {
+    return "text-destructive border-destructive/40 bg-destructive/5";
+  }
+  if (severity === "medium") {
+    return "text-amber-700 dark:text-amber-400 border-amber-400/30 bg-amber-50/40 dark:bg-amber-950/10";
+  }
+  return "text-muted-foreground border-border/40 bg-card/40";
+}
+
 type QualityTabProps = {
   bundle: RunArtefactBundle;
   isBuilding: boolean;
@@ -172,14 +263,22 @@ export function QualityTab({
   const gateSummary = asString(qualityResult.summary);
   const checks = asChecks(qualityResult.checks);
   const failedChecks = checks.filter((check) => check.status === "failed");
+  // kor-4a/4b copy-kritik (warning-lane; null när blueprintet inte kördes
+  // genom critic). Egen sektion — rör aldrig gate-status/badge.
+  const critic = asCritic(qualityResult.critic);
 
-  // repair-result.json: { status, iterations, mechanicalFixesApplied[],
-  // remainingErrors[], qualityStatusBefore } (packages/generation/repair).
+  // repair-result.json: { status, reason, iterations, mechanicalFixesApplied[],
+  // llmFixesApplied[], remainingErrors[], qualityStatusBefore/After,
+  // blueprintRepairs[] } (packages/generation/repair).
   const repairStatus = asString(repairResult.status);
+  const repairReason = asString(repairResult.reason);
   const repairFixes = asRepairFixes(repairResult.mechanicalFixesApplied);
+  const llmFixes = asRepairFixes(repairResult.llmFixesApplied);
+  const blueprintRepairs = asBlueprintRepairs(repairResult.blueprintRepairs);
   const remainingErrors = asStringList(repairResult.remainingErrors);
   const repairIterations = asNumber(repairResult.iterations);
   const qualityBefore = asString(repairResult.qualityStatusBefore);
+  const qualityAfter = asString(repairResult.qualityStatusAfter);
   const hasRepair = bundle.repairResult !== null;
 
   return (
@@ -252,6 +351,8 @@ export function QualityTab({
                   <div className="mb-0.5 flex items-baseline justify-between gap-2">
                     <span className="font-mono text-[10.5px]">
                       {check.name ?? "—"} · {check.status ?? "okänd"}
+                      {check.severity ? ` · ${check.severity}` : ""}
+                      {check.durationMs != null ? ` · ${check.durationMs}ms` : ""}
                     </span>
                     {failed ? (
                       <QuickPromptButton
@@ -290,6 +391,66 @@ export function QualityTab({
         )}
       </div>
 
+      {/* Copy-kritik (kor-4a deterministisk + kor-4b verifierModel). VARNING-
+          lane: påverkar aldrig gate-status. Visas bara när blueprintet kördes
+          genom critic (annars null). */}
+      {critic ? (
+        <div>
+          <div className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-[10.5px] tracking-[0.16em] uppercase">
+            <Sparkles className="h-3 w-3" aria-hidden />
+            Copy-kritik
+            {critic.score !== null ? ` · ${critic.score}/100` : ""}
+            {critic.source ? ` · ${critic.source}` : ""}
+          </div>
+          {critic.issues.length === 0 ? (
+            <p className="text-muted-foreground text-[11.5px] italic">
+              Inga copy-fynd — blueprintet passerade critic-heuristikerna.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {critic.issues.map((issue, idx) => {
+                const fixContext =
+                  issue.repairHint || issue.message || "förbättra copyn";
+                const fixPrompt = `Förbättra ${
+                  issue.target ?? "sektionen"
+                } (${issue.type ?? "copy"}): ${fixContext}`;
+                return (
+                  <li
+                    key={`critic-${issue.target ?? "issue"}-${idx}`}
+                    className={cn(
+                      "rounded-md border p-2 text-[11.5px]",
+                      criticTone(issue.severity),
+                    )}
+                  >
+                    <div className="mb-0.5 flex items-baseline justify-between gap-2">
+                      <span className="font-mono text-[10.5px]">
+                        {issue.severity ?? "—"} · {issue.type ?? "copy"}
+                        {issue.target ? ` · ${issue.target}` : ""}
+                      </span>
+                      <QuickPromptButton
+                        label="Be om fix"
+                        prompt={fixPrompt}
+                        isBuilding={isBuilding}
+                        isPending={pendingPrompt === fixPrompt}
+                        onSelect={onPrompt}
+                      />
+                    </div>
+                    {issue.message ? (
+                      <p className="leading-snug">{issue.message}</p>
+                    ) : null}
+                    {issue.repairHint ? (
+                      <p className="text-muted-foreground mt-1 leading-snug">
+                        Förslag: {issue.repairHint}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : null}
+
       {/* Repair Pipeline */}
       {hasRepair ? (
         <div>
@@ -298,12 +459,18 @@ export function QualityTab({
             Repair Pipeline
             {repairStatus ? ` · ${repairStatus}` : ""}
           </div>
-          {repairIterations !== null || qualityBefore ? (
+          {repairIterations !== null || qualityBefore || qualityAfter ? (
             <p className="text-muted-foreground mb-1.5 text-[10.5px]">
               {repairIterations !== null
                 ? `iterationer: ${repairIterations}`
                 : ""}
               {qualityBefore ? ` · gate innan: ${qualityBefore}` : ""}
+              {qualityAfter ? ` → efter: ${qualityAfter}` : ""}
+            </p>
+          ) : null}
+          {repairReason ? (
+            <p className="text-muted-foreground mb-1.5 text-[11px] leading-snug">
+              {repairReason}
             </p>
           ) : null}
           {repairFixes.length === 0 ? (
@@ -334,6 +501,11 @@ export function QualityTab({
                       </span>
                     ) : null}
                   </div>
+                  {fix.target ? (
+                    <p className="text-muted-foreground mt-1 font-mono text-[10px] break-all">
+                      {fix.target}
+                    </p>
+                  ) : null}
                   {fix.detail ? (
                     <p className="text-muted-foreground mt-1 leading-snug">
                       {fix.detail}
@@ -343,6 +515,68 @@ export function QualityTab({
               ))}
             </ul>
           )}
+          {blueprintRepairs.length > 0 ? (
+            <div className="mt-1.5">
+              <p className="text-muted-foreground text-[10.5px]">
+                Blueprint-repair (kor-5):
+              </p>
+              <ul className="mt-0.5 flex flex-col gap-1">
+                {blueprintRepairs.map((repair, idx) => (
+                  <li
+                    key={`blueprint-${repair.field ?? repair.target ?? "patch"}-${idx}`}
+                    className="border-border/40 bg-card/40 rounded-md border p-2 text-[11px]"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <code className="text-foreground bg-muted/40 rounded px-1.5 py-0.5 font-mono text-[10.5px] break-all">
+                        {repair.field ?? repair.target ?? "—"}
+                      </code>
+                      {repair.success !== undefined ? (
+                        <span
+                          className={cn(
+                            "shrink-0 font-mono text-[10.5px]",
+                            repair.success
+                              ? "text-emerald-700 dark:text-emerald-400"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {repair.success ? "patchad" : "avvisad"}
+                        </span>
+                      ) : null}
+                    </div>
+                    {repair.issueType || repair.detail ? (
+                      <p className="text-muted-foreground mt-1 leading-snug">
+                        {repair.issueType ?? ""}
+                        {repair.issueType && repair.detail ? " — " : ""}
+                        {repair.detail ?? ""}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {llmFixes.length > 0 ? (
+            <div className="mt-1.5">
+              <p className="text-muted-foreground text-[10.5px]">LLM-fixes:</p>
+              <ul className="mt-0.5 flex flex-col gap-1">
+                {llmFixes.map((fix, idx) => (
+                  <li
+                    key={`llm-fix-${fix.name ?? "fix"}-${idx}`}
+                    className="border-border/40 bg-card/40 rounded-md border p-2 text-[11px]"
+                  >
+                    <code className="text-foreground bg-muted/40 rounded px-1.5 py-0.5 font-mono text-[10.5px]">
+                      {fix.name ?? "—"}
+                    </code>
+                    {fix.detail ? (
+                      <p className="text-muted-foreground mt-1 leading-snug">
+                        {fix.detail}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {remainingErrors.length > 0 ? (
             <div className="mt-1.5">
               <p className="text-muted-foreground text-[10.5px]">

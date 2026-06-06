@@ -38,6 +38,7 @@ PAINTER_PALMA = REPO_ROOT / "examples" / "painter-palma.project-input.json"
 LOCAL_PREVIEW_SERVER = (
     REPO_ROOT / "apps" / "viewser" / "lib" / "local-preview-server.ts"
 )
+BUILD_RUNNER = REPO_ROOT / "apps" / "viewser" / "lib" / "build-runner.ts"
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +354,178 @@ def test_locked_previous_build_does_not_block_followup(
 
 
 # ---------------------------------------------------------------------------
+# cleanup_flat_layout (B157 level 4, flat-layout cleanup)
+# ---------------------------------------------------------------------------
+
+
+def _make_flat_layout_site(site_dir: Path) -> None:
+    """Materialise a site root as it looked under the pre-immutable flat layout."""
+    site_dir.mkdir(parents=True)
+    (site_dir / ".next").mkdir()
+    (site_dir / ".next" / "build-manifest.json").write_text("{}", encoding="utf-8")
+    (site_dir / "node_modules").mkdir()
+    (site_dir / "node_modules" / "keep.txt").write_text("x", encoding="utf-8")
+    (site_dir / "app").mkdir()
+    (site_dir / "app" / "page.tsx").write_text("export default null", encoding="utf-8")
+    (site_dir / "package.json").write_text('{"name":"flat"}', encoding="utf-8")
+    (site_dir / "package-lock.json").write_text('{"lockfileVersion":3}', encoding="utf-8")
+
+
+def test_cleanup_flat_layout_removes_legacy_artefacts_keeps_pointer_and_builds(
+    tmp_path: Path,
+) -> None:
+    from packages.generation.build.immutable_builds import (
+        BUILDS_DIRNAME,
+        POINTER_FILENAME,
+    )
+    from scripts.build_site import cleanup_flat_layout
+
+    site_dir = tmp_path / "site"
+    _make_flat_layout_site(site_dir)
+    # The immutable world's two survivors: builds/ and current.json.
+    (site_dir / BUILDS_DIRNAME).mkdir()
+    (site_dir / BUILDS_DIRNAME / "20260531T184500Z").mkdir()
+    (site_dir / POINTER_FILENAME).write_text("{}", encoding="utf-8")
+
+    removed = cleanup_flat_layout(
+        site_dir, keep={BUILDS_DIRNAME, POINTER_FILENAME}
+    )
+
+    # Legacy flat artefacts are gone.
+    assert not (site_dir / ".next").exists()
+    assert not (site_dir / "node_modules").exists()
+    assert not (site_dir / "app").exists()
+    assert not (site_dir / "package.json").exists()
+    assert not (site_dir / "package-lock.json").exists()
+    # The immutable build dir and the pointer survive untouched.
+    assert (site_dir / BUILDS_DIRNAME / "20260531T184500Z").is_dir()
+    assert (site_dir / POINTER_FILENAME).is_file()
+    assert set(removed) == {
+        ".next",
+        "node_modules",
+        "app",
+        "package.json",
+        "package-lock.json",
+    }
+
+
+def test_cleanup_flat_layout_is_noop_on_fresh_immutable_site(tmp_path: Path) -> None:
+    from packages.generation.build.immutable_builds import (
+        BUILDS_DIRNAME,
+        POINTER_FILENAME,
+    )
+    from scripts.build_site import cleanup_flat_layout
+
+    site_dir = tmp_path / "site"
+    (site_dir / BUILDS_DIRNAME / "20260531T184500Z").mkdir(parents=True)
+    (site_dir / POINTER_FILENAME).write_text("{}", encoding="utf-8")
+
+    removed = cleanup_flat_layout(
+        site_dir, keep={BUILDS_DIRNAME, POINTER_FILENAME}
+    )
+
+    assert removed == []
+    assert (site_dir / BUILDS_DIRNAME / "20260531T184500Z").is_dir()
+    assert (site_dir / POINTER_FILENAME).is_file()
+
+
+def test_cleanup_flat_layout_missing_dir_returns_empty(tmp_path: Path) -> None:
+    from scripts.build_site import cleanup_flat_layout
+
+    assert cleanup_flat_layout(tmp_path / "nope", keep={"builds", "current.json"}) == []
+
+
+def test_cleanup_flat_layout_skips_locked_artefact_without_raising(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A locked/unremovable flat artefact must be skipped, not crash the build.
+
+    Simulates the Windows ``WinError 5`` (a live preview still holding the old
+    flat ``.next``/``node_modules`` open) by making ``shutil.rmtree`` raise for
+    one directory. Cleanup must keep going and remove the rest.
+    """
+    import scripts.build_site as build_site
+
+    site_dir = tmp_path / "site"
+    site_dir.mkdir()
+    (site_dir / ".next").mkdir()
+    (site_dir / "app").mkdir()
+    (site_dir / "app" / "page.tsx").write_text("x", encoding="utf-8")
+
+    real_rmtree = build_site.shutil.rmtree
+
+    def _flaky_rmtree(path, *args, **kwargs):
+        if Path(path).name == ".next":
+            raise PermissionError("[WinError 5] locked .node binary")
+        return real_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(build_site.shutil, "rmtree", _flaky_rmtree)
+
+    removed = build_site.cleanup_flat_layout(site_dir, keep=set())
+
+    # The locked dir is left behind; the rest is cleaned; no exception bubbled.
+    assert (site_dir / ".next").exists()
+    assert not (site_dir / "app").exists()
+    assert removed == ["app"]  # only the removable entry is reported
+
+
+def test_build_shippable_status_cleans_flat_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A shippable build must reclaim legacy flat-layout artefacts in the root.
+
+    Pre-seeds the site root with pre-immutable flat-layout files, runs a build
+    that lands ``ok`` (so the pointer swaps), and asserts the flat artefacts are
+    gone while ``builds/`` and ``current.json`` remain.
+    """
+    generated_dir = tmp_path / "generated"
+    # painter-palma is the dossier built by _build_with_forced_status.
+    site_dir = generated_dir / "painter-palma"
+    _make_flat_layout_site(site_dir)
+
+    target, _run_dir = _build_with_forced_status("ok", tmp_path, monkeypatch)
+    assert target.parent.parent == site_dir  # built under <site>/builds/<id>
+
+    assert (site_dir / "builds").is_dir()
+    assert (site_dir / "current.json").is_file()
+    assert not (site_dir / ".next").exists()
+    assert not (site_dir / "node_modules").exists()
+    assert not (site_dir / "app").exists()
+    assert not (site_dir / "package-lock.json").exists()
+    # The new immutable build still resolves via the pointer.
+    assert read_active_build_dir(site_dir) == target
+
+
+def test_build_skipped_does_not_clean_flat_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A skipped run never swaps the pointer, so it must NOT touch flat artefacts.
+
+    Removing the flat ``.next`` before a pointer exists would strip the preview
+    resolver's only fallback for a site that has not yet published an immutable
+    build.
+    """
+    import scripts.build_site as build_site
+
+    generated_dir = tmp_path / "generated"
+    site_dir = generated_dir / "painter-palma"
+    _make_flat_layout_site(site_dir)
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    build_site.build(
+        PAINTER_PALMA,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=generated_dir,
+    )
+
+    assert not (site_dir / "current.json").exists()
+    # Flat fallback artefacts must survive an unshippable (skipped) run.
+    assert (site_dir / ".next").exists()
+    assert (site_dir / "node_modules").exists()
+
+
+# ---------------------------------------------------------------------------
 # Structural lock: Viewser preview resolver (no TS runner in repo)
 # ---------------------------------------------------------------------------
 
@@ -388,4 +561,38 @@ def test_preview_server_resolves_active_build_with_legacy_fallback() -> None:
         "doStartPreviewServer must resolve the preview dir via "
         "resolveActivePreviewDir (pointer + legacy fallback) before spawning "
         "next start."
+    )
+
+
+def test_build_runner_posix_tree_kills_build_process() -> None:
+    """build-runner.ts must POSIX tree-kill build_site.py + its descendants.
+
+    Locks the B157 follow-up "POSIX tree-kill" contract structurally (no TS
+    runner in repo):
+      - build_site.py is spawned in its own process group on POSIX
+        (``detached: process.platform !== "win32"``),
+      - a build-specific tree-killer signals the whole group via the NEGATIVE
+        pid (``process.kill(-child.pid, ...)``) so npm/next grandchildren die
+        too, instead of the direct-child-only ``child.kill`` that leaked them,
+      - the timeout path uses that tree-killer for both SIGTERM and SIGKILL.
+    """
+    source = BUILD_RUNNER.read_text(encoding="utf-8")
+
+    assert 'detached: process.platform !== "win32"' in source, (
+        "build_site.py must be spawned detached on POSIX so it leads its own "
+        "process group and a killpg can reach its npm/next descendants."
+    )
+    assert "function killBuildProcessTree(" in source, (
+        "build-runner.ts must define killBuildProcessTree for the build process "
+        "tree-kill (POSIX killpg + Windows taskkill)."
+    )
+    assert "process.kill(-child.pid" in source, (
+        "killBuildProcessTree must signal the NEGATIVE pid (process group / "
+        "killpg) on POSIX so python's npm/next descendants are killed too."
+    )
+    assert 'void killBuildProcessTree(child, "SIGTERM")' in source, (
+        "the build timeout must escalate via killBuildProcessTree (SIGTERM)."
+    )
+    assert 'void killBuildProcessTree(child, "SIGKILL")' in source, (
+        "the build timeout must escalate via killBuildProcessTree (SIGKILL)."
     )

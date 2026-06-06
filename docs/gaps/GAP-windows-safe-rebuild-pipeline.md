@@ -22,6 +22,32 @@ dem. Symptomatik registrerad som `B157`.
 
 Den här gap-spec:en täcker arkitektur-fixen, inte symptom-läkningen.
 
+## Implementationsstatus (2026-06-05)
+
+Nivå 4-kärnan är landad: immutable `builds/<buildId>/` + atomär
+`current.json`-pekarbyte (Stage A,
+`packages/generation/build/immutable_builds.py` + `scripts/build_site.py`)
+och fördröjd garbage collection (Stage B, `scripts/gc_old_builds.py`).
+
+De två kvarvarande icke-blockerande städpunkterna är nu också klara:
+
+- **flat-layout-städning** — efter att `current.json` swappats till en ny
+  immutable build städar `scripts/build_site.py:cleanup_flat_layout` bort
+  legacy flat-layout-artefakter (`.next`, `node_modules`, `app`, ...) som
+  ligger kvar direkt i sajt-roten från tiden före immutable builds. Best
+  effort: en låst artefakt hoppas över utan att fälla bygget. Gateas på
+  pekarbytet så preview aldrig tappar sin flat-`.next`-fallback innan
+  pekaren är live.
+- **POSIX-tree-kill i build-runner** — `apps/viewser/lib/build-runner.ts`
+  spawnar numera `build_site.py` detached i egen process-grupp och dödar
+  vid timeout hela trädet (python → npm → next) via
+  `process.kill(-pid)` (killpg) på POSIX, `taskkill /T /F` på Windows.
+  Stänger den descendant-läcka som den delade `killProcessTree`-helpern
+  bara löste på Windows.
+
+Resterande punkter (nivå 5 `vercel-preview`-adapter, UI-banner för "ny
+version tillgänglig") är fortsatt framtida arbete, se off-limits nedan.
+
 ## Reproduktion
 
 1. Operatören öppnar Viewser, kör prompt → first build skapar
