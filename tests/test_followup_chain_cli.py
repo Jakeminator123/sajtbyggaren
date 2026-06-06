@@ -159,6 +159,72 @@ def test_followup_chain_applies_capability_and_creates_new_version(
     assert _critic_of(new_run) is not None
 
 
+def test_followup_chain_restyle_applies_theme_and_creates_new_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A visual_style restyle goes router->(empty plan + theme)->apply->build.
+
+    The router classifies "ändra färgen till rosa" as visual_style/edit_instruction;
+    the patch planner has no capability patch, but the chain extracts an explicit
+    theme directive and routes it through apply so brand.primaryColorHex lands in
+    the next immutable version (rendered by patch_globals_css on rebuild)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, _base = _seed_init_build(tmp_path)
+
+    result = run_followup_chain(
+        SITE_ID,
+        "ändra färgen till rosa",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built"
+    assert result["applied"] is True
+    assert result["editKind"] == "visual_style"
+    assert result["version"] == 2
+
+    v2_path = prompt_inputs / f"{SITE_ID}.v2.project-input.json"
+    assert v2_path.exists()
+    v2_pi = json.loads(v2_path.read_text(encoding="utf-8"))
+    assert v2_pi["brand"]["primaryColorHex"] == "#db2777"
+    # No capability was applied (restyle is theme-only).
+    assert result["appliedCapabilities"] == []
+
+
+def test_followup_chain_capability_followup_does_not_restyle(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Gate: a non-visual_style edit never restyles. A component_add follow-up
+    (no restyle intent) must leave brand untouched even if it mentioned a colour
+    incidentally - the theme is applied only for a router visual_style intent."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, _base = _seed_init_build(tmp_path)
+
+    result = run_followup_chain(
+        SITE_ID,
+        CAPABILITY_FOLLOWUP,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["editKind"] == "component_add"
+    assert result["applied"] is True
+    v2_pi = json.loads(
+        (prompt_inputs / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    # The capability landed, but no brand restyle leaked in.
+    assert "contact-form" in v2_pi.get("requestedCapabilities", [])
+    assert "primaryColorHex" not in (v2_pi.get("brand") or {})
+
+
 def test_followup_question_is_honest_no_op(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
