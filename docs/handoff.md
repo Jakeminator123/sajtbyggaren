@@ -1,11 +1,12 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-06 UTC. Verifierad `main` är `496d605`.
+**Datum:** 2026-06-06 UTC (steward-auto efter PR #208). Verifierad `main` är `496d605`.
 
 Nya PRs sedan föregående checkpoint (alla mergade till `main` via jakob-be→main-sync):
 PR #198 (windows-safe-rebuild), #199 (skiva 1b UI-halva: OpenClaw-beslut i FloatingChat),
 #200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style tema-följdprompt + farm-naming),
-#204 (governance-regel `site-mutation-layers`), #207 (visual_style restyle genom apply-kedjan).
+#204 (governance-regel `site-mutation-layers`), #207 (visual_style restyle genom apply-kedjan),
+#208 (sync).
 
 ## Orchestrator-handoff 2026-06-06 — restyle-genom-apply + branch/docs-städning (TA ÖVER HÄR)
 
@@ -1790,6 +1791,51 @@ Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
 
 Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
 skiva 1c kor-5 rerender wiring.
+
+
+### 2026-06-05 UTC — handoff.md före `dfffb65`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half). Verifierad `main` är `dfffb65`.
+
+Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
+(skiva 1b action half).
+
+
+### 2026-06-05 UTC — handoff.md före `8499f85`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva. Verifierad `main` är `8499f85`.
+
+Nya PRs sedan föregående checkpoint: PR #198 — feat(builder): flat-layout-städning +
+POSIX-tree-kill (B157 nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b
+UI half (OpenClaw decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR
+#201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva.
+
+
+### 2026-06-05 UTC — handoff.md före `8ec022c`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #203 — sync(jakob-be->main): #202 visual_style theme + farm naming. Verifierad `main` är `8ec022c`.
+
+Nya PRs sedan föregående checkpoint: PR #202 — feat(followup): visual_style restyle
+(colour + font) + nicer unnamed-business label; PR #203 — sync(jakob-be->main): #202
+visual_style theme + farm naming.
+
+
+### 2026-06-06 UTC — handoff.md före `eff73cb`
+
+**Datum:** 2026-06-05 UTC, steward-auto efter PR #205 — sync(jakob-be->main): #204 site-mutation-layers rule. Verifierad `main` är `eff73cb`.
+
+Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
+rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
+site-mutation-layers rule.
+
+
+### 2026-06-06 UTC — handoff.md före `029a18c`
+
+**Datum:** 2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ). Verifierad `main` är `029a18c`.
+
+Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
+from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
+offer/tagline service guard (+FAQ).
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 

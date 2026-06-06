@@ -395,11 +395,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `496d605` (2026-06-06 UTC, `main` efter jakob-be→main-sync av PR #207).
+Last verified state: `496d605` (2026-06-06 UTC, `main` efter jakob-be→main-sync, steward-auto efter PR #208).
 Nya PRs sedan föregående checkpoint (alla mergade till `main`): #198 (windows-safe-rebuild),
 #199 (skiva 1b UI-halva), #200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style
 tema-följdprompt + farm-naming), #204 (governance-regel site-mutation-layers), #207
-(visual_style restyle genom apply-kedjan).
+(visual_style restyle genom apply-kedjan), #208 (sync).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -653,3 +653,38 @@ Nya PRs sedan föregående checkpoint: PR #194 — feat(viewser): UI/UX-batch
 Last verified state: `cc7ddc8` (2026-06-05 UTC, steward-auto efter PR #195 — feat: gap 1 trust-proof USP seeding + skiva 1c kor-5 rerender wiring).
 Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
 skiva 1c kor-5 rerender wiring.
+
+### 2026-06-05 UTC — current-focus.md före `dfffb65`
+
+Last verified state: `dfffb65` (2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half)).
+Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
+(skiva 1b action half).
+
+### 2026-06-05 UTC — current-focus.md före `8499f85`
+
+Last verified state: `8499f85` (2026-06-05 UTC, steward-auto efter PR #201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva).
+Nya PRs sedan föregående checkpoint: PR #198 — feat(builder): flat-layout-städning +
+POSIX-tree-kill (B157 nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b
+UI half (OpenClaw decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR
+#201 — sync(jakob-be->main): #198 windows-safe-rebuild + #199 skiva 1b UI-halva.
+
+### 2026-06-05 UTC — current-focus.md före `8ec022c`
+
+Last verified state: `8ec022c` (2026-06-05 UTC, steward-auto efter PR #203 — sync(jakob-be->main): #202 visual_style theme + farm naming).
+Nya PRs sedan föregående checkpoint: PR #202 — feat(followup): visual_style restyle
+(colour + font) + nicer unnamed-business label; PR #203 — sync(jakob-be->main): #202
+visual_style theme + farm naming.
+
+### 2026-06-06 UTC — current-focus.md före `eff73cb`
+
+Last verified state: `eff73cb` (2026-06-05 UTC, steward-auto efter PR #205 — sync(jakob-be->main): #204 site-mutation-layers rule).
+Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
+rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
+site-mutation-layers rule.
+
+### 2026-06-06 UTC — current-focus.md före `029a18c`
+
+Last verified state: `029a18c` (2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ)).
+Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
+from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
+offer/tagline service guard (+FAQ).
