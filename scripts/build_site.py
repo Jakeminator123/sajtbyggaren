@@ -5009,16 +5009,40 @@ def run_followup_chain(
 
     # 3. Patch planner (kor-7b): propose + validate. Applies nothing.
     plan = plan_patches(decision, context, registry=registry)
-    if not plan.patches:
+
+    # 3b. Restyle (visual_style): the patch planner has no patchable edit for a
+    #     theme change, but a restyle is a real follow-up. When the router
+    #     classified a visual_style edit, extract an EXPLICIT theme directive
+    #     (brand/tone) from the prompt and route it through apply so it
+    #     materialises as the next version + targeted render. Gated on the
+    #     router intent so an incidental colour word in a NON-restyle prompt
+    #     (e.g. "lägg till en blå knapp") never restyles the whole site.
+    theme_directive = None
+    is_restyle = decision.editKind == "visual_style" or any(
+        subtask.editKind == "visual_style" for subtask in decision.subtasks
+    )
+    if is_restyle:
+        from packages.generation.followup.theme_directives import (
+            extract_theme_directive,
+        )
+
+        theme_directive = extract_theme_directive(follow_up_prompt)
+
+    if not plan.patches and theme_directive is None:
+        no_edit_note = (
+            f"Router: messageKind={decision.messageKind} "
+            f"editKind={decision.editKind}; patch-planeraren föreslog inget "
+            "att applicera (ingen byggbar capability-patch)."
+        )
+        if is_restyle:
+            no_edit_note = (
+                "Router klassade en stiländring (visual_style) men ingen känd "
+                "färg/font kunde tolkas ur prompten; ingen ändring."
+            )
         return _result(
             "router_no_edit" if decision.editKind == "none" else "plan_empty",
             applied=False,
-            notes=[
-                f"Router: messageKind={decision.messageKind} "
-                f"editKind={decision.editKind}; patch-planeraren föreslog inget "
-                "att applicera (ingen byggbar capability-patch).",
-                *plan.notes,
-            ],
+            notes=[no_edit_note, *plan.notes],
             messageKind=decision.messageKind,
             editKind=decision.editKind,
         )
@@ -5045,6 +5069,7 @@ def run_followup_chain(
             output_dir=prompt_inputs_dir,
             base_run_id=base_run_id,
             runs_dir=runs_root,
+            theme_directive=theme_directive,
         )
     except PatchApplyError as exc:
         return _result(

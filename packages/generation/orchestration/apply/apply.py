@@ -41,6 +41,7 @@ from __future__ import annotations
 import copy
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ..patch import PatchPlan
 from .mapping import classify_patch
@@ -51,6 +52,9 @@ from .models import (
     UnmappedPatch,
 )
 from .trace import log_patch_apply_to_existing_run
+
+if TYPE_CHECKING:
+    from packages.generation.followup.theme_directives import ThemeDirective
 
 __all__ = ["apply_patch_plan"]
 
@@ -119,6 +123,7 @@ def apply_patch_plan(
     base_run_id: str | None = None,
     runs_dir: Path | None = None,
     trace_run_dir: Path | str | None = None,
+    theme_directive: ThemeDirective | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
 
@@ -127,6 +132,16 @@ def apply_patch_plan(
     rolling latest, identical to today's follow-up "iterate from version N".
     ``follow_up_prompt`` is stored verbatim on the meta sidecar for provenance
     only - it never drives the merge (apply is patch-driven).
+
+    ``theme_directive`` (optional, the restyle/visual_style edit) carries
+    EXPLICIT brand/tone values already extracted from the prompt by the caller
+    (``packages.generation.followup.theme_directives.extract_theme_directive``).
+    It is still patch-driven, not prompt-driven: apply sets only the named
+    ``brand.primaryColorHex``/``brand.accentColorHex``/``tone.primary`` fields
+    from the directive's explicit values; it never re-parses the prompt. When a
+    theme directive is present apply writes the next version even if the patch
+    plan carries no capability patch (a theme-only restyle), so a
+    ``visual_style`` follow-up materialises instead of being a no-op.
 
     ``trace_run_dir`` (optional) is the directory of the **new** version's run,
     if one already exists, to append an append-only apply Engine Event to its
@@ -186,8 +201,18 @@ def apply_patch_plan(
             "en rejected/ogiltig patch appliceras aldrig (kor-7c)."
         )
 
-    # 2. Empty valid plan -> nothing to apply (not an error). No write.
-    if not plan.patches:
+    # A restyle (visual_style) carries an explicit theme directive instead of a
+    # capability patch. It counts as a real change, so a theme-only follow-up
+    # still writes the next version below (the empty-plan no-op only applies when
+    # there is ALSO no theme to materialise).
+    theme_changes = theme_directive is not None and bool(
+        theme_directive.primaryColorHex
+        or theme_directive.accentColorHex
+        or theme_directive.toneVibe
+    )
+
+    # 2. Empty valid plan AND no theme -> nothing to apply (not an error). No write.
+    if not plan.patches and not theme_changes:
         return _trace(
             ApplyResult(
                 applied=False,
@@ -288,6 +313,18 @@ def apply_patch_plan(
     )
     _ensure_required_dossiers(merged, mounted_dossiers)
 
+    # visual_style restyle: set the named brand/tone fields from the directive's
+    # EXPLICIT values (patch-driven; the prompt is never re-parsed here). These
+    # are schema-declared Project Input fields rendered by patch_globals_css, so
+    # the targeted rebuild reflects the new colour/font.
+    theme_applied = False
+    if theme_changes:
+        from packages.generation.followup.theme_directives import (
+            apply_theme_directive,
+        )
+
+        theme_applied = apply_theme_directive(merged, theme_directive)
+
     _validate_against_schema(merged)
 
     # 6. Build the meta sidecar by carrying the prior version's meta forward and
@@ -321,6 +358,7 @@ def apply_patch_plan(
         "source": "kor-7c-artifact-apply",
         "patchCount": len(plan.patches),
         "appliedCapabilities": [entry.model_dump() for entry in capabilities],
+        "themeApplied": theme_applied,
     }
     meta["projectDna"] = _build_project_dna_snapshot(
         merged,
@@ -339,6 +377,15 @@ def apply_patch_plan(
         merged, meta, output_dir=output_dir
     )
 
+    notes = [
+        f"Applicerade {len(capabilities)} capability-patch(ar) som "
+        f"requestedCapabilities i ny version v{next_version}.",
+    ]
+    if theme_applied:
+        notes.append(
+            f"Applicerade restyle (brand/tone) i v{next_version} från "
+            "visual_style-direktivet."
+        )
     result = ApplyResult(
         applied=True,
         siteId=site_id,
@@ -348,10 +395,7 @@ def apply_patch_plan(
         projectInputPath=str(project_input_path),
         metaPath=str(meta_path),
         appliedCapabilities=capabilities,
-        notes=[
-            f"Applicerade {len(capabilities)} capability-patch(ar) som "
-            f"requestedCapabilities i ny version v{next_version}.",
-        ],
+        notes=notes,
     )
 
     # 8. FYND1: trace the applied outcome too (append-only, only for an
