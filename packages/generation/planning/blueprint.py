@@ -522,6 +522,67 @@ def _hero_subheadline(brief: dict[str, Any]) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Gap 3a: keep the company offer/tagline out of the offer service cards
+# ---------------------------------------------------------------------------
+#
+# briefModel occasionally files the hero offer/tagline line (the
+# ``positioning.oneLiner`` headline or the hero subheadline) under
+# ``servicesMentioned``. derive_content_blocks would then turn that line into an
+# offer-list item, so the tagline renders as a bogus service card next to the
+# real services. The guard below drops a servicesMentioned entry whose
+# normalised text is ~equal to a company offer/tagline phrase. It only ever
+# REMOVES an item - it never fabricates copy - so the honesty engine
+# (quality_gate/critic.py, docs/heavy-llm-flow/04 §9) is respected by
+# construction, and it is a no-op for a brief that carries no tagline.
+
+
+def _norm_phrase(value: Any) -> str:
+    """Normalised key for matching free-text phrases (~equality).
+
+    Lowercases, collapses internal whitespace and strips surrounding quotes plus
+    trailing sentence punctuation so a tagline that differs from a
+    ``servicesMentioned`` entry only by case, spacing or a trailing period still
+    compares equal. Returns "" for non-strings / empty input.
+    """
+    if not isinstance(value, str):
+        return ""
+    text = " ".join(value.split()).strip().casefold()
+    return text.strip(" \t\"'“”«».,!?:;–—-")
+
+
+def _offer_tagline_phrases(brief: dict[str, Any]) -> set[str]:
+    """Normalised company offer/tagline phrases an offer card must never echo.
+
+    Collects the hero one-liner (``positioning.oneLiner``) and the hero
+    subheadline (the offer tagline). Deliberately excludes the ``_hero_headline``
+    company-name fallback so a real service that happens to match a company name
+    is never dropped.
+    """
+    phrases: set[str] = set()
+    one_liner = _str(_obj(brief, "positioning").get("oneLiner"))
+    for candidate in (one_liner, _hero_subheadline(brief)):
+        key = _norm_phrase(candidate)
+        if key:
+            phrases.add(key)
+    return phrases
+
+
+def _drop_offer_tagline_services(services: list[str], brief: dict[str, Any]) -> list[str]:
+    """Drop ``servicesMentioned`` entries that are ~equal to the offer/tagline.
+
+    Honesty-preserving: only removes a service whose normalised text equals a
+    company offer/tagline phrase (hero one-liner / subheadline). Real services
+    are kept unchanged and nothing is fabricated. A no-op when the brief carries
+    no offer/tagline phrase (e.g. a legacy brief without positioning), so that
+    path stays byte-identical.
+    """
+    tagline_phrases = _offer_tagline_phrases(brief)
+    if not tagline_phrases:
+        return services
+    return [service for service in services if _norm_phrase(service) not in tagline_phrases]
+
+
+# ---------------------------------------------------------------------------
 # Deterministic blueprint derivation
 # ---------------------------------------------------------------------------
 
@@ -665,7 +726,14 @@ def derive_faq(brief: dict[str, Any]) -> list[dict[str, str]]:
         return []
     pairs: list[dict[str, str]] = []
 
-    services = _list_str(brief.get("servicesMentioned"))
+    # Gap 3a: same offer/tagline-as-service leak the offer cards guard against -
+    # if briefModel filed the hero tagline under servicesMentioned, the "Vad kan
+    # ni hjälpa till med?" answer would read "Vi hjälper dig bland annat med
+    # <hero-taglinen>". Drop it via the same helper so the FAQ lists real
+    # services only. No-op for a brief without an offer/tagline phrase.
+    services = _drop_offer_tagline_services(
+        _list_str(brief.get("servicesMentioned")), brief
+    )
     if services:
         pairs.append(
             {
@@ -742,7 +810,9 @@ def derive_content_blocks(
         blocks["home.hero"] = hero
 
     offer = _offer_section(scaffold, route_plan)
-    services = _list_str(brief.get("servicesMentioned"))
+    services = _drop_offer_tagline_services(
+        _list_str(brief.get("servicesMentioned")), brief
+    )
     if offer is not None and services:
         industry = _detect_industry(brief) if _enrichment_enabled(brief) else None
         items = [_offer_item(service, industry) for service in services]
