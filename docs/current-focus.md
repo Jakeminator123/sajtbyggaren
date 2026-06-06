@@ -392,10 +392,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `029a18c` (2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ)).
-Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
-from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
-offer/tagline service guard (+FAQ).
+Last verified state: `496d605` (2026-06-06 UTC, steward-auto efter PR #208 — sync(jakob-be->main): #207 openclaw restyle apply).
+Nya PRs sedan föregående checkpoint: PR #207 — feat(openclaw): materialise visual_style
+restyle through the apply chain; PR #208 — sync(jakob-be->main): #207 openclaw restyle
+apply.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -677,3 +677,10 @@ Last verified state: `eff73cb` (2026-06-05 UTC, steward-auto efter PR #205 — s
 Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
 rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
 site-mutation-layers rule.
+
+### 2026-06-06 UTC — current-focus.md före `029a18c`
+
+Last verified state: `029a18c` (2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ)).
+Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
+from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
+offer/tagline service guard (+FAQ).

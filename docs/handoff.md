@@ -1,10 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ). Verifierad `main` är `029a18c`.
+**Datum:** 2026-06-06 UTC, steward-auto efter PR #208 — sync(jakob-be->main): #207 openclaw restyle apply. Verifierad `main` är `496d605`.
 
-Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
-from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
-offer/tagline service guard (+FAQ).
+Nya PRs sedan föregående checkpoint: PR #207 — feat(openclaw): materialise visual_style
+restyle through the apply chain; PR #208 — sync(jakob-be->main): #207 openclaw restyle
+apply.
 
 ## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
 
@@ -1737,6 +1737,15 @@ visual_style theme + farm naming.
 Nya PRs sedan föregående checkpoint: PR #204 — docs(governance): site-mutation-layers
 rule + theme_directives reconciliation; PR #205 — sync(jakob-be->main): #204
 site-mutation-layers rule.
+
+
+### 2026-06-06 UTC — handoff.md före `029a18c`
+
+**Datum:** 2026-06-06 UTC, steward-auto efter PR #206 — sync(jakob-be->main): #200 gap 3a offer/tagline service guard (+FAQ). Verifierad `main` är `029a18c`.
+
+Nya PRs sedan föregående checkpoint: PR #200 — feat(planning): drop offer/tagline phrase
+from offer service cards (gap 3a); PR #206 — sync(jakob-be->main): #200 gap 3a
+offer/tagline service guard (+FAQ).
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
