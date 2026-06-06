@@ -5,14 +5,17 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-> **Nästa fas (uppdaterad 2026-06-05):** hela `docs/heavy-llm-flow/`-kör-sekvensen är
-> implementerad OCH **Fas 0-härdningen (router/OpenClaw-sömmarna) + #187 npm-check är klara**
-> (`jakob-be` @ `d149f23`). **Bygg inga nya kör-kort.** Nästa arbete enligt
-> [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md): **Fas 1** —
-> wira `routerDecision`/follow-up-kedjan i `/api/prompt` (låser #177, Christopher-lane) +
-> rerender-wiring (kor-5); sedan **Fas 2** baseline-eval (operatörsnärvaro: kostar tokens +
-> kräver ögon på renderingen). `referens/` borttagen (#191), `MIN_IDE/` raderad,
-> `backup_100_BRA` pushad som återställningspunkt.
+> **Nästa fas (uppdaterad 2026-06-06):** `main = 496d605`. Hela
+> `docs/heavy-llm-flow/`-kör-sekvensen är byggd; vi är i **Fas 1 (inkoppling)** av
+> [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md).
+> **Bygg inga nya kör-kort.** Denna session landade en restyle hela vägen genom
+> OpenClaw-apply (PR #207, CLI-bevisat: `"ändra färgen till rosa"` → v3
+> `brand.primaryColorHex=#db2777`). **Största kvarvarande hävstången:** Christopher
+> wirar `openclaw-runner --apply` + `/api/prompt`-routing + FloatingChat (hans lane)
+> så heavy-flow syns i UI:t — backend-kontraktet är klart. Sedan: router-igenkänning
+> för fler restyle-fraser, bredda apply (section/layout), trust-blockerare #1/#2,
+> **Fas 2** baseline-eval. Full överlämning överst i
+> [`docs/handoff.md`](handoff.md).
 
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
@@ -392,9 +395,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `dfffb65` (2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half)).
-Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
-(skiva 1b action half).
+Last verified state: `496d605` (2026-06-06 UTC, `main` efter jakob-be→main-sync av PR #207).
+Nya PRs sedan föregående checkpoint (alla mergade till `main`): #198 (windows-safe-rebuild),
+#199 (skiva 1b UI-halva), #200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style
+tema-följdprompt + farm-naming), #204 (governance-regel site-mutation-layers), #207
+(visual_style restyle genom apply-kedjan).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 

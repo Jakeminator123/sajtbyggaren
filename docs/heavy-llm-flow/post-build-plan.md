@@ -86,6 +86,20 @@ moduler, `governance_validate` om policies/schemas rörs.
 
 ### Fas 1 — Gör heavy-flow verklig för användaren
 
+> **Status 2026-06-06 (`main = 496d605`):** Delvis inne.
+> - `routerDecision` är wirad i `/api/prompt` (#192) och OpenClaw-beslut visas
+>   ärligt i FloatingChat (#199, **read-only** — `/api/prompt` rutar INTE
+>   följdprompter genom `--apply` än).
+> - OpenClaw action-bridge finns (`run_openclaw_followup.py --apply`, #196) och en
+>   **visual_style-restyle materialiseras nu hela vägen genom apply-kedjan** (#207,
+>   CLI-bevisat: `"ändra färgen till rosa"` → ny version med `brand.primaryColorHex`).
+> - **Kvar i Fas 1 (största hävstången):** Christopher (apps/viewser-lane) wirar
+>   `openclaw-runner --apply` + `/api/prompt`-routing + FloatingChat så heavy-flow
+>   syns i UI:t. Backend-kontraktet `{decision, bridge}` är klart.
+> - rerender-wiring (kor-5) landade i #195 (skiva 1c); kvar: buggranskningens
+>   trust-blockerare #1 (stale preview efter repair) + #2 (patchad
+>   `generation-package` sparas ej). Se `docs/handoff.md` (överst).
+
 1. **Wira `routerDecision` + follow-up-kedjan i `/api/prompt`** så Viewser-UI:t får
    heavy-flow-vinsten. `/api/prompt` returnerar `routerDecision`; FloatingChat visar
    ärligt vad som hände (#177 slutar vara no-op). `shouldStartPreview` förblir

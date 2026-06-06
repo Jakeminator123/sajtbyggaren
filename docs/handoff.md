@@ -1,11 +1,101 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-05 UTC, steward-auto efter PR #196 — feat(openclaw): action-bridge --apply (skiva 1b action half). Verifierad `main` är `dfffb65`.
+**Datum:** 2026-06-06 UTC. Verifierad `main` är `496d605`.
 
-Nya PRs sedan föregående checkpoint: PR #196 — feat(openclaw): action-bridge --apply
-(skiva 1b action half).
+Nya PRs sedan föregående checkpoint (alla mergade till `main` via jakob-be→main-sync):
+PR #198 (windows-safe-rebuild), #199 (skiva 1b UI-halva: OpenClaw-beslut i FloatingChat),
+#200 (gap 3a offer/tagline-guard + FAQ), #202 (visual_style tema-följdprompt + farm-naming),
+#204 (governance-regel `site-mutation-layers`), #207 (visual_style restyle genom apply-kedjan).
 
-## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge (TA ÖVER HÄR)
+## Orchestrator-handoff 2026-06-06 — restyle-genom-apply + branch/docs-städning (TA ÖVER HÄR)
+
+> Skriven som överlämning till nästa orchestrator. Läs först: detta block,
+> `docs/heavy-llm-flow/post-build-plan.md` (fas-planen), `docs/current-focus.md`,
+> `AGENTS.md`, och `governance/rules/site-mutation-layers.md` (ny: var man ändrar
+> en användarsajt + repo-författande vs runtime-mutation + OpenClaw fri-tillgång).
+
+### TL;DR — var vi står
+`main = 496d605`. `jakob-be = main` (+ denna handoff-commit). Hela
+`docs/heavy-llm-flow/`-kör-sekvensen är byggd; vi är i **Fas 1 (inkoppling)** av
+`post-build-plan.md`. Det stora kvarvarande gapet är fortfarande **koppling
+frontend ↔ heavy-flow**, inte mer backend-motor.
+
+**Bevisat i kärnloopen denna session (CLI + live):** init-prompt → genererad sajt;
+följdprompt `"ändra färgen till rosa"` → OpenClaw action-bridge (`run_openclaw_followup.py
+--apply`) kör KÖR-7-kedjan → ny version v3 med `brand.primaryColorHex=#db2777` →
+renderad `globals.css --primary:#db2777`. Dvs en **restyle materialiseras nu hela
+vägen genom OpenClaw-apply** (PR #207). Det är första capability-bredd-steget mot
+"OpenClaw som dirigent".
+
+### Landat denna session (på `main`)
+- **#198** windows-safe-rebuild (flat-layout-cleanup + POSIX tree-kill, B157 nivå 4).
+- **#199** skiva 1b UI-halva: `apps/viewser/lib/openclaw-runner.ts` (read-only) +
+  FloatingChat visar OpenClaw-beslut ärligt. **OBS: read-only — `/api/prompt` rutar
+  INTE följdprompter genom `--apply` än** (Christophers lane, se nedan).
+- **#200** gap 3a: offer/tagline-fras filed som tjänst droppas från offer-kort **och**
+  FAQ (likhet, inte substring; honesty-bevarande).
+- **#202** visual_style tema-följdprompt (färg/font → `brand`/`tone`, per-sajt-override)
+  + farm-slug-naming ("Gård i Småland" istf "Företag som arbetar med farm").
+- **#204** ny governance-regel `site-mutation-layers.md` (svar på operatörs-feedback:
+  delad mall vs per-sajt-lager + repo-författande vs runtime-mutation + OpenClaw
+  fri-tillgång till användarsajter via sanktionerade ytor).
+- **#207** visual_style restyle genom apply-kedjan: `apply_patch_plan` fick valfri
+  `theme_directive` (sätter `brand`/`tone` explicit, patch-driven); `run_followup_chain`
+  extraherar temat för en router-`visual_style`-edit och rutar genom apply + targeted
+  render. Grindat på router-intent (ingen falsk restyle på "lägg till en blå knapp").
+
+### NÄR funkar det tunga LLM-flödet fullt i frontend? (operatörens kärnfråga)
+Backend kan nu conduct:a en restyle + capability-add via OpenClaw-apply. Det
+**tänds i UI:t** när **Christopher (hans lane, `apps/viewser/**`)**:
+1. lägger `runOpenClawFollowupApply` i `openclaw-runner.ts` (anropar
+   `run_openclaw_followup.py --apply --site-id <id> [--base-run-id <id>] -- "<prompt>"`),
+2. rutar `/api/prompt` följdprompter (edit_instruction) genom bryggan i stället för
+   alltid `runBuild`,
+3. visar `bridge.applied`/`previewShouldRefresh` ärligt och refreshar preview bara
+   när `previewShouldRefresh=true`.
+Backend-kontraktet (`{decision, bridge:{status,applied,previewShouldRefresh,chain}}`)
+är klart och CLI-verifierat. Detta är **största återstående hävstången** för
+"loveable-känslan" och kräver ingen ny backend.
+
+### Öppna trådar / rekommenderad ordning (plocka upp här)
+1. **Router-igenkänning (jakob-be, liten men regressionskänslig):** routern klassar
+   `"byt/ändra färgen/typsnittet till X"` som `visual_style` (funkar med #207), men
+   **inte** bara `"gör färgen rosa"` ("gör" är inget ändra-verb → `unclear`). Bredda
+   `is_visual_style` i `packages/generation/orchestration/router/classify.py` försiktigt
+   (många fix1–7-tester). Egen slice, inte blandad med annat.
+2. **Christopher UI-wiring (hans lane):** punkterna ovan — gör restyle/apply synligt.
+3. **Bredda apply (jakob-be):** `section_add`/`layout_change` genom samma mönster som
+   #207 (`run_followup_chain` + `apply_patch_plan`). Nästa capability-slice.
+4. **Buggranskningens trust-blockerare (jakob-be):** #1 kor-5 rerender efter `npm build`
+   → preview visar pre-repair `.next` (stale); #2 patchad `generation-package.json`
+   sparas aldrig → nästa följdprompt kan regrediera. Gör den wirade vägen trovärdig.
+5. **Fas 2 baseline-eval** (operatörsnärvaro, kostar tokens) — avgör copy/trust vs visuellt.
+
+### Städning gjord denna session
+- **Branches raderade (bevisat mergade, local+remote):** `feat/followup-visual-style-theme`
+  (#202), `chore/site-mutation-layers-rule` (#204), `feat/openclaw-restyle-apply` (#207),
+  `cursor/offer-tagline-tj-nstekort-16b2` (#200), `cursor/windows-rebuild-cleanup-e0c2` (#198).
+- **Worktrees:** inga stray (bara repo-roten).
+- **`OC-kanske-bra.txt`** raderad (operatörsbeslut; extern openclaw-produkt, orelaterad).
+
+### Kräver operatörsbeslut / -åtgärd (INTE gjort)
+- **`.cursorignore`-fix (write-gate nekade agentens edit):** avkommentera de tunga
+  artefakt-raderna så Cursor slutar indexera per-run-churn. Sätt (lämna
+  `#data/prompt-inputs/` kvar = fortsatt indexerad, liten canonical JSON):
+  `data/runs/`, `data/versions/`, `data/embedding-index/`, `.generated/`.
+  (`.env`-blocket lämnas avkommenterat med flit per operator-granten.) Efteråt läses
+  run-artefakter via `scripts/verify_run.py`, inte via index/Read.
+- **Pre-existing brancher (ej mina; behåll tills du bekräftat):** `cursor/gap-3a-offer-service-guard`
+  (ingen PR — gammal gap-3a-skiss, superseded av #200), `cursor/cloud-env-setup-26ca`,
+  `cursor/dev-env-setup-ab58`, `cursor/preview-runtime-adapters`, `cursor/dossier-intake-v11-review-895d`,
+  `feat/kor-5-repair-pass`, `feat/viewser-router-decision-readiness`, `feat/viewser-ui-overhaul`,
+  `fix/kor-3a-planning-build-boundary`, `fix/kor-7-stab`. Verifiera diff-mot-main = tom innan radering.
+- **Christopher:** `git fetch && git reset --hard origin/main` (mycket landat sedan sist).
+  Lämna `christopher-ui` parkerad.
+- **Aldrig-rör:** `backup-*`, `christopher`, `christopher-ui`, `jakob-be`, `main`,
+  `feat/live-preview` (#156 parkerad), `cursor/env-setup-a7c6` (#197 draft), `hosted-sandbox-mvp`.
+
+## Orchestrator-handoff 2026-06-05 KVÄLL #2 — copy-honesty-batch + OpenClaw action-bridge
 
 > Skriven som överlämning till nästa orchestrator. Läs först: detta block,
 > `docs/current-focus.md`, `docs/open_claw.txt` (coachens OpenClaw-vägledning,
