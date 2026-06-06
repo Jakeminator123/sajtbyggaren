@@ -5,16 +5,20 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-> **Nästa fas (uppdaterad 2026-06-06):** `main = 496d605`. Hela
+> **Nästa fas (uppdaterad 2026-06-06):** `main = 629a2d5`. Hela
 > `docs/heavy-llm-flow/`-kör-sekvensen är byggd; vi är i **Fas 1 (inkoppling)** av
 > [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md).
-> **Bygg inga nya kör-kort.** Denna session landade en restyle hela vägen genom
-> OpenClaw-apply (PR #207, CLI-bevisat: `"ändra färgen till rosa"` → v3
-> `brand.primaryColorHex=#db2777`). **Största kvarvarande hävstången:** Christopher
-> wirar `openclaw-runner --apply` + `/api/prompt`-routing + FloatingChat (hans lane)
-> så heavy-flow syns i UI:t — backend-kontraktet är klart. Sedan: router-igenkänning
-> för fler restyle-fraser, bredda apply (section/layout), trust-blockerare #1/#2,
-> **Fas 2** baseline-eval. Full överlämning överst i
+> **Bygg inga nya kör-kort.** Restyle materialiseras nu hela vägen genom OpenClaw-apply
+> (PR #207, CLI) **OCH syns i UI:t** (PR #210: `/api/prompt` rutar följdprompter genom
+> `runOpenClawFollowupApply` → `bridge.applied` → ny run + preview-refresh via befintliga
+> `onBuildDone`; copy-edits kvar på den oförändrade legacy-vägen, ingen dubbel-build).
+> **Största hävstången (UI-wiring) är därmed landad** — sluta peka nästa agent dit.
+> **Kvar (prioordning):** (1) router-igenkänning för fler restyle-fraser
+> (`"gör färgen rosa"` → `unclear` idag; jakob-be, liten/regressionskänslig),
+> (2) bredda apply till section/layout (jakob-be), (3) trust-blockerare #1/#2,
+> (4) **Fas 2** baseline-eval. **Manuellt E2E kvar:** `"ändra färgen till rosa"` → ny
+> version → preview ändras (ingen byggd sajt fanns i wiring-sessionens träd; wiringen
+> är låst av source-locks + CLI-bevisad i #207). Full överlämning överst i
 > [`docs/handoff.md`](handoff.md).
 
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
