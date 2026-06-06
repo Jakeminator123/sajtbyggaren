@@ -668,6 +668,12 @@ COMMON_WORDS = {
     # allowlistade nedan. Dessa är viewser-lokala UI-symboler, inte nya domain
     # terms — samma logik som RouterDecisionPayload/RouterDecisionView ovan.
     "OpenClawDecisionPayload", "OpenClawFollowupOptions", "OpenClawDecisionView",
+    # Skiva 1b action-bridge (apply): runOpenClawFollowupApply-seamens result-/
+    # option-/bridge-typer + FloatingChat bridge-vyn. Samma viewser-lokala
+    # UI-symbol-logik; den canonical OpenClaw-besluts-/bridge-shapen bor i
+    # packages/-modellen + scripts/run_openclaw_followup.py.
+    "OpenClawApplyResult", "OpenClawApplyOptions", "OpenClawBridge",
+    "OpenClawBridgeView",
     # GAP-viewser-side-by-side-preview — interna TS-symboler i
     # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
     # Lokala UI-komponentnamn och prop-typer, inte domain terms.

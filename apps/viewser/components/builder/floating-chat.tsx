@@ -395,6 +395,14 @@ type PromptApiResponse = {
   // ensam). Utelämnat på init → ``extractOpenClawDecision`` returnerar null →
   // oförändrat beteende. Renderas aldrig rått (bara kända enum-/textfält).
   openClawDecision?: Record<string, unknown>;
+  // Skiva 1b (action bridge): the honest OpenClaw apply outcome, speglar
+  // ``bridge``-objektet från ``run_openclaw_followup.py --apply``
+  // ({status, applied, previewShouldRefresh, chain}). /api/prompt skickar det
+  // BARA på follow-ups (null på init). När ``applied=true`` materialiserade
+  // OpenClaw-kedjan en ny version (t.ex. en restyle) → ``runId`` pekar redan på
+  // den och ``summarizeOpenClawBridge`` ger en ärlig success-rad. När
+  // ``applied=false`` ignoreras bryggan (den vanliga/legacy-summeringen står).
+  bridge?: Record<string, unknown>;
   error?: string;
 };
 
@@ -930,6 +938,68 @@ function summarizeOpenClawDecision(
   };
 }
 
+// Skiva 1b (action bridge): OpenClaw-apply-utfallet. När /api/prompt rutade
+// follow-upen genom ``run_openclaw_followup.py --apply`` och KÖR-7-kedjan
+// MATERIALISERADE en ny version (restyle/capability) bär ``bridge``
+// { applied, previewShouldRefresh, chain:{ editKind, version, previousVersion } }.
+// Avläses defensivt (samma fält-drift-säkra mönster som extractOpenClawDecision).
+type OpenClawBridgeView = {
+  applied: boolean;
+  previewShouldRefresh: boolean;
+  editKind: string | null;
+  version: number | null;
+  previousVersion: number | null;
+};
+
+function extractOpenClawBridge(
+  payload: PromptApiResponse,
+): OpenClawBridgeView | null {
+  const raw = payload.bridge;
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const chainRaw = obj.chain;
+  const chain =
+    chainRaw && typeof chainRaw === "object"
+      ? (chainRaw as Record<string, unknown>)
+      : {};
+  return {
+    applied: obj.applied === true,
+    previewShouldRefresh: obj.previewShouldRefresh === true,
+    editKind: typeof chain.editKind === "string" ? chain.editKind : null,
+    version: typeof chain.version === "number" ? chain.version : null,
+    previousVersion:
+      typeof chain.previousVersion === "number" ? chain.previousVersion : null,
+  };
+}
+
+// Ärlig success-rad när OpenClaw-apply FAKTISKT landade en ny version (kedjan
+// är auktoritativ). Returnerar null när inget applicerades (applied=false) så
+// summarizeBuildResult faller tillbaka på den vanliga bygg-/no-op-/decision-
+// summeringen — vi lovar aldrig en ändring som bryggan inte materialiserade.
+// Renderas alltid som textnod ({message.content}) → React escapar payloaden.
+function summarizeOpenClawBridge(
+  view: OpenClawBridgeView,
+): { content: string; variant: ChatMessage["variant"] } | null {
+  if (!view.applied) return null;
+  const versionText =
+    typeof view.version === "number"
+      ? view.previousVersion != null && view.version >= 2
+        ? ` Sajten gick från v${view.previousVersion} → v${view.version}.`
+        : ` Ny version: v${view.version}.`
+      : "";
+  const lead =
+    view.editKind === "visual_style"
+      ? "Jag uppdaterade sajtens utseende (färg/typsnitt)"
+      : "Jag genomförde ändringen";
+  const tail = view.previewShouldRefresh
+    ? " Previewen visar den nu."
+    : " (Previewen kunde inte uppdateras automatiskt — ladda om för att se den.)";
+  return {
+    content: `${lead}.${versionText}${tail}`,
+    variant: "success",
+  };
+}
+
 // A3 (B155 honest-level-1): backend listar i ``build-result.json`` de
 // följd-asks den deterministiska v1-pipelinen KÄNDE IGEN men inte kunde
 // applicera, som ``{target, reason}``. Komplement till den globala
@@ -982,6 +1052,21 @@ function summarizeBuildResult(
   // "kan bara ändra texter, layout stöds ej än" är ärligare än en generisk
   // fråga) — exakt samma deferToBuildTruth-nyans som routerDecision. För
   // patch_plan_request vinner OpenClaw (dess targetSummary är mer specifik).
+  // Skiva 1b (action bridge): if the OpenClaw apply chain MATERIALISED a change
+  // (bridge.applied=true), show an honest restyle/capability success line. This
+  // wins over the decision/router lines because a change DID land — the run +
+  // preview already point to the new version. Only on a successful build;
+  // failed/degraded fall through to the authoritative branch below.
+  const bridgeView = extractOpenClawBridge(payload);
+  if (bridgeView && bridgeView.applied && outcome === "ok") {
+    const bridgeLine = summarizeOpenClawBridge(bridgeView);
+    if (bridgeLine) {
+      const exactChanges = summarizeChangeSet(payload.changeSet);
+      return exactChanges.length > 0
+        ? { ...bridgeLine, changes: exactChanges, changesExact: true }
+        : bridgeLine;
+    }
+  }
   const openClawView = extractOpenClawDecision(payload);
   if (openClawView && outcome === "ok") {
     const buildReportedNoOp =

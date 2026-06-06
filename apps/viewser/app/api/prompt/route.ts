@@ -7,11 +7,11 @@ import {
   isHostedVercelRuntime,
 } from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
-import { runOpenClawFollowup } from "@/lib/openclaw-runner";
+import { runOpenClawFollowupApply } from "@/lib/openclaw-runner";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
 import { classifyMessage } from "@/lib/router-classify-runner";
 import { readRunChangeSet } from "@/lib/run-change-set";
-import { readAppliedCopyDirectives } from "@/lib/runs";
+import { readAppliedCopyDirectives, readBuildResult } from "@/lib/runs";
 
 // Operator-prototype: keep the prompt small enough that an accidental
 // 50 MB paste cannot wedge the build pipeline. The cap is generous for
@@ -166,36 +166,92 @@ async function runPromptBuildOnce(
   payload: z.infer<typeof PromptPayloadSchema>,
   options?: { onPhase1Done?: () => void },
 ) {
-  // KÖR-6a (Fas 1, skiva 1a): classify the incoming message with the
-  // DETERMINISTIC router so the operator UI can honestly show what the router
-  // thought ("fråga", "plan", "ändring"). This is READ-ONLY metadata: it runs
-  // concurrently with the build, never gates it, and never starts a preview.
-  // shouldStartPreview / the build path stay EXACTLY as before. Failures
-  // degrade to null (no routerDecision on the wire) so the build flow can never
-  // break. Wiring the full follow-up chain (router -> context -> patch -> apply)
-  // is a separate slice (1b); here we only expose the decision.
-  const routerDecisionPromise = classifyMessage(payload.prompt, {
-    siteId: payload.siteId,
-  }).catch(() => null);
-
-  // Skiva 1b (UI half): on FOLLOW-UPS, ask OpenClaw Core V0 for an HONEST
-  // read-only decision (answer_only / clarification / plan_only /
-  // patch_plan_request). Same contract guarantees as classifyMessage above:
-  // deterministic, no LLM, no disk write, no build/preview, runs concurrently
-  // with the build, degrades to null on any failure. The OpenClaw opinion is a
-  // richer superset of routerDecision (it carries a concrete answer/plan/
-  // question), so FloatingChat prefers it when present. We skip it on init
-  // builds — there is no "follow-up message" to reason about — so init flow is
-  // byte-for-byte unchanged. The action bridge that would actually APPLY a
-  // patch_plan_request is Jakob's next backend slice; until then V0 reports
-  // status=action_bridge_missing and the UI says so honestly.
-  const openClawDecisionPromise =
-    payload.mode === "followup"
-      ? runOpenClawFollowup(payload.prompt, {
+  // Skiva 1b (action bridge): on FOLLOW-UPS, first try the OpenClaw apply
+  // bridge. It runs the deterministic OpenClaw decision and — ONLY for an
+  // edit_instruction (action=patch_plan_request) — the KÖR-7 chain
+  // (router -> context -> patch -> apply -> targeted render). The chain stops
+  // at an honest gate BEFORE any build for read-only kinds (answer/
+  // clarification/plan_only) and for unmapped/no-op edits, so this NEVER
+  // double-builds: when the bridge applied a visible change we re-surface its
+  // run and skip the legacy build; otherwise we fall through to the unchanged
+  // legacy copy/edit build path below. Init builds skip the bridge entirely so
+  // init flow is byte-for-byte unchanged. Degrades to null on any failure.
+  const applyResult =
+    payload.mode === "followup" && payload.siteId
+      ? await runOpenClawFollowupApply(payload.prompt, {
           siteId: payload.siteId,
           baseRunId: payload.baseRunId,
         }).catch(() => null)
-      : Promise.resolve(null);
+      : null;
+
+  if (applyResult && applyResult.bridge.applied) {
+    const chain = applyResult.bridge.chain ?? {};
+    const chainRunId = typeof chain.runId === "string" ? chain.runId : null;
+    if (chainRunId) {
+      // The OpenClaw chain materialised a new immutable version (e.g. a restyle
+      // or capability add) and swapped current.json on ok/degraded. Re-surface
+      // its run as the authoritative build so the EXISTING client flow (pick
+      // runId -> refresh preview via onBuildDone) works unchanged — no legacy
+      // build runs (the chain already built the targeted version).
+      let bridgeBuildResult: Record<string, unknown> = {};
+      try {
+        bridgeBuildResult = await readBuildResult(chainRunId);
+      } catch {
+        bridgeBuildResult = {};
+      }
+      let bridgeCopyDirectives: Awaited<
+        ReturnType<typeof readAppliedCopyDirectives>
+      > = [];
+      try {
+        bridgeCopyDirectives = await readAppliedCopyDirectives(chainRunId);
+      } catch {
+        bridgeCopyDirectives = [];
+      }
+      let bridgeChangeSet: Awaited<ReturnType<typeof readRunChangeSet>> = null;
+      try {
+        bridgeChangeSet = await readRunChangeSet(
+          chainRunId,
+          payload.baseRunId ? { baseRunId: payload.baseRunId } : {},
+        );
+      } catch {
+        bridgeChangeSet = null;
+      }
+      const chainBuildStatus =
+        typeof chain.buildStatus === "string" ? chain.buildStatus : null;
+      const chainVersion =
+        typeof chain.version === "number" ? chain.version : null;
+      return {
+        runId: chainRunId,
+        siteId: payload.siteId,
+        projectId: null,
+        version: chainVersion,
+        briefSource: null,
+        buildStatus: extractBuildStatus(bridgeBuildResult) ?? chainBuildStatus,
+        buildResult: bridgeBuildResult,
+        appliedCopyDirectives: bridgeCopyDirectives,
+        changeSet: bridgeChangeSet,
+        // A change DID apply, so we never show the "action bridge saknas" /
+        // router no-build lines over it; the build summary + bridge line stand.
+        routerDecision: null,
+        openClawDecision: null,
+        // Skiva 1b: the honest action-bridge outcome (applied /
+        // previewShouldRefresh + chain) so FloatingChat shows a restyle /
+        // capability success line and refreshes the preview.
+        bridge: applyResult.bridge,
+      };
+    }
+  }
+
+  // KÖR-6a (skiva 1a): classify the incoming message with the DETERMINISTIC
+  // router so the operator UI can honestly reframe a non-build outcome
+  // (question/plan/unclear) on the legacy/fallback path. READ-ONLY metadata: it
+  // runs concurrently with the build, never gates it, and never starts a
+  // preview. Failures degrade to null. (The OpenClaw decision below comes from
+  // the apply bridge above, which already classified the message — no second
+  // spawn; on init or bridge failure it is simply null.)
+  const routerDecisionPromise = classifyMessage(payload.prompt, {
+    siteId: payload.siteId,
+  }).catch(() => null);
 
   // Phase 1: prompt -> Project Input on disk (data/prompt-inputs/<siteId>.*).
   const helper = await runPromptToProjectInput(payload.prompt, {
@@ -265,14 +321,15 @@ async function runPromptBuildOnce(
     ? null
     : routerDecisionRaw;
 
-  // Same honesty gate for the OpenClaw decision: V0 returns
-  // patch_plan_request/action_bridge_missing for an edit instruction, but the
-  // (unchanged) deterministic copyDirective path may have ALREADY applied that
-  // edit (e.g. "byt rubriken till X"). Rendering "action bridge saknas" over a
-  // change that DID land would be dishonest, so when the legacy path applied a
-  // visible change we drop the decision and the authoritative build summary
-  // stands alone. Init builds carry null already (promise resolved to null).
-  const openClawDecisionRaw = await openClawDecisionPromise;
+  // Same honesty gate for the OpenClaw decision. The decision comes from the
+  // apply bridge above, which classified the message even on the fallback path
+  // (read-only kind / unmapped edit / bridge failure -> null). V0 returns
+  // patch_plan_request for an edit instruction, but the (unchanged) deterministic
+  // copyDirective path may have ALREADY applied that edit (e.g. "byt rubriken
+  // till X"). Rendering "action bridge saknas" over a change that DID land would
+  // be dishonest, so when the legacy path applied a visible change we drop the
+  // decision and the authoritative build summary stands alone.
+  const openClawDecisionRaw = applyResult?.decision ?? null;
   const openClawDecision = legacyPathAppliedVisibleChange
     ? null
     : openClawDecisionRaw;
@@ -300,6 +357,9 @@ async function runPromptBuildOnce(
     // builds and on follow-ups where the legacy path applied a visible change.
     // Richer superset of routerDecision; never controls build/preview.
     openClawDecision,
+    // Skiva 1b: the action-bridge outcome (applied=false on this fallback path)
+    // for transparency; null on init. FloatingChat ignores a non-applied bridge.
+    bridge: applyResult?.bridge ?? null,
   };
 }
 

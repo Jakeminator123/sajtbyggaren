@@ -2330,48 +2330,158 @@ def test_openclaw_runner_spawns_followup_seam() -> None:
 
 
 @pytest.mark.tooling
-def test_prompt_route_exposes_openclaw_decision() -> None:
-    """Skiva 1b: ``/api/prompt`` måste konsumera seamen och exponera
-    ``openClawDecision`` på samma ärlighetsgrind som ``routerDecision`` —
-    bara på follow-ups, och aldrig över en ändring den gamla vägen faktiskt
-    applicerade.
+def test_openclaw_runner_apply_bridge_seam() -> None:
+    """Skiva 1b (action half): ``lib/openclaw-runner.ts`` måste exponera
+    ``runOpenClawFollowupApply`` som shellar ``run_openclaw_followup.py --apply``
+    och returnerar ``{decision, bridge}`` — och ALDRIG krascha /api/prompt.
 
     Locks:
-      1. Routen importerar + anropar runOpenClawFollowup.
+      1. Exporterar ``runOpenClawFollowupApply`` + apply-result-/bridge-typerna.
+      2. Skickar ``--apply`` + ``--site-id`` (apply kräver en konkret sajt).
+      3. Tree-killar subprocessen vid timeout (--apply spawnar npm/next-barn —
+         ett plain child.kill() vore en process-/fil-lås-läcka, B157-klassen).
+      4. Parsar ut ``decision`` + ``bridge`` och degraderar till ``null`` vid fel.
+    """
+    text = (VIEWSER_DIR / "lib" / "openclaw-runner.ts").read_text(encoding="utf-8")
+
+    assert "export async function runOpenClawFollowupApply" in text, (
+        "openclaw-runner.ts måste exportera runOpenClawFollowupApply (action-"
+        "bryggan som /api/prompt rutar follow-ups genom)."
+    )
+    assert (
+        "export type OpenClawApplyResult" in text
+        and "export type OpenClawBridge" in text
+    ), (
+        "Exportera apply-result/bridge-typerna ({decision, bridge:{status, "
+        "applied, previewShouldRefresh, chain}})."
+    )
+    assert '"--apply"' in text and '"--site-id"' in text, (
+        "Apply-bryggan måste skicka --apply + --site-id (kräver en konkret sajt)."
+    )
+    # Tree-kill istället för plain child.kill() i apply-vägen (npm/next-barn).
+    assert "killProcessTree(child" in text, (
+        "Apply-vägen måste tree-killa subprocess-trädet vid timeout (npm/next "
+        "spawnas som barn — child.kill() lämnar dem som läckande processer)."
+    )
+    apply_start = text.index("export async function runOpenClawFollowupApply")
+    apply_body = text[apply_start:]
+    assert "obj.decision" in apply_body and "coerceBridge(" in apply_body, (
+        "Runnern måste parsa ut både decision och bridge ur scriptets stdout."
+    )
+    assert "return null;" in apply_body, (
+        "Alla felvägar i apply-runnern måste degradera till null (aldrig 500:a "
+        "bygg-routen)."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_exposes_openclaw_decision() -> None:
+    """Skiva 1b (action bridge): ``/api/prompt`` måste ruta follow-ups genom
+    OpenClaw-apply-bryggan och, när den materialiserade en ändring, exponera
+    den runen som det auktoritativa bygget — annars falla tillbaka på legacy
+    med samma ärlighetsgrind för ``openClawDecision``.
+
+    Locks:
+      1. Routen importerar + anropar runOpenClawFollowupApply.
       2. Anropet är gated på ``payload.mode === "followup"`` (init-flödet är
          byte-för-byte oförändrat).
-      3. Samma legacyPathAppliedVisibleChange-grind nollar beslutet när den
-         deterministiska copyDirective-vägen redan landade en synlig ändring
-         (annars vore "action bridge saknas" en lögn).
-      4. ``openClawDecision`` ligger i return-objektet (NDJSON-vägen sprider
-         ``...result`` så båda transporterna bär fältet).
+      3. När ``bridge.applied`` + ``chain.runId`` finns re-surface:as den runen
+         (ingen legacy-build → ingen dubbel-build).
+      4. Samma legacyPathAppliedVisibleChange-grind nollar beslutet på fallback-
+         vägen; ``openClawDecision`` (härledd ur bryggans decision) + ``bridge``
+         ligger i return-objektet (NDJSON-vägen sprider ``...result``).
     """
     text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
         encoding="utf-8"
     )
 
-    assert 'import { runOpenClawFollowup } from "@/lib/openclaw-runner"' in text, (
-        "route.ts måste importera runOpenClawFollowup-seamen."
+    assert (
+        'import { runOpenClawFollowupApply } from "@/lib/openclaw-runner"' in text
+    ), "route.ts måste importera apply-bryggan (runOpenClawFollowupApply)."
+    assert "runOpenClawFollowupApply(payload.prompt" in text, (
+        "Routen måste anropa apply-bryggan med prompten."
     )
-    assert "runOpenClawFollowup(payload.prompt" in text, (
-        "Routen måste anropa seamen med prompten."
-    )
-    # Gated på follow-up: init-flödet ska inte spawna OpenClaw-seamen.
-    call_idx = text.index("runOpenClawFollowup(payload.prompt")
-    gate_region = text[text.index("openClawDecisionPromise") : call_idx]
+    # Gated på follow-up: init-flödet ska inte spawna bryggan.
+    call_idx = text.index("runOpenClawFollowupApply(payload.prompt")
+    gate_region = text[text.index("const applyResult") : call_idx]
     assert 'payload.mode === "followup"' in gate_region, (
-        "OpenClaw-beslutet får bara köras på follow-ups (init-flödet "
-        "oförändrat)."
+        "Apply-bryggan får bara köras på follow-ups (init-flödet oförändrat)."
+    )
+    # När bryggan applicerade: använd dess chain.runId som det riktiga bygget.
+    assert "applyResult.bridge.applied" in text, (
+        "Routen måste gren:a på bridge.applied (materialiserad ändring)."
+    )
+    assert "chain.runId" in text, (
+        "Den applicerade bryggans chain.runId måste re-surface:as som runId så "
+        "klientens preview-refresh-flöde fungerar oförändrat (ingen dubbel-build)."
     )
     assert "const openClawDecision = legacyPathAppliedVisibleChange" in text, (
-        "Samma honesty-gate som routerDecision: nolla beslutet när den gamla "
-        "vägen redan applicerade en synlig ändring."
+        "Samma honesty-gate som routerDecision på fallback-vägen: nolla "
+        "beslutet när den gamla vägen redan applicerade en synlig ändring."
     )
-    # Fältet måste ligga i return-objektet (efter routerDecision).
+    # openClawDecision härleds nu ur bryggans decision-fält (ingen andra spawn).
+    assert "applyResult?.decision" in text, (
+        "openClawDecision ska komma från apply-bryggans decision-fält."
+    )
+    # Både openClawDecision och bridge måste ligga i return-objektet.
     return_idx = text.index("routerDecision,\n")
     assert text.index("openClawDecision,", return_idx) > return_idx, (
-        "openClawDecision måste returneras (NDJSON sprider ...result så båda "
-        "transporterna bär fältet)."
+        "openClawDecision måste returneras (NDJSON sprider ...result)."
+    )
+    assert "bridge: applyResult" in text, (
+        "bridge-utfallet måste returneras så FloatingChat kan visa en ärlig "
+        "restyle/capability-rad + preview-refresh-status."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_renders_openclaw_bridge_honestly() -> None:
+    """Skiva 1b (action half): FloatingChat måste visa OpenClaw-apply-utfallet
+    ärligt — en success-rad NÄR bryggan materialiserade en ändring, annars
+    falla tillbaka på den vanliga summeringen (lovar aldrig en ändring som inte
+    landade).
+
+    Locks:
+      1. ``PromptApiResponse`` exponerar ett valfritt ``bridge``-fält.
+      2. Defensiv ``extractOpenClawBridge`` + ``summarizeOpenClawBridge`` (bara
+         success när applied=true; null annars).
+      3. Bridge-preempten ligger FÖRE openClawView och är gated på
+         ``bridgeView.applied`` + outcome === "ok".
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "bridge?: Record<string, unknown>" in text, (
+        "PromptApiResponse måste exponera ett valfritt bridge-fält."
+    )
+    assert "function extractOpenClawBridge(" in text, (
+        "FloatingChat måste läsa bridge defensivt (extractOpenClawBridge)."
+    )
+    assert "function summarizeOpenClawBridge(" in text, (
+        "FloatingChat måste härleda en ärlig success-rad (summarizeOpenClawBridge)."
+    )
+    # summarizeOpenClawBridge får BARA ge en rad när applied=true.
+    summarize_start = text.index("function summarizeOpenClawBridge(")
+    summarize_body = text[summarize_start : summarize_start + 900]
+    assert "if (!view.applied) return null;" in summarize_body, (
+        "summarizeOpenClawBridge måste returnera null när inget applicerades "
+        "(vi lovar aldrig en ändring som bryggan inte materialiserade)."
+    )
+    # Bridge-preempten ligger FÖRE openClawView-preempten och är gated rätt.
+    bridge_preempt_idx = text.index(
+        "const bridgeView = extractOpenClawBridge(payload)"
+    )
+    openclaw_preempt_idx = text.index(
+        "const openClawView = extractOpenClawDecision(payload)"
+    )
+    assert bridge_preempt_idx < openclaw_preempt_idx, (
+        "Bridge-utfallet (en faktiskt landad ändring) måste preempta FÖRE "
+        "OpenClaw-beslutet (som annars säger 'inte inkopplad än')."
+    )
+    assert 'bridgeView.applied && outcome === "ok"' in text, (
+        "Bridge-preempten måste vara gated på applied + outcome ok (failed/"
+        "degraded faller igenom till den auktoritativa fel-/varningsgrenen)."
     )
 
 
