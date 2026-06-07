@@ -415,7 +415,7 @@ COMMON_WORDS = {
     # lucide-react icon names used by build_site.py page renderers.
     # 1-cap names like Phone/Mail/Sparkles never trigger PASCAL_RE; only
     # multi-cap PascalCase icons need explicit allowlisting.
-    "MapPin", "ShieldCheck", "PartyPopper", "ShoppingBag",
+    "MapPin", "ShieldCheck", "PartyPopper", "ShoppingBag", "LayoutTemplate",
     # Konsumentvarumärken som dyker upp i exempel-content (inte domänbegrepp)
     "PlayStation", "LinkedIn",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
@@ -715,6 +715,13 @@ COMMON_WORDS = {
     "BlinkMacSystemFont",
     "BookText", "BrowserKind",
     "BuildApiResponse", "BuildIcon",
+    # Lägg-till-modul-dialogen (drag-and-drop-prep, 2026-06-07): viewser-
+    # lokala UI-symboler i apps/viewser/components/builder/dialogs/
+    # add-module-dialog.tsx. AddModuleDialog är en React-komponent,
+    # AddModuleDialogProps dess props-typ, ModuleDef modul-katalogens
+    # rad-typ — inga canonical domänbegrepp (samma behandling som
+    # ColorPickerDialog / ScrapeUrlDialog ovan).
+    "AddModuleDialog", "AddModuleDialogProps", "ModuleDef",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",

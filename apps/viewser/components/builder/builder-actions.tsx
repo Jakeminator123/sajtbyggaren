@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Blocks,
   Globe,
   History,
   ImagePlus,
@@ -55,6 +56,7 @@ export type BuilderActionIcon =
   | "settings"
   | "palette"
   | "image"
+  | "module"
   | "globe"
   | "rebuild"
   | "ask"
@@ -122,6 +124,8 @@ function iconComponent(kind: BuilderActionIcon) {
       return Palette;
     case "image":
       return ImagePlus;
+    case "module":
+      return Blocks;
     case "globe":
       return Globe;
     case "rebuild":
