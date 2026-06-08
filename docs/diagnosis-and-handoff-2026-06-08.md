@@ -1,4 +1,17 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
 # Diagnos + Handoff — LLM-flödet & "Lovable-känslan" (2026-06-08)
+
+> **Arkivnot (lane A, 2026-06):** Historisk diagnos — värdefull bakgrund men
+> **inte** en aktiv diagnos (verifiera alltid mot koden). Behålls *på plats*
+> (inte flyttat till `docs/archive/`) eftersom filtexten innehåller en
+> branch-referens som blockeras av repo-secret-scannern vid filflytt.
+> Sanningskälla för nuläget: `docs/current-focus.md` + `docs/handoff.md`.
 
 > Skriven efter en live-demo där operatören testade följdprompter i Viewser
 > och blev besviken: färg funkade, men "byt rubriken" redigerade fel fält och

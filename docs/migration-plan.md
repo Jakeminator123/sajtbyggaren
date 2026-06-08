@@ -1,4 +1,16 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
 # Migrationsplan från sajtmaskin
+
+> **Arkivnot (lane A, 2026-06):** Historiskt dokument. Behålls *på plats* (inte
+> flyttat till `docs/archive/`) eftersom `tests/test_decisions_and_docs.py` listar
+> sökvägen som obligatorisk + `scripts/build_site.py` refererar den. Sanningskälla
+> för nuläget: `docs/current-focus.md` + `docs/heavy-llm-flow/`. Se `docs/archive/README.md`.
 
 > **STATUS 2026-06-08 (superseded roadmap):** Sprint-numreringen (Sprint 1-12)
 > nedan är HISTORIK. Det aktiva flödet drivs nu av `docs/heavy-llm-flow/`
