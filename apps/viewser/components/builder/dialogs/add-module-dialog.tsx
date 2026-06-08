@@ -2,15 +2,12 @@
 
 import {
   Blocks,
-  Briefcase,
   Clock,
   HelpCircle,
   Images,
-  LayoutTemplate,
   Loader2,
   Mail,
   MapPin,
-  Megaphone,
   ShieldCheck,
   Star,
   Tag,
@@ -59,16 +56,19 @@ type ModuleDef = {
 };
 
 // Modul-paletten. Etiketterna är operatörsvänlig svenska; id:t är den
-// stabila nyckel UI:t och (framtida) backend-kontraktet delar.
+// stabila nyckel UI:t och backend-kontraktet delar. Endast moduler som
+// backend faktiskt kan montera via section_add listas här: varje rad har en
+// sektionstyp i routerns _SECTION_TYPES + en implementerande dossier i
+// SECTION_TYPE_CAPABILITY (packages/generation/followup/section_directives.py).
+// Tidigare fanns även hero/services/cta-banner i listan, men de är INTE
+// section_add-mål (hero/services är sidsektioner, cta-banner saknar dossier),
+// så de gav en falsk affordance (Vercel-agent-fynd 2026-06-08) och är borttagna.
 const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
-  { id: "hero", label: "Hero", description: "Stor toppbanner med rubrik", Icon: LayoutTemplate },
   { id: "gallery", label: "Galleri", description: "Bildrutnät", Icon: Images },
-  { id: "services", label: "Tjänster", description: "Tjänste-/produktkort", Icon: Briefcase },
   { id: "contact-form", label: "Kontaktformulär", description: "Namn, e-post, meddelande", Icon: Mail },
   { id: "faq", label: "Vanliga frågor", description: "Hopfällbara frågor och svar", Icon: HelpCircle },
   { id: "testimonials", label: "Omdömen", description: "Kundcitat", Icon: Star },
   { id: "pricing", label: "Priser", description: "Pris-/paketlista", Icon: Tag },
-  { id: "cta-banner", label: "CTA-banner", description: "Uppmaning med knapp", Icon: Megaphone },
   { id: "map", label: "Karta", description: "Plats med adress", Icon: MapPin },
   { id: "opening-hours", label: "Öppettider", description: "Veckoschema", Icon: Clock },
   { id: "team", label: "Team", description: "Personalkort", Icon: Users },
@@ -198,8 +198,10 @@ export function AddModuleDialog({
         <DialogHeader>
           <DialogTitle>Lägg till modul</DialogTitle>
           <DialogDescription>
-            Dra (eller klicka) en modul till sidan där den ska in. Vi skickar
-            en strukturerad instruktion och bygger om sajten.
+            Dra (eller klicka) en modul till en sida. Vi skickar en strukturerad
+            instruktion och bygger om sajten. Obs: exakt sida och position är ett
+            önskemål — backend monterar sektionen men styr inte var den hamnar
+            ännu, och vissa typer monteras utan att synas i previewen direkt.
           </DialogDescription>
         </DialogHeader>
 
@@ -315,9 +317,10 @@ export function AddModuleDialog({
             </div>
           ) : (
             <p className="text-muted-foreground border-border/60 rounded-md border border-dashed px-3 py-2 text-[11px] leading-snug">
-              Modul-tillägg kopplas in steg för steg på backend. Stöds inte en
-              sektionstyp ännu rapporterar bygget det ärligt i chatten istället
-              för att låtsas att den lades till.
+              Modulerna ovan kan backend montera (section_add). Sida och position
+              är ännu ett önskemål — exakt placering kommer senare — och vissa
+              typer monteras utan att synas i previewen direkt. Bygget rapporterar
+              ärligt i chatten vad som faktiskt landade.
             </p>
           )}
         </div>
