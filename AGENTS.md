@@ -33,8 +33,13 @@ single byte.
   `dist/`). This is the conductor/agent-role reference we study to design
   Sajtbyggaren's own *conductor-only* OpenClaw — it is a reference, never a
   build target.
-- Any folder named `sajtmaskin` (the predecessor project), wherever it
-  appears on disk.
+- `C:\Users\jakem\dev\projects\sajtmaskin\` — the **actual predecessor
+  project** (Next.js app + `infra/openclaw/` Docker gateway blueprint:
+  Dockerfile, render.yaml, railway.toml, `config/agents/sajtagenten/`,
+  `config/workspace/{SOUL,TOOLS,USER,BOOTSTRAP,HEARTBEAT}.md`, plus
+  `src/app/api/openclaw/`, `src/lib/openclaw/`, `src/components/openclaw/`).
+  This is the richest reference for an external Docker OpenClaw conductor.
+- Any other folder named `sajtmaskin`, wherever it appears on disk.
 
 If a change to that material ever seems necessary, STOP and ask the operator
 first. The repo's own OpenClaw work happens ONLY inside this repository
