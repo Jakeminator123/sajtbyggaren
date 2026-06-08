@@ -5,12 +5,15 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-> **NULÄGES-REALIGNMENT (2026-06-08):** äldre versioner av denna fil sa
-> `main = 629a2d5` och listade `"gör färgen rosa" → unclear` som "kvar" — det är
-> STALE. Verifierat git-läge nu: `origin/main = 44e0618`, `origin/jakob-be =
-> 3f9bc28`, lokal `jakob-be` 5 commits före main (opushad; **operatören synkar
-> medvetet — pusha inte main per slice**). Verifiera alltid mot git/koden, inte
-> mot äldre stycken längre ner i denna fil.
+> **NULÄGES-REALIGNMENT (2026-06-08 sen kväll, POST-SYNC):** hela sessionens
+> arbete är nu i `main` via PR #212 (squash `b49d1f7`, steward-auto `16278c1`).
+> Verifierat git-läge: `origin/main = 16278c1`; `origin/jakob-be` ligger några
+> commits FÖRE main med en andra-rundas batch (hero-fix landade i #212; därefter
+> buggranskningsfixar: FloatingChat-honesty `a98a46e`, dev.mjs DEP0190-rest
+> `35baddb`, smal lane-grant `cccda391`, AddModuleDialog falsk-affordance
+> `dabd503`). **Operatören synkar `jakob-be → main` medvetet — pusha inte main
+> per slice.** Äldre git-SHA längre ner i denna fil (`44e0618`/`3f9bc28`/`629a2d5`)
+> är PRE-SYNC och STALE — verifiera alltid mot git, inte mot gamla stycken.
 >
 > **Redan gjort (sluta peka nästa agent hit):**
 > - OpenClaw `--apply` är inkopplat i `/api/prompt` för follow-ups (PR #210):
@@ -18,18 +21,18 @@ Startpromptar och rollgränser finns i
 >   annars legacy-väg, ingen dubbel-build. CLI-bevisat (PR #207, restyle → rosa).
 > - `"gör färgen rosa"` klassas som `visual_style` (44e0618 — färgnamn som
 >   style-adjektiv; `"lägg till en blå knapp"` förblir `component_add`).
-> - **`section_add` (section_builder-rollen) inne på jakob-be:** router klassar
->   "lägg till en sektion om garantier/team/FAQ/recensioner" som `section_add`
->   med typ-slug, och `run_followup_chain` resolverar typ→capability (faq-section/
->   reviews/team-section/guarantees, alla med implementerande dossier) och kör
->   SAMMA apply-kedja som `component_add` (requestedCapabilities +
->   selectedDossiers.required) → ny immutabel version → targeted render. Två nya
->   soft instructions-only dossiers (`team-roster`, `trust-guarantees`) som
->   återanvänder `render_section_team`/`render_section_trust_proof`. Okänd/ostödd
->   typ = ärlig no-op (`stage=section_unsupported`). `verify_openclaw.py` 6/6 grön
->   (ny section_add-beslutsrad). Regression: "lägg till en blå knapp" =
->   `component_add`, "lägg till en sida om X" = `route_add`, "...i andra
->   sektionen" = `component_add` (sektion som plats, inte ny sektion).
+> - **`section_add` (section_builder-rollen) — MOUNT-ONLY:** router klassar
+>   "lägg till en sektion om X" som `section_add` och `run_followup_chain`
+>   resolverar typ→capability+dossier och kör SAMMA apply-kedja som
+>   `component_add` → ny immutabel version. **Breddat 2026-06-08 (`4c6ba67`) till
+>   nio typer:** team/faq/trust/reviews + gallery/pricing/hours/map(location)/
+>   contact-form. **VIKTIGT:** soft-dossiers är instruktioner-only → en monterad
+>   sektion syns INTE automatiskt (`applied=true` men `appliedVisibleEffect=false`).
+>   Synlig render + exakt sida/position = separat render-path-follow-up (3B-spåret).
+>   FloatingChat grindar success på `previewShouldRefresh` (ingen falsk "genomförde
+>   ändringen"). Okänd/ostödd typ (inkl. hero/services/cta-banner) = ärlig no-op.
+>   Regression: "lägg till en blå knapp" = `component_add`, "lägg till en sida om
+>   X" = `route_add`, "...i andra sektionen" = `component_add`.
 > - copy-frasning: `rubrik/huvudrubrik → hero-tagline` + `"NYTT istället för
 >   GAMMALT"` (3f9bc28); `copyDirectiveModel` är nu **primärt** förståelse-lager
 >   för copy-edits, deterministiken som validator (109ba60, A1).

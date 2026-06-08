@@ -29,7 +29,7 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Scaffold Registry` | Centralt index över giltiga `Scaffold`-id:n. Sanningskälla i `scaffold-contract.v1.json:primaryScaffoldRegistry`. |
 | `Selection Profile` | Per-`Scaffold`-fil med embedding-text, semanticSignals, negativeSignals, llmClassificationHints. Det är **denna** som styr `Scaffold Selector`, inte ordmatchning. |
 | `Quality Contract` | Per-`Scaffold`-fil med scorecard-vikter, must-pass och avoid. Härleder från `page-quality-traits` men kan justera per `Scaffold`. |
-| `Project Input` | Strukturerad tolkning av init-promptens kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: `examples/<siteId>.project-input.json`. Alias: `Deep Brief`. **Är inte en Dossier.** |
+| `Project Input` | Strukturerad tolkning av init-promptens kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: committade exempel ligger i `examples/<siteId>.project-input.json`; **runtime/följdprompt-versioner** (Viewser `/api/prompt`) skrivs som immutabla snapshots i `data/prompt-inputs/<siteId>.vN.project-input.json`. Alias: `Deep Brief`. **Är inte en Dossier.** |
 | `Dossier` | Återanvändbar capability/legokloss som kan kopplas på en `Route`/section/slot. Klass: `soft` eller `hard`. Default-kompatibel med alla `Scaffolds`. |
 | `Dossier Class` | En av `soft` (frontend/content utan secrets) eller `hard` (kräver env/backend/auth/betalning/extern API). ADR 0012 tog bort `hybrid` - en Dossier som behöver mock i designläge är `hard` med `mockMode`-konfiguration. |
 | `Soft Dossier` | Återanvändbar frontend/content capability. Exempel: `pacman-game`, `mouse-reactive-background`, `pricing-calculator`. |

@@ -16,62 +16,63 @@ half); PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop 
 dialog; PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening +
 governance/cleanup batch.
 
-## CLOSING-ROUND HANDOFF 2026-06-08 (sen kväll) — hero-rotorsaksfix + governance/docs/cleanup-batch
+## CLOSING-ROUND HANDOFF 2026-06-08 (natt) — ÖVERLÄMNING TILL NY ORCHESTRATOR
 
-> Auktoritativt block. `origin/jakob-be = b2e1f3d`, `origin/main = 44e0618`
-> (jakob-be **22 commits före main**, OPUSHAD — medveten sync). Rent arbetsträd.
-> Hela icke-slow-sviten + guards (governance 19, rules_sync, term_coverage) gröna;
-> enda röda testet är `test_api_prompt_smoke` = MILJÖ-FLAKE (konkurrerande
-> `next dev` mot samma `.next`, ej regression — se inbox msg-0049).
+> **Detta är det ENDA auktoritativa blocket. ALLT nedanför `---` är historik —
+> verifiera alltid mot git/koden, aldrig mot äldre block (deras SHA är pre-sync
+> och stale).**
+>
+> **Git-läge (POST-SYNC):** `origin/main = 16278c1` (PR #212 squash `b49d1f7` +
+> steward-auto — hela förra batchen är officiell). `origin/jakob-be` ligger
+> några commits FÖRE main med en andra-rundas batch (se nedan); rent arbetsträd.
+> **Operatören synkar `jakob-be → main` medvetet — pusha aldrig main per slice.**
+> Guards gröna (governance 19, rules_sync, term_coverage); full `pytest -q` grön
+> (bara väntade skips — `test_api_prompt_smoke`-flaken är åtgärdad, `6c33798`).
+>
+> **Operatörsgrant (viktigt för dig som ny orchestrator):** jakob-be har stående
+> tillstånd att FIXA BUGGAR det ser i Christophers UI-lane (`apps/viewser/**`) —
+> committat på jakob-be, `[scope-leak]`-taggat, rapporterat i inboxen. Större
+> icke-bugg-feature-/UX-ändringar kräver fortfarande per-ändrings-OK. Källa:
+> `governance/rules/branch-discipline.md`.
 
-### Vad som landade denna session (11 commits ovanpå roll-trion 44143d5)
-- **Hero-rotorsaksfix (fb9692d):** "ändra hero-texten"/tagline-följdprompt syntes
-  inte — hero-H1 renderas från blueprint (`positioning.oneLiner`, regenereras varje
-  bygge), inte `company.tagline`. Ny `company.heroHeadline`-override som renderaren
-  föredrar + överlever ombygge. Fältkontraktet LÅST i copy-change-skill (064b01c).
-- **DEP0190 (f8e4205):** `dev.mjs` spawnar `next` shell-fritt (node + lokala bin,
-  npx-fallback) → tar bort deprecation + injektionsyta. [scope-leak, operatörs-OK]
-- **preview-runtime (ee68add):** client-safe `resolvePreviewRuntimeDescriptor`
-  (bevarar `auto`≠`local-next` + COEP/fallback-intent) + README synkad (Bite A/B
-  klara, vercel-sandbox v19). Detta avblockar Bite C (klient-flip = Christopher).
-- **Stale-städ (7f599c1):** B125 nedgraderad (mootad av vercel-sandbox), migration-plan
-  superseded, scaffold-runtime-extension klar — markerade som historik, ej raderade.
-- **Governance (cb09717):** SMAL operatörsgrant — jakob-be får redigera Christophers
-  UI-lane PER ändring (kärnloop + operatörs-OK + liten rapporterad diff + Christopher
-  informerad i inbox), INTE carte blanche.
-- **Env (9a64b02):** env-matris root vs viewser (varje var kod-verifierad läsare) i
-  `.env.example` + `docs/architecture/viewser.md`; lyfter gpt-4o-fallback-inkonsekvensen.
-- **gpt-4o (5e5144d):** operatörens modell-default `gpt-4o-mini`→`gpt-4o` (viewser + scrape).
-- **Backoffice-cleanup (b2e1f3d):** starter-bygg-cacher (safe) + stora `övrigt/`-artefakter
-  (warning, ≥50 MB) städbara från backoffice; säkerhetsgrind utökad + 2 regressionstester.
-- **.cursor:** `övrigt/` + `data/output/` åtkomliga för agent (ut ur `.cursorignore`,
-  kvar index-ignored).
+### Runda 1 (i main via #212): hero-fix + Bite C + section_add + governance/cleanup
+- **Hero-rotorsaksfix (`fb9692d`):** "ändra hero-texten" syntes inte — hero-H1
+  renderas från blueprint (`positioning.oneLiner`, regenereras varje bygge), inte
+  `company.tagline`. Ny `company.heroHeadline`-override (renderaren föredrar den,
+  överlever ombygge). Fältkontrakt LÅST i copy-change-skill.
+- **Bite C KLAR (`7984fc1`):** `viewer-panel.tsx` driver preview-flaggorna via
+  `resolvePreviewRuntimeDescriptor` (`auto`≠`local-next` bevarat). Helt stängd.
+- **section_add breddat (`4c6ba67`), MOUNT-ONLY:** nio typer (team/faq/trust/
+  reviews + gallery/pricing/hours/map/contact-form). Monterar capability+dossier
+  men renderar inte synligt än (`appliedVisibleEffect=false`).
+- **preview-runtime descriptor + README, DEP0190 `next`-fix, env-matris, gpt-4o
+  default, stale-doc-markeringar, backoffice-cleanup, .cursorignore-unlock.**
 
-### Christophers inbox + Bite C — hur vi tacklade dem
-- **msg-0045** (modul-drag-and-drop, behövde `section_add`) → svar **msg-0046**:
-  `section_add` FINNS på jakob-be; 4 av 12 moduler stöds, 5 har dossier men saknas i
-  katalogen (liten breddning kvar), page/position-targeting = follow-up.
-- **preview-runtime-relay** (Bite C-blockare) → löst: descriptorn levererad (ee68add),
-  svar **msg-0048**.
-- Bite C är INTE helt klar (medvetet). Server-halvan var redan klar; klient-flippen i
-  `viewer-panel.tsx` var blockerad av lossy `normalizePreviewMode` → nu AVBLOCKERAD av
-  descriptorn. **Klient-refaktorn är Christophers** (mot descriptorn, driven av
-  `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`).
-- **test_api_prompt_smoke-flake** → diagnostiserad (msg-0049), ej regression.
+### Runda 2 (på jakob-be, ovanför main — väntar nästa sync): buggranskning + docs
+- **FloatingChat honesty (`a98a46e`):** `summarizeOpenClawBridge` grindar synlig
+  success på `previewShouldRefresh` — en mount-only-montering säger inte längre
+  falskt "Jag genomförde ändringen".
+- **dev.mjs DEP0190-rest (`35baddb`):** `vercel env pull` shell-fritt. Dispatchern
+  helt ren.
+- **Smal→stående buggfix-grant (`cccda391`):** se grant-rutan ovan.
+- **AddModuleDialog falsk affordance (`dabd503`):** tog bort hero/services/
+  cta-banner (omountbara) + ärlig copy om placering/mount-only.
+- **Docs/governance-städning (denna commit):** section-add-skill + action-registry
+  + current-focus-topp + openclaw-2.0-conductor + glossary alignade till
+  mount-only + 9 typer + post-sync-git; Project Input runtime-path klargjord.
 
-### Lösa trådar (minimerade)
-1. **`jakob-be → main`-sync** (nu fler commits) — operatörsbeslut, ej gjort.
-2. ~~Bite C klient-flip~~ **KLAR (7984fc1):** `viewer-panel.tsx` flippad till
-   `resolvePreviewRuntimeDescriptor`, `auto`≠`local-next` bevarat. Bite C helt stängd.
-3. Remap-signalen (requestedTarget/remapped på copyDirective) — väntar Christophers --real-llm-repro.
-4. ~~section_add-breddning~~ **KLAR (4c6ba67):** gallery/pricing/opening-hours/map/
-   contact-form igenkänns + monteras (mount-only, samma ärliga status som de fyra
-   ursprungliga; synlig rendering = separat render-path-tråd). Kvar: **page/position-
-   targeting** (infoga sektion på vald sida+ordinal) + **synlig render av monterade
-   soft-sektioner** (kopplat till Sprint 3B render-/codegen-spåret).
-5. OpenClaw-conductor-slicen (roll-registry runtime, "F1") — scoped, ej startad.
-6. ~~test_api_prompt_smoke-härdning~~ **KLAR (6c33798):** skip på `.next`/dev-lock-
-   kollision så en körande viewser-dev-server inte rödflaggar sviten.
+### Lösa trådar (för dig, prioriterat)
+1. **Sync `jakob-be → main`** (runda-2-batchen) — operatörsbeslut.
+2. **Synlig render av monterade section_add-sektioner + page/position-targeting**
+   — den största produkthävstången nu (gör mount-only → faktiskt synligt). Hör
+   till render-path/Sprint-3B-spåret.
+3. **#4 dialog/toast-honesty:** `useFollowupBuild`→`onBuildDone`→studio-toast bär
+   inte `appliedVisibleEffect` (FloatingChat gör nu). Signaturändring över 5
+   dialoger + page — Christophers UX-slice. (inbox msg-0052)
+4. **Remap-signalen** (requestedTarget/remapped) — väntar Christophers `--real-llm`-repro.
+5. **#5 production COEP-split** + **#7 bridge-null-diagnostik** — små, noterade (msg-0052).
+6. OpenClaw-conductor-slicen (roll-registry runtime, "F1") — scoped, ej startad.
+7. **#156 hosted `/live`** — parkerad (säkerhet), rör inte.
 
 ---
 
