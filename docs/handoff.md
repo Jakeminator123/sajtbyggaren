@@ -2,6 +2,60 @@
 
 **Datum:** 2026-06-08 UTC.
 
+## CLOSING-ROUND HANDOFF 2026-06-08 (sen kväll) — hero-rotorsaksfix + governance/docs/cleanup-batch
+
+> Auktoritativt block. `origin/jakob-be = b2e1f3d`, `origin/main = 44e0618`
+> (jakob-be **22 commits före main**, OPUSHAD — medveten sync). Rent arbetsträd.
+> Hela icke-slow-sviten + guards (governance 19, rules_sync, term_coverage) gröna;
+> enda röda testet är `test_api_prompt_smoke` = MILJÖ-FLAKE (konkurrerande
+> `next dev` mot samma `.next`, ej regression — se inbox msg-0049).
+
+### Vad som landade denna session (11 commits ovanpå roll-trion 44143d5)
+- **Hero-rotorsaksfix (fb9692d):** "ändra hero-texten"/tagline-följdprompt syntes
+  inte — hero-H1 renderas från blueprint (`positioning.oneLiner`, regenereras varje
+  bygge), inte `company.tagline`. Ny `company.heroHeadline`-override som renderaren
+  föredrar + överlever ombygge. Fältkontraktet LÅST i copy-change-skill (064b01c).
+- **DEP0190 (f8e4205):** `dev.mjs` spawnar `next` shell-fritt (node + lokala bin,
+  npx-fallback) → tar bort deprecation + injektionsyta. [scope-leak, operatörs-OK]
+- **preview-runtime (ee68add):** client-safe `resolvePreviewRuntimeDescriptor`
+  (bevarar `auto`≠`local-next` + COEP/fallback-intent) + README synkad (Bite A/B
+  klara, vercel-sandbox v19). Detta avblockar Bite C (klient-flip = Christopher).
+- **Stale-städ (7f599c1):** B125 nedgraderad (mootad av vercel-sandbox), migration-plan
+  superseded, scaffold-runtime-extension klar — markerade som historik, ej raderade.
+- **Governance (cb09717):** SMAL operatörsgrant — jakob-be får redigera Christophers
+  UI-lane PER ändring (kärnloop + operatörs-OK + liten rapporterad diff + Christopher
+  informerad i inbox), INTE carte blanche.
+- **Env (9a64b02):** env-matris root vs viewser (varje var kod-verifierad läsare) i
+  `.env.example` + `docs/architecture/viewser.md`; lyfter gpt-4o-fallback-inkonsekvensen.
+- **gpt-4o (5e5144d):** operatörens modell-default `gpt-4o-mini`→`gpt-4o` (viewser + scrape).
+- **Backoffice-cleanup (b2e1f3d):** starter-bygg-cacher (safe) + stora `övrigt/`-artefakter
+  (warning, ≥50 MB) städbara från backoffice; säkerhetsgrind utökad + 2 regressionstester.
+- **.cursor:** `övrigt/` + `data/output/` åtkomliga för agent (ut ur `.cursorignore`,
+  kvar index-ignored).
+
+### Christophers inbox + Bite C — hur vi tacklade dem
+- **msg-0045** (modul-drag-and-drop, behövde `section_add`) → svar **msg-0046**:
+  `section_add` FINNS på jakob-be; 4 av 12 moduler stöds, 5 har dossier men saknas i
+  katalogen (liten breddning kvar), page/position-targeting = follow-up.
+- **preview-runtime-relay** (Bite C-blockare) → löst: descriptorn levererad (ee68add),
+  svar **msg-0048**.
+- Bite C är INTE helt klar (medvetet). Server-halvan var redan klar; klient-flippen i
+  `viewer-panel.tsx` var blockerad av lossy `normalizePreviewMode` → nu AVBLOCKERAD av
+  descriptorn. **Klient-refaktorn är Christophers** (mot descriptorn, driven av
+  `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`).
+- **test_api_prompt_smoke-flake** → diagnostiserad (msg-0049), ej regression.
+
+### Lösa trådar (minimerade)
+1. **`jakob-be → main`-sync** (22 commits) — operatörsbeslut, ej gjort.
+2. **Bite C klient-flip** (`viewer-panel.tsx`) — Christopher, nu avblockerad.
+3. Remap-signalen (requestedTarget/remapped på copyDirective) — väntar Christophers --real-llm-repro.
+4. **section_add-breddning** (gallery/pricing/opening-hours/map/contact-form) +
+   **page/position-targeting** — backend follow-up.
+5. OpenClaw-conductor-slicen (roll-registry runtime, "F1") — scoped, ej startad.
+6. **test_api_prompt_smoke-härdning** (isolerad distDir/skip om server kör) — valfritt, Christopher.
+
+---
+
 ## CLOSING-ROUND HANDOFF 2026-06-08 (kväll) — roll-trion klar; nästa = limma loopen
 
 > Detta block är auktoritativt. Allt längre ner kan vara stale — verifiera mot

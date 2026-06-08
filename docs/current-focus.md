@@ -450,17 +450,22 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `origin/jakob-be = 44143d5` (2026-06-08 kväll UTC — roll-trion
-klar). `origin/main = 44e0618`. Lokal `jakob-be` 9 commits före main (OPUSHAD mot
-main, operatören synkar medvetet). Commit-kedjan på jakob-be sedan main: `44e0618`
-router-färg (i main) → `3f9bc28` copy-frasning → `49850db`/`12f0ce4` read-only-regel
-sajtmaskin/openclaw → `109ba60` copy_editor (A1) → `861b1b4` OpenClaw 2.0-plan →
-`5bf0f28` docs-realign → `035c128` stylist (B) → `f8b66c9` OpenClaw-workspace-spec →
-`44143d5` section_builder (C, +2 soft dossiers). Ocommittat: `apps/viewser/
-package-lock.json` (operatörens `npm audit fix` — hono-prune, ofarligt). UI-E2E
-körd 2026-06-08: v1 renderade i preview; två glue-fynd loggade (se topp-blocket +
-handoff). Nästa: limma loopen (glue 1 backend Project-Input-discovery, glue 2 UI
-följdprompt-affordance) → Fas 1 roll-registry → sync main.
+Last verified state: `origin/jakob-be = b2e1f3d` (2026-06-08 sen kväll UTC).
+`origin/main = 44e0618` (oförändrad). Lokal `jakob-be` = origin, **22 commits före
+main** (OPUSHAD mot main — operatören synkar medvetet), rent arbetsträd. Denna
+session (11 commits ovanpå roll-trion `44143d5`): hero-text-rotorsaksfix
+(`company.heroHeadline`-override så "ändra hero-texten" faktiskt syns — fältet renderas
+i hero-H1, inte bara meta; `fb9692d`), DEP0190 shell-fri `dev.mjs` (`f8e4205`),
+preview-runtime client-safe `resolvePreviewRuntimeDescriptor` + README-synk (`ee68add`,
+avblockar Bite C), stale-markeringar B125/migration-plan/scaffold-runtime (`7f599c1`),
+SMAL operatörsgrant för jakob-be i UI-lanen (`cb09717`), env-matris root vs viewser
+(`9a64b02`), hero/copy-fältkontrakt låst (`064b01c`), gpt-4o modell-default (`5e5144d`),
+backoffice-cleanup för starter-cacher + stora övrigt-artefakter (`b2e1f3d`), inbox-svar
+till Christopher + audit (`84b5bc4`/`a18552e`). `övrigt/` + `data/output/` numera
+agent-åtkomliga (ej indexerade). Full överlämning + lösa trådar: `docs/handoff.md`
+(CLOSING-ROUND-blocket överst). Nästa: sync `jakob-be → main` (operatörsbeslut) →
+Bite C klient-flip (Christopher) → OpenClaw F1 roll-registry → section_add-breddning +
+page/position-targeting.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
