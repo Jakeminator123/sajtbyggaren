@@ -1,10 +1,49 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-08 UTC, steward-auto efter PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep dialog. Verifierad `main` är `28df1b9`.
+**Datum:** 2026-06-08 UTC.
 
-Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
-/api/prompt follow-ups (skiva 1b action half); PR #211 — feat(viewser): resizable
-FloatingChat + module drag-and-drop prep dialog.
+## ⚠️ REALIGNMENT 2026-06-08 — läs detta; allt nedanför kan vara stale
+
+Verifierat git-läge: `origin/main = 44e0618`, `origin/jakob-be = 3f9bc28`, lokal
+`jakob-be` 5 commits före main (OPUSHAD — operatören synkar medvetet). **Allt i
+blocken nedanför som säger `main = 496d605`/`28df1b9`, att "frontend↔heavy-flow"
+är det stora gapet, eller att "Christopher UI-wiring är största hävstången" är
+SUPERSEDED** — den wiringen är gjord.
+
+**Redan landat (sluta peka nästa agent hit):**
+- OpenClaw `--apply` är inkopplat i `/api/prompt` för follow-ups (PR #210):
+  bridge först → `bridge.applied` → auktoritativ run + preview-refresh, annars
+  legacy-väg, ingen dubbel-build.
+- `"gör färgen rosa"` → `visual_style` (44e0618). `"lägg till en blå knapp"`
+  förblir `component_add`.
+- copy-frasning: `rubrik/huvudrubrik → hero-tagline` + `"NYTT istället för
+  GAMMALT"` (3f9bc28); `copyDirectiveModel` är nu **primärt** copy-förståelse-lager,
+  deterministiken som validator (109ba60, A1).
+- `scripts/verify_openclaw.py` = 5/5 grön.
+
+**Smal riktning (icke förhandlingsbar):** OpenClaw är **conductor/bridge** på den
+kontrollerade motorn — inte ett nytt parallellt agent-/Docker-system, inte fri
+filpatch. Använd ENBART in-repo-källan (`packages/generation/orchestration/openclaw/`,
+`scripts/run_openclaw_followup.py`, `scripts/verify_openclaw.py`,
+`apps/viewser/lib/openclaw-runner.ts`, `apps/viewser/app/api/prompt/route.ts`).
+**Bygg inga nya OpenClaw-varianter.** Plan: `docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
+`sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` = strikt read-only referens (AGENTS.md).
+
+**Nästa produktvärde (en smal slice i taget, FloatingChat-användarcase, verify grön,
+landa på jakob-be, ingen main-push utan OK):**
+1. `stylist`-roll (fri/sammansatt färg+tema) — pågår på jakob-be.
+2. **`section_add` genom OpenClaw apply-kedjan** (#211 UI-drag-and-drop-prep väntar på det).
+3. Roll-registry → senare extern Docker-dirigent (Fas 1/2 i planen).
+
+Aktuell köplan: `docs/current-focus.md` (topp-blocket är uppdaterat 2026-06-08).
+
+---
+
+> Historik nedan (kan vara stale — se realignment ovan).
+>
+> Tidigare datum-rad: 2026-06-08, steward-auto efter PR #211 (resizable FloatingChat
+> + module drag-and-drop prep). Nya PRs då: #210 (OpenClaw --apply i /api/prompt),
+> #211 (resizable FloatingChat + module drag-and-drop prep).
 
 ## Orchestrator-handoff 2026-06-06 — restyle-genom-apply + branch/docs-städning (TA ÖVER HÄR)
 

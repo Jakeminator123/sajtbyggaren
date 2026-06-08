@@ -5,21 +5,45 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-> **Nästa fas (uppdaterad 2026-06-06):** `main = 629a2d5`. Hela
-> `docs/heavy-llm-flow/`-kör-sekvensen är byggd; vi är i **Fas 1 (inkoppling)** av
-> [`docs/heavy-llm-flow/post-build-plan.md`](heavy-llm-flow/post-build-plan.md).
-> **Bygg inga nya kör-kort.** Restyle materialiseras nu hela vägen genom OpenClaw-apply
-> (PR #207, CLI) **OCH syns i UI:t** (PR #210: `/api/prompt` rutar följdprompter genom
-> `runOpenClawFollowupApply` → `bridge.applied` → ny run + preview-refresh via befintliga
-> `onBuildDone`; copy-edits kvar på den oförändrade legacy-vägen, ingen dubbel-build).
-> **Största hävstången (UI-wiring) är därmed landad** — sluta peka nästa agent dit.
-> **Kvar (prioordning):** (1) router-igenkänning för fler restyle-fraser
-> (`"gör färgen rosa"` → `unclear` idag; jakob-be, liten/regressionskänslig),
-> (2) bredda apply till section/layout (jakob-be), (3) trust-blockerare #1/#2,
-> (4) **Fas 2** baseline-eval. **Manuellt E2E kvar:** `"ändra färgen till rosa"` → ny
-> version → preview ändras (ingen byggd sajt fanns i wiring-sessionens träd; wiringen
-> är låst av source-locks + CLI-bevisad i #207). Full överlämning överst i
-> [`docs/handoff.md`](handoff.md).
+> **NULÄGES-REALIGNMENT (2026-06-08):** äldre versioner av denna fil sa
+> `main = 629a2d5` och listade `"gör färgen rosa" → unclear` som "kvar" — det är
+> STALE. Verifierat git-läge nu: `origin/main = 44e0618`, `origin/jakob-be =
+> 3f9bc28`, lokal `jakob-be` 5 commits före main (opushad; **operatören synkar
+> medvetet — pusha inte main per slice**). Verifiera alltid mot git/koden, inte
+> mot äldre stycken längre ner i denna fil.
+>
+> **Redan gjort (sluta peka nästa agent hit):**
+> - OpenClaw `--apply` är inkopplat i `/api/prompt` för follow-ups (PR #210):
+>   bridge körs först, `bridge.applied` → auktoritativ run + preview-refresh,
+>   annars legacy-väg, ingen dubbel-build. CLI-bevisat (PR #207, restyle → rosa).
+> - `"gör färgen rosa"` klassas som `visual_style` (44e0618 — färgnamn som
+>   style-adjektiv; `"lägg till en blå knapp"` förblir `component_add`).
+> - copy-frasning: `rubrik/huvudrubrik → hero-tagline` + `"NYTT istället för
+>   GAMMALT"` (3f9bc28); `copyDirectiveModel` är nu **primärt** förståelse-lager
+>   för copy-edits, deterministiken som validator (109ba60, A1).
+> - `scripts/verify_openclaw.py` bevisar inkopplingen (5/5 grön).
+>
+> **Riktning (smal, icke förhandlingsbar):** OpenClaw är en **conductor/bridge**
+> på den kontrollerade motorn — INTE ett nytt parallellt agent-/Docker-system och
+> INTE fri filpatch. Använd ENBART den befintliga in-repo-källan:
+> `packages/generation/orchestration/openclaw/`, `scripts/run_openclaw_followup.py`,
+> `scripts/verify_openclaw.py`, `apps/viewser/lib/openclaw-runner.ts`,
+> `apps/viewser/app/api/prompt/route.ts`. **Bygg inga nya OpenClaw-varianter.**
+> Plan: [`docs/heavy-llm-flow/openclaw-2.0-conductor.md`](heavy-llm-flow/openclaw-2.0-conductor.md).
+> `sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` är strikt **read-only** referens
+> (se AGENTS.md) — studera, ändra aldrig.
+>
+> **Nästa produktvärde (en smal slice i taget):**
+> 1. `stylist`-roll (fri/sammansatt färg+tema) — pågår på jakob-be.
+> 2. **`section_add` genom OpenClaw apply-kedjan** — "lägg till en sektion om
+>    garantier/team/FAQ" → ny version, synlig i preview. (#211 UI har redan
+>    module-drag-and-drop-prep som väntar på detta backend-stöd.)
+> 3. Roll-registry → senare extern Docker-dirigent (Fas 1/2 i planen).
+>
+> **Regler för varje slice:** ett extremt smalt uppdrag, `verify_openclaw.py`
+> grön före merge, ett FloatingChat-användarcase, landa på `jakob-be`, ingen
+> main-push utan operatörs-OK. **Manuell UI-E2E** (`"ändra färgen till rosa"` → ny
+> version → preview ändras) är operatörsdriven. Full överlämning: [`docs/handoff.md`](handoff.md).
 
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
@@ -399,10 +423,16 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `28df1b9` (2026-06-08 UTC, steward-auto efter PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep dialog).
-Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
-/api/prompt follow-ups (skiva 1b action half); PR #211 — feat(viewser): resizable
-FloatingChat + module drag-and-drop prep dialog.
+Last verified state: `origin/main = 44e0618` (2026-06-08 UTC — feat(router):
+classify "gör färgen rosa" as visual_style; Vercel grön). `origin/jakob-be =
+3f9bc28`. Lokal `jakob-be` ligger 5 commits före main (OPUSHAD, operatören synkar
+medvetet): `3f9bc28` copy-frasning (rubrik→tagline + "istället för"), `49850db`
++ `12f0ce4` read-only-regel för sajtmaskin/openclaw-referens, `109ba60`
+copyDirectiveModel primärt copy-förståelse-lager (A1), `861b1b4` OpenClaw 2.0
+conductor-plan. En `stylist`-roll (färg/tema) byggs på jakob-be när detta skrevs.
+Nya PRs i main sedan föregående checkpoint: PR #210 (OpenClaw --apply i
+/api/prompt) + den UI-batch steward-auto kallade #211 (resizable FloatingChat +
+module drag-and-drop prep) + #207 (visual_style restyle genom apply-kedjan).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
