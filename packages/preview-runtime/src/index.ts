@@ -23,4 +23,7 @@ export {
   resolveRuntime,
 } from "./registry";
 
+export type { PreviewRuntimeDescriptor } from "./descriptor";
+export { resolvePreviewRuntimeDescriptor } from "./descriptor";
+
 export { configurePreviewRuntimeHandlers } from "./handlers";

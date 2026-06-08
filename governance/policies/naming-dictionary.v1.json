@@ -413,6 +413,14 @@
       "aliasesForbidden": []
     },
     {
+      "id": "previewRuntimeDescriptor",
+      "canonical": "PreviewRuntimeDescriptor",
+      "definition": "Klient-saker beskrivning av ett preview-mode: kind, rawMode (bevarar auto-skild-fran-local-next), prefersCoep, canFallbackToStackblitz. Ren funktion resolvePreviewRuntimeDescriptor i packages/preview-runtime/src/descriptor.ts; driver klientens COEP/StackBlitz-fallback-beslut som PreviewRuntimeKind ar lossy for.",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
       "id": "previewSession",
       "canonical": "Preview Session",
       "definition": "Aktiv session från en Preview Runtime: id, url, kind, createdAt. Returneras av PreviewRuntime.start() och stoppas av PreviewRuntime.stop().",
