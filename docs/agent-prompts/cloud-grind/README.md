@@ -1,6 +1,6 @@
 # Cloud-grind-promptar — avslutad backend-gap-batch
 
-Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM, pushar till `origin/jakob-be` och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten.
+Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM på en **egen feature-branch**, öppnar en **PR mot sin bas-branch** och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten. Den egna branchen per lane gör att alla tre kan köra **parallellt** utan att krocka på samma branch.
 
 Operatören öppnar ett nytt cloud-agent-fönster, klistrar in en av prompterna som första meddelande, och låter agenten köra till push.
 
@@ -8,49 +8,70 @@ Varje prompt-fil är self-contained: agenten ska inte behöva läsa något annat
 
 ## Läget nu
 
-Prompterna 1-5 är körda och bortstädade ur denna mapp:
+Tidigare batch (prompt 1-5) är körd och bortstädad: Gap 6/7 (`c002aec`/`ea6e141`),
+B147 (`b3834b3`), docs/workboard-sync (`cb07dbb`), Gap 9 (`365c1d7`), Gap 10
+(PR #122 / `3b61c73`).
 
-- Prompt 1 stängde Gap 6 + 7 i `c002aec` + `ea6e141`.
-- Prompt 2 stängde B147 i `b3834b3`.
-- Prompt 3 körde docs/workboard-sync i `cb07dbb` och efterföljande steward-commits.
-- Prompt 4 stängde Gap 9 i `365c1d7`.
-- Prompt 5 stängde Gap 10 i PR #122 / `3b61c73`.
-
-Det finns ingen kvarvarande cloud-grind-prompt i denna batch. Nästa naturliga steg är sync-PR `jakob-be -> main`.
+**Aktuell batch (2026-06-08) — tre FÖRBEREDDA lanes, ej startade.** Operatören
+startar dem manuellt en och en (eller parallellt) genom att klistra in
+respektive fil som första prompt i en Cursor Cloud Agent. De har hårda,
+disjunkta write-set så de kan köra samtidigt utan att krocka — och samtidigt med
+det lokala backend-arbetet (`packages/generation/**` render-path).
 
 ## Prompt-katalog
 
-Inga aktiva promptfiler.
+| Fil | Lane | Roll | Branch | Write-set | Status |
+| --- | --- | --- | --- | --- | --- |
+| [`lane-a-docs-honesty-rest.md`](lane-a-docs-honesty-rest.md) | A | Steward | `jakob-be` | docs honesty-cleanup (glossary/architecture-fixar, arkivflytt → `docs/archive/2026-06/`, gaps, frontmatter) + ev. ny `scripts/docs_check.py` | förberedd (utökad med coach-review) |
+| [`lane-b-floatingchat-split.md`](lane-b-floatingchat-split.md) | B | Builder (UI) | `christopher` | `floating-chat.tsx` + nya syskonfiler | förberedd (kräver operatörs-OK, refaktor i UI-lane) |
+| [`lane-c-backend-refactor-plan.md`](lane-c-backend-refactor-plan.md) | C | Scout/Steward | `jakob-be` | en ny `docs/refactor/`-planfil | förberedd |
 
 ## Parallellitet-matris
 
-Batchen var sekventiell eftersom Gap 6/7, Gap 9 och Gap 10 delade `scripts/build_site.py`-yta.
+Alla tre kan köra **helt parallellt** — var och en jobbar på sin egen
+feature-branch och öppnar en PR, så ingen push-krock uppstår:
+
+| Lane | Feature-branch | PR-bas | Parallell? |
+| --- | --- | --- | --- |
+| A | `cursor/lane-a-docs-cleanup` | `jakob-be` | ja |
+| B | `frontend/floating-chat-split` | `christopher` | ja |
+| C | `cursor/lane-c-refactor-plan` | `jakob-be` | ja |
+
+A och C har båda PR-bas `jakob-be` men disjunkta filer → konfliktfri merge
+(merga dem i valfri ordning). Det lokala backend-arbetet
+(`packages/generation/**`) är off-limits för alla tre.
+
+## Off-limits för ALLA lanes — OpenClaw-agentens yta
+
+En separat agent äger OpenClaw-docs-spegeln och ev. en MCP-server. Ingen lane
+rör: `scripts/fetch_openclaw_docs.py`, hela `openclaw-docs/` (gitignored
+spegel av docs.openclaw.ai), eller `.cursor/mcp.json`. OpenClaw-*docs*-fixar
+(workspace/conductor fas-nyans) koordineras med den agenten innan edit.
 
 ## Operatörens trigger-ordning (rekommenderad)
 
-```
-Alla fem klara. Sync-PR-fönster: gör nu (jakob-be → main).
-```
-
+Öppna tre cloud-agent-fönster och klistra in en lane-prompt i varje — de kan
+startas samtidigt. Review/merga PR:erna i valfri ordning när de är gröna.
 Varje prompt går att stoppa när som helst — de är atomiska.
 
 ## Sync-PR-fönster
 
-`jakob-be` är just nu över 30 commits framför `origin/main`. Bra läge för sync-PR är nu, så hela gap-batchen + B147 + doc-städet blir officiell `main`.
+`jakob-be` ligger 7 commits före `origin/main` (runda-2-batch ovanpå PR #212).
+Sync `jakob-be -> main` är operatörens beslut — verifiera alltid mot
+`git log --oneline origin/main..origin/jakob-be` innan ett sync-fönster.
 
 ## Övergripande disciplin
 
-Varje prompt slutar med samma rapport-rad:
+Varje prompt slutar med en kort rapport-rad: vilken PR som öppnades, att guards
+är gröna (ruff 0, governance 19/19, rules_sync OK, term-coverage --strict OK,
+pytest grön) och vad som ändrades. Exakt format står i respektive prompt.
 
-```
-Pushed <SHA> till origin/jakob-be. Guards alla gröna: ruff 0,
-governance 18/18, rules_sync OK, term-coverage --strict OK,
-sprintvakt OK, pytest grön. Klar — vänta operatörens nästa instruktion.
-```
+Cloud-agenten **öppnar en PR mot sin bas-branch** (A/C → `jakob-be`, B →
+`christopher`) men **mergar den inte** — review + merge är operatörens beslut.
+Sync `jakob-be -> main` är ett separat operatörsbeslut. PR-body måste lista alla
+ändrade filer (BUGBOT-disciplin: olistade filer = scope-läckage).
 
-Cloud-agenten **öppnar ingen PR** själv — sync-PR `jakob-be -> main` är operatörens beslut.
-
-Cloud-agenten **rör inte** `apps/viewser/components/**`, `apps/viewser/app/**/*.tsx`, `apps/viewser/public/**` om inte prompten uttryckligen säger det (Christopher-lane).
+Cloud-agenten **rör inte** `apps/viewser/components/**`, `apps/viewser/app/**/*.tsx`, `apps/viewser/public/**` om inte prompten uttryckligen säger det (Christopher-lane), och aldrig OpenClaw-agentens yta (se ovan).
 
 ## Cloud-VM-förutsättningar
 

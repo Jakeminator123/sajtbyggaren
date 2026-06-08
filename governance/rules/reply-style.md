@@ -1,5 +1,5 @@
 ---
-description: Svara kort och konkret. Förklara tekniska/dev-uttryck med en kort parentes första gången de dyker upp i en konversation, eftersom operatören inte är van vid jargong.
+description: Svara kort och konkret, gärna i matris/tabell-form. Förklara tekniska/dev-uttryck med en kort parentes första gången de dyker upp i en konversation, eftersom operatören inte är van vid jargong.
 alwaysApply: true
 ---
 
@@ -10,6 +10,15 @@ alwaysApply: true
 - Sikta på korta, koncentrerade svar. Föredra punktlistor framför löpande prosa.
 - Lägg bara till en bakgrundsförklaring när den faktiskt behövs för beslutet — inte som default.
 - Om ett svar måste vara långt: ha alltid en TL;DR-rad eller fet sammanfattning högst upp.
+
+## Format: matris/tabell
+
+- När svaret jämför alternativ, listar status, prioriterar steg eller fördelar arbete
+  per lane/agent: använd en **matris/tabell** i stället för löpande stycken. Det är
+  operatörens föredragna format.
+- En tabell ska ha tydliga kolumnrubriker och en rad per post. Håll cellerna korta.
+- Är posterna inte jämförbara (bara ett enda svar/en åtgärd) räcker en punktlista eller
+  1-3 rader — tvinga inte in allt i en tabell.
 
 ## Jargong och tekniska begrepp
 

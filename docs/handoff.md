@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-08 UTC, steward-auto efter PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening + governance/cleanup batch. Verifierad `main` är `b49d1f7`.
+**Datum:** 2026-06-08 UTC, steward-auto efter PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening + governance/cleanup batch. Verifierad `main` är `16278c1` (PR #212-squash `b49d1f7` + steward-auto-bump `16278c1` = nuvarande main-HEAD).
 
 Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
 skiva 1c kor-5 rerender wiring; PR #196 — feat(openclaw): action-bridge --apply (skiva

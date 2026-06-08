@@ -58,7 +58,7 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Repair Pipeline` | Centraliserad reparationskedja: normalize → mechanical fixes → typecheck/syntax → optional LLM fix → re-check → final. Får bo på exakt **EN** plats: `packages/generation/repair/`. Det löser den utspridda fix-rörran från sajtmaskin. |
 | `Quality Gate` | Mätbar acceptansgräns. **EN** gate på `packages/generation/quality_gate/`. Inte en F2/F3-tier-uppdelning. |
 | `Code Contract` | Per-`Dossier`-fil (`code-contract.json`) som listar must/avoid för den kod LLM:en får producera när `Dossier`n aktiveras. |
-| `Env Contract` | Per-`Dossier`-fil (`env-contract.json`) för hybrid/hard-Dossiers. Listar requires + designModeBehavior + integrationModeBehavior. |
+| `Env Contract` | Per-`Dossier`-fil (`env-contract.json`) för hard-Dossiers (ADR 0012 tog bort `hybrid`). Listar requires + designModeBehavior + integrationModeBehavior. |
 
 ## Plan, Routes, Specs
 
@@ -75,9 +75,9 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 
 | Term | Vad det är |
 |------|------------|
-| `Preview Runtime` | Abstraktion för var en genererad sajt körs. Implementationer: `LocalRuntime`, `StackBlitzRuntime`, `FlyRuntime`. Produktkoden talar bara om `Preview Runtime`. |
+| `Preview Runtime` | Abstraktion för var en genererad sajt körs. Implementationer: `LocalRuntime` (nuvarande default `local-next`), `vercel-sandbox`-adapter (opt-in primär, ADR 0033), `StackBlitzRuntime` (pausad), `FlyRuntime` (framtida). Produktkoden talar bara om `Preview Runtime`. |
 | `LocalRuntime` | Implementation som kör genererade filer på utvecklarens egen Node. Implementationsordning: byggs först (lättast att felsöka). |
-| `StackBlitzRuntime` | Implementation som kör genererade Next.js-sajter via `WebContainer` i browserfliken. Default i policy. Byggs efter `LocalRuntime`. |
+| `StackBlitzRuntime` | Implementation som kör genererade Next.js-sajter via `WebContainer` i browserfliken. Pausad (ADR 0033) - INTE default. Nuvarande default är `local-next` (`LocalRuntime`); `vercel-sandbox` är opt-in primär adapter. |
 | `FlyRuntime` | Implementation som kör genererade sajter på Fly.io VM. Används bara när `StackBlitz` inte räcker (hard-Dossiers, Stripe, DB). |
 | `WebContainer` | Browser-baserad Node.js-runtime (StackBlitz-tekniken). Underliggande för `StackBlitzRuntime`. Inte en produktterm utanför det paketet. |
 | `Preview Session` | Aktiv session från en `Preview Runtime`: id, url, kind, createdAt. Returneras av `PreviewRuntime.start()`. |
