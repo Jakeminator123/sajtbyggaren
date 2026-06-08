@@ -1065,3 +1065,117 @@ def plan_copy_directives_llm(
     return _run_copy_directive_model(
         system=_COPY_DIRECTIVE_PLAN_SYSTEM, context=context, model=model
     )
+
+
+# ---------------------------------------------------------------------------
+# styleDirectiveModel: free/compound style follow-up -> structured theme mutation
+# ---------------------------------------------------------------------------
+#
+# The stylist role (llm-models.v1.json v9) interprets a free or compound style
+# follow-up ("gör den i höstfärger", "samma känsla som en solnedgång") into a
+# structured theme mutation: a primary brand colour hex, an optional accent hex
+# and an optional tone vibe. It is the model-driven understanding layer that
+# kicks in only when the deterministic colour lexicon misses. The model only
+# PROPOSES; the caller (packages/generation/followup/theme_directives.py) then
+# re-validates every field (hex must be a real hex, vibe must be a known key)
+# before anything is applied, exactly like the copyDirective guards. The model
+# never writes a field directly and never does per-element styling.
+
+
+class StyleDirectiveCandidate(BaseModel):
+    """A structured theme mutation proposed by the model from a follow-up."""
+
+    primaryColorHex: str | None = Field(
+        default=None,
+        description=(
+            "The main brand colour as a hex string like '#1e7a46', or null if "
+            "the operator did not ask to change the colour. Choose a "
+            "mid/dark, contrast-safe tone (it becomes the primary button/link "
+            "colour). For a compound like 'grönvit' this is the saturated half "
+            "(green); the light half goes in accentColorHex."
+        ),
+    )
+    accentColorHex: str | None = Field(
+        default=None,
+        description=(
+            "An optional secondary/accent colour as a hex string, or null. "
+            "Only set this when the operator clearly named two colours (e.g. "
+            "'grönvit', 'blå och vit'); it may be a light tone (white/cream)."
+        ),
+    )
+    toneVibe: str | None = Field(
+        default=None,
+        description=(
+            "An optional typography/feel vibe, or null. MUST be exactly one of: "
+            "'editorial' (elegant/beautiful serif), 'luxury' (exclusive), "
+            "'playful' (friendly/rounded), 'modern' (clean/minimal), 'tech' "
+            "(technical/cool), 'calm' (soft serif), 'bold'. Use it for "
+            "'lyxig'/'modern'/'lekfull'-style requests; return null otherwise."
+        ),
+    )
+
+
+_STYLE_DIRECTIVE_SYSTEM = (
+    "You are the visual stylist for Sajtbyggaren. The operator already has a "
+    "generated website and typed a short follow-up asking to restyle it "
+    "(colours, palette, feel/typography) for the WHOLE site. Interpret the "
+    "request into a structured theme mutation: primaryColorHex (a hex like "
+    "'#0f766e'), an optional accentColorHex (only when two colours are named), "
+    "and an optional toneVibe from the fixed set "
+    "editorial|luxury|playful|modern|tech|calm|bold. Map free or compound "
+    "colour expressions to a sensible hex (e.g. 'korall' -> a coral hex, "
+    "'höstfärger' -> a warm autumnal hex, 'grönvit' -> green primary + white "
+    "accent). Pick a mid/dark, contrast-safe primary so button text stays "
+    "readable. Hard rules: return ONLY colours/vibe the operator actually "
+    "asked for; if the follow-up is not a global style/colour change (it is a "
+    "question, a copy edit, adding a component, or per-element styling like "
+    "'only the header'), or is unclear, return all nulls. Never invent a brand "
+    "colour the operator did not ask for."
+)
+
+
+def extract_style_directive_llm(
+    follow_up_prompt: str,
+    *,
+    language: str,
+    model: str,
+) -> dict[str, str] | None:
+    """Best-effort LLM interpretation of a free/compound style follow-up.
+
+    Returns ``{"primaryColorHex"?, "accentColorHex"?, "toneVibe"?}`` (only the
+    fields the model set) or ``None`` when no API key is configured, on any
+    error, or when the model returns nothing usable. The caller re-validates
+    every field, so this is not the security boundary.
+    """
+    if not has_openai_api_key():
+        return None
+    context = f"Language: {language}\nOperator follow-up: {follow_up_prompt}"
+    try:
+        from openai import OpenAI
+
+        client = OpenAI()
+        response = client.responses.parse(
+            model=model,
+            input=[
+                {"role": "system", "content": _STYLE_DIRECTIVE_SYSTEM},
+                {"role": "user", "content": context},
+            ],
+            text_format=StyleDirectiveCandidate,
+        )
+        parsed = response.output_parsed
+    except Exception as exc:  # noqa: BLE001
+        message = f"styleDirective model error: {type(exc).__name__}: {exc}"
+        logger.warning(message)
+        sys.stderr.write(f"[styleDirective] {message}\n")
+        sys.stderr.flush()
+        return None
+    if parsed is None:
+        return None
+    result: dict[str, str] = {}
+    if parsed.primaryColorHex:
+        result["primaryColorHex"] = parsed.primaryColorHex
+    if parsed.accentColorHex:
+        result["accentColorHex"] = parsed.accentColorHex
+    if parsed.toneVibe:
+        result["toneVibe"] = parsed.toneVibe
+    return result or None

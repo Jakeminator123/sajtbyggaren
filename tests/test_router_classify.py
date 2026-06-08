@@ -534,3 +534,48 @@ def test_bare_color_word_question_is_not_an_edit():
     assert d.editKind == "none"
     assert d.buildRequirement == "none"
     assert d.shouldStartPreview is False
+
+
+# ---------------------------------------------------------------------------
+# 2026-06-08 stylist slice: the router shares the central colour lexicon, so
+# lexicon colours ("korall") and compound colours ("grönvit") read as
+# visual_style adjectives. The same fix-1 guard holds: a bare/compound colour
+# without style context is no edit, and an additive request that mentions a
+# (compound) colour stays component_add - never a global restyle.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "gör sajten grönvit",
+        "gör den svartvit",
+        "gör den mintgrön",
+        "gör färgen korall",
+        "ändra färgen till grönvitt",
+    ],
+)
+def test_compound_and_lexicon_colours_are_visual_style(prompt: str):
+    """Free/compound colour expressions classify as a global visual_style edit
+    (so the stylist's theme path runs), with a real targeted rebuild."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.editKind == "visual_style"
+    assert d.buildRequirement == "targeted_rebuild"
+
+
+def test_compound_colour_add_request_stays_component_add():
+    """Regression: an ADD request that mentions a compound colour is
+    component_add, never a global restyle."""
+    d = classify_message("lägg till en grönvit knapp")
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "component_add"
+    assert d.componentIntent == "button"
+
+
+def test_bare_compound_colour_question_is_not_an_edit():
+    """fix-1 holds for compounds too: "vad betyder grönvit?" is not an edit."""
+    d = classify_message("vad betyder grönvit?")
+    assert d.editKind == "none"
+    assert d.buildRequirement == "none"
+    assert d.shouldStartPreview is False

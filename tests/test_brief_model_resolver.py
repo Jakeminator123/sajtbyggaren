@@ -143,6 +143,35 @@ def test_copy_directive_model_raises_when_role_missing(tmp_path: Path):
 
 
 @pytest.mark.tooling
+def test_resolves_style_directive_model_from_real_policy():
+    """stylist role: styleDirectiveModel is a registered role (llm-models v9)."""
+    from packages.generation.brief import resolve_style_directive_model
+
+    model = resolve_style_directive_model()
+    assert isinstance(model, str) and model.strip() == model and model
+
+
+@pytest.mark.tooling
+def test_style_directive_model_resolver_is_role_specific(tmp_path: Path):
+    from packages.generation.brief import resolve_style_directive_model
+
+    policy = tmp_path / "models.json"
+    policy.write_text(
+        json.dumps(
+            {
+                "roles": [
+                    {"id": "briefModel", "provider": "openai", "model": "gpt-brief"},
+                    {"id": "styleDirectiveModel", "provider": "openai", "model": "gpt-style"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert resolve_style_directive_model(policy_path=policy) == "gpt-style"
+    assert resolve_brief_model(policy_path=policy) == "gpt-brief"
+
+
+@pytest.mark.tooling
 def test_has_openai_api_key_treats_unset_as_missing(monkeypatch):
     monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
     assert has_openai_api_key() is False

@@ -924,6 +924,13 @@ COMMON_WORDS = {
     # ett canonical domain term (domänkoncepten heter brand/tone); samma
     # local-allowlist-logik som AppliedCopyDirective ovan.
     "ThemeDirective",
+    # stylist-roll (prompt B, 2026-06-08) — ``StyleDirectiveCandidate`` är den
+    # lokala pydantic-modellen i packages/generation/brief/extract.py för
+    # styleDirectiveModel:s structured output (primaryColorHex/accentColorHex/
+    # toneVibe). Inte ett canonical domain term (domänkoncepten heter brand/
+    # tone); modellens output re-valideras i theme_directives.py innan något
+    # appliceras. Samma local-allowlist-logik som ThemeDirective ovan.
+    "StyleDirectiveCandidate",
     # Tier 1 robusthet (2026-06-01) — christopher-ui frontend-paket A+B+C:
     # ErrorBoundary-komponent (klass, React 19) + lokalt toast-system. Alla
     # är apps/viewser-interna UI-helpers — varken canonical domain terms

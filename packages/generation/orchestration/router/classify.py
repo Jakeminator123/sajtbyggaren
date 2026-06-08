@@ -23,6 +23,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from packages.generation.followup.color_lexicon import (
+    COLOR_NAMES,
+    contains_compound_color,
+)
+
 from .models import (
     BuildRequirement,
     ContextLevel,
@@ -99,6 +104,14 @@ _STYLE_COLORS = (
     "pink", "red", "blue", "green", "yellow", "purple", "black", "white",
     "gray", "grey", "brown", "teal", "navy", "gold",
 )
+
+# Union the central colour lexicon names so every lexicon colour (korall, mint,
+# petrol, grå, ...) reads as a style adjective here too - one source of truth
+# shared with the theme extractor (packages/generation/followup/color_lexicon).
+# Kept as a SUPERSET of the legacy tuple so no previously-recognised name is
+# dropped (the regressions in test_router_classify.py stay green). Compound
+# colours like "grönvit" are matched separately via contains_compound_color.
+_STYLE_COLORS = tuple(sorted(set(_STYLE_COLORS) | COLOR_NAMES))
 
 _STYLE_VERBS = (
     "snygga till", "fräscha upp", "modernisera", "restyla", "restyle",
@@ -437,7 +450,11 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     has_create = _any_word(work, _CREATE_VERBS)
     has_new = _any_word(work, _NEW_PAGE_CUES)
     has_style_verb = _any_word(work, _STYLE_VERBS)
-    has_style_adj = _any_word(work, _STYLE_ADJECTIVES) or _any_word(work, _STYLE_COLORS)
+    has_style_adj = (
+        _any_word(work, _STYLE_ADJECTIVES)
+        or _any_word(work, _STYLE_COLORS)
+        or contains_compound_color(work)
+    )
     has_style_noun = _any_word(work, _STYLE_NOUNS)
     has_redesign = _any_word(work, _REDESIGN_VERBS)
     has_layout_verb = _any_word(work, _LAYOUT_VERBS)

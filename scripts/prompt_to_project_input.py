@@ -96,6 +96,7 @@ _validate_copy_directive_candidate = _copy_directives._validate_copy_directive_c
 # prompt to brand.primaryColorHex + tone.primary - both already rendered by the
 # builder - so the rebuild shows the restyle. Honest no-op when no theme intent.
 extract_theme_directive = _theme_directives.extract_theme_directive
+extract_theme_directive_via_llm = _theme_directives.extract_theme_directive_via_llm
 apply_theme_directive = _theme_directives.apply_theme_directive
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
@@ -2271,6 +2272,91 @@ def _copy_directive_llm_eligible(
     return True
 
 
+# Visual cues that mark a follow-up as a STYLE/THEME request (the stylist role's
+# honesty gate, mirroring the router's fix-1 "needs style context"). The
+# styleDirectiveModel fallback only fires when the deterministic theme extractor
+# missed AND one of these is present, so a bare colour question ("vad betyder
+# rosa?" - no cue) and an additive request ("lägg till en blå knapp") can never
+# trigger a model-driven restyle. These are visual NOUNS + restyle VERBS, not a
+# bare colour word, so the gate keys on style intent, not on a colour token.
+_THEME_STYLE_CUE_KEYWORDS: tuple[str, ...] = (
+    "färg",
+    "färgen",
+    "färger",
+    "färgerna",
+    "farg",
+    "fargen",
+    "färgschema",
+    "fargschema",
+    "färgskala",
+    "palett",
+    "paletten",
+    "palette",
+    "tema",
+    "temat",
+    "theme",
+    "stil",
+    "stilen",
+    "style",
+    "utseende",
+    "utseendet",
+    "look",
+    "design",
+    "designen",
+    "bakgrund",
+    "bakgrunden",
+    "bakgrundsfärg",
+    "color",
+    "colour",
+    "colors",
+    "colours",
+    "typsnitt",
+    "typsnittet",
+    "font",
+    "fonten",
+    "typografi",
+    "vibe",
+    "känsla",
+    "kansla",
+    "känslan",
+    "kanslan",
+    # restyle verbs / colour-application verbs
+    "snygga",
+    "modernisera",
+    "styla om",
+    "designa om",
+    "piffa",
+    "polera",
+    "restyla",
+    "restyle",
+    "måla",
+    "mala",
+    "färga",
+    "farga",
+)
+
+
+def _theme_directive_llm_eligible(follow_up_prompt: str) -> bool:
+    """Decide whether to consult styleDirectiveModel for this follow-up.
+
+    The stylist model is the PRIMARY understanding layer for free/compound style
+    expressions and the deterministic colour lexicon is the safety net. The
+    model is consulted only when the deterministic ``extract_theme_directive``
+    missed AND the prompt carries a visual/style cue (a colour/theme/style noun
+    or a restyle verb). This preserves the router's fix-1 guard in the prompt
+    path: a bare colour with no style context ("vad betyder rosa?") and an
+    additive request ("lägg till en blå knapp") never trigger a model restyle.
+    Honesty: an empty/invalid model result stays an honest no-op (handled in
+    ``extract_theme_directive_via_llm``); this gate only decides whether to ask.
+    """
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return False
+    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
+        return False
+    return _contains_any(text, _THEME_STYLE_CUE_KEYWORDS)
+
+
 def _apply_semantic_patch(
     merged: dict[str, Any],
     candidate: dict[str, Any],
@@ -2769,7 +2855,23 @@ def merge_followup_project_input(
     # the builder already renders via patch_globals_css on rebuild. Honest
     # no-op when the prompt carries no theme intent (most follow-ups), so the
     # deterministic copyDirective/semantic behaviour above is unchanged.
-    apply_theme_directive(merged, extract_theme_directive(follow_up_prompt, language=language))
+    # stylist role: the deterministic colour/vibe lexicon resolves known + many
+    # compound expressions ("grönvit", "korall", "lyxigare"). When it misses a
+    # free expression and the caller opted into the LLM fallback, the
+    # styleDirectiveModel interprets it into the SAME validated ThemeDirective
+    # (hex + known vibe re-checked in extract_theme_directive_via_llm). The gate
+    # keeps the fix-1 honesty guard (bare colour question / add-only never
+    # restyles); an empty/invalid model result is an honest no-op.
+    theme_directive = extract_theme_directive(follow_up_prompt, language=language)
+    if (
+        theme_directive is None
+        and enable_llm_fallback
+        and _theme_directive_llm_eligible(follow_up_prompt)
+    ):
+        theme_directive = extract_theme_directive_via_llm(
+            follow_up_prompt, language=language
+        )
+    apply_theme_directive(merged, theme_directive)
     return merged
 
 

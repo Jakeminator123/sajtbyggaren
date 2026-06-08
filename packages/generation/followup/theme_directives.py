@@ -50,68 +50,24 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from packages.generation.followup.color_lexicon import (
+    ACCENT_COLOR_HEX,
+    PRIMARY_COLOR_HEX,
+    split_compound_color,
+)
 from packages.generation.followup.text import (
     _contains_word,
     _normalise_followup_text,
 )
 
-# Natural-language colour word -> hex applied to ``brand.primaryColorHex``.
-# Values are mid-to-dark brand tones so the auto-contrast foreground stays
-# readable; light/neutral words (white/grey) are intentionally excluded because
-# a near-white primary breaks button/CTA contrast. Swedish + English + common
-# ASCII-folded spellings (rod/bla/gron) are covered so casing/diacritics don't
-# create a gap.
-_COLOR_WORD_HEX: dict[str, str] = {
-    "rosa": "#db2777",
-    "pink": "#db2777",
-    "magenta": "#be185d",
-    "röd": "#dc2626",
-    "rött": "#dc2626",
-    "röda": "#dc2626",
-    "rod": "#dc2626",
-    "red": "#dc2626",
-    "blå": "#2563eb",
-    "blått": "#2563eb",
-    "blåa": "#2563eb",
-    "bla": "#2563eb",
-    "blue": "#2563eb",
-    "marinblå": "#1e3a8a",
-    "marinblått": "#1e3a8a",
-    "navy": "#1e3a8a",
-    "grön": "#16a34a",
-    "grönt": "#16a34a",
-    "gröna": "#16a34a",
-    "gron": "#16a34a",
-    "green": "#16a34a",
-    "lila": "#7c3aed",
-    "violett": "#7c3aed",
-    "purple": "#7c3aed",
-    "orange": "#ea580c",
-    "gul": "#ca8a04",
-    "gult": "#ca8a04",
-    "gula": "#ca8a04",
-    "yellow": "#ca8a04",
-    "turkos": "#0d9488",
-    "turkost": "#0d9488",
-    "teal": "#0d9488",
-    "mint": "#10b981",
-    "petrol": "#0e7490",
-    "korall": "#f43f5e",
-    "coral": "#f43f5e",
-    "vinröd": "#9f1239",
-    "vinrott": "#9f1239",
-    "bordeaux": "#9f1239",
-    "brun": "#92400e",
-    "brunt": "#92400e",
-    "bruna": "#92400e",
-    "brown": "#92400e",
-    "guld": "#b45309",
-    "gyllene": "#b45309",
-    "gold": "#b45309",
-    "svart": "#171717",
-    "svarta": "#171717",
-    "black": "#171717",
-}
+# Natural-language colour word -> hex lives in the central colour lexicon
+# (packages/generation/followup/color_lexicon.py), shared with the router so a
+# new colour is understood by both the classifier and this extractor from one
+# edit. PRIMARY tones are contrast-safe brand colours; ACCENT tones (white,
+# cream, beige, ...) only ever fill the accent slot of a two-colour or compound
+# expression - a near-white primary breaks button/CTA contrast.
+_COLOR_TOKEN_RE = re.compile(r"[a-zåäöéü0-9]+")
+
 
 # Whole-word match with the same boundary rule as ``text._contains_word`` (so a
 # colour word is never matched inside a longer word, e.g. "blå" inside "marinblå").
@@ -230,26 +186,59 @@ class ThemeDirective:
     vibeWord: str | None = None
 
 
-def _ordered_colors(text: str) -> list[tuple[str, str]]:
-    """Return ``(hex, word)`` pairs for colour words present in ``text``, in the
-    order they appear, de-duplicated by hex (so "rosa" and "pink" don't both
-    count). The first is treated as the primary colour, the second (if any) as
-    the accent - so "gör den rosa och blå" yields a pink primary + blue accent.
+def _resolve_colors(
+    text: str,
+) -> tuple[str | None, str | None, str | None, str | None]:
+    """Resolve ``(primary_hex, primary_word, accent_hex, accent_word)`` from text.
+
+    Priority:
+
+    1. A compound colour token ("grönvit"/"svartvit"/"blåvit") splits into a
+       primary + accent in one word (the white half is the accent, never a
+       near-white primary).
+    2. Otherwise the colour words present, in order: the first
+       primary-eligible word is the primary and the next distinct colour
+       (primary OR accent-only, e.g. "vit"/"white") is the accent - so
+       "gör den rosa och blå" -> pink + blue and "blå och vit" -> blue + white.
+
+    An accent-only colour on its own (a bare "vit") yields no primary - a
+    near-white primary breaks contrast - so it stays an honest no-op.
     """
-    matches: list[tuple[int, str, str]] = []
-    for word, hex_value in _COLOR_WORD_HEX.items():
+    # 1. compound single token wins (resolves primary + accent at once).
+    for token in _COLOR_TOKEN_RE.findall(text):
+        split = split_compound_color(token)
+        if split is not None:
+            return split
+
+    # 2. ordered single colour words, de-duplicated by hex.
+    matches: list[tuple[int, str, str, bool]] = []
+    for word, hex_value in PRIMARY_COLOR_HEX.items():
         position = _color_word_position(text, word)
         if position is not None:
-            matches.append((position, hex_value, word))
+            matches.append((position, hex_value, word, True))
+    for word, hex_value in ACCENT_COLOR_HEX.items():
+        position = _color_word_position(text, word)
+        if position is not None:
+            matches.append((position, hex_value, word, False))
     matches.sort(key=lambda item: (item[0], -len(item[2])))
-    ordered: list[tuple[str, str]] = []
+    ordered: list[tuple[str, str, bool]] = []
     seen_hex: set[str] = set()
-    for _position, hex_value, word in matches:
+    for _position, hex_value, word, is_primary in matches:
         if hex_value in seen_hex:
             continue
         seen_hex.add(hex_value)
-        ordered.append((hex_value, word))
-    return ordered
+        ordered.append((hex_value, word, is_primary))
+    if not ordered:
+        return None, None, None, None
+
+    primary = next((item for item in ordered if item[2]), None)
+    if primary is None:
+        # Only accent-only tones present (e.g. a bare "vit") -> no safe primary.
+        return None, None, None, None
+    primary_hex, primary_word, _ = primary
+    accent = next((item for item in ordered if item[0] != primary_hex), None)
+    accent_hex, accent_word = (accent[0], accent[1]) if accent else (None, None)
+    return primary_hex, primary_word, accent_hex, accent_word
 
 
 def _match_font_vibe(text: str) -> tuple[str | None, str | None]:
@@ -278,9 +267,7 @@ def extract_theme_directive(
     if not text:
         return None
 
-    colors = _ordered_colors(text)
-    color_hex, color_word = colors[0] if colors else (None, None)
-    accent_hex, accent_word = colors[1] if len(colors) > 1 else (None, None)
+    color_hex, color_word, accent_hex, accent_word = _resolve_colors(text)
     vibe, vibe_word = _match_font_vibe(text)
 
     # A bare "ändra typsnittet" (font trigger, no vibe) gets a tasteful default
@@ -298,6 +285,86 @@ def extract_theme_directive(
         colorWord=color_word,
         accentWord=accent_word,
         vibeWord=vibe_word,
+    )
+
+
+# --- stylist role: model-driven fallback (parallel to the copyDirective A1) ---
+# When the deterministic extractor misses a free/unknown style expression
+# ("gör den i höstfärger", "samma känsla som en solnedgång"), the styleDirective
+# model interprets it into the SAME structured ThemeDirective shape. Output is
+# never trusted blindly: it is re-validated here exactly like a copyDirective
+# candidate - hex must be a real hex, toneVibe must be a known vibe key - and an
+# all-empty / invalid result is an honest no-op (None). The model never writes a
+# field directly; apply_theme_directive remains the single, deterministic seam.
+
+_HEX_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+# The vibe keys the deterministic extractor + _TONE_TYPOGRAPHY already
+# understand. The model may only return one of these (never a free string), so a
+# hallucinated vibe is dropped, not rendered.
+_ALLOWED_TONE_VIBES: frozenset[str] = frozenset(_FONT_VIBE_TONE.values())
+
+
+def _normalise_hex(value: Any) -> str | None:
+    """Return a lower-case ``#rrggbb`` hex or ``None`` for an invalid value.
+
+    Accepts ``#rgb`` (expanded to ``#rrggbb``) and ``#rrggbb``. This is the
+    security boundary for the model path: a non-hex/garbage value never reaches
+    ``brand.primaryColorHex``.
+    """
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip().lower()
+    if not _HEX_RE.match(candidate):
+        return None
+    if len(candidate) == 4:  # #rgb -> #rrggbb
+        candidate = "#" + "".join(channel * 2 for channel in candidate[1:])
+    return candidate
+
+
+def extract_theme_directive_via_llm(
+    prompt: str,
+    *,
+    language: str = "sv",
+) -> ThemeDirective | None:
+    """stylist role: model-driven theme fallback for a free/unknown style request.
+
+    Resolves the ``styleDirectiveModel`` role and asks it to interpret the
+    follow-up into a structured theme mutation, then RE-VALIDATES every field:
+    ``primaryColorHex``/``accentColorHex`` must be a valid hex and ``toneVibe``
+    must be a known vibe key. An accent with no primary is dropped (a lone
+    light accent could break contrast). An all-empty / invalid result is an
+    honest no-op (``None``). Fail-safe: any resolution/call error yields
+    ``None`` so a missing key never breaks the follow-up loop.
+    """
+    try:
+        from packages.generation.brief.extract import extract_style_directive_llm
+        from packages.generation.brief.models import resolve_style_directive_model
+
+        model = resolve_style_directive_model()
+        raw = extract_style_directive_llm(prompt, language=language, model=model)
+    except Exception:  # noqa: BLE001
+        return None
+    if not isinstance(raw, dict):
+        return None
+
+    primary = _normalise_hex(raw.get("primaryColorHex"))
+    accent = _normalise_hex(raw.get("accentColorHex"))
+    raw_vibe = raw.get("toneVibe")
+    vibe = raw_vibe if isinstance(raw_vibe, str) and raw_vibe in _ALLOWED_TONE_VIBES else None
+
+    # An accent only makes sense alongside a primary; drop a lone accent.
+    if primary is None and accent is not None:
+        accent = None
+    if primary is None and vibe is None:
+        return None
+
+    return ThemeDirective(
+        primaryColorHex=primary,
+        accentColorHex=accent,
+        toneVibe=vibe,
+        colorWord=None,
+        accentWord=None,
+        vibeWord=None,
     )
 
 
