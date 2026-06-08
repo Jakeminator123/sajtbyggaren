@@ -24,11 +24,13 @@ import pytest
 
 from scripts.build_site import build
 from scripts.prompt_to_project_input import (
+    _copy_directive_llm_eligible,
     _extract_copy_directives,
     _extract_copy_directives_via_llm,
     _is_content_rewrite_request,
     _validate_against_schema,
     _validate_copy_directive_candidate,
+    classify_followup_intent,
     generate,
     generate_followup,
     merge_followup_project_input,
@@ -1678,3 +1680,208 @@ def test_schema_rejects_about_text_include_token() -> None:
     )
     with pytest.raises(SystemExit):
         _validate_against_schema(pi)
+
+
+# --- 2026-06-08 (jakob-be): copyDirectiveModel as the PRIMARY copy-edit layer ---
+#
+# The deterministic _extract_copy_directives is the safety net, not the gate:
+# the model is now consulted for free-text copy edits the keyword rules miss
+# even when the intent is tagline-update (not only no-semantic-change), while
+# tone-shift/story-emphasize/positioning-shift/clarify and additive prompts stay
+# deterministic so the model can never fabricate a cross-field copy edit.
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("prompt", "intent", "expected"),
+    [
+        # no-semantic-change stays eligible (unchanged behaviour)...
+        ("kan du kalla firman Nordens Smycken", "no-semantic-change", True),
+        # ...and tagline-update is now ALSO eligible so the model can read the
+        # free-text hero/tagline edits the deterministic rules miss.
+        ("gör herotexten ölälskarna från palma", "tagline-update", True),
+        (
+            'byt ut sloganen mot något lekfullare: "Surdeg med kärlek"',
+            "tagline-update",
+            True,
+        ),
+        # Add-only requests never trigger a copy edit, whatever the intent.
+        ("lägg till en kontaktknapp", "no-semantic-change", False),
+        # Intents whose semantic-patch field the extraction path cannot emit stay
+        # deterministic (no double-apply / no fabricated cross-field copy).
+        ("gör tonen varmare", "tone-shift", False),
+        ("lyft fram vår historia", "story-emphasize", False),
+        ("positionera oss som premium", "positioning-shift", False),
+        ("ok", "clarify", False),
+    ],
+)
+def test_copy_directive_llm_eligible_widened_to_tagline_update(
+    prompt: str, intent: str, expected: bool
+) -> None:
+    assert _copy_directive_llm_eligible(prompt, intent=intent) is expected
+
+
+@pytest.mark.tooling
+def test_merge_llm_extracts_hero_tagline_when_intent_is_tagline_update(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """'gör herotexten ölälskarna från palma' classifies as tagline-update and
+    the deterministic rules miss it (no replace verb/marker, no till/to value).
+    The widened eligibility lets copyDirectiveModel read the literal, which then
+    overrides the conservative semantic fallback. Regression for the 2026-06-08
+    silent no-op (docs/diagnosis-and-handoff-2026-06-08.md)."""
+    prompt = "gör herotexten ölälskarna från palma"
+    assert classify_followup_intent(prompt, language="sv") == "tagline-update"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "ölälskarna från palma",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == "ölälskarna från palma"
+    assert merged["directives"]["copyDirectives"] == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "ölälskarna från palma",
+            "source": "llm",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_merge_llm_extracts_slogan_from_mot_phrasing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """'byt ut sloganen mot något lekfullare: "X"' is tagline-update, but the
+    deterministic value extractor only understands 'till'/'instead of'/quoted-
+    before-marker - not 'mot ... :'. With the model consulted the quoted literal
+    still lands as the tagline."""
+    prompt = 'byt ut sloganen mot något lekfullare: "Surdeg med kärlek"'
+    assert classify_followup_intent(prompt, language="sv") == "tagline-update"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "Surdeg med kärlek",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == "Surdeg med kärlek"
+    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_merge_llm_extracts_company_name_from_kalla_firman(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """'kan du kalla firman Nordens Smycken' is no-semantic-change and the
+    deterministic rules miss it ('kalla'/'firman' are not name keywords); the
+    model reads the rename. Locks the operator's exact free-text phrasing."""
+    prompt = "kan du kalla firman Nordens Smycken"
+    assert classify_followup_intent(prompt, language="sv") == "no-semantic-change"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "company-name",
+                "operation": "replace-text",
+                "payload": "Nordens Smycken",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert merged["company"]["name"] == "Nordens Smycken"
+    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_tone_shift_never_fabricates_tagline_via_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: 'gör tonen varmare' is tone-shift, so the extraction path is
+    NOT consulted - even a misbehaving model proposing a literal tagline can
+    never be reached/applied. The semantic tone patch leaves company.tagline
+    byte-stable and no copyDirective is recorded."""
+    previous = _previous_project_input()
+    prompt = "gör tonen varmare"
+    assert classify_followup_intent(prompt, language="sv") == "tone-shift"
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "Värme i varje möte",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, previous=previous, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_additive_request_never_triggers_llm_copy_edit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: 'lägg till en kontaktknapp' must never become a copy edit
+    (add-only guard), even with the model enabled and (wrongly) proposing a
+    rename. Name + tagline stay byte-stable; no copyDirective is recorded."""
+    previous = _previous_project_input()
+    prompt = "lägg till en kontaktknapp"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "company-name",
+                "operation": "replace-text",
+                "payload": "Knappbolaget",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, previous=previous, enable_llm_fallback=True)
+    assert merged["company"]["name"] == previous["company"]["name"]
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_tagline_update_llm_no_op_does_not_fabricate_copy_directive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Honesty: when the model returns nothing valid for a tagline-update with
+    no literal copy ('gör herotexten mer slagkraftig'), the LLM no-op stays an
+    honest no-op - no copyDirective is fabricated."""
+    prompt = "gör herotexten mer slagkraftig"
+    assert classify_followup_intent(prompt, language="sv") == "tagline-update"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )

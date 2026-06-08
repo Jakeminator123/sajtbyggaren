@@ -2217,6 +2217,29 @@ def _semantic_source_entry(
 _MISSING_STORY = object()
 
 
+# Intents for which the copyDirectiveModel extraction fallback may run when the
+# deterministic _extract_copy_directives misses. The extraction path only ever
+# emits company-name | tagline directives (see _extract_copy_directives_via_llm),
+# so the ONLY field it can touch that _apply_semantic_patch also touches is the
+# tagline, and only under tagline-update. For that intent the model is the better
+# interpreter of literal copy the keyword rules miss - e.g.
+# "gör herotexten ölälskarna från palma" or
+# 'byt ut sloganen mot något lekfullare: "Surdeg med kärlek"' - and its
+# *validated* directive cleanly REPLACES the conservative semantic fallback
+# (copy directives apply AFTER the semantic patch and replace-text overwrites,
+# so the model is authoritative for the field it is allowed to emit; there is no
+# stacked double-apply). tone-shift (-> tone), story-emphasize (-> company.story)
+# and positioning-shift (-> no copy field) own fields the extraction path does
+# NOT emit, so consulting the model there could only fabricate a spurious
+# cross-field name/tagline edit (e.g. "gör tonen varmare" must never invent a
+# literal tagline). They keep their deterministic handling untouched - this is
+# the "no double-apply against _apply_semantic_patch for the same field" rule.
+# clarify is too ambiguous to carry a literal copy edit.
+_COPY_DIRECTIVE_LLM_ELIGIBLE_INTENTS: frozenset[FollowupIntent] = frozenset(
+    {"no-semantic-change", "tagline-update"}
+)
+
+
 def _copy_directive_llm_eligible(
     follow_up_prompt: str,
     *,
@@ -2224,13 +2247,23 @@ def _copy_directive_llm_eligible(
 ) -> bool:
     """Decide whether to consult copyDirectiveModel for this follow-up.
 
-    Only genuinely unclassified follow-ups qualify. Additive prompts
-    ("lägg till ...") and the known semantic intents (tone-shift,
-    tagline-update, story-emphasize, positioning-shift, clarify) already have
-    deterministic handling - firing the model there risks a spurious copy edit
-    (e.g. "lägg till premium produkt" must not rewrite the tagline).
+    copyDirectiveModel is the PRIMARY understanding layer for copy edits and the
+    deterministic _extract_copy_directives is the safety net (a validator, not a
+    gatekeeper): the model is consulted whenever the deterministic rules miss AND
+    the intent is one the extraction path can faithfully serve - a genuinely
+    unclassified follow-up (no-semantic-change) or an explicit hero/tagline edit
+    (tagline-update). For tagline-update the model's literal tagline overrides the
+    conservative semantic fallback; because the extraction path only emits
+    company-name | tagline (company-name is never semantic-patched, tagline is the
+    sole overlap) the model is authoritative for that one field and never
+    double-applies on top of _apply_semantic_patch.
+
+    Additive prompts ("lägg till ...") never qualify - an add request must not
+    rewrite copy - and tone-shift/story-emphasize/positioning-shift/clarify keep
+    their deterministic handling so the model can never silently fabricate a copy
+    edit for a field _apply_semantic_patch already owns for them.
     """
-    if intent != "no-semantic-change":
+    if intent not in _COPY_DIRECTIVE_LLM_ELIGIBLE_INTENTS:
         return False
     text = _normalise_followup_text(follow_up_prompt)
     if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
