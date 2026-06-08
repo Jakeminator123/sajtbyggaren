@@ -1,28 +1,21 @@
 "use client";
 
 import {
-  AlertTriangle,
   ChevronLeft,
   ChevronUp,
-  Clock,
   GitBranch,
   ImagePlus,
   Loader2,
   MessageSquare,
   Minus,
-  RotateCcw,
   Send,
-  ServerCrash,
-  ShieldAlert,
   Sparkles,
-  WifiOff,
   X,
 } from "lucide-react";
 import {
   ChangeEvent as ReactChangeEvent,
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
-  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -39,7 +32,6 @@ import {
   classifyBuildStatus,
   outcomeToStage,
   type PromptBuildOutcome,
-  type PromptStage,
 } from "@/components/prompt-builder";
 import { Textarea } from "@/components/ui/textarea";
 import type { AssetRef } from "@/lib/asset-store/types";
@@ -50,12 +42,41 @@ import {
   type BuildChange,
   type RunChangeSet,
 } from "@/lib/build-changes";
-import {
-  CHIP_INTERACTIONS,
-  PRIMARY_INTERACTIONS,
-  SECONDARY_INTERACTIONS,
-} from "@/lib/ui-tokens";
+import { CHIP_INTERACTIONS, PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
 import { cn } from "@/lib/utils";
+
+import {
+  ALLOWED_UPLOAD_MIMES,
+  INITIAL_BUILD_LABEL,
+  MAX_UPLOAD_BYTES,
+  PANEL_DEFAULT_SIZE,
+  PANEL_HEIGHT,
+  PANEL_MIN_HEIGHT,
+  PROGRESS_RAMP_DURATION_MS,
+  QUICK_PROMPT_CATEGORIES,
+  TOOLBAR_ROW_HEIGHT,
+} from "./floating-chat/constants";
+import { ErrorBubble } from "./floating-chat/error-bubble";
+import {
+  clampSize,
+  clampToViewport,
+  classifyFollowupError,
+  defaultPosition,
+} from "./floating-chat/helpers";
+import { useKeyboardInset } from "./floating-chat/hooks";
+import type {
+  AppliedCopyDirective,
+  ChatMessage,
+  FloatingChatProps,
+  OpenClawAction,
+  OpenClawBridgeView,
+  OpenClawDecisionView,
+  Position,
+  RouterBuildRequirement,
+  RouterDecisionView,
+  RouterMessageKind,
+  Size,
+} from "./floating-chat/types";
 
 /**
  * Floating, draggable, minimizable chat window för efter-bygget-läget.
@@ -75,275 +96,6 @@ import { cn } from "@/lib/utils";
  * position-state är `null` och panelen renderas via CSS-fallback
  * (`right-6 bottom-6`) tills mount-effekten kör.
  */
-
-/**
- * Klassificering av error-meddelanden för rikare visuell + actionable
- * presentation. Mappar 1:1 mot ikon-paletten i ``ErrorBubble``.
- *
- * Klassificeringen sker en gång i ``classifyFollowupError`` när
- * meddelandet skapas, så MessageBubble kan vara dum presentations-
- * komponent utan att veta hur klassificering fungerar.
- */
-type ErrorKind =
-  | "rate-limit"
-  | "timeout"
-  | "schema"
-  | "auth"
-  | "quality"
-  | "network"
-  | "generic";
-
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  isPending?: boolean;
-  variant?: "info" | "success" | "warning" | "error";
-  /** Antal bilagor som skickades tillsammans med användarens prompt. */
-  attachmentCount?: number;
-  /**
-   * För error-meddelanden: kort tip-text (visad mindre under huvud-
-   * meddelandet) + den fulla error-strängen från servern (expanderbar
-   * "Visa detaljer") + den ursprungliga prompten som operatören kan
-   * retry:a med ett klick.
-   */
-  errorKind?: ErrorKind;
-  errorTip?: string;
-  errorDetails?: string;
-  retryPrompt?: string;
-  /**
-   * För success-meddelanden: en kort lista över ändringar. Källan
-   * avgörs av `changesExact`:
-   *   - `true`  → bekräftade deltas från en strukturerad change-set
-   *     (`summarizeChangeSet`), renderas under "Ändrat".
-   *   - falsy   → prompt-heuristik (`summarizeChangesFromPrompt`),
-   *     renderas under "Troligen ändrat".
-   */
-  changes?: BuildChange[];
-  /** True när `changes` kommer från en exakt change-set, inte heuristik. */
-  changesExact?: boolean;
-};
-
-/**
- * Snabbförslag-chips, kategoriserade. Visas under en collapsed
- * "Förslag"-toggle ovanför textarean när input är tomt och inga
- * bilagor är pending.
- *
- * Designprinciper för formuleringen av prompts:
- * - Konkreta verb ("Centrera", "Lägg till", "Byt") — inte vaga
- *   substantiv ("Färgschema").
- * - Adresserar features som faktiskt finns i build_site.py
- *   (gradient/centered/split hero, gallery-sektion, FAQ-sektion,
- *   USP-chips, story-sektion). Operatören får inte föreslagna
- *   ändringar som pipelinen inte kan utföra deterministiskt.
- * - Kort nog att rymmas i panelens 360px-bredd som chip, men
- *   tillräckligt specifika för att brief-modellen ska kunna
- *   producera bra dossier-deltas.
- * - Tre kategorier: Design (visuell stil), Innehåll (nya/ändrade
- *   sektioner), Layout (struktur). Kategori-labels är medvetet
- *   svenska för att matcha hela operatör-UI:t.
- */
-type QuickPromptCategory = {
-  id: "design" | "content" | "layout";
-  label: string;
-  prompts: ReadonlyArray<string>;
-};
-
-const QUICK_PROMPT_CATEGORIES: ReadonlyArray<QuickPromptCategory> = [
-  {
-    id: "design",
-    label: "Design",
-    prompts: [
-      "Använd en varmare färgpalett",
-      "Mer luftig typografi och vitytor",
-      "Mörkare bakgrund med ljusare accenter",
-    ],
-  },
-  {
-    id: "content",
-    label: "Innehåll",
-    prompts: [
-      "Skriv om hero-rubriken så den är mer säljande",
-      "Lägg till en sektion om vårt team",
-      "Mer specifika beskrivningar i tjänsteblocken",
-    ],
-  },
-  {
-    id: "layout",
-    label: "Layout",
-    prompts: [
-      "Centrera hero-sektionen",
-      "Hero med bild bredvid (split-layout)",
-      "Lägg till en gallery-sektion på startsidan",
-    ],
-  },
-];
-
-/**
- * Pending-bubblans label drivs nu av `useBuildTracePolling`-hooken
- * (GAP-viewser-pipeline-status-polling). Hooken pollar
- * /api/runs?siteId=X för att hitta pending-runen och switchar sedan
- * till /api/runs/[runId]/trace?since= för incrementala events. Phase
- * från trace.ndjson ("understand"/"plan"/"build") översätts till svenska
- * labels så operatören ser exakt vad pipen gör — inte en simulerad
- * tidskedja.
- *
- * Total-duration är hårdkodad till 30 s för progress-barens easing-ramp
- * (95 % på ~30 s, hopp till 100 % när /api/prompt-fetchen returnerar).
- * Det är bara en visuell ledtråd — den verkliga progress-signalen är
- * `tracePolling.currentPhase`-uppdateringen i pending-bubblan.
- */
-const PROGRESS_RAMP_DURATION_MS = 30_000;
-const INITIAL_BUILD_LABEL = "Bygger om sajten…";
-
-/**
- * Tolka ett backend-felmeddelande och returnera en kort, åtgärdsbar
- * text + ett "tips" för operatören. Vi ser specifika fel oftast
- * (OpenAI/Anthropic rate-limits, schema-valideringar, timeout) och
- * vill ge användaren något konkret att göra istället för bara
- * generic "Bygget misslyckades".
- *
- * Mappningen bygger på faktiska error-strängar från
- * `apps/viewser/lib/build-runner.ts` och `scripts/build_site.py`.
- * När en sträng inte matchar någon känd kategori returneras en
- * generic-tip som ändå är bättre än "okänt fel".
- */
-function classifyFollowupError(rawError: string): {
-  kind: ErrorKind;
-  message: string;
-  tip: string;
-} {
-  const text = rawError.toLowerCase();
-  if (text.includes("rate limit") || text.includes("429")) {
-    return {
-      kind: "rate-limit",
-      message: "AI-tjänsten är överbelastad just nu.",
-      tip: "Vänta 10–20 sekunder och försök igen.",
-    };
-  }
-  if (text.includes("timeout") || text.includes("timed out")) {
-    return {
-      kind: "timeout",
-      message: "Bygget tog för lång tid.",
-      tip: "Prova en mindre, mer specifik ändring.",
-    };
-  }
-  if (
-    text.includes("schema") ||
-    text.includes("validation") ||
-    text.includes("invalid")
-  ) {
-    return {
-      kind: "schema",
-      message: "Sajtens struktur kunde inte uppdateras automatiskt.",
-      tip: "Beskriv ändringen mer konkret (vilken sektion, vad ska ändras).",
-    };
-  }
-  if (
-    text.includes("openai") ||
-    text.includes("anthropic") ||
-    text.includes("api key")
-  ) {
-    return {
-      kind: "auth",
-      message: "AI-tjänsten är otillgänglig.",
-      tip: "Kontrollera att .env.local har giltig OPENAI_API_KEY.",
-    };
-  }
-  if (
-    text.includes("quality") ||
-    text.includes("typecheck") ||
-    text.includes("build failed")
-  ) {
-    return {
-      kind: "quality",
-      message: "Den nya versionen klarade inte Quality Gate.",
-      tip: "Pipelinen avbröt automatiskt — sajten är oförändrad. Prova en mer specifik instruktion.",
-    };
-  }
-  if (
-    text.includes("network") ||
-    text.includes("fetch") ||
-    text.includes("econnreset")
-  ) {
-    return {
-      kind: "network",
-      message: "Nätverket avbröts.",
-      tip: "Kontrollera anslutningen och försök igen.",
-    };
-  }
-  return {
-    kind: "generic",
-    message: rawError.length > 200 ? rawError.slice(0, 200) + "…" : rawError,
-    tip: "Prova en mer specifik instruktion eller dela upp ändringen i flera steg.",
-  };
-}
-
-/**
- * Returnera en ikon (lucide-react-komponent) per error-kind. Hålls
- * separat från `classifyFollowupError` så klassificeringen kan testas
- * utan React-bundlare och bubblan kan lägga till nya ikoner utan att
- * röra klassificeringen.
- */
-const ERROR_ICONS: Record<ErrorKind, typeof AlertTriangle> = {
-  "rate-limit": Clock,
-  timeout: Clock,
-  schema: AlertTriangle,
-  auth: ShieldAlert,
-  quality: ServerCrash,
-  network: WifiOff,
-  generic: AlertTriangle,
-};
-
-const ALLOWED_UPLOAD_MIMES = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/svg+xml",
-]);
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-
-type FloatingChatProps = {
-  /** Sajten vi gör follow-ups på (måste vara prompt-genererad). */
-  siteId: string;
-  /** Anropas när en follow-up-build är klar — page.tsx väljer den nya runen. */
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
-  /** Sätts under hela /api/prompt-cykeln av builder-shell så UI:t kan blockera dubbel-submit. */
-  isBuilding: boolean;
-  onBuildStart: () => void;
-  onBuildEnd: () => void;
-  /**
-   * Rapporterar bygg-stage (idle/thinking/building/success/failed) uppåt så
-   * page.tsx kan driva ViewerPanel:s BuildProgressCard under follow-ups. Utan
-   * den frös buildStage på föregående bygges sista värde (oftast "success")
-   * och stegmarkören hoppade direkt till sista steget vid varje följdprompt.
-   * Stegen drivs av den riktiga trace.ndjson-signalen (useBuildTracePolling),
-   * inte av en setTimeout-flip (jfr B122).
-   */
-  onStageChange?: (stage: PromptStage) => void;
-  /**
-   * "Iterera från denna" — när satt skickar nästa /api/prompt-fetch med
-   * `baseRunId` så backend laddar PI-snapshotet från den runen istället
-   * för senaste. Operatören sätter via Versions-tab. Rensas via
-   * `onClearBaseRunId` direkt efter en lyckad submit eller när operatören
-   * klickar "Avbryt iterera"-pilllen i composern.
-   */
-  pendingBaseRunId?: { baseRunId: string; baseVersion: number | null } | null;
-  onClearBaseRunId?: () => void;
-  /**
-   * Öppnar versionsvyn (ConsoleDrawer-historiken). Driver "Visa
-   * versioner"-knappen i första-gångs-hinten så operatören direkt ser
-   * var tidigare bygg bor. Valfri — utelämnas → knappen döljs.
-   */
-  onShowVersions?: () => void;
-  /**
-   * Slot för extra UI som rendras i samma centrerade toolbar-rad UNDER
-   * chat-panelen (till höger om device-preset-toggle). Typiskt
-   * `<BuilderActions variant="inline" ... />`. Renderas bara på desktop
-   * när panelen inte är minimerad.
-   */
-  tools?: ReactNode;
-};
 
 type PromptApiResponse = {
   runId?: string;
@@ -404,24 +156,6 @@ type PromptApiResponse = {
   // ``applied=false`` ignoreras bryggan (den vanliga/legacy-summeringen står).
   bridge?: Record<string, unknown>;
   error?: string;
-};
-
-/**
- * Strikt typad copy-direktiv-shape som speglar
- * ``governance/schemas/project-input.schema.json:directives.copyDirectives``.
- * Måste hållas i synk med ``AppliedCopyDirective`` i
- * ``apps/viewser/lib/runs.ts``. Den extra typen här finns så FloatingChat
- * inte tar ett direkt ``import`` på server-only path utan får sin
- * egen client-bundle-säkra typ.
- */
-type AppliedCopyDirective = {
-  target: "company-name" | "tagline" | "about-text" | "services";
-  operation: "replace-text" | "include-token";
-  payload: string;
-  // Pekar ut vilken tjänst (services[].id|label) ett services-direktiv träffar.
-  // Krävs av schemat när target=services, utelämnas annars.
-  targetRef?: string;
-  source?: "prompt-rule" | "llm" | "explicit";
 };
 
 // B155: avläs ``appliedVisibleEffect`` från build-result-payloaden utan
@@ -497,32 +231,6 @@ function summarizeCopyDirectives(
   return lines;
 }
 
-type Position = { x: number; y: number };
-type Size = { width: number; height: number };
-
-const PANEL_WIDTH = 360;
-const PANEL_HEIGHT = 460;
-const PANEL_MIN_HEIGHT = 220;
-// Resize-gränser (operatör-önskan 2026-06-07: dra i hörnen som ett
-// webbläsarfönster). Bredden får inte bli smalare än chip-raden tål
-// (~320) och inte bredare än att den täcker hela previewen i onödan.
-// Höjden delar PANEL_MIN_HEIGHT som golv; taket clamp:as mot viewporten
-// i clampSize så panelen + toolbar-raden alltid får plats.
-const PANEL_MIN_WIDTH = 320;
-const PANEL_MAX_WIDTH = 720;
-const PANEL_MAX_HEIGHT = 900;
-const VIEWPORT_PADDING = 16;
-/**
- * Toolbar-pillen (375/768/1024/Full + Verktyg) sitter kant-i-kant
- * UNDER chat-panelen via `top: position.y + PANEL_HEIGHT`. När vi
- * clamp:ar drag/resize-position måste vi räkna med pillens egen höjd
- * (h-8 button + p-0.5 padding ≈ 36px) plus lite andnings-padding så
- * raden inte klipps av viewportens nederkant. Används som höjd-argument
- * till clampToViewport där tidigare bara PANEL_HEIGHT användes
- * (scout-fynd 2026-05-26: toolbar hamnade utanför viewporten vid
- * default-position nederst till höger).
- */
-const TOOLBAR_ROW_HEIGHT = 40;
 const STORAGE_KEY_POSITION = "sajtbyggaren:floating-chat:position";
 const STORAGE_KEY_SIZE = "sajtbyggaren:floating-chat:size";
 const STORAGE_KEY_MINIMIZED = "sajtbyggaren:floating-chat:minimized";
@@ -577,42 +285,6 @@ function useIsMobileViewport(): boolean {
     return () => legacy.removeListener(update);
   }, []);
   return isMobile;
-}
-
-/**
- * useKeyboardInset — returnerar antalet pixlar som virtuella tangent-
- * bordet täcker av viewporten på iOS Safari. Driver bottom-offset på
- * bottom-sheet-panelen så att composern aldrig hamnar under tangent-
- * bordet när operatören skriver.
- *
- * Implementation via `window.visualViewport`-API:t som specifikt rapporterar
- * sektionen som faktiskt är synlig för användaren (inte hela window).
- * Skillnaden `innerHeight - visualViewport.height - visualViewport.offsetTop`
- * = höjden av det som ligger nedanför synlig viewport, dvs keyboard.
- *
- * Disabled när `enabled` är false (vi vill inte lyssna på dessa events
- * när chatten är minimerad eller desktop-läge är aktivt).
- */
-function useKeyboardInset(enabled: boolean): number {
-  const [inset, setInset] = useState(0);
-  useEffect(() => {
-    if (!enabled) return;
-    if (typeof window === "undefined") return;
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      const offset = window.innerHeight - vv.height - vv.offsetTop;
-      setInset(Math.max(0, Math.round(offset)));
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, [enabled]);
-  return inset;
 }
 
 function readStoredPosition(): Position | null {
@@ -673,91 +345,11 @@ function readLoopHintSeen(): boolean {
   }
 }
 
-function clampToViewport(
-  pos: Position,
-  width: number,
-  height: number,
-): Position {
-  if (typeof window === "undefined") return pos;
-  const maxX = Math.max(
-    VIEWPORT_PADDING,
-    window.innerWidth - width - VIEWPORT_PADDING,
-  );
-  const maxY = Math.max(
-    VIEWPORT_PADDING,
-    window.innerHeight - height - VIEWPORT_PADDING,
-  );
-  return {
-    x: Math.min(Math.max(VIEWPORT_PADDING, pos.x), maxX),
-    y: Math.min(Math.max(VIEWPORT_PADDING, pos.y), maxY),
-  };
-}
-
-// Clamp:ar panel-storleken mot min/max-konstanterna OCH viewporten så att
-// panelen + toolbar-raden (TOOLBAR_ROW_HEIGHT) alltid får plats med
-// VIEWPORT_PADDING på båda kanter. Anropas vid hydrering, under resize-drag
-// och vid window-resize.
-function clampSize(size: Size): Size {
-  const maxWidth =
-    typeof window !== "undefined"
-      ? Math.min(PANEL_MAX_WIDTH, window.innerWidth - 2 * VIEWPORT_PADDING)
-      : PANEL_MAX_WIDTH;
-  const maxHeight =
-    typeof window !== "undefined"
-      ? Math.min(
-          PANEL_MAX_HEIGHT,
-          window.innerHeight - TOOLBAR_ROW_HEIGHT - 2 * VIEWPORT_PADDING,
-        )
-      : PANEL_MAX_HEIGHT;
-  return {
-    width: Math.min(Math.max(PANEL_MIN_WIDTH, size.width), Math.max(PANEL_MIN_WIDTH, maxWidth)),
-    height: Math.min(Math.max(PANEL_MIN_HEIGHT, size.height), Math.max(PANEL_MIN_HEIGHT, maxHeight)),
-  };
-}
-
-const PANEL_DEFAULT_SIZE: Size = { width: PANEL_WIDTH, height: PANEL_HEIGHT };
-
-function defaultPosition(width: number, height: number): Position {
-  if (typeof window === "undefined") return { x: 0, y: 0 };
-  return clampToViewport(
-    {
-      x: window.innerWidth - width - VIEWPORT_PADDING,
-      y: window.innerHeight - height - VIEWPORT_PADDING,
-    },
-    width,
-    height,
-  );
-}
-
 // --- KÖR-6a RouterDecision-readiness ---------------------------------------
 // Stängda enum-litteraler speglade från
 // governance/schemas/router-decision.schema.json. Vi mirrorar bara de fält
 // summarizeRouterDecision faktiskt grenar på; resten av kontraktet ignoreras
 // medvetet (UI:t ska inte koppla sig hårt till hela router-shapen).
-type RouterMessageKind =
-  | "answer_only"
-  | "site_review"
-  | "edit_instruction"
-  | "component_discovery"
-  | "reference_analysis"
-  | "bug_report"
-  | "multi_intent"
-  | "unclear";
-
-type RouterBuildRequirement =
-  | "none"
-  | "plan_only"
-  | "artifact_patch_only"
-  | "targeted_rebuild"
-  | "full_rebuild";
-
-type RouterDecisionView = {
-  messageKind: RouterMessageKind;
-  buildRequirement: RouterBuildRequirement;
-  requiresClarification: boolean;
-  subtaskCount: number;
-};
-
 const ROUTER_MESSAGE_KINDS: ReadonlySet<string> = new Set([
   "answer_only",
   "site_review",
@@ -870,22 +462,6 @@ function summarizeRouterDecision(
   return null;
 }
 
-// Skiva 1b (UI half): OpenClaw Core V0:s action-enum, speglar
-// ``OpenClawAction`` i packages/generation/orchestration/openclaw/models.py.
-type OpenClawAction =
-  | "answer_only"
-  | "clarification"
-  | "plan_only"
-  | "patch_plan_request";
-
-type OpenClawDecisionView = {
-  action: OpenClawAction;
-  answer: string | null;
-  clarifyingQuestion: string | null;
-  plan: string[];
-  patchTargetSummary: string | null;
-};
-
 const OPENCLAW_ACTIONS: ReadonlySet<string> = new Set([
   "answer_only",
   "clarification",
@@ -990,14 +566,6 @@ function summarizeOpenClawDecision(
 // MATERIALISERADE en ny version (restyle/capability) bär ``bridge``
 // { applied, previewShouldRefresh, chain:{ editKind, version, previousVersion } }.
 // Avläses defensivt (samma fält-drift-säkra mönster som extractOpenClawDecision).
-type OpenClawBridgeView = {
-  applied: boolean;
-  previewShouldRefresh: boolean;
-  editKind: string | null;
-  version: number | null;
-  previousVersion: number | null;
-};
-
 function extractOpenClawBridge(
   payload: PromptApiResponse,
 ): OpenClawBridgeView | null {
@@ -2770,92 +2338,6 @@ function MessageBubble({
             : `${message.attachmentCount} bilagor`}
         </span>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * ErrorBubble — rik error-presentation med kategori-ikon, tip-text,
- * expanderbar tekniska detaljer och retry-knapp.
- *
- * Designval: en separat komponent istället för att svälla MessageBubble
- * med fler conditionals. Egen state för detail-expand (öppnar inte
- * automatiskt vid mount för att hålla bubblan kompakt).
- */
-function ErrorBubble({
-  message,
-  onRetry,
-}: {
-  message: ChatMessage;
-  onRetry: (prompt: string) => void;
-}) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const Icon = message.errorKind
-    ? ERROR_ICONS[message.errorKind]
-    : AlertTriangle;
-  const canRetry =
-    typeof message.retryPrompt === "string" && message.retryPrompt.length > 0;
-  const hasDetails =
-    typeof message.errorDetails === "string" &&
-    message.errorDetails.length > 0 &&
-    message.errorDetails !== message.content;
-  return (
-    <div className="flex max-w-full flex-col items-start gap-0.5">
-      <div className="border-destructive/40 bg-destructive/[0.04] text-foreground flex flex-col gap-1.5 rounded-xl border px-3 py-2 text-[12.5px] leading-relaxed">
-        <div className="flex items-start gap-2">
-          <Icon
-            className="text-destructive mt-0.5 h-3.5 w-3.5 shrink-0"
-            aria-hidden
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-foreground font-medium">{message.content}</p>
-            {message.errorTip ? (
-              <p className="text-muted-foreground mt-0.5 text-[11.5px] leading-snug">
-                {message.errorTip}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        {(canRetry || hasDetails) && (
-          <div className="border-destructive/20 mt-0.5 flex flex-wrap items-center gap-2 border-t pt-1.5">
-            {canRetry ? (
-              <button
-                type="button"
-                onClick={() => onRetry(message.retryPrompt as string)}
-                className={cn(
-                  "text-foreground/85 hover:text-foreground border-border/60 hover:border-foreground/40 hover:bg-muted/60",
-                  "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
-                  SECONDARY_INTERACTIONS,
-                )}
-                title="Skicka samma instruktion igen"
-              >
-                <RotateCcw className="h-3 w-3" aria-hidden />
-                Försök igen
-              </button>
-            ) : null}
-            {hasDetails ? (
-              <button
-                type="button"
-                onClick={() => setDetailsOpen((prev) => !prev)}
-                aria-expanded={detailsOpen}
-                className={cn(
-                  "text-muted-foreground hover:text-foreground",
-                  "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium transition-colors",
-                )}
-              >
-                {detailsOpen ? "Dölj detaljer" : "Visa detaljer"}
-              </button>
-            ) : null}
-          </div>
-        )}
-        {detailsOpen && hasDetails ? (
-          <pre className="bg-background/60 border-border/50 text-muted-foreground mt-1 max-h-32 overflow-auto rounded border px-2 py-1.5 font-mono text-[10.5px] whitespace-pre-wrap">
-            {message.errorDetails}
-          </pre>
-        ) : null}
-      </div>
     </div>
   );
 }
