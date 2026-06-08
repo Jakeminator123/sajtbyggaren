@@ -399,9 +399,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `7391a28` (2026-06-06 UTC, steward-auto efter PR #210 — feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action half)).
+Last verified state: `28df1b9` (2026-06-08 UTC, steward-auto efter PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep dialog).
 Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
-/api/prompt follow-ups (skiva 1b action half).
+/api/prompt follow-ups (skiva 1b action half); PR #211 — feat(viewser): resizable
+FloatingChat + module drag-and-drop prep dialog.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -704,3 +705,9 @@ tema-följdprompt + farm-naming), #204 (governance-regel site-mutation-layers), 
 Last verified state: `49ef53c` (2026-06-06 UTC, steward-auto efter PR #209 — docs(handoff): orchestrator handoff 2026-06-06 + focus/plan bumps).
 Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator handoff
 2026-06-06 + focus/plan bumps.
+
+### 2026-06-08 UTC — current-focus.md före `7391a28`
+
+Last verified state: `7391a28` (2026-06-06 UTC, steward-auto efter PR #210 — feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action half)).
+Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
+/api/prompt follow-ups (skiva 1b action half).

@@ -1,9 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-06 UTC, steward-auto efter PR #210 — feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action half). Verifierad `main` är `7391a28`.
+**Datum:** 2026-06-08 UTC, steward-auto efter PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep dialog. Verifierad `main` är `28df1b9`.
 
 Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
-/api/prompt follow-ups (skiva 1b action half).
+/api/prompt follow-ups (skiva 1b action half); PR #211 — feat(viewser): resizable
+FloatingChat + module drag-and-drop prep dialog.
 
 ## Orchestrator-handoff 2026-06-06 — restyle-genom-apply + branch/docs-städning (TA ÖVER HÄR)
 
@@ -1865,6 +1866,14 @@ PR #198 (windows-safe-rebuild), #199 (skiva 1b UI-halva: OpenClaw-beslut i Float
 
 Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator handoff
 2026-06-06 + focus/plan bumps.
+
+
+### 2026-06-08 UTC — handoff.md före `7391a28`
+
+**Datum:** 2026-06-06 UTC, steward-auto efter PR #210 — feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action half). Verifierad `main` är `7391a28`.
+
+Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
+/api/prompt follow-ups (skiva 1b action half).
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
