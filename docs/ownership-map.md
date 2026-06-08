@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Ownership Map
 
 Den här kartan är en praktisk startpunkt för Team Parallel Work v1. Den låser

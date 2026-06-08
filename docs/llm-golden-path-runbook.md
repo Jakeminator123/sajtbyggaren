@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Runbook: LLM Golden Path v1
 
 Detta är den smala vertikala skivan av Sajtbyggarens kärnflöde. Hela

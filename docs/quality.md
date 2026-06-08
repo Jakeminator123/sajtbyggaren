@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Kvalitetsskydd och regression-tester
 
 Det här dokumentet beskriver vad som hindrar repot från att glida ifrån governance. Fyra lager lokala skydd, plus en CI-grind på toppen.
