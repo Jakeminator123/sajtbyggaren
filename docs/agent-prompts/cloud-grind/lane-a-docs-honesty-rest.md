@@ -134,22 +134,23 @@ Working tree är smutsig av okända ändringar, en check failar och felet inte �
 förstått, en flytt skulle bryta ett script som läser filen, eller
 `origin/jakob-be` har rört sig.
 
-## Leverans (parallell-säker — egen branch + PR mot `jakob-be`)
+## Leverans (tillfällig branch så lanes kan köra parallellt)
+Branch-discipline tillåter tillfälliga `cursor/<syfte>`-branches för
+cloud-/grind-arbete — det används HÄR bara för att A och C inte ska krocka i en
+push-race på `jakob-be`. Pusha branchen:
 ```bash
 git push -u origin cursor/lane-a-docs-cleanup
-gh pr create --base jakob-be --head cursor/lane-a-docs-cleanup \
-  --title "docs(steward): docs honesty-cleanup (lane A)" \
-  --body "<sammanfattning + LISTA ALLA ÄNDRADE/FLYTTADE FILER>"
 ```
-PR-base är `jakob-be` (INTE main — main saknar jakob-be:s osynkade commits).
-Lista alla ändrade/flyttade filer i PR-body (BUGBOT-disciplin: olistade filer =
-scope-läckage). Operatören mergar PR:en; sync `jakob-be -> main` är ett separat
-operatörsbeslut.
+Säg sedan till operatören att lanen är klar. **Operatören mergar in i `jakob-be`**
+— direkt eller via PR mot `jakob-be` om hen vill ha Bugbot/Codex-review (valfri
+bonus, INTE standard). Lista alla ändrade/flyttade filer i rapporten
+(BUGBOT-disciplin: olistade filer = scope-läckage). Öppna INGEN PR mot `main` —
+det sker bara vid release.
 
 ## Slutrapport (exakt format)
 ```
-PR öppnad: cursor/lane-a-docs-cleanup -> jakob-be (#<nr>). Guards alla gröna:
-ruff 0, governance 19/19, rules_sync OK, term-coverage --strict OK, pytest grön.
-Flyttade: <lista>. Uppdaterade: <lista>. Lämnat till OpenClaw-agenten: <lista>.
-Klar — vänta operatörens nästa instruktion.
+Branch pushad: cursor/lane-a-docs-cleanup (redo för merge in i jakob-be).
+Guards alla gröna: ruff 0, governance 19/19, rules_sync OK, term-coverage
+--strict OK, pytest grön. Flyttade: <lista>. Uppdaterade: <lista>. Lämnat till
+OpenClaw-agenten: <lista>. Klar — vänta operatörens nästa instruktion.
 ```

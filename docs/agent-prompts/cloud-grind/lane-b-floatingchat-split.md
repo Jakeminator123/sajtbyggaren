@@ -61,20 +61,21 @@ inga props/▸händelser ändrats (diffen ska vara flytt + import, inte logik).
 Du inte kan hålla extraktionen behavior-preserving, typecheck/build failar,
 scope växer utanför `floating-chat*`, eller `origin/christopher` har rört sig.
 
-## Leverans (parallell-säker — egen branch + PR mot `christopher`)
+## Leverans (tillfällig branch — egen feature-branch för UI-lanen)
+Pusha feature-branchen (den kan köra parallellt med A och C eftersom den är en
+egen branch):
 ```bash
 git push -u origin frontend/floating-chat-split
-gh pr create --base christopher --head frontend/floating-chat-split \
-  --title "refactor(viewser): split FloatingChat (behavior-preserving)" \
-  --body "<sammanfattning + LISTA ALLA NYA/ÄNDRADE FILER + 'inga kontraktsändringar'>"
 ```
-PR-base är `christopher` (UI-lane). Lista alla filer i PR-body. Operatören +
-Christopher reviewar/mergar — detta är hans lane.
+Säg till operatören att lanen är klar. Eftersom detta är Christophers lane bör
+ändringen **reviewas av operatören/Christopher** innan den mergas in i
+`christopher` — en PR mot `christopher` rekommenderas just för review (men det är
+operatörens val). Lista alla nya/ändrade filer i rapporten. Öppna INGEN PR mot `main`.
 
 ## Slutrapport (exakt format)
 ```
-PR öppnad: frontend/floating-chat-split -> christopher (#<nr>). UI-typecheck +
-lint + build gröna. Behavior-preserving: publik export oförändrad, inga
-kontraktsändringar. Nya filer: <lista>. Ev. noterade buggar (ej fixade):
-<lista eller "inga">. Klar — vänta operatörens nästa instruktion.
+Branch pushad: frontend/floating-chat-split (redo för review/merge in i
+christopher). UI-typecheck + lint + build gröna. Behavior-preserving: publik
+export oförändrad, inga kontraktsändringar. Nya filer: <lista>. Ev. noterade
+buggar (ej fixade): <lista eller "inga">. Klar — vänta operatörens nästa instruktion.
 ```

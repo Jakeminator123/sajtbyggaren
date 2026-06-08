@@ -1,6 +1,6 @@
 # Cloud-grind-promptar — avslutad backend-gap-batch
 
-Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM på en **egen feature-branch**, öppnar en **PR mot sin bas-branch** och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten. Den egna branchen per lane gör att alla tre kan köra **parallellt** utan att krocka på samma branch.
+Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM på en **tillfällig `cursor/<syfte>`-branch** (sanktionerad för cloud-/grind-arbete i `branch-discipline.md`), pushar den och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten. Den egna branchen per lane gör att alla tre kan köra **parallellt** utan push-race på `jakob-be`. **Operatören mergar** sedan in branchen i bas-branchen (`jakob-be` för A/C, `christopher` för B) — direkt eller via PR om hen vill ha Bugbot/Codex-review. PR är alltså en valfri review-bonus, **inte** standard; standardflödet är fortfarande arbete direkt på `jakob-be`, och PR mot `main` sker bara vid release (se `branch-discipline.md`).
 
 Operatören öppnar ett nytt cloud-agent-fönster, klistrar in en av prompterna som första meddelande, och låter agenten köra till push.
 
@@ -28,18 +28,20 @@ det lokala backend-arbetet (`packages/generation/**` render-path).
 
 ## Parallellitet-matris
 
-Alla tre kan köra **helt parallellt** — var och en jobbar på sin egen
-feature-branch och öppnar en PR, så ingen push-krock uppstår:
+Alla tre kan köra **helt parallellt** — var och en jobbar på sin egen tillfälliga
+branch, så ingen push-race uppstår. Operatören mergar sedan in i bas-branchen:
 
-| Lane | Feature-branch | PR-bas | Parallell? |
+| Lane | Tillfällig branch | Mergas in i | Parallell? |
 | --- | --- | --- | --- |
 | A | `cursor/lane-a-docs-cleanup` | `jakob-be` | ja |
-| B | `frontend/floating-chat-split` | `christopher` | ja |
+| B | `frontend/floating-chat-split` | `christopher` (review först) | ja |
 | C | `cursor/lane-c-refactor-plan` | `jakob-be` | ja |
 
-A och C har båda PR-bas `jakob-be` men disjunkta filer → konfliktfri merge
-(merga dem i valfri ordning). Det lokala backend-arbetet
-(`packages/generation/**`) är off-limits för alla tre.
+A och C mergas båda in i `jakob-be` men rör disjunkta filer → konfliktfri merge
+(i valfri ordning). Hade de pushat rakt på `jakob-be` i stället hade den andra
+fått en push-race (`branch-discipline.md §Push-fel` = stoppa och fråga) — därav
+de tillfälliga brancherna. Det lokala backend-arbetet (`packages/generation/**`)
+är off-limits för alla tre.
 
 ## Off-limits för ALLA lanes — OpenClaw-agentens yta
 
@@ -62,14 +64,15 @@ Sync `jakob-be -> main` är operatörens beslut — verifiera alltid mot
 
 ## Övergripande disciplin
 
-Varje prompt slutar med en kort rapport-rad: vilken PR som öppnades, att guards
-är gröna (ruff 0, governance 19/19, rules_sync OK, term-coverage --strict OK,
-pytest grön) och vad som ändrades. Exakt format står i respektive prompt.
+Varje prompt slutar med en kort rapport-rad: vilken branch som pushades, att
+guards är gröna (ruff 0, governance 19/19, rules_sync OK, term-coverage --strict
+OK, pytest grön) och vad som ändrades. Exakt format står i respektive prompt.
 
-Cloud-agenten **öppnar en PR mot sin bas-branch** (A/C → `jakob-be`, B →
-`christopher`) men **mergar den inte** — review + merge är operatörens beslut.
-Sync `jakob-be -> main` är ett separat operatörsbeslut. PR-body måste lista alla
-ändrade filer (BUGBOT-disciplin: olistade filer = scope-läckage).
+Cloud-agenten **pushar sin tillfälliga branch men mergar inte själv** — merge in
+i bas-branchen (`jakob-be` för A/C, `christopher` för B) är operatörens beslut,
+direkt eller via PR för review. Sync `jakob-be -> main` är ett separat
+operatörsbeslut (bara vid release). Lista alltid alla ändrade filer i rapporten
+(och i ev. PR-body) — BUGBOT-disciplin: olistade filer = scope-läckage.
 
 Cloud-agenten **rör inte** `apps/viewser/components/**`, `apps/viewser/app/**/*.tsx`, `apps/viewser/public/**` om inte prompten uttryckligen säger det (Christopher-lane), och aldrig OpenClaw-agentens yta (se ovan).
 

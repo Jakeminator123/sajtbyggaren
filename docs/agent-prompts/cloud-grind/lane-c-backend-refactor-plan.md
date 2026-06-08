@@ -60,18 +60,20 @@ python -m pytest tests/test_docs_freshness.py tests/test_no_legacy_terms.py -q
 Du frestas ändra kod, term-coverage flaggar nya begrepp i planen (skriv om utan
 versaler-i-backticks då), eller `origin/jakob-be` har rört sig.
 
-## Leverans (parallell-säker — egen branch + PR mot `jakob-be`)
+## Leverans (tillfällig branch så lanes kan köra parallellt)
+Branch-discipline tillåter tillfälliga `cursor/<syfte>`-branches för
+cloud-/grind-arbete — HÄR bara för att undvika push-race med lane A på `jakob-be`.
 ```bash
 git push -u origin cursor/lane-c-refactor-plan
-gh pr create --base jakob-be --head cursor/lane-c-refactor-plan \
-  --title "docs(refactor): megafil-refaktorplan (lane C, plan only)" \
-  --body "<sammanfattning + 'ingen kod rörd, en ny docs-planfil'>"
 ```
-PR-base är `jakob-be`. Operatören mergar.
+Säg till operatören att lanen är klar. **Operatören mergar in i `jakob-be`** —
+direkt eller via PR mot `jakob-be` för review (valfri bonus, INTE standard).
+Öppna INGEN PR mot `main`.
 
 ## Slutrapport (exakt format)
 ```
-PR öppnad: cursor/lane-c-refactor-plan -> jakob-be (#<nr>). Ny planfil:
-docs/refactor/megafiles-plan.md. Ingen kod rörd. Guards gröna: governance 19/19,
-term-coverage --strict OK, docs-tester gröna. Klar — vänta operatörens nästa instruktion.
+Branch pushad: cursor/lane-c-refactor-plan (redo för merge in i jakob-be).
+Ny planfil: docs/refactor/megafiles-plan.md. Ingen kod rörd. Guards gröna:
+governance 19/19, term-coverage --strict OK, docs-tester gröna.
+Klar — vänta operatörens nästa instruktion.
 ```
