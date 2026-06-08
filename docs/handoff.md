@@ -1,6 +1,20 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-08 UTC.
+**Datum:** 2026-06-08 UTC, steward-auto efter PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening + governance/cleanup batch. Verifierad `main` är `b49d1f7`.
+
+Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
+skiva 1c kor-5 rerender wiring; PR #196 — feat(openclaw): action-bridge --apply (skiva
+1b action half); PR #198 — feat(builder): flat-layout-städning + POSIX-tree-kill (B157
+nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b UI half (OpenClaw
+decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR #202 —
+feat(followup): visual_style restyle (colour + font) + nicer unnamed-business label; PR
+#204 — docs(governance): site-mutation-layers rule + theme_directives reconciliation; PR
+#200 — feat(planning): drop offer/tagline phrase from offer service cards (gap 3a); PR
+#207 — feat(openclaw): materialise visual_style restyle through the apply chain; PR #210
+— feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action
+half); PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep
+dialog; PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening +
+governance/cleanup batch.
 
 ## CLOSING-ROUND HANDOFF 2026-06-08 (sen kväll) — hero-rotorsaksfix + governance/docs/cleanup-batch
 
@@ -2007,6 +2021,11 @@ Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator h
 
 Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
 /api/prompt follow-ups (skiva 1b action half).
+
+
+### 2026-06-08 UTC — handoff.md före `d149f23`
+
+**Datum:** 2026-06-08 UTC.
 
 ## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 

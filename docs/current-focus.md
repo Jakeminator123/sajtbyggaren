@@ -450,22 +450,20 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `origin/jakob-be = b2e1f3d` (2026-06-08 sen kväll UTC).
-`origin/main = 44e0618` (oförändrad). Lokal `jakob-be` = origin, **22 commits före
-main** (OPUSHAD mot main — operatören synkar medvetet), rent arbetsträd. Denna
-session (11 commits ovanpå roll-trion `44143d5`): hero-text-rotorsaksfix
-(`company.heroHeadline`-override så "ändra hero-texten" faktiskt syns — fältet renderas
-i hero-H1, inte bara meta; `fb9692d`), DEP0190 shell-fri `dev.mjs` (`f8e4205`),
-preview-runtime client-safe `resolvePreviewRuntimeDescriptor` + README-synk (`ee68add`,
-avblockar Bite C), stale-markeringar B125/migration-plan/scaffold-runtime (`7f599c1`),
-SMAL operatörsgrant för jakob-be i UI-lanen (`cb09717`), env-matris root vs viewser
-(`9a64b02`), hero/copy-fältkontrakt låst (`064b01c`), gpt-4o modell-default (`5e5144d`),
-backoffice-cleanup för starter-cacher + stora övrigt-artefakter (`b2e1f3d`), inbox-svar
-till Christopher + audit (`84b5bc4`/`a18552e`). `övrigt/` + `data/output/` numera
-agent-åtkomliga (ej indexerade). Full överlämning + lösa trådar: `docs/handoff.md`
-(CLOSING-ROUND-blocket överst). Nästa: sync `jakob-be → main` (operatörsbeslut) →
-Bite C klient-flip (Christopher) → OpenClaw F1 roll-registry → section_add-breddning +
-page/position-targeting.
+Last verified state: `b49d1f7` (2026-06-08 UTC, steward-auto efter PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening + governance/cleanup batch).
+Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
+skiva 1c kor-5 rerender wiring; PR #196 — feat(openclaw): action-bridge --apply (skiva
+1b action half); PR #198 — feat(builder): flat-layout-städning + POSIX-tree-kill (B157
+nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b UI half (OpenClaw
+decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR #202 —
+feat(followup): visual_style restyle (colour + font) + nicer unnamed-business label; PR
+#204 — docs(governance): site-mutation-layers rule + theme_directives reconciliation; PR
+#200 — feat(planning): drop offer/tagline phrase from offer service cards (gap 3a); PR
+#207 — feat(openclaw): materialise visual_style restyle through the apply chain; PR #210
+— feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action
+half); PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep
+dialog; PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening +
+governance/cleanup batch.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
@@ -774,3 +772,22 @@ Nya PRs sedan föregående checkpoint: PR #209 — docs(handoff): orchestrator h
 Last verified state: `7391a28` (2026-06-06 UTC, steward-auto efter PR #210 — feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action half)).
 Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
 /api/prompt follow-ups (skiva 1b action half).
+
+### 2026-06-08 UTC — current-focus.md före `d149f23`
+
+Last verified state: `origin/jakob-be = b2e1f3d` (2026-06-08 sen kväll UTC).
+`origin/main = 44e0618` (oförändrad). Lokal `jakob-be` = origin, **22 commits före
+main** (OPUSHAD mot main — operatören synkar medvetet), rent arbetsträd. Denna
+session (11 commits ovanpå roll-trion `44143d5`): hero-text-rotorsaksfix
+(`company.heroHeadline`-override så "ändra hero-texten" faktiskt syns — fältet renderas
+i hero-H1, inte bara meta; `fb9692d`), DEP0190 shell-fri `dev.mjs` (`f8e4205`),
+preview-runtime client-safe `resolvePreviewRuntimeDescriptor` + README-synk (`ee68add`,
+avblockar Bite C), stale-markeringar B125/migration-plan/scaffold-runtime (`7f599c1`),
+SMAL operatörsgrant för jakob-be i UI-lanen (`cb09717`), env-matris root vs viewser
+(`9a64b02`), hero/copy-fältkontrakt låst (`064b01c`), gpt-4o modell-default (`5e5144d`),
+backoffice-cleanup för starter-cacher + stora övrigt-artefakter (`b2e1f3d`), inbox-svar
+till Christopher + audit (`84b5bc4`/`a18552e`). `övrigt/` + `data/output/` numera
+agent-åtkomliga (ej indexerade). Full överlämning + lösa trådar: `docs/handoff.md`
+(CLOSING-ROUND-blocket överst). Nästa: sync `jakob-be → main` (operatörsbeslut) →
+Bite C klient-flip (Christopher) → OpenClaw F1 roll-registry → section_add-breddning +
+page/position-targeting.
