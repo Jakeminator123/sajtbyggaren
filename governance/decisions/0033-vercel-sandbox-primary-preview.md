@@ -91,6 +91,23 @@ OK, eftersom de är mekaniskt kopplade till kod och policy + cross-policy-tester
 - Bite C (flippa produktions-routen `app/api/preview/[siteId]` till
   `currentViewserRuntime()`) är Christophers UI-lane.
 
+## Uppdatering (2026-06-09): staging-punkterna ovan är landade
+
+Naming-bumpen (v19), adaptern, registry-mappningen och policy-justeringen i
+staging-listan ovan landade i adapter-slicen efter operatörens OK. Sedan dess
+är även wiringen (tidigare kallad Bite C) landad end-to-end: produktionsrouten
+`app/api/preview/[siteId]` resolvar via `currentViewserRuntime()`, iframen i
+`viewer-panel.tsx`, `next.config`-header-grenen och dev-dispatchern är
+inkopplade (`apps/viewser/.env.example` bekräftar att läget är wirat in
+end-to-end och kan sättas aktivt). vercel-sandbox är därmed körbar idag genom
+att explicit sätta `VIEWSER_PREVIEW_MODE=vercel-sandbox` (+ Vercel-auth).
+
+Det enda som återstår av staging-punkterna är det valfria, icke-brådskande
+default-värde-bytet: att ändra `default` `VIEWSER_PREVIEW_MODE` från `local-next`
+till `vercel-sandbox` i kod. Det är ett separat operatörsbeslut, INTE en
+Bite C-verifiering - Bite C (wiringen) är klar. Fältet `default` i
+`preview-runtime-policy.v1.json` förblir `local` tills (och om) det bytet görs.
+
 ## Konsekvenser
 
 Positiva:

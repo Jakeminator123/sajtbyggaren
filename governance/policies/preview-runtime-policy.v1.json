@@ -1,12 +1,12 @@
 {
   "$schema": "../schemas/preview-runtime-policy.schema.json",
   "policyId": "preview-runtime-policy.v1",
-  "version": 2,
+  "version": 3,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin. ADR 0033: vercel-sandbox är primärt förstahandsval (intended primary, status=primary), MEN fältet 'default' speglar FAKTISK runtime-default = local/local-next (apps/viewser/.env.example, dev-fallback utan Vercel-auth). stackblitz är pausad (status=paused) och får aldrig anges som default här eller i Viewser-env. fly är framtida. Policyn ska aldrig peka 'default' på en runtime som koden inte använder ännu.",
+  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin. ADR 0033: vercel-sandbox är primärt förstahandsval (intended primary, status=primary). Wiringen (tidigare kallad Bite C) ÄR landad end-to-end - route app/api/preview/[siteId] resolvar via currentViewserRuntime(), iframe + next.config header-branch + dev-dispatcher är inkopplade - så vercel-sandbox är körbar idag genom att explicit sätta VIEWSER_PREVIEW_MODE=vercel-sandbox (+ Vercel-auth). Fältet 'default' speglar fortfarande FAKTISK runtime-default = local/local-next (apps/viewser/.env.example, dev-fallback utan Vercel-auth); det enda som återstår är ett valfritt, icke-brådskande default-VÄRDE-byte (local-next -> vercel-sandbox), inte en Bite C-verifiering. stackblitz är pausad (status=paused) och får aldrig anges som default här eller i Viewser-env. fly är framtida. Policyn ska aldrig peka 'default' på en runtime som koden inte använder ännu. (v3, 2026-06-09: omformulerad - Bite C-wiringen är klar och vercel-sandbox körbar via explicit env + auth; kvar är bara det valfria default-värde-bytet.)",
   "principles": [
     "Preview Runtime är en abstraktion. Produktkoden talar bara om 'Preview Runtime', aldrig 'VM', 'webcontainer' eller oregistrerade sandbox-synonymer (registrerade alias finns i naming-dictionary.v1.json).",
-    "vercel-sandbox är primärt förstahandsval för användarpreview (ADR 0033, status=primary), men fältet 'default' speglar FAKTISK default = local/local-next tills default-flip/Bite C verifierats - intended primary != actual default. local är den garanterade fallbacken. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
+    "vercel-sandbox är primärt förstahandsval för användarpreview (ADR 0033, status=primary) och är körbar idag via explicit VIEWSER_PREVIEW_MODE=vercel-sandbox + Vercel-auth (wiringen, tidigare kallad Bite C, är landad). Fältet 'default' speglar dock fortfarande FAKTISK default = local/local-next - intended primary != actual default; det som återstår är bara det valfria default-värde-bytet (local-next -> vercel-sandbox), inte någon Bite C-verifiering. local är den garanterade fallbacken. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
     "Det finns EN Quality Gate; nya lager läggs först om eval-batchen visar bevisat behov (se ADR 0016)."
   ],
   "default": "local",
@@ -17,7 +17,7 @@
       "useWhen": [
         "användarvänd preview av genererad sajt (publik HTTPS-URL i iframe, fungerar i alla browsers)",
         "kärnflödet prompt -> företagshemsida -> preview -> följdprompt -> ny version",
-        "intended primary per ADR 0033 - blir 'default' först när VIEWSER_PREVIEW_MODE-flippen (Bite C) verifierats; tills dess väljs den explicit via VIEWSER_PREVIEW_MODE=vercel-sandbox"
+        "intended primary per ADR 0033 - körbar idag genom att explicit sätta VIEWSER_PREVIEW_MODE=vercel-sandbox (+ Vercel-auth); wiringen (tidigare kallad Bite C) är landad. Att göra den till fältet 'default' kräver bara ett valfritt, icke-brådskande default-värde-byte (local-next -> vercel-sandbox), inte en Bite C-verifiering"
       ],
       "limitations": [
         "kräver Vercel-auth (OIDC eller access-token); utan auth degraderar adaptern till unsupported/failed",
@@ -30,7 +30,7 @@
       "kind": "local",
       "status": "developer-only",
       "useWhen": [
-        "faktisk runtime-default idag (local-next) tills default-flip till vercel-sandbox verifierats (ADR 0033)",
+        "faktisk runtime-default idag (local-next); kvarstår tills (och om) det valfria default-värde-bytet till vercel-sandbox görs (ADR 0033) - oberoende av att vercel-sandbox-wiringen (tidigare kallad Bite C) redan är landad",
         "lokal dev och felsökning på utvecklarmaskin",
         "garanterad fallback när vercel-sandbox inte är tillgänglig (ingen Vercel-auth)"
       ],
