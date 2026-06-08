@@ -65,6 +65,11 @@ EXCLUDE_DIRS = {
     # symbols are spike-local implementation names, not canonical Sajtbyggaren
     # domain terms - same treatment as the MIN_IDE workspace above.
     "openclaw-mvp",
+    # Lokal spegel av docs.openclaw.ai (gitignored, openclaw-docs/), hämtad av
+    # scripts/fetch_openclaw_docs.py. Externt referensmaterial som Cursor får
+    # indexera men vars OpenClaw-termer inte är Sajtbyggaren-domänbegrepp -
+    # samma behandling som MIN_IDE/openclaw-mvp ovan.
+    "openclaw-docs",
     # Local Cursor canvas mirror (gitignored, docs/heavy-llm-flow/canvases/).
     # Cursor only renders canvases from ~/.cursor/projects/<ws>/canvases/; we
     # keep a portable copy in-repo so it survives folder-jumps/restarts. The
