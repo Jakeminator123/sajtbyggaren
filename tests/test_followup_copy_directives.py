@@ -199,6 +199,55 @@ def test_explicit_company_name_keyword_still_renames_company() -> None:
     ]
 
 
+# --- 2026-06-08 phrasing slice: "<NEW> istället för <OLD>" ------------------
+
+
+@pytest.mark.tooling
+def test_extract_hero_text_instead_of_phrasing() -> None:
+    """The operator's natural phrasing 'gör ... herotexten "X" istället för
+    "Y"' lands the hero tagline = X. The text after the marker is the OLD value
+    and is ignored. Regression for the 2026-06-08 live-demo no-op."""
+    directives = _extract_copy_directives(
+        'Gör sajten med herotexten "ölälskarna från palma" istället för '
+        '"En tydlig och lugn företagswebb"',
+        language="sv",
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "ölälskarna från palma",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_instead_of_marker_with_till_takes_new_value_before_marker() -> None:
+    directives = _extract_copy_directives(
+        'ändra rubriken till "Nytt" istället för "Gammalt"', language="sv"
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "Nytt",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_unquoted_instead_of_is_honest_no_op() -> None:
+    """No quoted new value before the marker -> honest no-op (never guess)."""
+    assert (
+        _extract_copy_directives(
+            "gör herotexten blå istället för röd", language="sv"
+        )
+        == []
+    )
+
+
 @pytest.mark.tooling
 @pytest.mark.parametrize(
     "prompt",

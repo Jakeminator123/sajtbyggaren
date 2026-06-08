@@ -336,6 +336,19 @@ _TILL_VALUE_TRAILING_RE = re.compile(
 )
 _QUOTED_SPAN_RE = re.compile(rf"[{_QUOTE_CHARS}]([^{_QUOTE_CHARS}]+)[{_QUOTE_CHARS}]")
 
+# "instead of"-style replace markers. A natural rephrasing like
+# "gör herotexten 'X' istället för 'Y'" carries the NEW value as the quoted
+# span BEFORE the marker (the OLD value follows it and is ignored). This is a
+# replace intent even without a "byt/ändra ... till" pattern, so the gate +
+# value extractors treat the marker like a "till" value marker.
+_REPLACE_MARKERS: tuple[str, ...] = (
+    "istället för",
+    "i stället för",
+    "istallet for",
+    "i stallet for",
+    "instead of",
+)
+
 
 def _title_case_company_name(value: str) -> str:
     """Capitalise an all-lowercase company name without mangling intended case.
@@ -465,8 +478,33 @@ def _looks_like_trailing_instruction(value: str) -> bool:
     )
 
 
+def _value_before_replace_marker(follow_up_prompt: str) -> str | None:
+    """New value from a ``"NEW" istället för "OLD"`` phrasing.
+
+    Returns the quoted span immediately before an ``istället för``/``instead
+    of`` marker (the operator's NEW value); the text after the marker is the
+    OLD value and is ignored. Returns ``None`` when no marker is present or no
+    quoted span precedes it, so a bare/unquoted ``istället för`` stays an
+    honest no-op (we never guess the new value). 2026-06-08 phrasing slice.
+    """
+    lowered = follow_up_prompt.lower()
+    positions = [pos for pos in (lowered.find(m) for m in _REPLACE_MARKERS) if pos != -1]
+    if not positions:
+        return None
+    head = follow_up_prompt[: min(positions)]
+    matches = list(_QUOTED_SPAN_RE.finditer(head))
+    return matches[-1].group(1) if matches else None
+
+
 def _extract_replace_value(follow_up_prompt: str) -> str | None:
-    """Pull the new value after a ``till``/``to`` marker (colon, quoted, trailing)."""
+    """Pull the new value after a ``till``/``to`` marker (colon, quoted, trailing).
+
+    Also handles the ``"NEW" istället för "OLD"`` phrasing (the new value is the
+    quoted span before the marker) so a natural rephrasing lands the same edit.
+    """
+    marker_value = _value_before_replace_marker(follow_up_prompt)
+    if marker_value is not None:
+        return marker_value
     colon = _TILL_VALUE_COLON_RE.search(follow_up_prompt.strip())
     if colon:
         return colon.group(1)
@@ -494,7 +532,13 @@ def _extract_explicit_replace_value(follow_up_prompt: str) -> str | None:
     the rewrite instead (reviewer-fynd 2026-06-02). company-name/tagline keep
     the looser ``_extract_replace_value`` because short labels are commonly
     given unquoted ("byt namnet till Volvo").
+
+    Also accepts the quoted ``"NEW" istället för "OLD"`` phrasing (the new value
+    is the quoted span before the marker), matching ``_extract_replace_value``.
     """
+    marker_value = _value_before_replace_marker(follow_up_prompt)
+    if marker_value is not None:
+        return marker_value
     colon = _TILL_VALUE_COLON_RE.search(follow_up_prompt.strip())
     if colon:
         return colon.group(1)
@@ -664,6 +708,11 @@ def _extract_copy_directives(
     # trigger replace-mode via the substring "byt" inside "bytte".
     has_include = _contains_any_word(text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS)
     has_replace = _contains_any_word(text, _COPY_DIRECTIVE_REPLACE_KEYWORDS)
+    # An "instead of"-style marker is a replace intent even without a
+    # byt/ändra/sätt verb (e.g. "gör herotexten 'X' istället för 'Y'"). The
+    # value extractors pull the quoted span before the marker.
+    if not has_replace and _contains_any(text, _REPLACE_MARKERS):
+        has_replace = True
     if not has_include and not has_replace:
         return []
     # about-text is replace-only in slice 2a (operator decision): the operator
