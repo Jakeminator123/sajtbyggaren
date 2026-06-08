@@ -23,6 +23,7 @@ from packages.generation.followup.theme_directives import (
     extract_theme_directive,
 )
 from scripts.prompt_to_project_input import (
+    _theme_directive_llm_eligible,
     _validate_against_schema,
     merge_followup_project_input,
 )
@@ -228,3 +229,175 @@ def test_merge_non_theme_followup_leaves_theme_untouched() -> None:
     # No theme intent -> brand stays absent, tone.primary unchanged.
     assert "primaryColorHex" not in (merged.get("brand") or {})
     assert (merged.get("tone") or {}).get("primary") == "trustworthy"
+
+
+# --- 2026-06-08 stylist slice: compound colours + accent (central lexicon) ---
+#
+# A free/compound colour expression ("grönvit"/"svartvit"/"blå och vit") must
+# resolve to a primary + accent without exact single-word keywords, the white
+# half landing as the accent (never a near-white primary). "korall" and the
+# other lexicon colours resolve too. A model-driven fallback (the stylist role)
+# interprets unknown free expressions into the SAME validated ThemeDirective.
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt,primary,accent",
+    [
+        ("gör sajten grönvit", "#16a34a", "#ffffff"),
+        ("gör den svartvit", "#171717", "#ffffff"),
+        ("jag vill ha det blåvitt", "#2563eb", "#ffffff"),
+    ],
+)
+def test_extract_compound_colour_sets_primary_and_white_accent(
+    prompt: str, primary: str, accent: str
+) -> None:
+    directive = extract_theme_directive(prompt)
+    assert directive is not None
+    assert directive.primaryColorHex == primary
+    assert directive.accentColorHex == accent
+
+
+@pytest.mark.tooling
+def test_extract_two_word_colour_with_white_accent() -> None:
+    """A light/neutral word (white) only fills the ACCENT slot, alongside a
+    contrast-safe primary - it is never the primary on its own."""
+    directive = extract_theme_directive("gör den blå och vit")
+    assert directive is not None
+    assert directive.primaryColorHex == "#2563eb"
+    assert directive.accentColorHex == "#ffffff"
+
+
+@pytest.mark.tooling
+def test_extract_korall_colour() -> None:
+    directive = extract_theme_directive("gör färgen korall")
+    assert directive is not None
+    assert directive.primaryColorHex == "#f43f5e"
+
+
+@pytest.mark.tooling
+def test_bare_white_alone_is_no_op() -> None:
+    """A near-white primary breaks contrast, so a bare 'vit' yields no primary
+    (honest no-op) rather than a near-white brand colour."""
+    assert extract_theme_directive("gör den vit") is None
+
+
+@pytest.mark.tooling
+def test_compound_colour_is_schema_valid_after_merge() -> None:
+    merged = _merge("gör sajten grönvit")
+    brand = merged.get("brand")
+    assert isinstance(brand, dict)
+    assert brand["primaryColorHex"] == "#16a34a"
+    assert brand["accentColorHex"] == "#ffffff"
+    _validate_against_schema(merged)
+
+
+# --- stylist role: model-driven fallback (parallel to the copyDirective A1) ---
+
+
+def _merge_with_llm(prompt: str) -> dict[str, object]:
+    previous = _previous_project_input()
+    return merge_followup_project_input(
+        previous,
+        copy.deepcopy(previous),
+        follow_up_prompt=prompt,
+        enable_llm_fallback=True,
+    )
+
+
+@pytest.mark.tooling
+def test_style_model_fallback_resolves_free_expression(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A free style expression the deterministic lexicon misses is interpreted
+    by styleDirectiveModel into a validated theme mutation (hex + known vibe)."""
+    prompt = "gör sajten i varma höstfärger"
+    assert extract_theme_directive(prompt) is None  # deterministic miss
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_style_directive_llm",
+        lambda *a, **k: {"primaryColorHex": "#b45309", "toneVibe": "calm"},
+    )
+    merged = _merge_with_llm(prompt)
+    assert merged["brand"]["primaryColorHex"] == "#b45309"
+    assert merged["tone"]["primary"] == "calm"
+
+
+@pytest.mark.tooling
+def test_style_model_fallback_rejects_garbage_hex_and_vibe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validation/honesty: a non-hex colour or unknown vibe from the model is
+    dropped, leaving an honest no-op (no fabricated restyle)."""
+    prompt = "gör om hela färgkänslan"
+    assert extract_theme_directive(prompt) is None
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_style_directive_llm",
+        lambda *a, **k: {"primaryColorHex": "skyblue", "toneVibe": "not-a-vibe"},
+    )
+    merged = _merge_with_llm(prompt)
+    assert "primaryColorHex" not in (merged.get("brand") or {})
+    assert (merged.get("tone") or {}).get("primary") == "trustworthy"
+
+
+@pytest.mark.tooling
+def test_style_model_fallback_lone_accent_without_primary_is_dropped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A model that returns only a light accent (no primary, no vibe) is a
+    no-op - a lone near-white accent could break contrast."""
+    prompt = "gör om temat lite"
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_style_directive_llm",
+        lambda *a, **k: {"accentColorHex": "#ffffff"},
+    )
+    merged = _merge_with_llm(prompt)
+    assert "primaryColorHex" not in (merged.get("brand") or {})
+    assert "accentColorHex" not in (merged.get("brand") or {})
+
+
+@pytest.mark.tooling
+def test_style_model_fallback_only_runs_when_llm_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without the opt-in flag the model is never consulted (offline parity)."""
+    called = {"n": 0}
+
+    def _spy(*a: object, **k: object) -> dict[str, str]:
+        called["n"] += 1
+        return {"primaryColorHex": "#db2777"}
+
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_style_directive_llm", _spy
+    )
+    previous = _previous_project_input()
+    merged = merge_followup_project_input(
+        previous,
+        copy.deepcopy(previous),
+        follow_up_prompt="gör sajten i höstfärger",
+    )
+    assert called["n"] == 0
+    assert "primaryColorHex" not in (merged.get("brand") or {})
+
+
+# --- stylist eligibility gate (fix-1 honesty mirrored into the prompt path) ---
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt,expected",
+    [
+        # free style expressions carry a visual cue -> eligible
+        ("gör sajten i höstfärger", True),
+        ("ändra färgkänslan", True),
+        ("gör om hela stilen", True),
+        ("snygga till paletten", True),
+        # fix-1: a bare colour / question with no style cue -> never asks
+        ("vad betyder rosa", False),
+        ("rosa", False),
+        # add-only requests never restyle, even with a colour cue word
+        ("lägg till en blå knapp", False),
+        ("lägg till en sektion om färger", False),
+    ],
+)
+def test_theme_directive_llm_eligible_gate(prompt: str, expected: bool) -> None:
+    assert _theme_directive_llm_eligible(prompt) is expected

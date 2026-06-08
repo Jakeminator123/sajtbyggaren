@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "trust-guarantees",
+  "enabled": true,
+  "label": "Trust Guarantees",
+  "capability": "guarantees",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a trust/guarantees block (a 'Varfor oss' icon bullet list), server-rendered with no client JS. Content is grounded in static project-input signals (trustSignals, uniqueSellingPoints, or confirmed businessFacts) - it never renders an invented certificate, review or guarantee. Reuses the existing render_section_trust_proof renderer; the section_builder follow-up role mounts it for a 'garantier/trust' section_add through the same apply chain component_add uses.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["TrustGuarantees", "GuaranteeBullet"],
+  "lastVerified": "2026-06-08"
+}

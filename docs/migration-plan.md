@@ -1,5 +1,15 @@
 # Migrationsplan från sajtmaskin
 
+> **STATUS 2026-06-08 (superseded roadmap):** Sprint-numreringen (Sprint 1-12)
+> nedan är HISTORIK. Det aktiva flödet drivs nu av `docs/heavy-llm-flow/`
+> (kör-sekvensen, implementerad) + `docs/current-focus.md`. Status-tabellen
+> längst ned ("Sprint 4/5/6 inte startad", "apps/web inte startad") speglar
+> INTE verkligheten: LocalRuntime/preview finns (local-next + vercel-sandbox),
+> fler scaffolds finns (`restaurant-hospitality` m.fl.), och `apps/viewser` blev
+> operatörs-UI:t i stället för `apps/web`. Läs `current-focus.md` +
+> `heavy-llm-flow/` för aktuell status; behåll detta dokument som
+> migrations-historik.
+
 Sajtbyggaren ärver inte `Jakeminator123/sajtmaskin@master` rakt av. Vi gör en kontrollerad rekonstruktion. Detta dokument håller listan över vad som plockats från vilken commit och varför. Manual ports loggas i [`docs/migration/import-log.md`](migration/import-log.md).
 
 Beslutet att skjuta upp baseline-eval (tidigare steg 3) tills LLM-flödet finns är dokumenterat i [ADR 0008](../governance/decisions/0008-defer-evals-until-flow-exists.md).

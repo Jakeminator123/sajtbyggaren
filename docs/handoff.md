@@ -1,10 +1,143 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-08 UTC, steward-auto efter PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep dialog. Verifierad `main` är `28df1b9`.
+**Datum:** 2026-06-08 UTC.
 
-Nya PRs sedan föregående checkpoint: PR #210 — feat(viewser): wire OpenClaw --apply into
-/api/prompt follow-ups (skiva 1b action half); PR #211 — feat(viewser): resizable
-FloatingChat + module drag-and-drop prep dialog.
+## CLOSING-ROUND HANDOFF 2026-06-08 (sen kväll) — hero-rotorsaksfix + governance/docs/cleanup-batch
+
+> Auktoritativt block. `origin/jakob-be = b2e1f3d`, `origin/main = 44e0618`
+> (jakob-be **22 commits före main**, OPUSHAD — medveten sync). Rent arbetsträd.
+> Hela icke-slow-sviten + guards (governance 19, rules_sync, term_coverage) gröna;
+> enda röda testet är `test_api_prompt_smoke` = MILJÖ-FLAKE (konkurrerande
+> `next dev` mot samma `.next`, ej regression — se inbox msg-0049).
+
+### Vad som landade denna session (11 commits ovanpå roll-trion 44143d5)
+- **Hero-rotorsaksfix (fb9692d):** "ändra hero-texten"/tagline-följdprompt syntes
+  inte — hero-H1 renderas från blueprint (`positioning.oneLiner`, regenereras varje
+  bygge), inte `company.tagline`. Ny `company.heroHeadline`-override som renderaren
+  föredrar + överlever ombygge. Fältkontraktet LÅST i copy-change-skill (064b01c).
+- **DEP0190 (f8e4205):** `dev.mjs` spawnar `next` shell-fritt (node + lokala bin,
+  npx-fallback) → tar bort deprecation + injektionsyta. [scope-leak, operatörs-OK]
+- **preview-runtime (ee68add):** client-safe `resolvePreviewRuntimeDescriptor`
+  (bevarar `auto`≠`local-next` + COEP/fallback-intent) + README synkad (Bite A/B
+  klara, vercel-sandbox v19). Detta avblockar Bite C (klient-flip = Christopher).
+- **Stale-städ (7f599c1):** B125 nedgraderad (mootad av vercel-sandbox), migration-plan
+  superseded, scaffold-runtime-extension klar — markerade som historik, ej raderade.
+- **Governance (cb09717):** SMAL operatörsgrant — jakob-be får redigera Christophers
+  UI-lane PER ändring (kärnloop + operatörs-OK + liten rapporterad diff + Christopher
+  informerad i inbox), INTE carte blanche.
+- **Env (9a64b02):** env-matris root vs viewser (varje var kod-verifierad läsare) i
+  `.env.example` + `docs/architecture/viewser.md`; lyfter gpt-4o-fallback-inkonsekvensen.
+- **gpt-4o (5e5144d):** operatörens modell-default `gpt-4o-mini`→`gpt-4o` (viewser + scrape).
+- **Backoffice-cleanup (b2e1f3d):** starter-bygg-cacher (safe) + stora `övrigt/`-artefakter
+  (warning, ≥50 MB) städbara från backoffice; säkerhetsgrind utökad + 2 regressionstester.
+- **.cursor:** `övrigt/` + `data/output/` åtkomliga för agent (ut ur `.cursorignore`,
+  kvar index-ignored).
+
+### Christophers inbox + Bite C — hur vi tacklade dem
+- **msg-0045** (modul-drag-and-drop, behövde `section_add`) → svar **msg-0046**:
+  `section_add` FINNS på jakob-be; 4 av 12 moduler stöds, 5 har dossier men saknas i
+  katalogen (liten breddning kvar), page/position-targeting = follow-up.
+- **preview-runtime-relay** (Bite C-blockare) → löst: descriptorn levererad (ee68add),
+  svar **msg-0048**.
+- Bite C är INTE helt klar (medvetet). Server-halvan var redan klar; klient-flippen i
+  `viewer-panel.tsx` var blockerad av lossy `normalizePreviewMode` → nu AVBLOCKERAD av
+  descriptorn. **Klient-refaktorn är Christophers** (mot descriptorn, driven av
+  `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`).
+- **test_api_prompt_smoke-flake** → diagnostiserad (msg-0049), ej regression.
+
+### Lösa trådar (minimerade)
+1. **`jakob-be → main`-sync** (nu fler commits) — operatörsbeslut, ej gjort.
+2. ~~Bite C klient-flip~~ **KLAR (7984fc1):** `viewer-panel.tsx` flippad till
+   `resolvePreviewRuntimeDescriptor`, `auto`≠`local-next` bevarat. Bite C helt stängd.
+3. Remap-signalen (requestedTarget/remapped på copyDirective) — väntar Christophers --real-llm-repro.
+4. ~~section_add-breddning~~ **KLAR (4c6ba67):** gallery/pricing/opening-hours/map/
+   contact-form igenkänns + monteras (mount-only, samma ärliga status som de fyra
+   ursprungliga; synlig rendering = separat render-path-tråd). Kvar: **page/position-
+   targeting** (infoga sektion på vald sida+ordinal) + **synlig render av monterade
+   soft-sektioner** (kopplat till Sprint 3B render-/codegen-spåret).
+5. OpenClaw-conductor-slicen (roll-registry runtime, "F1") — scoped, ej startad.
+6. ~~test_api_prompt_smoke-härdning~~ **KLAR (6c33798):** skip på `.next`/dev-lock-
+   kollision så en körande viewser-dev-server inte rödflaggar sviten.
+
+---
+
+## CLOSING-ROUND HANDOFF 2026-06-08 (kväll) — roll-trion klar; nästa = limma loopen
+
+> Detta block är auktoritativt. Allt längre ner kan vara stale — verifiera mot
+> git/koden. Verifierat git-läge: `origin/jakob-be = 44143d5`, `origin/main =
+> 44e0618`, lokal `jakob-be` 9 commits före main (OPUSHAD mot main — operatören
+> synkar medvetet). Enda ocommittade ändring: `apps/viewser/package-lock.json`
+> (operatörens `npm audit fix`, prunar `hono`-subträdet; ofarligt — localhost-
+> only konsol, ingen Hono-server/auth/IP-deny används).
+
+### Vad som ÄR gjort (roll-trion + workspace, allt på origin/jakob-be — verifierat grönt)
+- **OpenClaw `--apply` i `/api/prompt`** (PR #210): bridge först → `bridge.applied`
+  → auktoritativ run + preview-refresh; annars legacy-väg, ingen dubbel-build.
+- **`copy_editor` (A1, 109ba60):** `copyDirectiveModel` är PRIMÄRT förståelse-lager
+  för copy-edits; deterministiken validator. `rubrik/huvudrubrik → hero-tagline`,
+  `"NYTT istället för GAMMALT"` (3f9bc28).
+- **`stylist` (B, 035c128):** fri/sammansatt färg+tema via `color_lexicon` +
+  `styleDirectiveModel`. "gör sajten grönvit" → visual_style.
+- **`section_builder` (C, 44143d5):** "lägg till sektion om garantier/team/FAQ/
+  recensioner" → `section_add` genom SAMMA apply-kedja → ny version. Två nya soft
+  dossiers (`team-roster`, `trust-guarantees`). Okänd typ = ärlig no-op.
+- **`"gör färgen rosa"` → visual_style** (44e0618, i main).
+- **OpenClaw-workspace-spec** (f8b66c9): `docs/openclaw-workspace/` (SOUL/TOOLS/
+  action-registry/skills) — conductor-modellen kodifierad, inga nya varianter.
+- **`scripts/verify_openclaw.py` = 6/6 grön.** Hela testsviten grön (478+).
+
+### UI-E2E 2026-06-08 — KÖRD i browsern, två glue-fynd (detta är nästa arbete)
+Operatören + agent körde live i `/studio` (vercel-sandbox-läge): init-prompt →
+**v1 byggdes och RENDERADE i preview** ("Tjänsteföretag", build-klar-badge). Men
+följdprompt-loopen exponerade två konkreta glue-gap:
+
+1. **UX-gap (Christopher/UI-lane):** den stora prompt-rutan på `/studio` (+ svarta
+   pilen) öppnar ALLTID create-wizarden (ny sajt) — den är INTE en följdprompt-ruta.
+   Följdprompt-FloatingChat ("Sajten X är aktiv. Beskriv vad du vill ändra") nås
+   bara via **konsolen (⌘K) → välj aktiv run**. Efter ett färskt bygge är alltså
+   nästa naturliga steg (iterera) inte synligt → känns som att "följdprompt inte
+   funkar". Fix: surfa FloatingChat direkt efter build / gör skapa-rutan till
+   följdprompt-ruta när en sajt är aktiv.
+2. **Glue-bug-kandidat (backend, HÖGSTA hävstång):** den färskbyggda runen
+   (`tjansteforetag-588050 · ok · v1`) gav i konsolen *"ingen Project Input med
+   det id:t finns på disk"*, och `data/prompt-inputs/tjansteforetag*` var tomt.
+   → en följdprompt kan då inte iterera på en just byggd sajt. Måste utredas:
+   skriver studio-create-vägen (vercel-sandbox) verkligen `data/prompt-inputs/
+   <siteId>.project-input.json`, eller är det en picker-discovery-miss? Detta är
+   sannolikt kärnan i "v2 innehåller inte min ändring"-känslan. (Obs: operatören
+   kan ha raderat äldre sajter — verifiera på en FÄRSK build.)
+
+### Nästa riktning — limma hela LLM-flödet (prioordning)
+1. **Glue 1 (backend, jakob-be):** utred + fixa "färsk build → Project Input
+   hittas av följdprompt-vägen". Utan detta känns loopen trasig oavsett roller.
+   Användarcase: skapa sajt → ⌘K → välj run → "gör sajten grönvit" → v2 syns.
+2. **Glue 2 (UI, Christopher-lane):** efter build, gör följdprompt nåbar utan
+   ⌘K-omväg (surfa FloatingChat / aktiv-sajt-läge).
+3. **Fas 1 — roll-registry runtime (jakob-be):** dirigenten väljer roll ur
+   `docs/openclaw-workspace/action-registry.json` (copy/stylist/section/review).
+   Detta gör OpenClaw till en riktig conductor över de tre färdiga rollerna.
+4. **Sync `jakob-be → main`** när UI-E2E (glue 1+2) är grön — lås milstolpen.
+5. **Senare:** `route_add` ("lägg till en sida om X"), `layout_change`, sedan
+   Fas 2 (extern Docker-dirigent per `openclaw-2.0-conductor.md`). EJ före produktbevis.
+
+### Regler (icke förhandlingsbara)
+OpenClaw = conductor/bridge på den kontrollerade motorn, inte ny parallell
+motor/Docker-agent, inte fri filpatch. In-repo-källan ENBART
+(`packages/generation/orchestration/openclaw/`, `scripts/run_openclaw_followup.py`,
+`scripts/verify_openclaw.py`, `apps/viewser/lib/openclaw-runner.ts`,
+`apps/viewser/app/api/prompt/route.ts`). Bygg inga nya OpenClaw-varianter.
+`sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` = strikt read-only (AGENTS.md).
+Varje slice: ett FloatingChat-användarcase, `verify_openclaw.py` grön före merge,
+landa på `jakob-be`, ingen main-push utan operatörs-OK. Plan:
+`docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
+
+---
+
+> Historik nedan (kan vara stale — se realignment ovan).
+>
+> Tidigare datum-rad: 2026-06-08, steward-auto efter PR #211 (resizable FloatingChat
+> + module drag-and-drop prep). Nya PRs då: #210 (OpenClaw --apply i /api/prompt),
+> #211 (resizable FloatingChat + module drag-and-drop prep).
 
 ## Orchestrator-handoff 2026-06-06 — restyle-genom-apply + branch/docs-städning (TA ÖVER HÄR)
 

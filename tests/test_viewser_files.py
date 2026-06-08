@@ -599,14 +599,16 @@ def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
     """
     text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
-    # Lock 1: konstanten finns och har rätt definition
+    # Lock 1: konstanten finns och härleds ur descriptorn (Bite C, ee68add).
+    # ``kind === "stackblitz"`` är 1:1 med rawMode här; descriptorn mappar
+    # ``stackblitz`` rakt igenom medan ``auto`` ger ``kind === "local"``.
     pattern_const = re.compile(
-        r'const\s+IS_STACKBLITZ_MODE\s*=\s*VIEWSER_PREVIEW_MODE\s*===\s*["\']stackblitz["\']',
+        r'const\s+IS_STACKBLITZ_MODE\s*=\s*PREVIEW_RUNTIME\.kind\s*===\s*["\']stackblitz["\']',
         re.MULTILINE,
     )
     assert pattern_const.search(text), (
         "viewer-panel.tsx saknar ``const IS_STACKBLITZ_MODE = "
-        "VIEWSER_PREVIEW_MODE === 'stackblitz'``. Krävs för att gate:a "
+        "PREVIEW_RUNTIME.kind === 'stackblitz'``. Krävs för att gate:a "
         "Steg 1 (lokal preview-server) i strikt stackblitz-mode."
     )
 
@@ -621,6 +623,90 @@ def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
         "stackblitz-mode hoppar lokal-preview helt och går direkt till "
         "Steg 2. Annars är configens namn (``stackblitz``) inte "
         "auktoritativt."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_drives_preview_mode_through_descriptor() -> None:
+    """Bite C (commit ee68add): ViewerPanel får INTE längre läsa
+    ``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`` rått och härleda IS_*-booleanerna
+    via ``=== "..."`` mot en lokal lower-cased sträng. Den client-säkra
+    ``resolvePreviewRuntimeDescriptor`` (@preview-runtime) ska vara EN
+    delad mode-normaliserare med host-transporten (``scripts/dev.mjs``).
+
+    Fyra lås:
+      1. ``resolvePreviewRuntimeDescriptor`` importeras från
+         ``@preview-runtime``.
+      2. Descriptorn drivs av ``process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE``
+         (med behållen ``?? "local-next"``-default så en osatt env beter
+         sig EXAKT som förr).
+      3. KRITISKT — ``auto`` ≠ ``local-next``: ``IS_LOCAL_NEXT_MODE`` måste
+         härledas ur ``PREVIEW_RUNTIME.rawMode`` (som bevarar distinktionen),
+         ALDRIG ur ``.kind`` (som kollapsar local-next/auto/local till
+         ``"local"`` och därmed skulle flippa ``auto`` till local-next och
+         tappa StackBlitz-fallbacken).
+      4. Det gamla råa mönstret
+         ``const VIEWSER_PREVIEW_MODE = (...).toLowerCase()`` får inte vara
+         kvar — annars finns två konkurrerande normaliserare igen.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+
+    # Lock 1: importen från @preview-runtime.
+    assert re.search(
+        r'import\s*\{\s*resolvePreviewRuntimeDescriptor\s*\}\s*from\s*["\']@preview-runtime["\']',
+        text,
+    ), (
+        "viewer-panel.tsx måste importera ``resolvePreviewRuntimeDescriptor`` "
+        "från ``@preview-runtime`` (Bite C, ee68add) i stället för att läsa "
+        "preview-mode rått."
+    )
+
+    # Lock 2: descriptorn drivs av NEXT_PUBLIC_VIEWSER_PREVIEW_MODE med
+    # behållen local-next-default.
+    assert re.search(
+        r"resolvePreviewRuntimeDescriptor\(\s*process\.env\."
+        r'NEXT_PUBLIC_VIEWSER_PREVIEW_MODE\s*\?\?\s*["\']local-next["\']',
+        text,
+    ), (
+        "viewer-panel.tsx måste driva descriptorn med "
+        "``resolvePreviewRuntimeDescriptor(process.env."
+        "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? 'local-next')``. ``?? 'local-next'`` "
+        "är beteende-bevarande: descriptorns egna tomma default är ``'local'``, "
+        "men en osatt env ska fortsätta bete sig som local-next (COEP av, "
+        "ingen StackBlitz-fallback)."
+    )
+
+    # Lock 3: auto ≠ local-next — IS_LOCAL_NEXT_MODE härleds ur rawMode.
+    assert re.search(
+        r'const\s+IS_LOCAL_NEXT_MODE\s*=\s*PREVIEW_RUNTIME\.rawMode\s*===\s*["\']local-next["\']',
+        text,
+    ), (
+        "viewer-panel.tsx måste härleda ``IS_LOCAL_NEXT_MODE`` ur "
+        "``PREVIEW_RUNTIME.rawMode === 'local-next'`` (INTE ur ``.kind``). "
+        "``kind`` kollapsar local-next/auto/local till ``'local'`` — om "
+        "IS_LOCAL_NEXT_MODE härleddes ur ``.kind`` skulle ``auto`` felaktigt "
+        "flippas till local-next och tappa sin StackBlitz-fallback. "
+        "``rawMode`` bevarar distinktionen auto ≠ local-next."
+    )
+    # Negativ guard: IS_LOCAL_NEXT_MODE får inte härledas ur ``.kind``.
+    assert not re.search(
+        r"const\s+IS_LOCAL_NEXT_MODE\s*=\s*PREVIEW_RUNTIME\.kind\b",
+        text,
+    ), (
+        "viewer-panel.tsx: ``IS_LOCAL_NEXT_MODE`` får ALDRIG härledas ur "
+        "``PREVIEW_RUNTIME.kind`` — det skulle slå ihop ``auto`` med "
+        "``local-next`` (kind-kollaps) och bryta StackBlitz-fallbacken."
+    )
+
+    # Lock 4: det gamla råa env-mönstret är borta.
+    assert not re.search(
+        r"const\s+VIEWSER_PREVIEW_MODE\s*=\s*\(",
+        text,
+    ), (
+        "viewer-panel.tsx får inte längre deklarera "
+        "``const VIEWSER_PREVIEW_MODE = (...).toLowerCase()`` — den råa "
+        "env-läsningen ersätts av resolvePreviewRuntimeDescriptor så klient "
+        "och host delar en enda mode-normaliserare."
     )
 
 
@@ -2977,12 +3063,12 @@ def test_viewer_panel_has_vercel_sandbox_branch() -> None:
     text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     pattern_const = re.compile(
-        r'const\s+IS_VERCEL_SANDBOX_MODE\s*=\s*VIEWSER_PREVIEW_MODE\s*===\s*["\']vercel-sandbox["\']',
+        r'const\s+IS_VERCEL_SANDBOX_MODE\s*=\s*PREVIEW_RUNTIME\.kind\s*===\s*["\']vercel-sandbox["\']',
         re.MULTILINE,
     )
     assert pattern_const.search(text), (
         "viewer-panel.tsx saknar ``const IS_VERCEL_SANDBOX_MODE = "
-        "VIEWSER_PREVIEW_MODE === 'vercel-sandbox'``."
+        "PREVIEW_RUNTIME.kind === 'vercel-sandbox'`` (Bite C, ee68add)."
     )
 
     combined = len(re.findall(r"IS_LOCAL_NEXT_MODE\s*\|\|\s*IS_VERCEL_SANDBOX_MODE", text))

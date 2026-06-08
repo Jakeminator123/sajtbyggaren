@@ -14,7 +14,7 @@ export type UsageSummary = {
   model: string;
 };
 
-const DEFAULT_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+const DEFAULT_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o";
 const INPUT_USD_PER_1K = Number(process.env.OPENAI_INPUT_USD_PER_1K ?? "0");
 const OUTPUT_USD_PER_1K = Number(process.env.OPENAI_OUTPUT_USD_PER_1K ?? "0");
 const DEFAULT_MAX_OUTPUT_TOKENS = 1500;
@@ -25,7 +25,9 @@ let openaiClient: OpenAI | null = null;
 
 function getClient(): OpenAI {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY saknas. Lägg till den i apps/viewser/.env.local.");
+    throw new Error(
+      "OPENAI_API_KEY saknas. Lägg till den i apps/viewser/.env.local.",
+    );
   }
   if (!openaiClient) {
     openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -53,7 +55,8 @@ function toUsageSummary(
   const outputTokens = usage?.completion_tokens ?? 0;
   const totalTokens = usage?.total_tokens ?? inputTokens + outputTokens;
   const estimatedCostUsd =
-    (inputTokens / 1000) * INPUT_USD_PER_1K + (outputTokens / 1000) * OUTPUT_USD_PER_1K;
+    (inputTokens / 1000) * INPUT_USD_PER_1K +
+    (outputTokens / 1000) * OUTPUT_USD_PER_1K;
 
   return {
     inputTokens,

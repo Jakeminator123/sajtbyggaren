@@ -924,6 +924,13 @@ COMMON_WORDS = {
     # ett canonical domain term (domänkoncepten heter brand/tone); samma
     # local-allowlist-logik som AppliedCopyDirective ovan.
     "ThemeDirective",
+    # stylist-roll (prompt B, 2026-06-08) — ``StyleDirectiveCandidate`` är den
+    # lokala pydantic-modellen i packages/generation/brief/extract.py för
+    # styleDirectiveModel:s structured output (primaryColorHex/accentColorHex/
+    # toneVibe). Inte ett canonical domain term (domänkoncepten heter brand/
+    # tone); modellens output re-valideras i theme_directives.py innan något
+    # appliceras. Samma local-allowlist-logik som ThemeDirective ovan.
+    "StyleDirectiveCandidate",
     # Tier 1 robusthet (2026-06-01) — christopher-ui frontend-paket A+B+C:
     # ErrorBoundary-komponent (klass, React 19) + lokalt toast-system. Alla
     # är apps/viewser-interna UI-helpers — varken canonical domain terms
@@ -1091,6 +1098,16 @@ COMMON_WORDS = {
     # Same SaaS-name category as Bokadirekt / OpenStreetMap / TripAdvisor
     # above.
     "YouTube",
+    # section_builder slice (2026-06-08) — two new soft instructions-only
+    # Dossiers (team-roster, trust-guarantees) mounted by the section_add
+    # follow-up role. The names below are the React component identifiers in
+    # their manifest ``exposes`` lists; the sections themselves are rendered by
+    # the existing render_section_team / render_section_trust_proof helpers, so
+    # these are descriptive component names (same treatment as the
+    # FaqAccordion / ReviewsDisplay dossier-exposes family above), not canonical
+    # domain terms. Canonical capability slugs (team-section, guarantees) live
+    # in capability-map.v1.json.
+    "TeamRoster", "TeamMemberCard", "TrustGuarantees", "GuaranteeBullet",
     # Viewser-internal React component + context symbols introduced by the
     # mobile-adaptation passes (2026-05-25/26). Same category as
     # PromptStageIndicator / RunHistory / ApplyRunsContext above: viewser-

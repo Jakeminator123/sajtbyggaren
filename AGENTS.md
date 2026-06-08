@@ -18,6 +18,34 @@ Do not edit `.cursor/rules/` directly. Those files are generated mirrors; the
 source lives under `governance/rules/`. If a rule needs to change, update the
 governance source and run the rule sync check.
 
+### READ-ONLY reference projects (NEVER modify)
+
+The following external folders are **strictly read-only reference material**.
+They are NOT part of this repo's build and must NEVER be created in, edited,
+deleted, renamed, moved, formatted, linted, committed, or written to in any
+way — not by an agent, a subagent, a script, or a git command. You MAY read
+and study them freely (that is their whole purpose); you may NOT change a
+single byte.
+
+- `C:\Users\jakem\Desktop\openclaw\` — the operator's standalone **OpenClaw
+  gateway/assistant** installation plus the **sajtmaskin** integration
+  (`sajtmaskin_agent.py`, `docs/sajtmaskin_docs/`, `assistant/`, `src/`,
+  `dist/`). This is the conductor/agent-role reference we study to design
+  Sajtbyggaren's own *conductor-only* OpenClaw — it is a reference, never a
+  build target.
+- `C:\Users\jakem\dev\projects\sajtmaskin\` — the **actual predecessor
+  project** (Next.js app + `infra/openclaw/` Docker gateway blueprint:
+  Dockerfile, render.yaml, railway.toml, `config/agents/sajtagenten/`,
+  `config/workspace/{SOUL,TOOLS,USER,BOOTSTRAP,HEARTBEAT}.md`, plus
+  `src/app/api/openclaw/`, `src/lib/openclaw/`, `src/components/openclaw/`).
+  This is the richest reference for an external Docker OpenClaw conductor.
+- Any other folder named `sajtmaskin`, wherever it appears on disk.
+
+If a change to that material ever seems necessary, STOP and ask the operator
+first. The repo's own OpenClaw work happens ONLY inside this repository
+(`packages/generation/orchestration/openclaw/`, `openclaw-mvp/`, `apps/`,
+`scripts/`), never in the read-only reference folders above.
+
 ### Overview
 
 The operator/governance/builder layer is Python. The **output** of the

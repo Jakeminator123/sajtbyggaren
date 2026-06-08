@@ -7,36 +7,54 @@ och **previewen som kör/visar sajten** för operatören och slutkunden.
 Generation-lagret slutar vid genererad output. Det vet ingenting om StackBlitz,
 Vercel, Fly, eller lokal `next start`. Preview Runtime tar vid där.
 
-## Status
+## Status (uppdaterad 2026-06-08)
 
-**Bite A — skelett (denna PR).** Typkontrakt + registry + tre adapter-stubs.
-Inga konsumenter wirade än. Adapter-stubsen returnerar `unsupported` med
-tydlig "Bite B-wiring saknas"-text. Filerna kompilerar men anropas inte
-från någon befintlig fil.
+> Tidigare versioner av denna fil sa "Bite A — skelett, inga konsumenter
+> wirade än" och "Bite B — kommande sprint". Det var STALE: Bite B landade i
+> PR #140 och en `vercel-sandbox`-adapter (ADR 0033) tillkom. Statusen nedan
+> speglar koden, inte den gamla planen.
 
-**Bite B — wiring (kommande sprint).** Adaptrarna delegerar till befintlig
-kod i `apps/viewser/lib/`:
+**Bite A — skelett. KLAR + utökad.** Typkontrakt + registry + adaptrar.
+Typunionen `PreviewRuntimeKind` är numera **fyra** värden inkl.
+`vercel-sandbox` (naming-dictionary **v19**, ADR 0033), inte tre.
 
-- `local` → `apps/viewser/lib/local-preview-server.ts` (`next start`)
+**Bite B — wiring. KLAR (PR #140).** Adaptrarna får sina konkreta handlers via
+dependency injection (`configurePreviewRuntimeHandlers`):
+
+- `local` → `apps/viewser/lib/` (`next start` via injicerad handler)
 - `stackblitz` → `apps/viewser/lib/stackblitz-files.ts` (file-payload till
   `@stackblitz/sdk`)
-- `fly` → ingen implementation — reserverad enligt naming-dictionary v17
+- `vercel-sandbox` → `apps/viewser/lib/vercel-sandbox-*` (publik
+  `…vercel.run`-https-iframe, ADR 0033 — primärt förstahandsval)
+- `fly` → fortfarande `unsupported`-stub (reserverad slot, se nedan)
 
-Bite B kräver tsconfig path-alias eller npm-workspace så `apps/viewser/` kan
-importera härifrån. Det är bytetypen i Bite B, inte i Bite A.
+`apps/viewser/lib/preview-runtime-server.ts` injicerar handlers, tsconfig-
+path-aliaset `@preview-runtime` finns, och `app/api/preview/[siteId]/route.ts`
++ `apps/viewser/lib/preview-runtime.test.ts` konsumerar paketet via
+`currentViewserRuntime()`/`currentRuntime()`.
 
-**Bite C — UI-refaktor (kräver Christopher-koordinering).** Flytta
-`IS_LOCAL_NEXT_MODE`/`IS_STACKBLITZ_MODE`-grenarna i
-`apps/viewser/components/viewer-panel.tsx` bakom `currentRuntime()`.
-`apps/viewser/components/**` är Christophers reserverade lane per
-`governance/rules/branch-scope-ui-ux.md`.
+**Bite C — UI-refaktor (Christophers lane).** Server-halvan är klar
+(`route.ts` går via runtime-registret). Klient-flippen i
+`apps/viewser/components/viewer-panel.tsx` (`IS_LOCAL_NEXT_MODE` /
+`IS_STACKBLITZ_MODE` / `IS_VERCEL_SANDBOX_MODE` bakom en runtime-resolver) var
+blockerad av ett **riktigt kontraktsproblem**, inte bara lane-ägarskap:
+`normalizePreviewMode()` är **lossy** — den slår ihop `local-next` + `auto` +
+`local` → `"local"`, men klienten måste skilja `local-next` (COEP av →
+StackBlitz-embed ogiltig) från `auto` (COEP på → StackBlitz-embed legitim).
+**Avblockerat 2026-06-08** med en klient-säker, ren export:
+`resolvePreviewRuntimeDescriptor(raw)` (se `src/descriptor.ts`) som bevarar
+`rawMode` (`auto` ≠ `local-next`) + `prefersCoep` + `canFallbackToStackblitz`
+utan server-only-beroenden, så den kan tree-shakas in i en Next-klientbundle.
+Christopher gör klient-refaktorn i sin lane mot descriptorn (driv den från
+`NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`). Relaterat: B125 (cross-browser-preview)
+är till stor del adresserad av `vercel-sandbox` som inte kräver COEP.
 
-## Canonical-namn (naming-dictionary v17)
+## Canonical-namn (naming-dictionary v19)
 
 Alla namn är låsta:
 
 - `Preview Runtime` (`previewRuntime`) — abstraktionen
-- `PreviewRuntimeKind` (`previewRuntimeKind`) — sluten typunion `"stackblitz" | "local" | "fly"`
+- `PreviewRuntimeKind` (`previewRuntimeKind`) — sluten typunion `"vercel-sandbox" | "local" | "stackblitz" | "fly"` (v19; `vercel-sandbox` är primärt förstahandsval, ADR 0033)
 - `PreviewRuntimeConfig` (`previewRuntimeConfig`) — config till `start()`
 - `Preview Session` (`previewSession`) — aktiv session
 - `Preview File` (`previewFile`) — fil i payload
@@ -72,21 +90,29 @@ Detta är dokumenterad reconciliation, inte en arkitektur-fix. Eventuell
 omdöpning av `fly` till mer neutralt namn (t.ex. `production`) kräver
 naming-dictionary-bump till v18 + egen ADR-not och tas inte i Bite A/B/C.
 
-## Eventuell framtida `vercel-preview`-adapter
+## `vercel-sandbox`-adaptern (ADR 0033) — landad
 
-ADR 0030 (Preview-Provider Portability) listar `vercel-preview` som adapter
-#4. **Det kräver naming-dictionary-bump till v18** (utöka
-`PreviewRuntimeKind`-typunionen) och egen ADR per ADR 0030 §"Vad ADR 0030
-INTE beslutar". Tas inte i Bite A/B/C.
+`vercel-sandbox` är implementerad (`src/adapters/vercel-sandbox.ts`) och är det
+primära förstahandsvalet per ADR 0033: previewen är en publik
+`…vercel.run`-https-iframe som bäddas utan cross-origin-isolation, så den
+funkar i alla browsers (löser i praktiken B125:s Chromium-only-begränsning).
+Typunionen bumpades till v19 för att rymma den. (Den tidigare planerade
+`vercel-preview`-adaptern i ADR 0030 #4 är en separat, ännu icke-byggd slot;
+`vercel-sandbox` är det som faktiskt landade.)
 
 ## Env-var
 
 `VIEWSER_PREVIEW_MODE` är fortsatt input-env-var per
 `apps/viewser/.env.example`. Värden:
 
-- `local-next` → normaliseras till `kind: "local"`
-- `stackblitz` → `kind: "stackblitz"`
-- `auto` → normaliseras till `kind: "local"` (default)
+- `local-next` → normaliseras till `kind: "local"` (COEP av)
+- `stackblitz` → `kind: "stackblitz"` (COEP på)
+- `vercel-sandbox` → `kind: "vercel-sandbox"` (COEP av; publik https-iframe, ADR 0033)
+- `fly` → `kind: "fly"` (unsupported-stub)
+- `auto` → normaliseras till `kind: "local"` (default; men COEP på — `auto` ≠ `local-next`, se `resolvePreviewRuntimeDescriptor`)
+
+Klienten (browsern) har inte `VIEWSER_PREVIEW_MODE` i runtime — använd
+`NEXT_PUBLIC_VIEWSER_PREVIEW_MODE` + `resolvePreviewRuntimeDescriptor()` där.
 
 Eventuellt namnbyte till `SITE_RUNTIME_ADAPTER` är **inte** prioriterat och
 kräver separat operator-beslut. ADR 0030 stödjer bakåtkompatibilitet

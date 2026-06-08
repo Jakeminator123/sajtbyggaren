@@ -10,6 +10,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { resolvePreviewRuntimeDescriptor } from "@preview-runtime";
+
 import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
 import {
@@ -235,8 +237,26 @@ function unavailableForPreviewError(
  * exponerar (raw ``VIEWSER_PREVIEW_MODE``, inte production-gate-utfallet).
  * Värdet bakas in i bundlen vid build-time så det är konstant per session.
  *
- * Används för att avgöra om StackBlitz-fallback överhuvudtaget är ett
- * giltigt nästa steg när LocalRuntime failar:
+ * Bite C (2026-06-08): tidigare lästes env-värdet rått här och IS_*-
+ * booleanerna härleddes via ``=== "..."``. Nu drivs allt genom den
+ * client-säkra ``resolvePreviewRuntimeDescriptor`` (@preview-runtime,
+ * commit ee68add) så klienten och host-transporten (``scripts/dev.mjs``)
+ * delar EN mode-normaliserare i stället för två som kan driva isär.
+ *
+ * VIKTIGT — ``auto`` ≠ ``local-next``: descriptorns lossy ``kind`` kollapsar
+ * ``local-next``/``auto``/``local`` till ``"local"``, men COEP/fallback-
+ * beslutet skiljer dem åt. Därför läses ``IS_LOCAL_NEXT_MODE`` ur
+ * ``rawMode`` (som bevarar distinktionen), aldrig ur ``kind`` — annars
+ * skulle ``auto`` felaktigt flippas till local-next och tappa sin
+ * StackBlitz-fallback (descriptor.prefersCoep / canFallbackToStackblitz
+ * är ``true`` för ``auto``/``stackblitz``, ``false`` för local-next).
+ *
+ * ``?? "local-next"`` behålls medvetet (descriptorns egna tomma default är
+ * ``"local"``) så en osatt env beter sig EXAKT som förr: local-next, dvs
+ * COEP av och ingen StackBlitz-fallback.
+ *
+ * Avgör om StackBlitz-fallback överhuvudtaget är ett giltigt nästa steg när
+ * LocalRuntime failar:
  *
  *   - ``local-next``  → COEP är OFF på host, så StackBlitz-embeds skulle
  *                       blockas av Chrome med "Specify a Cross-Origin
@@ -247,10 +267,13 @@ function unavailableForPreviewError(
  *                       steg om LocalRuntime är ouppnåelig.
  *   - ``auto``        → Som ``stackblitz`` på header-nivå idag.
  */
-const VIEWSER_PREVIEW_MODE = (
-  process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? "local-next"
-).toLowerCase();
-const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
+const PREVIEW_RUNTIME = resolvePreviewRuntimeDescriptor(
+  process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? "local-next",
+);
+// ``rawMode`` (inte ``kind``): ``kind`` kollapsar local-next/auto/local till
+// ``"local"`` och skulle därför göra ``auto`` till local-next. ``rawMode``
+// bevarar den exakta token som COEP/fallback-beslutet hänger på.
+const IS_LOCAL_NEXT_MODE = PREVIEW_RUNTIME.rawMode === "local-next";
 // Reviewer-fynd (post-PR #101): tidigare provades alltid
 // ``POST /api/preview/<siteId>`` först, även i ``stackblitz``-mode.
 // Det betydde att configen namn (``stackblitz``) inte var sann end-to-
@@ -262,7 +285,10 @@ const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
 //   - ``stackblitz``  → hoppa Steg 1, gå direkt till StackBlitz Steg 2
 //   - ``auto``        → prova lokal, fall till StackBlitz vid miss
 //                       (oförändrat — det är vad ``auto`` betyder)
-const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
+// ``kind === "stackblitz"`` är 1:1 med ``rawMode`` här (descriptorn mappar
+// ``stackblitz`` rakt igenom); ``auto`` ger ``kind === "local"`` så grinden
+// nedan släpper fortfarande igenom auto till Steg 1.
+const IS_STACKBLITZ_MODE = PREVIEW_RUNTIME.kind === "stackblitz";
 // ``vercel-sandbox`` (ADR 0033, primärt förstahandsval): preview serveras från
 // en isolerad Vercel Sandbox och POST /api/preview/<siteId> returnerar en publik
 // ``…vercel.run``-https-URL. ViewerPanel behandlar den EXAKT som local-next-
@@ -270,7 +296,7 @@ const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
 // saknad token) i stället för att tyst falla till StackBlitz. Skillnaden mot
 // local-next är bara cold-starten (~28 s medan sandboxen kör npm install +
 // next build innan URL:en svarar), som loading-UI:t nedan tål.
-const IS_VERCEL_SANDBOX_MODE = VIEWSER_PREVIEW_MODE === "vercel-sandbox";
+const IS_VERCEL_SANDBOX_MODE = PREVIEW_RUNTIME.kind === "vercel-sandbox";
 
 // Mode-aware UI-copy för BuildProgressCard-preview-steget. Tidigare
 // hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode

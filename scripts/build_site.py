@@ -5028,19 +5028,59 @@ def run_followup_chain(
 
         theme_directive = extract_theme_directive(follow_up_prompt)
 
-    if not plan.patches and theme_directive is None:
+    # 3c. Section add (section_add, section_builder role): the patch planner has
+    #     no patchable edit for a whole-section add, but it is a real follow-up.
+    #     Mirroring 3b's restyle wiring, resolve the sanctioned section type
+    #     (carried on componentIntent) to its capability and route it through the
+    #     SAME apply path component_add uses (requestedCapabilities +
+    #     selectedDossiers.required), so the existing dossier mounts and the
+    #     targeted render reflects it. An unknown/unsupported type is an HONEST
+    #     no-op with a clear reason - never a faked section.
+    added_capabilities: list[str] = []
+    section_unsupported: list[dict[str, str]] = []
+    is_section_add = decision.editKind == "section_add" or any(
+        subtask.editKind == "section_add" for subtask in decision.subtasks
+    )
+    if is_section_add:
+        from packages.generation.followup.section_directives import (
+            resolve_section_capabilities,
+        )
+
+        section_types: list[str | None] = []
+        if decision.editKind == "section_add":
+            section_types.append(decision.componentIntent)
+        section_types.extend(
+            subtask.componentIntent
+            for subtask in decision.subtasks
+            if subtask.editKind == "section_add"
+        )
+        added_capabilities, section_unsupported = resolve_section_capabilities(
+            section_types
+        )
+
+    if not plan.patches and theme_directive is None and not added_capabilities:
         no_edit_note = (
             f"Router: messageKind={decision.messageKind} "
             f"editKind={decision.editKind}; patch-planeraren föreslog inget "
             "att applicera (ingen byggbar capability-patch)."
         )
-        if is_restyle:
+        stage = "router_no_edit" if decision.editKind == "none" else "plan_empty"
+        if is_section_add:
+            reasons = "; ".join(
+                f"{item['type']}: {item['reason']}" for item in section_unsupported
+            ) or "ingen sanktionerad sektionstyp kunde tolkas."
+            no_edit_note = (
+                "Router klassade en sektionsadd (section_add) men ingen "
+                f"sanktionerad/stödd sektionstyp kunde monteras: {reasons}"
+            )
+            stage = "section_unsupported"
+        elif is_restyle:
             no_edit_note = (
                 "Router klassade en stiländring (visual_style) men ingen känd "
                 "färg/font kunde tolkas ur prompten; ingen ändring."
             )
         return _result(
-            "router_no_edit" if decision.editKind == "none" else "plan_empty",
+            stage,
             applied=False,
             notes=[no_edit_note, *plan.notes],
             messageKind=decision.messageKind,
@@ -5070,6 +5110,7 @@ def run_followup_chain(
             base_run_id=base_run_id,
             runs_dir=runs_root,
             theme_directive=theme_directive,
+            added_capabilities=added_capabilities,
         )
     except PatchApplyError as exc:
         return _result(

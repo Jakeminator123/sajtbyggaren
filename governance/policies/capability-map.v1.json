@@ -102,6 +102,16 @@
     "command-search": {
       "dossiers": [],
       "comment": "No Dossier in repo yet. MIN_IDE has cmdk-command-palette (soft) as the planned import."
+    },
+    "team-section": {
+      "dossiers": ["team-roster"],
+      "default": "team-roster",
+      "comment": "team-roster is a soft instructions-only Dossier for a team/staff section: a responsive grid of monogram cards (name + role) reusing the existing render_section_team renderer. Team data is static project-input content (company.team). Added for the section_builder follow-up role so 'lägg till en team-sektion' mounts a sanctioned section through the existing apply chain (requestedCapabilities + selectedDossiers.required)."
+    },
+    "guarantees": {
+      "dossiers": ["trust-guarantees"],
+      "default": "trust-guarantees",
+      "comment": "trust-guarantees is a soft instructions-only Dossier for a trust/guarantees block ('Varfor oss') as an icon bullet list, reusing the existing render_section_trust_proof renderer. Content is grounded in project-input trustSignals / uniqueSellingPoints / confirmed businessFacts (never invented claims). Added for the section_builder follow-up role so 'lägg till en sektion om garantier' mounts a sanctioned section through the existing apply chain."
     }
   }
 }

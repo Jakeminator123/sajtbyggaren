@@ -39,6 +39,12 @@ DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossie
 # concept. ``scripts/cleanup_dev_artifacts.py`` reads the same name.
 MINI_EVAL_KEEP_ENV = "SAJTBYGGAREN_MINI_EVAL_KEEP"
 
+# Only genuinely large stray artifacts in the operator's git-ignored ``övrigt/``
+# scratch folder are offered for cleanup (e.g. a 300 MB downloaded
+# chrome-win.zip), so notes and small files there are never listed or wiped.
+# This is a warning-gated cleanup, never part of the safe pass.
+_OVRIGT_LARGE_BYTES = 50 * 1024 * 1024
+
 
 @dataclass(frozen=True)
 class CleanupItem:
@@ -337,6 +343,15 @@ def assert_cleanup_path_allowed(
     if resolved.name.startswith(".env") and resolved.name != ".env.example":
         raise ValueError(f"Refusing to delete dotenv file: {resolved}")
 
+    # Build artifacts inside a starter (``data/starters/<id>/.next`` or
+    # ``.../node_modules``) are git-ignored + regenerable, so they are cleanable
+    # even though the starter SOURCE is off-limits below. ONLY the top-level
+    # build dir directly under a starter qualifies (parent.parent == starters
+    # root) — never a tracked template file deeper in the tree.
+    starters_root = (repo_root / "data" / "starters").resolve()
+    if resolved.name in {".next", "node_modules"} and resolved.parent.parent == starters_root:
+        return
+
     denied_roots = [
         repo_root / "examples",
         repo_root / "data" / "starters",
@@ -346,7 +361,14 @@ def assert_cleanup_path_allowed(
         if _is_within(resolved, denied):
             raise ValueError(f"Refusing to delete off-limits path: {resolved}")
 
-    warning_roots = [repo_root / "data" / "prompt-inputs", repo_root / "apps" / "viewser" / "node_modules"]
+    # ``övrigt/`` is the operator's git-ignored scratch folder. Large stray
+    # artifacts there are cleanable but gated behind an explicit warning
+    # confirmation, so notes/small files are never wiped blindly.
+    warning_roots = [
+        repo_root / "data" / "prompt-inputs",
+        repo_root / "apps" / "viewser" / "node_modules",
+        repo_root / "övrigt",
+    ]
     if any(_is_within(resolved, root) for root in warning_roots):
         if allow_warning_targets:
             return
@@ -480,6 +502,15 @@ def plan_safe_cleanup(
         if cache_path.exists():
             plan.items.append(_item(cache_path, "cache"))
 
+    # Stray build artifacts inside starters: a built ``.next/`` or an installed
+    # ``node_modules/`` left in a template directory. Git-ignored + regenerable;
+    # cleanable via the starter carve-out in ``assert_cleanup_path_allowed``.
+    starters_root = repo_root / "data" / "starters"
+    for pattern in ("*/.next", "*/node_modules"):
+        for starter_cache in sorted(starters_root.glob(pattern)):
+            if starter_cache.is_dir() and not starter_cache.is_symlink():
+                plan.items.append(_item(starter_cache, "starter-cache"))
+
     for pycache in repo_root.rglob("__pycache__"):
         if pycache.is_dir() and not pycache.is_symlink():
             plan.items.append(_item(pycache, "python-cache"))
@@ -525,6 +556,26 @@ def plan_warning_cleanup(
                 "Kräver npm install i apps/viewser efteråt.",
             )
         )
+
+    # Large stray artifacts in the operator's git-ignored övrigt/ scratch folder
+    # (e.g. a downloaded chrome-win.zip). Only files at/above the size threshold
+    # are offered, so notes and small files there are never listed.
+    ovrigt_dir = repo_root / "övrigt"
+    if ovrigt_dir.is_dir():
+        for child in sorted(ovrigt_dir.iterdir()):
+            if (
+                child.is_file()
+                and not child.is_symlink()
+                and path_size_bytes(child) >= _OVRIGT_LARGE_BYTES
+            ):
+                plan.items.append(
+                    _item(
+                        child,
+                        "ovrigt-artifact",
+                        "Stor strö-artefakt i övrigt/ (git-ignored). Småfiler "
+                        "och anteckningar under tröskeln rörs aldrig.",
+                    )
+                )
     return plan
 
 
@@ -676,6 +727,7 @@ def apply_warning_cleanup(
     environ: dict[str, str] | None = None,
     include_prompt_inputs: bool = False,
     include_node_modules: bool = False,
+    include_ovrigt: bool = False,
 ) -> CleanupResult:
     """Apply warning cleanup after the UI has collected explicit confirmation."""
     plan = plan_warning_cleanup(repo_root=repo_root, environ=environ)
@@ -696,6 +748,9 @@ def apply_warning_cleanup(
             result.skipped_paths.append(item.path)
             continue
         if item.kind == "node-modules" and not include_node_modules:
+            result.skipped_paths.append(item.path)
+            continue
+        if item.kind == "ovrigt-artifact" and not include_ovrigt:
             result.skipped_paths.append(item.path)
             continue
         try:

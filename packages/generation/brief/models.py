@@ -19,6 +19,7 @@ DEFAULT_POLICY_PATH = REPO_ROOT / "governance" / "policies" / "llm-models.v1.jso
 
 BRIEF_ROLE_ID = "briefModel"
 COPY_DIRECTIVE_ROLE_ID = "copyDirectiveModel"
+STYLE_DIRECTIVE_ROLE_ID = "styleDirectiveModel"
 EXPECTED_PROVIDER = "openai"
 OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
 
@@ -97,3 +98,13 @@ def resolve_brief_model(policy_path: Path | None = None) -> str:
 def resolve_copy_directive_model(policy_path: Path | None = None) -> str:
     """Return the model string registered for copyDirectiveModel (ADR 0034)."""
     return _resolve_role_model(COPY_DIRECTIVE_ROLE_ID, policy_path)
+
+
+def resolve_style_directive_model(policy_path: Path | None = None) -> str:
+    """Return the model string registered for styleDirectiveModel (stylist role).
+
+    The stylist role interprets a free/compound style follow-up into a
+    structured, validated theme mutation (brand colour + tone vibe). Separate
+    role from copyDirectiveModel so the colour/style purpose stays distinct.
+    """
+    return _resolve_role_model(STYLE_DIRECTIVE_ROLE_ID, policy_path)

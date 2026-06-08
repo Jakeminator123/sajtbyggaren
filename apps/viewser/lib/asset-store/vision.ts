@@ -15,11 +15,7 @@
  */
 import OpenAI from "openai";
 
-import type {
-  AssetPlacement,
-  AssetRole,
-  VisionConfidence,
-} from "./types";
+import type { AssetPlacement, AssetRole, VisionConfidence } from "./types";
 
 export interface VisionResult {
   subject: string;
@@ -30,7 +26,7 @@ export interface VisionResult {
   usedFallback: boolean;
 }
 
-const VISION_MODEL = process.env.OPENAI_VISION_MODEL ?? "gpt-4o-mini";
+const VISION_MODEL = process.env.OPENAI_VISION_MODEL ?? "gpt-4o";
 
 const SYSTEM_INSTRUCTIONS = [
   "You analyse photos uploaded by an operator who is building a small business website.",
@@ -53,7 +49,8 @@ function mockVisionFor(role: AssetRole): VisionResult {
   const placement: AssetPlacement =
     role === "logo" ? "home" : role === "hero" ? "home" : "gallery";
   return {
-    subject: role === "logo" ? "logo" : role === "hero" ? "hero photo" : "photo",
+    subject:
+      role === "logo" ? "logo" : role === "hero" ? "hero photo" : "photo",
     recommendedPlacement: placement,
     suggestedAltText:
       role === "logo"
@@ -77,9 +74,9 @@ function clampPlacement(value: string): AssetPlacement {
     "products",
     "gallery",
   ];
-  return (allowed.includes(normalized as AssetPlacement)
-    ? normalized
-    : "gallery") as AssetPlacement;
+  return (
+    allowed.includes(normalized as AssetPlacement) ? normalized : "gallery"
+  ) as AssetPlacement;
 }
 
 function clampConfidence(value: string): VisionConfidence {
@@ -94,16 +91,29 @@ function parseVisionJson(raw: string, role: AssetRole): VisionResult {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return { ...mockVisionFor(role), modelUsed: VISION_MODEL, usedFallback: true };
+    return {
+      ...mockVisionFor(role),
+      modelUsed: VISION_MODEL,
+      usedFallback: true,
+    };
   }
   if (typeof parsed !== "object" || parsed === null) {
-    return { ...mockVisionFor(role), modelUsed: VISION_MODEL, usedFallback: true };
+    return {
+      ...mockVisionFor(role),
+      modelUsed: VISION_MODEL,
+      usedFallback: true,
+    };
   }
   const obj = parsed as Record<string, unknown>;
   return {
-    subject: typeof obj.subject === "string" && obj.subject.trim() ? obj.subject.trim() : "photo",
+    subject:
+      typeof obj.subject === "string" && obj.subject.trim()
+        ? obj.subject.trim()
+        : "photo",
     recommendedPlacement: clampPlacement(
-      typeof obj.recommendedPlacement === "string" ? obj.recommendedPlacement : "gallery",
+      typeof obj.recommendedPlacement === "string"
+        ? obj.recommendedPlacement
+        : "gallery",
     ),
     suggestedAltText:
       typeof obj.suggestedAltText === "string" && obj.suggestedAltText.trim()

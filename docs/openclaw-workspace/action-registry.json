@@ -1,0 +1,41 @@
+{
+  "comment": "Sajtbyggaren OpenClaw action registry. OpenClaw is a conductor on the controlled engine, not a free agent. status: supported | partial | planned.",
+  "version": 1,
+  "actions": [
+    {
+      "id": "restyle",
+      "skill": "skills/restyle/SKILL.md",
+      "routerEditKind": "visual_style",
+      "status": "supported",
+      "note": "Colour/font/theme -> brand/tone via theme_directives; compound colours via the stylist role + color_lexicon."
+    },
+    {
+      "id": "copy_change",
+      "skill": "skills/copy-change/SKILL.md",
+      "routerEditKind": "copy_change",
+      "status": "supported",
+      "note": "name/tagline/about/services via copyDirective; LLM-understood (copyDirectiveModel) with deterministic guards."
+    },
+    {
+      "id": "section_add",
+      "skill": "skills/section-add/SKILL.md",
+      "routerEditKind": "section_add",
+      "status": "supported",
+      "note": "Mount one sanctioned section (team/faq/garantier/recensioner) via the apply chain: router section_add -> resolve type to capability (faq-section/reviews/team-section/guarantees) with an implementing dossier -> apply (requestedCapabilities + selectedDossiers.required) -> targeted render. Unknown/unsupported type = honest no-op."
+    },
+    {
+      "id": "layout_change",
+      "skill": "skills/layout-change/SKILL.md",
+      "routerEditKind": "layout_change",
+      "status": "planned",
+      "note": "Reorder/move sections; needs an apply capability, not free CSS."
+    },
+    {
+      "id": "site_review",
+      "skill": "skills/site-review/SKILL.md",
+      "routerEditKind": "site_review",
+      "status": "partial",
+      "note": "Read-only answer/critique from artifacts; never builds."
+    }
+  ]
+}

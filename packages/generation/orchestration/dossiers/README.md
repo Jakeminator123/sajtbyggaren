@@ -60,7 +60,7 @@ ovan är optional och fylls när hard Dossiers importeras i Sprint 3+.
 
 ## Status
 
-Elva (11) soft Dossiers är implementerade idag (alla instructions-only,
+Tretton (13) soft Dossiers är implementerade idag (alla instructions-only,
 inga verbatim TSX-filer):
 
 **Pre-Week-1 (basbygglock):**
@@ -114,6 +114,20 @@ inga verbatim TSX-filer):
   `defaultForCapability=true`. Native `<video>` med poster-fallback,
   preload=metadata, prefers-reduced-motion-hantering och text-overlay
   med kontrast-gradient. Ingen YouTube/Vimeo-embed.
+
+**section_builder-slice (section_add follow-up-roll, 2026-06-08):**
+
+- [`soft/team-roster/`](soft/team-roster/) — capability `team-section`,
+  `defaultForCapability=true`. Responsivt grid av monogram-kort (namn + roll)
+  som återanvänder den befintliga `render_section_team`-renderaren. Data-drivet
+  på `company.team`; tom lista renderar ingenting (ingen påhittad personal).
+  Monteras av section_add-följdprompten ("lägg till en team-sektion").
+- [`soft/trust-guarantees/`](soft/trust-guarantees/) — capability `guarantees`,
+  `defaultForCapability=true`. Trust/garanti-block ('Varför oss' som ikon-
+  punktlista) som återanvänder den befintliga `render_section_trust_proof`-
+  renderaren. Grundat i `trustSignals` / `uniqueSellingPoints` / bekräftade
+  `businessFacts` (aldrig påhittade certifikat/garantier). Monteras av
+  section_add-följdprompten ("lägg till en sektion om garantier").
 
 Övriga capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
 har fortfarande tomma `dossiers`-listor och är dokumenterade gap

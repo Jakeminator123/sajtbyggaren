@@ -51,6 +51,16 @@ synkar. PR:ar från arbets-branchen till `main` när "sanningen" ska uppdateras.
 > [`governance/rules/christopher-active-branch.md`](../governance/rules/christopher-active-branch.md)
 > och [ADR 0035](../governance/decisions/0035-auth-billing-scope-gate.md).
 
+> **Operatörsgrant (Jakob, 2026-06-08) — smal lane-unblock, inte carte
+> blanche:** operatören kan ge jakob-be rätt att redigera Christophers UI-lane
+> (`apps/viewser/**`) för en *specifik* ändring när ALLA fyra villkor gäller:
+> (1) krävs för kärnloopen, (2) explicit operatörsgodkänd, (3) liten + rapporterad
+> diff, (4) Christopher informerad i inbox/handoff. Riktat unblock per ändring,
+> inte stående full access; commit-body taggas `[scope-leak] Approved by
+> operator`. Lane-ägandet består. Full formulering:
+> `governance/rules/branch-discipline.md` (sektionen "Jakob-agent och
+> Christopher-agent").
+
 ### Livscykel för arbets-branchen
 
 1. **Skapa en gång:** `git switch main && git switch -c <branch> && git push -u origin <branch>`. Arbets-branchen lever ovanpå main.

@@ -96,6 +96,7 @@ _validate_copy_directive_candidate = _copy_directives._validate_copy_directive_c
 # prompt to brand.primaryColorHex + tone.primary - both already rendered by the
 # builder - so the rebuild shows the restyle. Honest no-op when no theme intent.
 extract_theme_directive = _theme_directives.extract_theme_directive
+extract_theme_directive_via_llm = _theme_directives.extract_theme_directive_via_llm
 apply_theme_directive = _theme_directives.apply_theme_directive
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
@@ -2217,6 +2218,29 @@ def _semantic_source_entry(
 _MISSING_STORY = object()
 
 
+# Intents for which the copyDirectiveModel extraction fallback may run when the
+# deterministic _extract_copy_directives misses. The extraction path only ever
+# emits company-name | tagline directives (see _extract_copy_directives_via_llm),
+# so the ONLY field it can touch that _apply_semantic_patch also touches is the
+# tagline, and only under tagline-update. For that intent the model is the better
+# interpreter of literal copy the keyword rules miss - e.g.
+# "gör herotexten ölälskarna från palma" or
+# 'byt ut sloganen mot något lekfullare: "Surdeg med kärlek"' - and its
+# *validated* directive cleanly REPLACES the conservative semantic fallback
+# (copy directives apply AFTER the semantic patch and replace-text overwrites,
+# so the model is authoritative for the field it is allowed to emit; there is no
+# stacked double-apply). tone-shift (-> tone), story-emphasize (-> company.story)
+# and positioning-shift (-> no copy field) own fields the extraction path does
+# NOT emit, so consulting the model there could only fabricate a spurious
+# cross-field name/tagline edit (e.g. "gör tonen varmare" must never invent a
+# literal tagline). They keep their deterministic handling untouched - this is
+# the "no double-apply against _apply_semantic_patch for the same field" rule.
+# clarify is too ambiguous to carry a literal copy edit.
+_COPY_DIRECTIVE_LLM_ELIGIBLE_INTENTS: frozenset[FollowupIntent] = frozenset(
+    {"no-semantic-change", "tagline-update"}
+)
+
+
 def _copy_directive_llm_eligible(
     follow_up_prompt: str,
     *,
@@ -2224,18 +2248,113 @@ def _copy_directive_llm_eligible(
 ) -> bool:
     """Decide whether to consult copyDirectiveModel for this follow-up.
 
-    Only genuinely unclassified follow-ups qualify. Additive prompts
-    ("lägg till ...") and the known semantic intents (tone-shift,
-    tagline-update, story-emphasize, positioning-shift, clarify) already have
-    deterministic handling - firing the model there risks a spurious copy edit
-    (e.g. "lägg till premium produkt" must not rewrite the tagline).
+    copyDirectiveModel is the PRIMARY understanding layer for copy edits and the
+    deterministic _extract_copy_directives is the safety net (a validator, not a
+    gatekeeper): the model is consulted whenever the deterministic rules miss AND
+    the intent is one the extraction path can faithfully serve - a genuinely
+    unclassified follow-up (no-semantic-change) or an explicit hero/tagline edit
+    (tagline-update). For tagline-update the model's literal tagline overrides the
+    conservative semantic fallback; because the extraction path only emits
+    company-name | tagline (company-name is never semantic-patched, tagline is the
+    sole overlap) the model is authoritative for that one field and never
+    double-applies on top of _apply_semantic_patch.
+
+    Additive prompts ("lägg till ...") never qualify - an add request must not
+    rewrite copy - and tone-shift/story-emphasize/positioning-shift/clarify keep
+    their deterministic handling so the model can never silently fabricate a copy
+    edit for a field _apply_semantic_patch already owns for them.
     """
-    if intent != "no-semantic-change":
+    if intent not in _COPY_DIRECTIVE_LLM_ELIGIBLE_INTENTS:
         return False
     text = _normalise_followup_text(follow_up_prompt)
     if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
         return False
     return True
+
+
+# Visual cues that mark a follow-up as a STYLE/THEME request (the stylist role's
+# honesty gate, mirroring the router's fix-1 "needs style context"). The
+# styleDirectiveModel fallback only fires when the deterministic theme extractor
+# missed AND one of these is present, so a bare colour question ("vad betyder
+# rosa?" - no cue) and an additive request ("lägg till en blå knapp") can never
+# trigger a model-driven restyle. These are visual NOUNS + restyle VERBS, not a
+# bare colour word, so the gate keys on style intent, not on a colour token.
+_THEME_STYLE_CUE_KEYWORDS: tuple[str, ...] = (
+    "färg",
+    "färgen",
+    "färger",
+    "färgerna",
+    "farg",
+    "fargen",
+    "färgschema",
+    "fargschema",
+    "färgskala",
+    "palett",
+    "paletten",
+    "palette",
+    "tema",
+    "temat",
+    "theme",
+    "stil",
+    "stilen",
+    "style",
+    "utseende",
+    "utseendet",
+    "look",
+    "design",
+    "designen",
+    "bakgrund",
+    "bakgrunden",
+    "bakgrundsfärg",
+    "color",
+    "colour",
+    "colors",
+    "colours",
+    "typsnitt",
+    "typsnittet",
+    "font",
+    "fonten",
+    "typografi",
+    "vibe",
+    "känsla",
+    "kansla",
+    "känslan",
+    "kanslan",
+    # restyle verbs / colour-application verbs
+    "snygga",
+    "modernisera",
+    "styla om",
+    "designa om",
+    "piffa",
+    "polera",
+    "restyla",
+    "restyle",
+    "måla",
+    "mala",
+    "färga",
+    "farga",
+)
+
+
+def _theme_directive_llm_eligible(follow_up_prompt: str) -> bool:
+    """Decide whether to consult styleDirectiveModel for this follow-up.
+
+    The stylist model is the PRIMARY understanding layer for free/compound style
+    expressions and the deterministic colour lexicon is the safety net. The
+    model is consulted only when the deterministic ``extract_theme_directive``
+    missed AND the prompt carries a visual/style cue (a colour/theme/style noun
+    or a restyle verb). This preserves the router's fix-1 guard in the prompt
+    path: a bare colour with no style context ("vad betyder rosa?") and an
+    additive request ("lägg till en blå knapp") never trigger a model restyle.
+    Honesty: an empty/invalid model result stays an honest no-op (handled in
+    ``extract_theme_directive_via_llm``); this gate only decides whether to ask.
+    """
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return False
+    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
+        return False
+    return _contains_any(text, _THEME_STYLE_CUE_KEYWORDS)
 
 
 def _apply_semantic_patch(
@@ -2736,7 +2855,23 @@ def merge_followup_project_input(
     # the builder already renders via patch_globals_css on rebuild. Honest
     # no-op when the prompt carries no theme intent (most follow-ups), so the
     # deterministic copyDirective/semantic behaviour above is unchanged.
-    apply_theme_directive(merged, extract_theme_directive(follow_up_prompt, language=language))
+    # stylist role: the deterministic colour/vibe lexicon resolves known + many
+    # compound expressions ("grönvit", "korall", "lyxigare"). When it misses a
+    # free expression and the caller opted into the LLM fallback, the
+    # styleDirectiveModel interprets it into the SAME validated ThemeDirective
+    # (hex + known vibe re-checked in extract_theme_directive_via_llm). The gate
+    # keeps the fix-1 honesty guard (bare colour question / add-only never
+    # restyles); an empty/invalid model result is an honest no-op.
+    theme_directive = extract_theme_directive(follow_up_prompt, language=language)
+    if (
+        theme_directive is None
+        and enable_llm_fallback
+        and _theme_directive_llm_eligible(follow_up_prompt)
+    ):
+        theme_directive = extract_theme_directive_via_llm(
+            follow_up_prompt, language=language
+        )
+    apply_theme_directive(merged, theme_directive)
     return merged
 
 

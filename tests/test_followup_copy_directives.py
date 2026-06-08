@@ -24,11 +24,13 @@ import pytest
 
 from scripts.build_site import build
 from scripts.prompt_to_project_input import (
+    _copy_directive_llm_eligible,
     _extract_copy_directives,
     _extract_copy_directives_via_llm,
     _is_content_rewrite_request,
     _validate_against_schema,
     _validate_copy_directive_candidate,
+    classify_followup_intent,
     generate,
     generate_followup,
     merge_followup_project_input,
@@ -197,6 +199,55 @@ def test_explicit_company_name_keyword_still_renames_company() -> None:
             "source": "prompt-rule",
         }
     ]
+
+
+# --- 2026-06-08 phrasing slice: "<NEW> istället för <OLD>" ------------------
+
+
+@pytest.mark.tooling
+def test_extract_hero_text_instead_of_phrasing() -> None:
+    """The operator's natural phrasing 'gör ... herotexten "X" istället för
+    "Y"' lands the hero tagline = X. The text after the marker is the OLD value
+    and is ignored. Regression for the 2026-06-08 live-demo no-op."""
+    directives = _extract_copy_directives(
+        'Gör sajten med herotexten "ölälskarna från palma" istället för '
+        '"En tydlig och lugn företagswebb"',
+        language="sv",
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "ölälskarna från palma",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_instead_of_marker_with_till_takes_new_value_before_marker() -> None:
+    directives = _extract_copy_directives(
+        'ändra rubriken till "Nytt" istället för "Gammalt"', language="sv"
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "Nytt",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_unquoted_instead_of_is_honest_no_op() -> None:
+    """No quoted new value before the marker -> honest no-op (never guess)."""
+    assert (
+        _extract_copy_directives(
+            "gör herotexten blå istället för röd", language="sv"
+        )
+        == []
+    )
 
 
 @pytest.mark.tooling
@@ -1629,3 +1680,337 @@ def test_schema_rejects_about_text_include_token() -> None:
     )
     with pytest.raises(SystemExit):
         _validate_against_schema(pi)
+
+
+# --- 2026-06-08 (jakob-be): copyDirectiveModel as the PRIMARY copy-edit layer ---
+#
+# The deterministic _extract_copy_directives is the safety net, not the gate:
+# the model is now consulted for free-text copy edits the keyword rules miss
+# even when the intent is tagline-update (not only no-semantic-change), while
+# tone-shift/story-emphasize/positioning-shift/clarify and additive prompts stay
+# deterministic so the model can never fabricate a cross-field copy edit.
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("prompt", "intent", "expected"),
+    [
+        # no-semantic-change stays eligible (unchanged behaviour)...
+        ("kan du kalla firman Nordens Smycken", "no-semantic-change", True),
+        # ...and tagline-update is now ALSO eligible so the model can read the
+        # free-text hero/tagline edits the deterministic rules miss.
+        ("gör herotexten ölälskarna från palma", "tagline-update", True),
+        (
+            'byt ut sloganen mot något lekfullare: "Surdeg med kärlek"',
+            "tagline-update",
+            True,
+        ),
+        # Add-only requests never trigger a copy edit, whatever the intent.
+        ("lägg till en kontaktknapp", "no-semantic-change", False),
+        # Intents whose semantic-patch field the extraction path cannot emit stay
+        # deterministic (no double-apply / no fabricated cross-field copy).
+        ("gör tonen varmare", "tone-shift", False),
+        ("lyft fram vår historia", "story-emphasize", False),
+        ("positionera oss som premium", "positioning-shift", False),
+        ("ok", "clarify", False),
+    ],
+)
+def test_copy_directive_llm_eligible_widened_to_tagline_update(
+    prompt: str, intent: str, expected: bool
+) -> None:
+    assert _copy_directive_llm_eligible(prompt, intent=intent) is expected
+
+
+@pytest.mark.tooling
+def test_merge_llm_extracts_hero_tagline_when_intent_is_tagline_update(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """'gör herotexten ölälskarna från palma' classifies as tagline-update and
+    the deterministic rules miss it (no replace verb/marker, no till/to value).
+    The widened eligibility lets copyDirectiveModel read the literal, which then
+    overrides the conservative semantic fallback. Regression for the 2026-06-08
+    silent no-op (docs/diagnosis-and-handoff-2026-06-08.md)."""
+    prompt = "gör herotexten ölälskarna från palma"
+    assert classify_followup_intent(prompt, language="sv") == "tagline-update"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "ölälskarna från palma",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == "ölälskarna från palma"
+    assert merged["directives"]["copyDirectives"] == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "ölälskarna från palma",
+            "source": "llm",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_merge_llm_extracts_slogan_from_mot_phrasing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """'byt ut sloganen mot något lekfullare: "X"' is tagline-update, but the
+    deterministic value extractor only understands 'till'/'instead of'/quoted-
+    before-marker - not 'mot ... :'. With the model consulted the quoted literal
+    still lands as the tagline."""
+    prompt = 'byt ut sloganen mot något lekfullare: "Surdeg med kärlek"'
+    assert classify_followup_intent(prompt, language="sv") == "tagline-update"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "Surdeg med kärlek",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == "Surdeg med kärlek"
+    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_merge_llm_extracts_company_name_from_kalla_firman(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """'kan du kalla firman Nordens Smycken' is no-semantic-change and the
+    deterministic rules miss it ('kalla'/'firman' are not name keywords); the
+    model reads the rename. Locks the operator's exact free-text phrasing."""
+    prompt = "kan du kalla firman Nordens Smycken"
+    assert classify_followup_intent(prompt, language="sv") == "no-semantic-change"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "company-name",
+                "operation": "replace-text",
+                "payload": "Nordens Smycken",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert merged["company"]["name"] == "Nordens Smycken"
+    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_tone_shift_never_fabricates_tagline_via_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: 'gör tonen varmare' is tone-shift, so the extraction path is
+    NOT consulted - even a misbehaving model proposing a literal tagline can
+    never be reached/applied. The semantic tone patch leaves company.tagline
+    byte-stable and no copyDirective is recorded."""
+    previous = _previous_project_input()
+    prompt = "gör tonen varmare"
+    assert classify_followup_intent(prompt, language="sv") == "tone-shift"
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "Värme i varje möte",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, previous=previous, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_additive_request_never_triggers_llm_copy_edit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: 'lägg till en kontaktknapp' must never become a copy edit
+    (add-only guard), even with the model enabled and (wrongly) proposing a
+    rename. Name + tagline stay byte-stable; no copyDirective is recorded."""
+    previous = _previous_project_input()
+    prompt = "lägg till en kontaktknapp"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "company-name",
+                "operation": "replace-text",
+                "payload": "Knappbolaget",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(prompt, previous=previous, enable_llm_fallback=True)
+    assert merged["company"]["name"] == previous["company"]["name"]
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_tagline_update_llm_no_op_does_not_fabricate_copy_directive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Honesty: when the model returns nothing valid for a tagline-update with
+    no literal copy ('gör herotexten mer slagkraftig'), the LLM no-op stays an
+    honest no-op - no copyDirective is fabricated."""
+    prompt = "gör herotexten mer slagkraftig"
+    assert classify_followup_intent(prompt, language="sv") == "tagline-update"
+    assert _extract_copy_directives(prompt, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [],
+    )
+    merged = _merge(prompt, enable_llm_fallback=True)
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+# --- 2026-06-08 (jakob-be): hero-copy decoupling fix (company.heroHeadline) ---
+#
+# Root cause from the kaka-ab live demo: the follow-up DID work at the data
+# layer (copyDirectiveModel set company.tagline = "jakobs kakor"), but the big
+# hero H1 renders from the planning blueprint (contentBlocks.home.hero.headline,
+# regenerated from briefModel positioning every build), NOT from company.tagline
+# (which only feeds the meta description, footer and a subheadline fallback the
+# blueprint overrides). So the edit was invisible. The fix mirrors an explicit
+# tagline edit into company.heroHeadline, an operator override the renderer
+# prefers over the regenerated blueprint headline.
+
+THE_KAKA_DEMO_PROMPT = (
+    'Ändra denna text: "En svensk webbshop för kakor med tydlig väg från '
+    'produkt till köp." til att säga "jakobs kakor".'
+)
+
+
+@pytest.mark.tooling
+def test_tagline_replace_mirrors_into_hero_headline_override() -> None:
+    """A deterministic tagline edit (rubrik -> tagline) also writes the operator
+    hero-headline override so the big hero H1 reflects the edit, not just the
+    invisible tagline/meta field."""
+    merged = _merge("byt rubriken till 'Jakobs kakor'")
+    assert merged["company"]["tagline"] == "Jakobs kakor"
+    assert merged["company"]["heroHeadline"] == "Jakobs kakor"
+
+
+@pytest.mark.tooling
+def test_include_token_tagline_reflects_in_hero_headline() -> None:
+    """An include-token tagline edit also surfaces in the hero-headline override
+    (the resulting tagline value), so the token is visible in the H1 too."""
+    merged = _merge(INCLUDE_TOKEN_PROMPT)
+    assert "TEST-JAKOB" in merged["company"]["heroHeadline"]
+    assert merged["company"]["heroHeadline"] == merged["company"]["tagline"]
+
+
+@pytest.mark.tooling
+def test_company_rename_does_not_set_hero_headline_override() -> None:
+    """A company rename keeps the nav/footer brand and must NOT hijack the hero
+    H1 - so it never writes company.heroHeadline."""
+    merged = _merge(OPERATOR_RENAME_PROMPT)
+    assert merged["company"]["name"] == "Jakobs Örhängen"
+    assert "heroHeadline" not in merged["company"]
+
+
+@pytest.mark.tooling
+def test_about_text_edit_does_not_set_hero_headline_override() -> None:
+    """An about-text (story) edit must not touch the hero-headline override."""
+    merged = _merge(ABOUT_REPLACE_PROMPT)
+    assert merged["company"]["story"] == "Vi är ett familjeföretag sedan 1982"
+    assert "heroHeadline" not in merged["company"]
+
+
+@pytest.mark.tooling
+def test_kaka_demo_prompt_sets_hero_headline_via_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The operator's exact live-demo prompt: "Ändra denna text: '<old>' til att
+    säga 'jakobs kakor'." The deterministic rules miss it ("denna text" has no
+    stable target keyword), the intent is no-semantic-change (LLM-eligible), and
+    copyDirectiveModel returns a tagline directive. The fix then mirrors it into
+    company.heroHeadline so the big hero H1 becomes "jakobs kakor" - the change
+    that was silently swallowed in the live demo."""
+    assert classify_followup_intent(THE_KAKA_DEMO_PROMPT, language="sv") == (
+        "no-semantic-change"
+    )
+    assert _extract_copy_directives(THE_KAKA_DEMO_PROMPT, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "jakobs kakor",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(THE_KAKA_DEMO_PROMPT, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == "jakobs kakor"
+    assert merged["company"]["heroHeadline"] == "jakobs kakor"
+    assert merged["directives"]["copyDirectives"][0]["target"] == "tagline"
+
+
+@pytest.mark.tooling
+def test_merged_hero_headline_override_passes_schema() -> None:
+    merged = _merge("byt rubriken till 'Jakobs kakor'")
+    assert merged["company"]["heroHeadline"] == "Jakobs kakor"
+    _validate_against_schema(merged)
+
+
+@pytest.mark.tooling
+def test_schema_accepts_company_hero_headline() -> None:
+    pi = _previous_project_input()
+    pi.pop("$schema", None)
+    pi["company"]["heroHeadline"] = "Jakobs kakor"
+    _validate_against_schema(pi)  # must not raise
+
+
+@pytest.mark.tooling
+def test_end_to_end_hero_headline_override_visible_as_h1(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Acceptance: a hero/tagline follow-up reaches the rendered hero H1, not
+    just the invisible tagline/meta field. This is the end-to-end proof for the
+    kaka-ab live-demo fix - "byt rubriken till X" now changes the big hero
+    headline in the generated page."""
+    import re
+
+    new_headline = "Smaskiga kakor varje dag"
+    page, build_result = _build_two_versions(
+        monkeypatch,
+        tmp_path,
+        init_prompt="Skapa en hemsida för Surdegsbagaren i Malmö.",
+        followup_prompt=f"byt rubriken till '{new_headline}'",
+        site_id="surdegsbagaren-hero",
+        project_id="copydir-hero",
+    )
+    text = page.read_text(encoding="utf-8")
+    assert new_headline in text
+    h1_blocks = re.findall(r"<h1[^>]*>(.*?)</h1>", text, flags=re.DOTALL)
+    assert any(new_headline in block for block in h1_blocks), (
+        "the hero override must render inside the hero H1, not only meta/footer"
+    )
+    assert build_result["engineMode"] == "followup"
+    assert build_result["appliedVisibleEffect"] is True

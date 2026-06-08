@@ -534,3 +534,135 @@ def test_bare_color_word_question_is_not_an_edit():
     assert d.editKind == "none"
     assert d.buildRequirement == "none"
     assert d.shouldStartPreview is False
+
+
+# ---------------------------------------------------------------------------
+# 2026-06-08 stylist slice: the router shares the central colour lexicon, so
+# lexicon colours ("korall") and compound colours ("grönvit") read as
+# visual_style adjectives. The same fix-1 guard holds: a bare/compound colour
+# without style context is no edit, and an additive request that mentions a
+# (compound) colour stays component_add - never a global restyle.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "gör sajten grönvit",
+        "gör den svartvit",
+        "gör den mintgrön",
+        "gör färgen korall",
+        "ändra färgen till grönvitt",
+    ],
+)
+def test_compound_and_lexicon_colours_are_visual_style(prompt: str):
+    """Free/compound colour expressions classify as a global visual_style edit
+    (so the stylist's theme path runs), with a real targeted rebuild."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.editKind == "visual_style"
+    assert d.buildRequirement == "targeted_rebuild"
+
+
+def test_compound_colour_add_request_stays_component_add():
+    """Regression: an ADD request that mentions a compound colour is
+    component_add, never a global restyle."""
+    d = classify_message("lägg till en grönvit knapp")
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "component_add"
+    assert d.componentIntent == "button"
+
+
+def test_bare_compound_colour_question_is_not_an_edit():
+    """fix-1 holds for compounds too: "vad betyder grönvit?" is not an edit."""
+    d = classify_message("vad betyder grönvit?")
+    assert d.editKind == "none"
+    assert d.buildRequirement == "none"
+    assert d.shouldStartPreview is False
+
+
+# ---------------------------------------------------------------------------
+# 2026-06-08 section_builder slice: "lägg till en sektion om <typ>" /
+# "lägg till en <typ>-sektion" classifies as section_add with a type slug
+# (team/faq/trust/reviews), distinct from component_add (a widget) and route_add
+# (a new page). An unknown type still classifies as section_add (the apply chain
+# does the honest no-op). Guards: a positional reference to an existing section
+# ("i andra sektionen") stays component_add; questions never become edits.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "prompt,slug",
+    [
+        ("lägg till en sektion om garantier", "trust"),
+        ("lägg till en FAQ-sektion", "faq"),
+        ("lägg till en team-sektion", "team"),
+        ("lägg till en sektion om teamet", "team"),
+        ("lägg till en sektion med recensioner", "reviews"),
+        ("skapa en sektion med vanliga frågor", "faq"),
+        ("lägg till en sektion om trygghet", "trust"),
+        # section_builder broadening (2026-06-08): the module-drag-and-drop types
+        # that reuse an existing Dossier + renderer route as section_add too.
+        ("lägg till en galleri-sektion", "gallery"),
+        ("lägg till en sektion med priser", "pricing"),
+        ("lägg till en öppettider-sektion", "hours"),
+        ("lägg till en sektion med en karta", "map"),
+        ("lägg till en kontaktformulär-sektion", "contact-form"),
+    ],
+)
+def test_section_add_classifies_with_type_slug(prompt: str, slug: str):
+    """A sanctioned section add -> edit_instruction / section_add / targeted_rebuild,
+    with the type slug carried on componentIntent."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.editKind == "section_add"
+    assert d.buildRequirement == "targeted_rebuild"
+    assert d.componentIntent == slug
+    assert d.shouldStartPreview is True
+
+
+def test_section_add_unknown_type_still_section_add():
+    """An unrecognised section type still classifies as section_add (the apply
+    chain does the honest no-op); the router never invents a type slug."""
+    d = classify_message("lägg till en sektion om färger")
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "section_add"
+    assert d.componentIntent is None
+
+
+def test_section_add_does_not_steal_colored_button():
+    """Regression: an add of a colored widget is component_add, never section_add
+    (no section noun present)."""
+    d = classify_message("lägg till en blå knapp")
+    assert d.editKind == "component_add"
+    assert d.componentIntent == "button"
+
+
+def test_section_add_does_not_steal_new_page():
+    """Regression: "lägg till en sida om X" is route_add, never section_add."""
+    d = classify_message("lägg till en sida om vårt team")
+    assert d.editKind == "route_add"
+
+
+def test_widget_into_named_section_stays_component_add():
+    """A different widget added INTO a named section ("i andra sektionen") is a
+    component_add at that location, not a section_add."""
+    d = classify_message("lägg till ett kontaktformulär i sista sektionen")
+    assert d.editKind == "component_add"
+    assert d.componentIntent == "contact_form"
+
+
+def test_section_word_as_location_is_not_section_add():
+    """"lägg en klocka i andra sektionen" uses the section word as a LOCATION
+    (ordinal), so it stays component_add."""
+    d = classify_message("lägg en klocka i andra sektionen")
+    assert d.editKind == "component_add"
+    assert d.componentIntent == "clock_widget"
+
+
+def test_section_add_question_is_not_an_edit():
+    """A question about a section type never becomes a section_add edit."""
+    d = classify_message("vad är en faq-sektion?")
+    assert d.editKind == "none"
+    assert d.buildRequirement == "none"
+    assert d.shouldStartPreview is False

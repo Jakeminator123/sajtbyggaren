@@ -42,6 +42,7 @@ MessageKind = Literal[
 EditKind = Literal[
     "component_add",
     "component_remove",
+    "section_add",
     "visual_style",
     "copy_change",
     "layout_change",

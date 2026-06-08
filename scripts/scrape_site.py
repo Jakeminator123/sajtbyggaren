@@ -452,7 +452,7 @@ def _llm_synthesize(corpus: ScrapedCorpus) -> dict[str, Any] | None:
     except ImportError:  # pragma: no cover - install guard
         return None
 
-    model = os.environ.get("SAJTBYGGAREN_DISCOVERY_MODEL", "gpt-4o-mini")
+    model = os.environ.get("SAJTBYGGAREN_DISCOVERY_MODEL", "gpt-4o")
 
     instructions = (
         "Du är Sajtbyggarens discovery-assistent. Du läser HTML-text "

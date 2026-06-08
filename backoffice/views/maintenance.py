@@ -78,8 +78,10 @@ def _env_caption(names: Iterable[str]) -> str:
 def view_safe_cleanup() -> None:
     st.title("Cleanup - Säker rensning")
     st.caption(
-        "Dry-run som standard. Rensar bara bygg-/cache-artefakter och använder "
-        "befintlig auto-prune-logik för runs, genererade previews och eval-output."
+        "Dry-run som standard. Rensar bara bygg-/cache-artefakter (inkl. "
+        "starter-bygg-cacher: `data/starters/*/.next` + `node_modules`) och "
+        "använder befintlig auto-prune-logik för runs, genererade previews och "
+        "eval-output."
     )
     st.caption(
         _env_caption(
@@ -149,9 +151,11 @@ def view_warning_cleanup() -> None:
 
     prompt_items = [item for item in plan.items if item.kind == "prompt-input"]
     node_modules_items = [item for item in plan.items if item.kind == "node-modules"]
+    ovrigt_items = [item for item in plan.items if item.kind == "ovrigt-artifact"]
 
     include_prompt_inputs = False
     include_node_modules = False
+    include_ovrigt = False
     if prompt_items:
         st.error(
             "`data/prompt-inputs/`-rensning kan ta bort fortsätt-på-sajt-underlag "
@@ -169,8 +173,19 @@ def view_warning_cleanup() -> None:
             key="confirm-node-modules",
         )
         include_node_modules = typed == "RADERA NODE MODULES"
+    if ovrigt_items:
+        st.error(
+            "`övrigt/`-artefakter (git-ignored skräp, t.ex. nedladdade zippar). "
+            "Bara filer över storlekströskeln listas ovan — anteckningar och "
+            "småfiler rörs aldrig."
+        )
+        typed = st.text_input(
+            "Skriv RADERA ÖVRIGT för att bekräfta övrigt-rensning",
+            key="confirm-ovrigt",
+        )
+        include_ovrigt = typed == "RADERA ÖVRIGT"
 
-    disabled = not (include_prompt_inputs or include_node_modules)
+    disabled = not (include_prompt_inputs or include_node_modules or include_ovrigt)
     if st.button(
         "Bekräfta varningsradering",
         type="primary",
@@ -180,6 +195,7 @@ def view_warning_cleanup() -> None:
         result = apply_warning_cleanup(
             include_prompt_inputs=include_prompt_inputs,
             include_node_modules=include_node_modules,
+            include_ovrigt=include_ovrigt,
         )
         if result.errors:
             for error in result.errors:

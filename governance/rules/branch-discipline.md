@@ -170,9 +170,18 @@ När flera agenter jobbar samtidigt:
 - Jakob-agenten rör inte `apps/viewser/components/**`,
   `apps/viewser/app/**/*.tsx` eller andra UI-paths utan operatörens OK
   (se `docs/ownership-map.md`).
-- Vid undantag: tagga commit-body med `[scope-leak] Approved by
-  operator: <motivering>` enligt branch-scope-regeln. Detta är
-  engångsundantag, inte permanent norm.
+- **Operatörsgrant (Jakob, 2026-06-08) — smal lane-unblock, INTE carte
+  blanche:** operatören kan ge jakob-be rätt att redigera Christophers
+  UI-lane (`apps/viewser/**`) för en *specifik* ändring när ALLA fyra villkor
+  gäller: (1) ändringen krävs för kärnloopen `prompt -> sajt -> preview ->
+  följdprompt`, (2) operatören har explicit godkänt just den ändringen,
+  (3) diffen är liten och rapporteras, (4) Christopher informeras i
+  `docs/agent-inbox.jsonl`/handoff. Det är ett riktat unblock per ändring —
+  inte stående full access. Lane-ägandet består (Christopher är default-ägare
+  av UI/UX), och commit-body taggas fortfarande `[scope-leak] Approved by
+  operator: <motivering>`.
+- Vid undantag (inklusive ett sådant operatörs-unblock): tagga commit-body med
+  `[scope-leak] Approved by operator: <motivering>` enligt branch-scope-regeln.
 
 ### Scout-agent
 

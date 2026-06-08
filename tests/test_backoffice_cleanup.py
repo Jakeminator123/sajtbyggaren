@@ -8,9 +8,11 @@ from pathlib import Path
 
 from backoffice.maintenance import (
     apply_safe_cleanup,
+    apply_warning_cleanup,
     assert_cleanup_path_allowed,
     path_size_bytes,
     plan_safe_cleanup,
+    plan_warning_cleanup,
 )
 from packages.generation.maintenance import MAX_GENERATED_ENV_VAR, MAX_RUNS_ENV_VAR
 from scripts.run_golden_path_eval import MAX_GOLDEN_PATH_EVALS_ENV
@@ -188,3 +190,74 @@ def test_cleanup_apply_removes_eval_generated_and_golden_path_summaries(
     assert not old_golden.exists()
     assert not (repo / "data" / "evals" / "golden-path" / "golden-old.json").exists()
     assert not (repo / "data" / "evals" / "golden-path" / "golden-old.md").exists()
+
+
+def test_starter_build_cache_planned_allowed_but_source_denied(tmp_path: Path) -> None:
+    repo = _make_repo(tmp_path)
+    starter = repo / "data" / "starters" / "portfolio-base"
+    _write(starter / ".next" / "build.txt", 10)
+    _write(starter / "node_modules" / "pkg" / "index.js", 10)
+    _write(starter / "package.json", 10)  # tracked template source -> protected
+
+    plan = plan_safe_cleanup(
+        repo_root=repo,
+        generated_dir=tmp_path / "generated",
+        environ={},
+    )
+    planned = {item.path for item in plan.items if item.kind == "starter-cache"}
+    assert (starter / ".next") in planned
+    assert (starter / "node_modules") in planned
+
+    # The build artifacts are allowed; the starter source stays off-limits.
+    assert_cleanup_path_allowed(starter / ".next", repo_root=repo)
+    assert_cleanup_path_allowed(starter / "node_modules", repo_root=repo)
+    try:
+        assert_cleanup_path_allowed(starter / "package.json", repo_root=repo)
+    except ValueError as exc:
+        assert "off-limits" in str(exc)
+    else:  # pragma: no cover - explicit failure branch
+        raise AssertionError("starter source file was accepted")
+
+    result = apply_safe_cleanup(
+        repo_root=repo,
+        generated_dir=tmp_path / "generated",
+        environ={},
+    )
+    assert not (starter / ".next").exists()
+    assert not (starter / "node_modules").exists()
+    assert (starter / "package.json").exists()
+    assert (starter / ".next") in result.deleted_paths
+
+
+def test_ovrigt_large_artifact_is_warning_gated(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = _make_repo(tmp_path)
+    monkeypatch.setattr("backoffice.maintenance._OVRIGT_LARGE_BYTES", 8)
+    ovrigt = repo / "övrigt"
+    _write(ovrigt / "chrome-win.zip", 20)  # >= threshold -> offered
+    _write(ovrigt / "notes.md", 3)  # < threshold -> never offered
+
+    plan = plan_warning_cleanup(repo_root=repo, environ={})
+    artifact_paths = [item.path for item in plan.items if item.kind == "ovrigt-artifact"]
+    assert (ovrigt / "chrome-win.zip") in artifact_paths
+    assert (ovrigt / "notes.md") not in [item.path for item in plan.items]
+
+    # Gate: övrigt is a warning target - needs explicit confirmation.
+    try:
+        assert_cleanup_path_allowed(ovrigt / "chrome-win.zip", repo_root=repo)
+    except ValueError as exc:
+        assert "Warning target" in str(exc)
+    else:  # pragma: no cover - explicit failure branch
+        raise AssertionError("övrigt artifact accepted without warning confirmation")
+    assert_cleanup_path_allowed(
+        ovrigt / "chrome-win.zip", repo_root=repo, allow_warning_targets=True
+    )
+
+    # Without the include flag the artifact is skipped; with it, deleted.
+    apply_warning_cleanup(repo_root=repo, environ={}, include_ovrigt=False)
+    assert (ovrigt / "chrome-win.zip").exists()
+    result = apply_warning_cleanup(repo_root=repo, environ={}, include_ovrigt=True)
+    assert not (ovrigt / "chrome-win.zip").exists()
+    assert (ovrigt / "notes.md").exists()
+    assert (ovrigt / "chrome-win.zip") in result.deleted_paths
