@@ -141,6 +141,64 @@ def test_extract_tagline_replace() -> None:
     ]
 
 
+# --- 2026-06-08 diagnosis: "rubrik" means the hero H1, not the company name ---
+
+
+@pytest.mark.tooling
+def test_extract_rubrik_targets_hero_tagline() -> None:
+    """The live-demo failure: "byt rubriken på startsidan" edited the company
+    NAME instead of the hero H1 because "rubrik" sat in the name keyword set.
+
+    A heading ("rubrik"/"huvudrubrik") is the hero tagline; only an explicit
+    company-name keyword (företagsnamn/header/heter/rename) should rename the
+    company. Regression for docs/diagnosis-and-handoff-2026-06-08.md class A.
+    """
+    directives = _extract_copy_directives(
+        "byt rubriken på startsidan till 'Jakobs smålandshöns'", language="sv"
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "Jakobs smålandshöns",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_extract_huvudrubrik_targets_hero_tagline() -> None:
+    directives = _extract_copy_directives(
+        "ändra huvudrubriken till 'Vi bygger framtidens hus'", language="sv"
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "Vi bygger framtidens hus",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_explicit_company_name_keyword_still_renames_company() -> None:
+    """The contrast guard: after rubrik* moved to the tagline set, an explicit
+    company-name keyword must still target company-name (not regress to a
+    no-op or hijack the tagline)."""
+    directives = _extract_copy_directives(
+        "byt företagsnamnet till 'Jakobs Smålandshöns'", language="sv"
+    )
+    assert directives == [
+        {
+            "target": "company-name",
+            "operation": "replace-text",
+            "payload": "Jakobs Smålandshöns",
+            "source": "prompt-rule",
+        }
+    ]
+
+
 @pytest.mark.tooling
 @pytest.mark.parametrize(
     "prompt",

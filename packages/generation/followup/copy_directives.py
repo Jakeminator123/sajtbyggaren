@@ -45,6 +45,21 @@ _COPY_DIRECTIVE_TAGLINE_KEYWORDS: tuple[str, ...] = (
     "subtitle",
     "subheading",
 )
+# "rubrik"/"huvudrubrik" mean the hero H1, not the company name. An operator who
+# says "byt rubriken på startsidan till X" wants the hero heading, not a company
+# rename (the brand sits in the nav header + hero brand line, addressed by the
+# explicit "företagsnamn"/"header"/"heter"/"rename" keywords). These are matched
+# on WORD boundaries (not substring) so a compound like "rubriktext" inside a
+# vibe-rewrite ("skriv om rubriktexten så den välkomnar") does NOT become a
+# literal tagline replace - it stays an honest no-op surfaced via
+# unappliedFollowupIntents. Fixes the 2026-06-08 demo where "byt rubriken"
+# renamed the company instead of editing the hero heading.
+_COPY_DIRECTIVE_HEADING_KEYWORDS: tuple[str, ...] = (
+    "rubrik",
+    "rubriken",
+    "huvudrubrik",
+    "huvudrubriken",
+)
 _COPY_DIRECTIVE_NAME_KEYWORDS: tuple[str, ...] = (
     "företagsnamn",
     "foretagsnamn",
@@ -60,10 +75,6 @@ _COPY_DIRECTIVE_NAME_KEYWORDS: tuple[str, ...] = (
     "dopa om",
     "header",
     "headern",
-    "rubrik",
-    "rubriken",
-    "huvudrubrik",
-    "huvudrubriken",
     "titeln",
     "company name",
     "business name",
@@ -255,10 +266,6 @@ _COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS: tuple[str, ...] = (
     "dopa om",
     "header",
     "headern",
-    "rubrik",
-    "rubriken",
-    "huvudrubrik",
-    "huvudrubriken",
     "titeln",
     "company name",
     "business name",
@@ -398,6 +405,13 @@ def _classify_copy_target(text_norm: str) -> str | None:
     """
     if _contains_any(text_norm, _COPY_DIRECTIVE_TAGLINE_KEYWORDS):
         return "tagline"
+    # A standalone "rubrik"/"huvudrubrik" (hero H1) maps to the tagline. Matched
+    # on word boundaries so the compound "rubriktext" does not trigger a literal
+    # replace (that stays an honest no-op). Placed right after the explicit
+    # tagline keywords and before the name branch so a heading rename never
+    # hijacks company.name (2026-06-08 demo fix).
+    if _contains_any_word(text_norm, _COPY_DIRECTIVE_HEADING_KEYWORDS):
+        return "tagline"
     # about / "om oss" scope wins over the generic name signals so a follow-up
     # like "ändra om-oss-texten till '...'" edits company.story, not the name.
     if _contains_any(text_norm, _COPY_DIRECTIVE_ABOUT_KEYWORDS):
@@ -418,7 +432,7 @@ def _classify_copy_target(text_norm: str) -> str | None:
         # operator scoped the rename to a service/product/page (Codex-fynd
         # 2026-06-01): "byt namnet på tjänsten till X" renames a service, not
         # the company. An explicit company-name keyword (företagsnamn,
-        # header, rubrik, rename, ...) still wins over the scope words.
+        # header, rename, ...) still wins over the scope words.
         has_explicit_name = _contains_any_word(
             text_norm, _COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS
         )
@@ -563,6 +577,7 @@ _COPY_DIRECTIVE_TOKEN_STOPWORDS: frozenset[str] = frozenset(
     word.strip().lower()
     for group in (
         _COPY_DIRECTIVE_TAGLINE_KEYWORDS,
+        _COPY_DIRECTIVE_HEADING_KEYWORDS,
         _COPY_DIRECTIVE_NAME_KEYWORDS,
         _COPY_DIRECTIVE_HERO_KEYWORDS,
         _COPY_DIRECTIVE_INCLUDE_KEYWORDS,
@@ -626,9 +641,11 @@ def _extract_copy_directives(
     V1 understands two phrasings, both validated through the public-copy
     guards so the raw instruction can never become customer copy:
 
-    - "byt/ändra/gör om <namnet|headern|...> till '<Y>'" -> replace-text on
-      company-name (the operator's reported failing case: the company name in
-      the nav header + hero H1).
+    - "byt/ändra/gör om <företagsnamnet|headern|...> till '<Y>'" -> replace-text
+      on company-name (the company brand in the nav header + hero brand line).
+    - "byt/ändra <rubriken|huvudrubriken|underrubriken|hero-texten> till '<Y>'"
+      -> replace-text on the hero tagline (the H1 the operator actually means
+      when they say "byt rubriken på startsidan").
     - "inkludera '<TOKEN>' i hero/rubriken" -> include-token on the hero
       tagline (ADR 0034 acceptance case).
 
