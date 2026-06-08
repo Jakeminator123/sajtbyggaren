@@ -752,7 +752,7 @@
     {
       "id": "viewser",
       "canonical": "Viewser",
-      "definition": "Localhost-only operator-prototype (apps/viewser) som driver Builder MVP via prompt/wizard, follow-up och preview av senaste run. Inte en canonical kund-yta; intern operator-MVP tills apps/web finns. Preview körs via Preview Runtime-adaptrar (local-next default, [REDACTED] primär när Vercel-auth finns).",
+      "definition": "Localhost-only operator-prototype (apps/viewser) som driver Builder MVP via prompt/wizard, follow-up och preview av senaste run. Inte en canonical kund-yta; intern operator-MVP tills apps/web finns. Preview körs via Preview Runtime-adaptrar (local-next default, VercelSandboxRuntime primär när Vercel-auth finns).",
       "ownerPackage": "apps/viewser",
       "aliasesAllowed": [],
       "aliasesForbidden": []
