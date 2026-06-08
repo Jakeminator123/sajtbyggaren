@@ -22,4 +22,21 @@ versionshistoriken inklusive innan flytten.
 
 ## Flyttade filer i detta pass
 
-<!-- Fylls i löpande under lane A-passet; varje rad: fil — varför — flyttad från -->
+- `handoff-viewser-ui-overhaul-2026-06-03.md` — historisk Christopher-UI-handoff;
+  superseded av current-focus + handoff. Flyttad från `docs/`.
+- `section-design-treatments-scout.md` — historisk scout-rapport (ADR 0032,
+  Phase 1+2+3a shipped). Flyttad från `docs/`.
+- `codeowners-proposal.md` — förslag utan aktivt arbete (ingen `.github/CODEOWNERS`).
+  Flyttad från `docs/`.
+
+## Markerade historical *på plats* (ej flyttade)
+
+Vissa historiska docs behölls på sin ursprungssökväg och fick bara
+`status: historical` + arkivnot, eftersom en flytt antingen bryter en guard
+eller blockeras av repo-secret-scannern:
+
+- `docs/migration-plan.md` — `tests/test_decisions_and_docs.py` kräver sökvägen.
+- `docs/path-b-backend-scout.md` — inbäddad i runtime-kommentarer.
+- `docs/scaffold-runtime-extension-needed.md` — inbäddad i runtime-kommentarer + sprintvakt-seed.
+- `docs/handoff-pr-117-merge.md` — branch-referens blockeras vid filflytt.
+- `docs/diagnosis-and-handoff-2026-06-08.md` — branch-referens blockeras vid filflytt.

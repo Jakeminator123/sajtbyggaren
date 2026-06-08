@@ -1,4 +1,17 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
 # Section Design Treatments — Scout
+
+> **Arkivnot (lane A, 2026-06):** Historisk scout-rapport (Phase 1+2+3a shipped,
+> ADR 0032). Flyttad från `docs/section-design-treatments-scout.md`. En
+> runtime-kommentar i `packages/generation/build/dispatcher.py` pekar fortfarande
+> på den gamla sökvägen (icke-blockerande; lämnas till backend-lane). Sanningskälla
+> för nuläget: `docs/current-focus.md`. Se `docs/archive/README.md`.
 
 Status: **Phase 1 + Phase 2 + Phase 3a implemented (ADR 0032)**
 — operator-pin, schema, planning-prompt och wizard-UI shipped

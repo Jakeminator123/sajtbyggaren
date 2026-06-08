@@ -1,4 +1,16 @@
+---
+status: historical
+owner: ui
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
 # Handoff: Viewser UI (utan auth/billing) → main
+
+> **Arkivnot (lane A, 2026-06):** Historisk handoff. Flyttad från
+> `docs/handoff-viewser-ui-overhaul-2026-06-03.md`. Superseded av
+> `docs/current-focus.md` + `docs/handoff.md` (toppblock). Arkiv = historik,
+> inte sanningskälla — se `docs/archive/README.md`.
 
 Datum: 2026-06-03
 Lane: Christopher (UI)
