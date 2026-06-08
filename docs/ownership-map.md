@@ -51,15 +51,15 @@ synkar. PR:ar från arbets-branchen till `main` när "sanningen" ska uppdateras.
 > [`governance/rules/christopher-active-branch.md`](../governance/rules/christopher-active-branch.md)
 > och [ADR 0035](../governance/decisions/0035-auth-billing-scope-gate.md).
 
-> **Operatörsgrant (Jakob, 2026-06-08) — smal lane-unblock, inte carte
-> blanche:** operatören kan ge jakob-be rätt att redigera Christophers UI-lane
-> (`apps/viewser/**`) för en *specifik* ändring när ALLA fyra villkor gäller:
-> (1) krävs för kärnloopen, (2) explicit operatörsgodkänd, (3) liten + rapporterad
-> diff, (4) Christopher informerad i inbox/handoff. Riktat unblock per ändring,
-> inte stående full access; commit-body taggas `[scope-leak] Approved by
-> operator`. Lane-ägandet består. Full formulering:
-> `governance/rules/branch-discipline.md` (sektionen "Jakob-agent och
-> Christopher-agent").
+> **Operatörsgrant (Jakob, 2026-06-08) — lane-unblock, inte carte blanche.**
+> jakob-be får gå in i Christophers UI-lane (`apps/viewser/**`) i två fall:
+> **(a) stående buggfix-tillstånd** — fixa buggar du ser, utan per-bugg-OK
+> (committat på jakob-be, `[scope-leak]`-taggat, rapporterat i inbox); och
+> **(b) riktat per-ändrings-OK** för större/icke-bugg-feature-/UX-ändringar
+> (kärnloop + explicit operatörs-OK + liten rapporterad diff + Christopher
+> informerad). Lane-ägandet består (Christopher = default-ägare). Full
+> formulering: `governance/rules/branch-discipline.md` (sektionen "Jakob-agent
+> och Christopher-agent").
 
 ### Livscykel för arbets-branchen
 

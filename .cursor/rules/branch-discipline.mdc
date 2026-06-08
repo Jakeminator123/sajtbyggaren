@@ -171,16 +171,22 @@ När flera agenter jobbar samtidigt:
 - Jakob-agenten rör inte `apps/viewser/components/**`,
   `apps/viewser/app/**/*.tsx` eller andra UI-paths utan operatörens OK
   (se `docs/ownership-map.md`).
-- **Operatörsgrant (Jakob, 2026-06-08) — smal lane-unblock, INTE carte
-  blanche:** operatören kan ge jakob-be rätt att redigera Christophers
-  UI-lane (`apps/viewser/**`) för en *specifik* ändring när ALLA fyra villkor
-  gäller: (1) ändringen krävs för kärnloopen `prompt -> sajt -> preview ->
-  följdprompt`, (2) operatören har explicit godkänt just den ändringen,
-  (3) diffen är liten och rapporteras, (4) Christopher informeras i
-  `docs/agent-inbox.jsonl`/handoff. Det är ett riktat unblock per ändring —
-  inte stående full access. Lane-ägandet består (Christopher är default-ägare
-  av UI/UX), och commit-body taggas fortfarande `[scope-leak] Approved by
-  operator: <motivering>`.
+- **Operatörsgrant (Jakob, 2026-06-08) — lane-unblock, INTE carte blanche.**
+  Operatören har gett jakob-be rätt att gå in i Christophers UI-lane
+  (`apps/viewser/**`) i två fall:
+  - **Stående buggfix-tillstånd:** jakob-be FÅR fixa buggar det upptäcker i
+    Christophers lane utan per-bugg-förhandsgodkännande — committat på
+    `jakob-be`, taggat `[scope-leak] Approved by operator`, och rapporterat i
+    `docs/agent-inbox.jsonl`. "Om buggar finns, fixa dem i jakob-be om du ser
+    dem" (operatörsdirektiv 2026-06-08). Gäller buggfixar, inte nya features.
+  - **Riktat unblock per ändring (större/icke-bugg):** för en *specifik*
+    feature-/UX-ändring krävs fortfarande att (1) den hör till kärnloopen
+    `prompt -> sajt -> preview -> följdprompt`, (2) operatören explicit godkänt
+    just den ändringen, (3) diffen är liten och rapporteras, (4) Christopher
+    informeras i inbox/handoff.
+  I båda fallen består lane-ägandet (Christopher är default-ägare av UI/UX och
+  informeras), och commit-body taggas `[scope-leak] Approved by operator:
+  <motivering>`. Det är inte stående full access för godtyckliga ändringar.
 - Vid undantag (inklusive ett sådant operatörs-unblock): tagga commit-body med
   `[scope-leak] Approved by operator: <motivering>` enligt branch-scope-regeln.
 
