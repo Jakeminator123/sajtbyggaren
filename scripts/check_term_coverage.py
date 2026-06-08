@@ -1218,6 +1218,14 @@ COMMON_WORDS = {
     # (no saved file, no ADR) - same local-allowlist treatment as the
     # OpenClawDecision / RouterDecision families above.
     "PatchPlanRequest", "ToolCall",
+    # docs/diagnosis-and-handoff-2026-06-08.md prose-emphasis labels. The
+    # diagnosis frames two future mutation modes ("Safe Mode" = current
+    # sanctioned-contract conductor, "Agent Code Mode" = future sandboxed free
+    # code patching, "Publish Mode" = build-green publish gate) and references
+    # the agent "Inbox". These are descriptive narrative labels, NOT canonical
+    # domain terms (no runtime symbol, no ADR) - same bold/backtick prose-
+    # emphasis allowlist treatment as the heavy-llm-flow run-plan block above.
+    "Safe Mode", "Agent Code Mode", "Publish Mode", "Inbox",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
