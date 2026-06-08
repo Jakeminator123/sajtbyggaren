@@ -424,10 +424,11 @@ export function DiscoveryWizard({
               width={115}
               height={28}
               priority
-              // Se site-header.tsx: style.width auto bevarar aspect-ratio
-              // och tystar Next:s aspect-ratio-varning (B160).
-              style={{ width: "auto" }}
-              className="h-7 w-auto object-contain"
+              // Se site-header.tsx: Next läser inline-style (inte Tailwind),
+              // så höjd + bredd sätts inline (höjd pinnad, bredd auto) för att
+              // bevara aspect-ratio och tysta varningen (B160).
+              style={{ height: 28, width: "auto" }}
+              className="object-contain"
             />
             <DialogTitle className="sr-only">Sajtbyggaren</DialogTitle>
             <DialogDescription className="text-muted-foreground/70 hidden text-[11.5px] leading-relaxed sm:inline">

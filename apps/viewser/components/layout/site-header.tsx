@@ -55,11 +55,11 @@ function Brandmark() {
       width={115}
       height={28}
       priority
-      // height styrs av ``h-7``; ``style.width: auto`` bevarar aspect-ratio
-      // OCH tystar Next:s "width or height modified, but not the other"-
-      // varning (Next läser inline-style, inte Tailwind-klassen w-auto).
-      style={{ width: "auto" }}
-      className="h-7 w-auto object-contain"
+      // Next läser INLINE-style (inte Tailwind-klassen ``h-7``) för aspect-
+      // ratio-kontrollen, så BÅDA dimensionerna sätts inline: höjd pinnad,
+      // bredd auto → ratio bevaras och varningen tystnar.
+      style={{ height: 28, width: "auto" }}
+      className="object-contain"
     />
   );
 }

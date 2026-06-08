@@ -53,11 +53,12 @@ export function MarketingHeader() {
             width={90}
             height={22}
             priority
-            // Höjd via ``h-[22px]``; ``w-auto`` + ``style.width:auto`` bevarar
-            // aspect-ratio (intrinsisk 1750×426) och tystar Next:s
-            // "width or height modified, but not the other"-varning.
-            style={{ width: "auto" }}
-            className="h-[22px] w-auto object-contain"
+            // Next läser INLINE-style (inte Tailwind-klasser) för aspect-ratio-
+            // kontrollen, så BÅDA dimensionerna sätts inline: höjd pinnad,
+            // bredd auto → ratio (intrinsisk 1750×426) bevaras och Next:s
+            // "width or height modified, but not the other"-varning tystnar.
+            style={{ height: 22, width: "auto" }}
+            className="object-contain"
           />
         </Link>
 
