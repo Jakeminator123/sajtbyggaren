@@ -601,6 +601,13 @@ def test_bare_compound_colour_question_is_not_an_edit():
         ("lägg till en sektion med recensioner", "reviews"),
         ("skapa en sektion med vanliga frågor", "faq"),
         ("lägg till en sektion om trygghet", "trust"),
+        # section_builder broadening (2026-06-08): the module-drag-and-drop types
+        # that reuse an existing Dossier + renderer route as section_add too.
+        ("lägg till en galleri-sektion", "gallery"),
+        ("lägg till en sektion med priser", "pricing"),
+        ("lägg till en öppettider-sektion", "hours"),
+        ("lägg till en sektion med en karta", "map"),
+        ("lägg till en kontaktformulär-sektion", "contact-form"),
     ],
 )
 def test_section_add_classifies_with_type_slug(prompt: str, slug: str):

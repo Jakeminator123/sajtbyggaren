@@ -232,6 +232,14 @@ def test_followup_chain_capability_followup_does_not_restyle(
         ("lägg till en FAQ-sektion", "faq-section", "faq-accordion"),
         ("lägg till en team-sektion", "team-section", "team-roster"),
         ("lägg till en sektion med recensioner", "reviews", "reviews-display"),
+        # section_builder broadening (2026-06-08): the module-drag-and-drop types
+        # that REUSE an existing Dossier + renderer. The slug the router emits maps
+        # to a capability-map.v1.json capability with a default Dossier; map->location.
+        ("lägg till en galleri-sektion", "gallery", "image-gallery"),
+        ("lägg till en sektion med priser", "pricing", "pricing-table"),
+        ("lägg till en öppettider-sektion", "hours", "opening-hours"),
+        ("lägg till en sektion med en karta", "location", "map-embed"),
+        ("lägg till en kontaktformulär-sektion", "contact-form", "mailto-contact-form"),
     ],
 )
 def test_followup_chain_section_add_mounts_dossier_and_creates_new_version(

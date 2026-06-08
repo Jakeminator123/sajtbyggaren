@@ -207,6 +207,19 @@ _SECTION_TYPES = {
     "omdömen": "reviews", "omdöme": "reviews", "kundomdömen": "reviews",
     "kundrecensioner": "reviews", "testimonials": "reviews", "reviews": "reviews",
     "referenser": "reviews",
+    # gallery / galleri (capability gallery -> image-gallery dossier)
+    "galleri": "gallery", "galleriet": "gallery", "bildgalleri": "gallery",
+    "bildgalleriet": "gallery", "gallery": "gallery",
+    # pricing / priser (capability pricing -> pricing-table dossier)
+    "priser": "pricing", "priserna": "pricing", "prislista": "pricing",
+    "prislistan": "pricing", "pris": "pricing", "paket": "pricing",
+    "pricing": "pricing",
+    # opening hours / öppettider (capability hours -> opening-hours dossier)
+    "öppettider": "hours", "öppettiderna": "hours", "öppettid": "hours",
+    # map / karta (capability location -> map-embed dossier)
+    "karta": "map", "kartan": "map", "map": "map",
+    # contact form / kontaktformulär (capability contact-form -> mailto-contact-form)
+    "kontaktformulär": "contact-form", "kontaktformuläret": "contact-form",
 }
 
 # Phrases checked longest-first so "vanliga frågor" wins over a bare "frågor"
@@ -219,12 +232,21 @@ _SECTION_NOUNS = (
 )
 
 # componentIntent slug -> section-type slug, for the section types that are ALSO
-# component nouns (faq/recensioner). Used so "lägg till en FAQ-sektion" (the type
-# IS the object) is a section_add, while "lägg en knapp i team-sektionen" (a
-# different widget added INTO a named section) stays component_add.
+# component nouns (faq/recensioner/galleri/priser/öppettider/karta/kontaktformulär).
+# Used so "lägg till en FAQ-sektion" / "lägg till en galleri-sektion" (the type IS
+# the object) is a section_add, while "lägg en knapp i team-sektionen" (a different
+# widget added INTO a named section) stays component_add. The values match the
+# section-type slugs in ``_SECTION_TYPES`` (and the keys are the ``_COMPONENT_INTENTS``
+# values), so ``_is_section_object`` only treats the noun as a section when the
+# component IS that section type.
 _COMPONENT_INTENT_SECTION_TYPE = {
     "faq_accordion": "faq",
     "reviews_display": "reviews",
+    "image_gallery": "gallery",
+    "pricing_table": "pricing",
+    "opening_hours": "hours",
+    "map_embed": "map",
+    "contact_form": "contact-form",
 }
 
 _ORDINAL_WORDS = {
