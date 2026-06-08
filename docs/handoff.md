@@ -46,13 +46,18 @@
 - **test_api_prompt_smoke-flake** → diagnostiserad (msg-0049), ej regression.
 
 ### Lösa trådar (minimerade)
-1. **`jakob-be → main`-sync** (22 commits) — operatörsbeslut, ej gjort.
-2. **Bite C klient-flip** (`viewer-panel.tsx`) — Christopher, nu avblockerad.
+1. **`jakob-be → main`-sync** (nu fler commits) — operatörsbeslut, ej gjort.
+2. ~~Bite C klient-flip~~ **KLAR (7984fc1):** `viewer-panel.tsx` flippad till
+   `resolvePreviewRuntimeDescriptor`, `auto`≠`local-next` bevarat. Bite C helt stängd.
 3. Remap-signalen (requestedTarget/remapped på copyDirective) — väntar Christophers --real-llm-repro.
-4. **section_add-breddning** (gallery/pricing/opening-hours/map/contact-form) +
-   **page/position-targeting** — backend follow-up.
+4. ~~section_add-breddning~~ **KLAR (4c6ba67):** gallery/pricing/opening-hours/map/
+   contact-form igenkänns + monteras (mount-only, samma ärliga status som de fyra
+   ursprungliga; synlig rendering = separat render-path-tråd). Kvar: **page/position-
+   targeting** (infoga sektion på vald sida+ordinal) + **synlig render av monterade
+   soft-sektioner** (kopplat till Sprint 3B render-/codegen-spåret).
 5. OpenClaw-conductor-slicen (roll-registry runtime, "F1") — scoped, ej startad.
-6. **test_api_prompt_smoke-härdning** (isolerad distDir/skip om server kör) — valfritt, Christopher.
+6. ~~test_api_prompt_smoke-härdning~~ **KLAR (6c33798):** skip på `.next`/dev-lock-
+   kollision så en körande viewser-dev-server inte rödflaggar sviten.
 
 ---
 
