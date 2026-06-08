@@ -53,3 +53,5 @@ data/evals/golden-path/
 # repetitiv branschstruktur. Read funkar fortfarande om en agent
 # explicit behöver en enskild post (samma mönster som lockfiles).
 data/taxonomies/sni/sni-2025.v1.json
+
+övrigt/
