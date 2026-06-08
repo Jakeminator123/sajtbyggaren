@@ -54,7 +54,24 @@ def _random_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def _start_server(port: int, tmp_path: Path) -> subprocess.Popen[str]:
+# Substrings Next.js prints when a SECOND `next dev` tries to start in a
+# project dir that already has a dev server running. The dev-lock lives inside
+# the shared `.next` distDir, so a viewser dev server the operator left running
+# in apps/viewser (or an orphaned one from a previous run) makes this test's own
+# `next dev` refuse to start and exit early. That is an ENVIRONMENT collision,
+# not a code regression (documented in AGENTS.md + agent-inbox msg-0049), so we
+# skip rather than fail on it. We match Next's own message rather than guessing
+# at process state, and ONLY this exact signal is treated as skippable — any
+# other early exit still fails the test, so its end-to-end coverage is intact.
+DEV_LOCK_COLLISION_MARKERS = (
+    "Another next dev server is already running",
+    "dev server is already running",
+)
+
+
+def _start_server(
+    port: int, tmp_path: Path, log_path: Path
+) -> subprocess.Popen[str]:
     package_json = json.loads((VIEWSER_DIR / "package.json").read_text(encoding="utf-8"))
     script = "dev:http" if "dev:http" in package_json.get("scripts", {}) else "dev"
     env = os.environ.copy()
@@ -78,23 +95,59 @@ def _start_server(port: int, tmp_path: Path) -> subprocess.Popen[str]:
     kwargs = {}
     if sys.platform != "win32":
         kwargs["preexec_fn"] = os.setsid
-    process = subprocess.Popen(
-        ["npm", "run", script, "--", "--port", str(port), "--hostname", "127.0.0.1"],
-        cwd=VIEWSER_DIR,
-        env=env,
-        text=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        **kwargs,
-    )
+    # Capture the dev server's output to a file (instead of DEVNULL) so an
+    # early exit can be classified: a `.next` dev-lock collision with an
+    # already-running viewser dev server skips (env issue, msg-0049); any
+    # other early exit still fails. The child gets its own duplicated handle,
+    # so the parent closes its copy immediately after spawn — the file is then
+    # read only after the child has exited, avoiding cross-process file locks.
+    log_handle = open(log_path, "w", encoding="utf-8")
+    try:
+        process = subprocess.Popen(
+            ["npm", "run", script, "--", "--port", str(port), "--hostname", "127.0.0.1"],
+            cwd=VIEWSER_DIR,
+            env=env,
+            text=True,
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            **kwargs,
+        )
+    finally:
+        log_handle.close()
     return process
 
 
-def _wait_for_server(process: subprocess.Popen[str], port: int) -> None:
+def _skip_if_dev_lock_collision(log_path: Path) -> None:
+    """Skip (don't fail) if the dev server exited from a `.next` dev-lock clash.
+
+    Called only after the spawned `next dev` has exited. Reads the captured
+    output and, if it carries Next's "another dev server is already running"
+    signal, raises ``pytest.skip`` with operator guidance. Returns normally
+    for every other early-exit reason so the caller still fails the test.
+    """
+    try:
+        output = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return
+    if any(marker in output for marker in DEV_LOCK_COLLISION_MARKERS):
+        pytest.skip(
+            "A viewser dev server is already running in apps/viewser, so this "
+            "test's own `next dev` could not acquire the shared `.next` "
+            "dev-lock and exited early. Stop the existing dev server before "
+            "running the slow suite (see AGENTS.md + agent-inbox msg-0049). "
+            "Skipping rather than red-flagging the suite on an environment "
+            "collision."
+        )
+
+
+def _wait_for_server(
+    process: subprocess.Popen[str], port: int, log_path: Path
+) -> None:
     deadline = time.monotonic() + 90
     url = f"http://127.0.0.1:{port}/api/runs"
     while time.monotonic() < deadline:
         if process.poll() is not None:
+            _skip_if_dev_lock_collision(log_path)
             pytest.fail("Viewser dev server exited early.")
         try:
             with urllib.request.urlopen(url, timeout=2) as response:
@@ -106,45 +159,65 @@ def _wait_for_server(process: subprocess.Popen[str], port: int) -> None:
 
 
 def _stop_process(process: subprocess.Popen[str]) -> None:
+    """Terminate the dev server *and every descendant*.
+
+    The Popen target is the ``npm`` launcher, which spawns ``next dev``,
+    which spawns Turbopack worker processes. ``Popen.terminate()`` /
+    ``Popen.kill()`` only signal the launcher, so on Windows the
+    grandchildren are orphaned: they keep running and keep holding the
+    shared ``.next`` dev-lock. That is doubly bad here — an orphaned
+    ``next dev`` from a previous run is exactly what makes a later run of
+    this same test hit the dev-lock collision (msg-0049) and skip, and
+    B154 documented the same leak eventually breaking a ``npm ci`` in
+    apps/viewser with an access-denied unlink error on the locked
+    ``next-swc-*.node``. Reap the whole tree, not just the launcher.
+
+    Cleanup must never crash, even if the process resists every
+    termination we try or exits in a platform-specific race window:
+      - POSIX race: the process may exit between the poll() above and
+        os.killpg(); killpg then raises ProcessLookupError (ESRCH).
+      - Windows: taskkill /T /F itself handles the "already gone" race,
+        so only the launch + wait are guarded (PermissionError for the
+        access-denied race, TimeoutExpired for a stuck process).
+      - Stuck process (POSIX): SIGKILL can fail to reap a process in
+        D-state (uninterruptible sleep); the post-SIGKILL wait then
+        raises subprocess.TimeoutExpired.
+    These are swallowed silently — if nothing reaps the process, the
+    test cannot do more, and surface logs/zombies stay for the operator
+    to triage. We deliberately do NOT catch the broader OSError to avoid
+    hiding genuine permission failures (e.g. the test runs as a user that
+    cannot signal the spawned process at all — a config bug, not a race).
+    """
     if process.poll() is not None:
         return
-    # Defensive cleanup: never crash, even if the process resists every
-    # termination signal we try, and never crash if the process exits in
-    # one of the platform-specific race windows below.
-    #   - POSIX race: process may exit between the poll() above and
-    #     os.killpg(); killpg then raises ProcessLookupError (ESRCH).
-    #   - Windows race: process may exit between poll() and
-    #     Popen.terminate(); the underlying Win32 termination call can
-    #     return a "process already gone" status which Python raises as
-    #     PermissionError (errno 5, access denied). Same applies to
-    #     Popen.kill() on Windows.
-    #   - Stuck process: SIGKILL/Popen.kill() can also fail to reap a
-    #     process that sits in POSIX D-state (uninterruptible sleep) or
-    #     similar kernel blockage. The post-SIGKILL wait would then raise
-    #     subprocess.TimeoutExpired.
-    # All three exceptions are swallowed silently — if neither SIGTERM nor
-    # SIGKILL works, the test cannot do more, and surface logs/zombies
-    # stay for the operator to triage. We deliberately do NOT catch the
-    # broader OSError to avoid hiding genuine permission failures (e.g.
-    # the test runs as a user that cannot signal the spawned process at
-    # all — that is a config bug, not a race).
+    if sys.platform == "win32":
+        # /T reaps the child tree, /F forces it. taskkill handles the
+        # "already gone" race itself, so we only guard the launch + wait.
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                check=False,
+                capture_output=True,
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        try:
+            process.wait(timeout=10)
+        except (subprocess.TimeoutExpired, PermissionError):
+            pass
+        return
+
+    # POSIX: signal the whole process group created by preexec_fn=os.setsid.
     try:
-        if sys.platform != "win32":
-            # Unix: use killpg to terminate the process group (preexec_fn=os.setsid created a group)
-            os.killpg(process.pid, signal.SIGTERM)
-        else:
-            # Windows: use terminate() which is cross-platform
-            process.terminate()
+        os.killpg(process.pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
         return
     try:
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
         try:
-            if sys.platform != "win32":
-                os.killpg(process.pid, signal.SIGKILL)
-            else:
-                process.kill()
+            os.killpg(process.pid, signal.SIGKILL)
         except (ProcessLookupError, PermissionError):
             return
         try:
@@ -175,9 +248,14 @@ def test_api_prompt_route_spawns_python_end_to_end(tmp_path: Path) -> None:
     _ensure_viewser_install()
 
     port = _random_port()
-    process = _start_server(port, tmp_path)
+    # Capture the dev server log under tmp_path so a `.next` dev-lock collision
+    # with an already-running viewser dev server skips cleanly instead of
+    # red-flagging the suite (agent-inbox msg-0049). tmp_path is per-test, so
+    # this leaves nothing behind in the repo tree.
+    dev_log = tmp_path / "viewser-dev-server.log"
+    process = _start_server(port, tmp_path, dev_log)
     try:
-        _wait_for_server(process, port)
+        _wait_for_server(process, port, dev_log)
         status, payload = _post_prompt(port)
     finally:
         _stop_process(process)
