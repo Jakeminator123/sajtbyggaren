@@ -1885,3 +1885,132 @@ def test_tagline_update_llm_no_op_does_not_fabricate_copy_directive(
     assert "directives" not in merged or "copyDirectives" not in merged.get(
         "directives", {}
     )
+
+
+# --- 2026-06-08 (jakob-be): hero-copy decoupling fix (company.heroHeadline) ---
+#
+# Root cause from the kaka-ab live demo: the follow-up DID work at the data
+# layer (copyDirectiveModel set company.tagline = "jakobs kakor"), but the big
+# hero H1 renders from the planning blueprint (contentBlocks.home.hero.headline,
+# regenerated from briefModel positioning every build), NOT from company.tagline
+# (which only feeds the meta description, footer and a subheadline fallback the
+# blueprint overrides). So the edit was invisible. The fix mirrors an explicit
+# tagline edit into company.heroHeadline, an operator override the renderer
+# prefers over the regenerated blueprint headline.
+
+THE_KAKA_DEMO_PROMPT = (
+    'Ändra denna text: "En svensk webbshop för kakor med tydlig väg från '
+    'produkt till köp." til att säga "jakobs kakor".'
+)
+
+
+@pytest.mark.tooling
+def test_tagline_replace_mirrors_into_hero_headline_override() -> None:
+    """A deterministic tagline edit (rubrik -> tagline) also writes the operator
+    hero-headline override so the big hero H1 reflects the edit, not just the
+    invisible tagline/meta field."""
+    merged = _merge("byt rubriken till 'Jakobs kakor'")
+    assert merged["company"]["tagline"] == "Jakobs kakor"
+    assert merged["company"]["heroHeadline"] == "Jakobs kakor"
+
+
+@pytest.mark.tooling
+def test_include_token_tagline_reflects_in_hero_headline() -> None:
+    """An include-token tagline edit also surfaces in the hero-headline override
+    (the resulting tagline value), so the token is visible in the H1 too."""
+    merged = _merge(INCLUDE_TOKEN_PROMPT)
+    assert "TEST-JAKOB" in merged["company"]["heroHeadline"]
+    assert merged["company"]["heroHeadline"] == merged["company"]["tagline"]
+
+
+@pytest.mark.tooling
+def test_company_rename_does_not_set_hero_headline_override() -> None:
+    """A company rename keeps the nav/footer brand and must NOT hijack the hero
+    H1 - so it never writes company.heroHeadline."""
+    merged = _merge(OPERATOR_RENAME_PROMPT)
+    assert merged["company"]["name"] == "Jakobs Örhängen"
+    assert "heroHeadline" not in merged["company"]
+
+
+@pytest.mark.tooling
+def test_about_text_edit_does_not_set_hero_headline_override() -> None:
+    """An about-text (story) edit must not touch the hero-headline override."""
+    merged = _merge(ABOUT_REPLACE_PROMPT)
+    assert merged["company"]["story"] == "Vi är ett familjeföretag sedan 1982"
+    assert "heroHeadline" not in merged["company"]
+
+
+@pytest.mark.tooling
+def test_kaka_demo_prompt_sets_hero_headline_via_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The operator's exact live-demo prompt: "Ändra denna text: '<old>' til att
+    säga 'jakobs kakor'." The deterministic rules miss it ("denna text" has no
+    stable target keyword), the intent is no-semantic-change (LLM-eligible), and
+    copyDirectiveModel returns a tagline directive. The fix then mirrors it into
+    company.heroHeadline so the big hero H1 becomes "jakobs kakor" - the change
+    that was silently swallowed in the live demo."""
+    assert classify_followup_intent(THE_KAKA_DEMO_PROMPT, language="sv") == (
+        "no-semantic-change"
+    )
+    assert _extract_copy_directives(THE_KAKA_DEMO_PROMPT, language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "tagline",
+                "operation": "replace-text",
+                "payload": "jakobs kakor",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(THE_KAKA_DEMO_PROMPT, enable_llm_fallback=True)
+    assert merged["company"]["tagline"] == "jakobs kakor"
+    assert merged["company"]["heroHeadline"] == "jakobs kakor"
+    assert merged["directives"]["copyDirectives"][0]["target"] == "tagline"
+
+
+@pytest.mark.tooling
+def test_merged_hero_headline_override_passes_schema() -> None:
+    merged = _merge("byt rubriken till 'Jakobs kakor'")
+    assert merged["company"]["heroHeadline"] == "Jakobs kakor"
+    _validate_against_schema(merged)
+
+
+@pytest.mark.tooling
+def test_schema_accepts_company_hero_headline() -> None:
+    pi = _previous_project_input()
+    pi.pop("$schema", None)
+    pi["company"]["heroHeadline"] = "Jakobs kakor"
+    _validate_against_schema(pi)  # must not raise
+
+
+@pytest.mark.tooling
+def test_end_to_end_hero_headline_override_visible_as_h1(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Acceptance: a hero/tagline follow-up reaches the rendered hero H1, not
+    just the invisible tagline/meta field. This is the end-to-end proof for the
+    kaka-ab live-demo fix - "byt rubriken till X" now changes the big hero
+    headline in the generated page."""
+    import re
+
+    new_headline = "Smaskiga kakor varje dag"
+    page, build_result = _build_two_versions(
+        monkeypatch,
+        tmp_path,
+        init_prompt="Skapa en hemsida för Surdegsbagaren i Malmö.",
+        followup_prompt=f"byt rubriken till '{new_headline}'",
+        site_id="surdegsbagaren-hero",
+        project_id="copydir-hero",
+    )
+    text = page.read_text(encoding="utf-8")
+    assert new_headline in text
+    h1_blocks = re.findall(r"<h1[^>]*>(.*?)</h1>", text, flags=re.DOTALL)
+    assert any(new_headline in block for block in h1_blocks), (
+        "the hero override must render inside the hero H1, not only meta/footer"
+    )
+    assert build_result["engineMode"] == "followup"
+    assert build_result["appliedVisibleEffect"] is True

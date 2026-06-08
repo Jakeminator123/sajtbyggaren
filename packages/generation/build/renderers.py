@@ -663,6 +663,16 @@ def render_section_hero(
             if proof not in (effective_subheadline, effective_headline):
                 hero_proof_line = proof
                 blueprint.note_applied("home.hero.proofLine")
+    # Hero-copy decoupling fix (2026-06-08): an explicit operator hero override
+    # (``company.heroHeadline``, set by a follow-up tagline copyDirective) wins
+    # over the regenerated blueprint headline so "ändra hero-texten till X" is
+    # actually visible in the H1 and survives a rebuild. The blueprint headline
+    # is re-derived from briefModel positioning every build and would otherwise
+    # overwrite the operator's edit. Absent on init/most builds, so the
+    # no-override path stays byte-identical (the field is optional in the schema).
+    hero_override = company.get("heroHeadline")
+    if isinstance(hero_override, str) and hero_override.strip():
+        hero_headline = hero_override.strip()
     spel_cta = (
         '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
         if "/spel" in dossier_routes

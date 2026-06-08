@@ -364,6 +364,57 @@ def test_hero_without_blueprint_uses_company_template():
 
 
 @pytest.mark.tooling
+def test_operator_hero_headline_overrides_blueprint_and_template():
+    """Hero-copy decoupling fix (2026-06-08): an explicit operator hero override
+    (``company.heroHeadline``, set by a follow-up tagline copyDirective) wins
+    over the regenerated blueprint headline for the big H1. The blueprint
+    subheadline is untouched. Regression for the kaka-ab live demo where
+    "ändra hero-texten till X" changed only the invisible tagline/meta field."""
+    dossier = _dossier("keramik-ehandel")
+    dossier["company"]["heroHeadline"] = "Jakobs kakor"
+    blueprint = RenderBlueprint(
+        content_blocks={
+            "home.hero": {
+                "headline": "En auto-genererad blueprintrubrik",
+                "subheadline": "En auto-genererad underrubrik",
+            }
+        }
+    )
+    hero = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=blueprint,
+    )
+    assert "Jakobs kakor" in hero, "operator hero override must render as the H1"
+    assert "En auto-genererad blueprintrubrik" not in hero, (
+        "the operator override must win over the regenerated blueprint headline"
+    )
+    # The blueprint subheadline is independent of the headline override.
+    assert "En auto-genererad underrubrik" in hero
+
+
+@pytest.mark.tooling
+def test_hero_headline_override_wins_without_blueprint():
+    """The override also wins when no blueprint is present (the H1 would
+    otherwise fall back to company.name)."""
+    dossier = _dossier("keramik-ehandel")
+    dossier["company"]["heroHeadline"] = "Jakobs kakor"
+    hero = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=None,
+    )
+    assert "Jakobs kakor" in hero
+    assert f'>{dossier["company"]["name"]}<' not in hero
+
+
+@pytest.mark.tooling
 @pytest.mark.parametrize("branch", BRANCHES)
 def test_no_blueprint_is_byte_identical(branch: str):
     dossier = _dossier(branch)

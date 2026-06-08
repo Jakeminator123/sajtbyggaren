@@ -1201,6 +1201,22 @@ def _apply_copy_directives(
                 company[field] = payload
         else:
             continue
+        # Hero-copy decoupling fix (2026-06-08): the rendered hero H1 comes from
+        # the planning blueprint (contentBlocks.home.hero.headline, derived from
+        # briefModel positioning.oneLiner and REGENERATED every build), NOT from
+        # company.tagline - which only feeds the meta description, footer and a
+        # subheadline fallback the blueprint always overrides. So an operator
+        # "change the hero text"/tagline edit landed in a field that never shows
+        # in the big hero text. Mirror an explicit tagline edit into
+        # company.heroHeadline, an operator override the renderer prefers over the
+        # regenerated blueprint headline; it lives in the carried-forward company
+        # block so the edit survives later rebuilds/follow-ups. Only tagline edits
+        # set it - a company rename keeps the nav/footer brand and must never
+        # hijack the hero H1.
+        if target == "tagline":
+            tagline_value = company.get("tagline")
+            if isinstance(tagline_value, str) and tagline_value.strip():
+                company["heroHeadline"] = tagline_value.strip()
         applied.append(
             {
                 key: directive[key]
