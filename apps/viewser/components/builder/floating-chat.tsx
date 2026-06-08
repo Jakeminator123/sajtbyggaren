@@ -1034,15 +1034,30 @@ function summarizeOpenClawBridge(
         ? ` Sajten gick från v${view.previousVersion} → v${view.version}.`
         : ` Ny version: v${view.version}.`
       : "";
+  // Honesty split (Vercel-agent-fynd 2026-06-08): ``bridge.applied=true`` means
+  // a new version was written + the targeted render ran — NOT that anything
+  // visibly changed. ``previewShouldRefresh`` mirrors the chain's
+  // ``appliedVisibleEffect`` (preview only refreshes on a real visible change),
+  // so it is the gate for claiming a visible change. A capability mount whose
+  // soft dossier renders nothing (a section_add that is mount-only today) lands
+  // ``applied=true`` + ``previewShouldRefresh=false``; saying "Jag genomförde
+  // ändringen — ladda om" there is a FALSE success (reloading shows nothing new).
+  // Be honest instead: the version/capability was registered but is not visible.
+  if (!view.previewShouldRefresh) {
+    return {
+      content:
+        `Jag registrerade ändringen i sajtens uppsättning.${versionText} ` +
+        "Men den ger ingen synlig ändring i previewen ännu — previewen ser " +
+        "likadan ut (vissa tillägg monteras men renderas inte synligt än).",
+      variant: "info",
+    };
+  }
   const lead =
     view.editKind === "visual_style"
       ? "Jag uppdaterade sajtens utseende (färg/typsnitt)"
       : "Jag genomförde ändringen";
-  const tail = view.previewShouldRefresh
-    ? " Previewen visar den nu."
-    : " (Previewen kunde inte uppdateras automatiskt — ladda om för att se den.)";
   return {
-    content: `${lead}.${versionText}${tail}`,
+    content: `${lead}.${versionText} Previewen visar den nu.`,
     variant: "success",
   };
 }

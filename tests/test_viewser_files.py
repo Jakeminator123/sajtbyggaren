@@ -2549,10 +2549,23 @@ def test_floating_chat_renders_openclaw_bridge_honestly() -> None:
     )
     # summarizeOpenClawBridge får BARA ge en rad när applied=true.
     summarize_start = text.index("function summarizeOpenClawBridge(")
-    summarize_body = text[summarize_start : summarize_start + 900]
+    summarize_body = text[summarize_start : summarize_start + 1800]
     assert "if (!view.applied) return null;" in summarize_body, (
         "summarizeOpenClawBridge måste returnera null när inget applicerades "
         "(vi lovar aldrig en ändring som bryggan inte materialiserade)."
+    )
+    # Honesty split (Vercel-agent-fynd 2026-06-08): applied=true men
+    # previewShouldRefresh=false (mount-only, ingen synlig effekt) får INTE säga
+    # "Jag genomförde ändringen" — då blir det en falsk success. Grinda på
+    # previewShouldRefresh och ge en ärlig info-rad i stället.
+    assert "if (!view.previewShouldRefresh) {" in summarize_body, (
+        "summarizeOpenClawBridge måste grinda den synliga success-raden på "
+        "previewShouldRefresh (annars lovar en mount-only-montering en synlig "
+        "ändring som inte syns)."
+    )
+    assert 'variant: "info"' in summarize_body, (
+        "Mount-only-utfallet (applied men inte synligt) ska vara en ärlig "
+        "info-rad, inte en success-rad."
     )
     # Bridge-preempten ligger FÖRE openClawView-preempten och är gated rätt.
     bridge_preempt_idx = text.index(
