@@ -2,40 +2,75 @@
 
 **Datum:** 2026-06-08 UTC.
 
-## ⚠️ REALIGNMENT 2026-06-08 — läs detta; allt nedanför kan vara stale
+## CLOSING-ROUND HANDOFF 2026-06-08 (kväll) — roll-trion klar; nästa = limma loopen
 
-Verifierat git-läge: `origin/main = 44e0618`, `origin/jakob-be = 3f9bc28`, lokal
-`jakob-be` 5 commits före main (OPUSHAD — operatören synkar medvetet). **Allt i
-blocken nedanför som säger `main = 496d605`/`28df1b9`, att "frontend↔heavy-flow"
-är det stora gapet, eller att "Christopher UI-wiring är största hävstången" är
-SUPERSEDED** — den wiringen är gjord.
+> Detta block är auktoritativt. Allt längre ner kan vara stale — verifiera mot
+> git/koden. Verifierat git-läge: `origin/jakob-be = 44143d5`, `origin/main =
+> 44e0618`, lokal `jakob-be` 9 commits före main (OPUSHAD mot main — operatören
+> synkar medvetet). Enda ocommittade ändring: `apps/viewser/package-lock.json`
+> (operatörens `npm audit fix`, prunar `hono`-subträdet; ofarligt — localhost-
+> only konsol, ingen Hono-server/auth/IP-deny används).
 
-**Redan landat (sluta peka nästa agent hit):**
-- OpenClaw `--apply` är inkopplat i `/api/prompt` för follow-ups (PR #210):
-  bridge först → `bridge.applied` → auktoritativ run + preview-refresh, annars
-  legacy-väg, ingen dubbel-build.
-- `"gör färgen rosa"` → `visual_style` (44e0618). `"lägg till en blå knapp"`
-  förblir `component_add`.
-- copy-frasning: `rubrik/huvudrubrik → hero-tagline` + `"NYTT istället för
-  GAMMALT"` (3f9bc28); `copyDirectiveModel` är nu **primärt** copy-förståelse-lager,
-  deterministiken som validator (109ba60, A1).
-- `scripts/verify_openclaw.py` = 5/5 grön.
+### Vad som ÄR gjort (roll-trion + workspace, allt på origin/jakob-be — verifierat grönt)
+- **OpenClaw `--apply` i `/api/prompt`** (PR #210): bridge först → `bridge.applied`
+  → auktoritativ run + preview-refresh; annars legacy-väg, ingen dubbel-build.
+- **`copy_editor` (A1, 109ba60):** `copyDirectiveModel` är PRIMÄRT förståelse-lager
+  för copy-edits; deterministiken validator. `rubrik/huvudrubrik → hero-tagline`,
+  `"NYTT istället för GAMMALT"` (3f9bc28).
+- **`stylist` (B, 035c128):** fri/sammansatt färg+tema via `color_lexicon` +
+  `styleDirectiveModel`. "gör sajten grönvit" → visual_style.
+- **`section_builder` (C, 44143d5):** "lägg till sektion om garantier/team/FAQ/
+  recensioner" → `section_add` genom SAMMA apply-kedja → ny version. Två nya soft
+  dossiers (`team-roster`, `trust-guarantees`). Okänd typ = ärlig no-op.
+- **`"gör färgen rosa"` → visual_style** (44e0618, i main).
+- **OpenClaw-workspace-spec** (f8b66c9): `docs/openclaw-workspace/` (SOUL/TOOLS/
+  action-registry/skills) — conductor-modellen kodifierad, inga nya varianter.
+- **`scripts/verify_openclaw.py` = 6/6 grön.** Hela testsviten grön (478+).
 
-**Smal riktning (icke förhandlingsbar):** OpenClaw är **conductor/bridge** på den
-kontrollerade motorn — inte ett nytt parallellt agent-/Docker-system, inte fri
-filpatch. Använd ENBART in-repo-källan (`packages/generation/orchestration/openclaw/`,
-`scripts/run_openclaw_followup.py`, `scripts/verify_openclaw.py`,
-`apps/viewser/lib/openclaw-runner.ts`, `apps/viewser/app/api/prompt/route.ts`).
-**Bygg inga nya OpenClaw-varianter.** Plan: `docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
-`sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` = strikt read-only referens (AGENTS.md).
+### UI-E2E 2026-06-08 — KÖRD i browsern, två glue-fynd (detta är nästa arbete)
+Operatören + agent körde live i `/studio` (vercel-sandbox-läge): init-prompt →
+**v1 byggdes och RENDERADE i preview** ("Tjänsteföretag", build-klar-badge). Men
+följdprompt-loopen exponerade två konkreta glue-gap:
 
-**Nästa produktvärde (en smal slice i taget, FloatingChat-användarcase, verify grön,
-landa på jakob-be, ingen main-push utan OK):**
-1. `stylist`-roll (fri/sammansatt färg+tema) — pågår på jakob-be.
-2. **`section_add` genom OpenClaw apply-kedjan** (#211 UI-drag-and-drop-prep väntar på det).
-3. Roll-registry → senare extern Docker-dirigent (Fas 1/2 i planen).
+1. **UX-gap (Christopher/UI-lane):** den stora prompt-rutan på `/studio` (+ svarta
+   pilen) öppnar ALLTID create-wizarden (ny sajt) — den är INTE en följdprompt-ruta.
+   Följdprompt-FloatingChat ("Sajten X är aktiv. Beskriv vad du vill ändra") nås
+   bara via **konsolen (⌘K) → välj aktiv run**. Efter ett färskt bygge är alltså
+   nästa naturliga steg (iterera) inte synligt → känns som att "följdprompt inte
+   funkar". Fix: surfa FloatingChat direkt efter build / gör skapa-rutan till
+   följdprompt-ruta när en sajt är aktiv.
+2. **Glue-bug-kandidat (backend, HÖGSTA hävstång):** den färskbyggda runen
+   (`tjansteforetag-588050 · ok · v1`) gav i konsolen *"ingen Project Input med
+   det id:t finns på disk"*, och `data/prompt-inputs/tjansteforetag*` var tomt.
+   → en följdprompt kan då inte iterera på en just byggd sajt. Måste utredas:
+   skriver studio-create-vägen (vercel-sandbox) verkligen `data/prompt-inputs/
+   <siteId>.project-input.json`, eller är det en picker-discovery-miss? Detta är
+   sannolikt kärnan i "v2 innehåller inte min ändring"-känslan. (Obs: operatören
+   kan ha raderat äldre sajter — verifiera på en FÄRSK build.)
 
-Aktuell köplan: `docs/current-focus.md` (topp-blocket är uppdaterat 2026-06-08).
+### Nästa riktning — limma hela LLM-flödet (prioordning)
+1. **Glue 1 (backend, jakob-be):** utred + fixa "färsk build → Project Input
+   hittas av följdprompt-vägen". Utan detta känns loopen trasig oavsett roller.
+   Användarcase: skapa sajt → ⌘K → välj run → "gör sajten grönvit" → v2 syns.
+2. **Glue 2 (UI, Christopher-lane):** efter build, gör följdprompt nåbar utan
+   ⌘K-omväg (surfa FloatingChat / aktiv-sajt-läge).
+3. **Fas 1 — roll-registry runtime (jakob-be):** dirigenten väljer roll ur
+   `docs/openclaw-workspace/action-registry.json` (copy/stylist/section/review).
+   Detta gör OpenClaw till en riktig conductor över de tre färdiga rollerna.
+4. **Sync `jakob-be → main`** när UI-E2E (glue 1+2) är grön — lås milstolpen.
+5. **Senare:** `route_add` ("lägg till en sida om X"), `layout_change`, sedan
+   Fas 2 (extern Docker-dirigent per `openclaw-2.0-conductor.md`). EJ före produktbevis.
+
+### Regler (icke förhandlingsbara)
+OpenClaw = conductor/bridge på den kontrollerade motorn, inte ny parallell
+motor/Docker-agent, inte fri filpatch. In-repo-källan ENBART
+(`packages/generation/orchestration/openclaw/`, `scripts/run_openclaw_followup.py`,
+`scripts/verify_openclaw.py`, `apps/viewser/lib/openclaw-runner.ts`,
+`apps/viewser/app/api/prompt/route.ts`). Bygg inga nya OpenClaw-varianter.
+`sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` = strikt read-only (AGENTS.md).
+Varje slice: ett FloatingChat-användarcase, `verify_openclaw.py` grön före merge,
+landa på `jakob-be`, ingen main-push utan operatörs-OK. Plan:
+`docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
 
 ---
 

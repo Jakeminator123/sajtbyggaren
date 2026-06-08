@@ -45,23 +45,32 @@ Startpromptar och rollgränser finns i
 > `sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` är strikt **read-only** referens
 > (se AGENTS.md) — studera, ändra aldrig.
 >
-> **Nästa produktvärde (en smal slice i taget):**
-> 1. `stylist`-roll (fri/sammansatt färg+tema) — inne på jakob-be.
-> 2. **`section_add` genom OpenClaw apply-kedjan** — INNE på jakob-be (se "Redan
->    gjort" ovan). (#211 UI har redan module-drag-and-drop-prep mot detta backend-
->    stöd.) Kvarvarande nyans: de befintliga deterministiska render_section_*-
->    renderarna är data-drivna (team kräver `company.team`, reviews kräver
->    reviews-content), så `appliedVisibleEffect` blir ärligt `false` på en sajt
->    utan det innehållet — dossiern monteras men sektionen kräver content/LLM-
->    codegen för att synas. faq/trust renderar oftast redan från
->    blueprint/USP/businessFacts.
-> 3. `route_add` ("lägg till en sida om X") — prio 3 i diagnosen, nästa slice.
-> 4. Roll-registry → senare extern Docker-dirigent (Fas 1/2 i planen).
+> **Roll-trion är KLAR på origin/jakob-be (44143d5):** `copy_editor` (A1),
+> `stylist` (B), `section_builder` (C) + OpenClaw-workspace-spec
+> (`docs/openclaw-workspace/`). `verify_openclaw.py` 6/6.
+>
+> **UI-E2E 2026-06-08 (körd i browsern) — två glue-fynd som är nästa arbete:**
+> v1 byggdes och RENDERADE i preview. Men följdprompt-loopen visade:
+> 1. **UX:** den stora prompt-rutan på `/studio` öppnar ALLTID create-wizarden;
+>    följdprompt-FloatingChat nås bara via konsolen (⌘K → välj run). Efter ett
+>    bygge är "iterera" alltså inte synligt. (Christopher/UI-lane.)
+> 2. **Glue-bug-kandidat (backend, högsta hävstång):** färsk run gav "ingen
+>    Project Input på disk" i konsolen → följdprompt kan inte iterera på en just
+>    byggd sajt. Utred om studio-create (vercel-sandbox) skriver
+>    `data/prompt-inputs/<siteId>.project-input.json`. Detta är sannolikt kärnan
+>    i "v2 saknar min ändring"-känslan.
+>
+> **Nästa produktvärde (prioordning — limma loopen):**
+> 1. **Glue 1 (backend):** färsk build → Project Input nåbar för följdprompt.
+> 2. **Glue 2 (UI):** surfa följdprompt efter build (ingen ⌘K-omväg).
+> 3. **Fas 1 — roll-registry runtime:** dirigent väljer roll ur
+>    `docs/openclaw-workspace/action-registry.json`.
+> 4. Sync `jakob-be → main` när glue 1+2 är grön i UI; sedan `route_add`,
+>    `layout_change`, Fas 2 (Docker-dirigent) — ej före produktbevis.
 >
 > **Regler för varje slice:** ett extremt smalt uppdrag, `verify_openclaw.py`
 > grön före merge, ett FloatingChat-användarcase, landa på `jakob-be`, ingen
-> main-push utan operatörs-OK. **Manuell UI-E2E** (`"ändra färgen till rosa"` → ny
-> version → preview ändras) är operatörsdriven. Full överlämning: [`docs/handoff.md`](handoff.md).
+> main-push utan operatörs-OK. Full överlämning: [`docs/handoff.md`](handoff.md).
 
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
@@ -441,16 +450,17 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `origin/main = 44e0618` (2026-06-08 UTC — feat(router):
-classify "gör färgen rosa" as visual_style; Vercel grön). `origin/jakob-be =
-3f9bc28`. Lokal `jakob-be` ligger 5 commits före main (OPUSHAD, operatören synkar
-medvetet): `3f9bc28` copy-frasning (rubrik→tagline + "istället för"), `49850db`
-+ `12f0ce4` read-only-regel för sajtmaskin/openclaw-referens, `109ba60`
-copyDirectiveModel primärt copy-förståelse-lager (A1), `861b1b4` OpenClaw 2.0
-conductor-plan. En `stylist`-roll (färg/tema) byggs på jakob-be när detta skrevs.
-Nya PRs i main sedan föregående checkpoint: PR #210 (OpenClaw --apply i
-/api/prompt) + den UI-batch steward-auto kallade #211 (resizable FloatingChat +
-module drag-and-drop prep) + #207 (visual_style restyle genom apply-kedjan).
+Last verified state: `origin/jakob-be = 44143d5` (2026-06-08 kväll UTC — roll-trion
+klar). `origin/main = 44e0618`. Lokal `jakob-be` 9 commits före main (OPUSHAD mot
+main, operatören synkar medvetet). Commit-kedjan på jakob-be sedan main: `44e0618`
+router-färg (i main) → `3f9bc28` copy-frasning → `49850db`/`12f0ce4` read-only-regel
+sajtmaskin/openclaw → `109ba60` copy_editor (A1) → `861b1b4` OpenClaw 2.0-plan →
+`5bf0f28` docs-realign → `035c128` stylist (B) → `f8b66c9` OpenClaw-workspace-spec →
+`44143d5` section_builder (C, +2 soft dossiers). Ocommittat: `apps/viewser/
+package-lock.json` (operatörens `npm audit fix` — hono-prune, ofarligt). UI-E2E
+körd 2026-06-08: v1 renderade i preview; två glue-fynd loggade (se topp-blocket +
+handoff). Nästa: limma loopen (glue 1 backend Project-Input-discovery, glue 2 UI
+följdprompt-affordance) → Fas 1 roll-registry → sync main.
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
