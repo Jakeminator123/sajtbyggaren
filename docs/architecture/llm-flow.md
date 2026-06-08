@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # LLM-flöde
 
 Sanningskälla: [`llm-flow-concepts.v1.json`](../../governance/policies/llm-flow-concepts.v1.json).
@@ -75,7 +82,26 @@ flowchart TD
 
 ## Init vs Followup
 
-För nu fokuserar vi enbart på **init** (första generationen). Followup-flödet är medvetet utelämnat tills init är stabilt på `~9.0/10`. Se ADR [`0004`](../../governance/decisions/0004-migration-from-sajtmaskin-baseline.md).
+De tre faserna ovan beskriver **init** (första generationen). När projektet
+startade var followup medvetet utelämnat tills init var stabilt (ADR
+[`0004`](../../governance/decisions/0004-migration-from-sajtmaskin-baseline.md));
+det är **inte längre läget**. Followup (följdprompt → ny version) är idag ett
+**centralt** flöde och kärnan i produktloopen `prompt → företagshemsida →
+preview → följdprompt → ny version`.
+
+Followup går genom Viewser `POST /api/prompt`, som klassar meddelandet och kör
+sanktionerade mutationer på Project Input innan en ny build:
+
+- **copyDirectives** — riktade copy-ändringar (t.ex. byt namn/tagline, inkludera
+  token) via en dedikerad `copyDirectiveModel`-roll (ADR 0034).
+- **theme_directives / visual_style** — färg/font-restyle (`brand`/`tone`).
+- **section_add** — montering av nio sanktionerade sektionstyper (mount-only
+  idag: `applied=true`, men synlig render + exakt placering återstår; statusen
+  bärs av `appliedVisibleEffect` i `build-result.json`).
+
+OpenClaw-conductorn är bryggan ovanpå denna in-repo-motor (in-process registry-
+runtime först; extern Docker/Gateway är en senare fas). Allt followup-arbete
+respekterar samma flöde och guards som init — inga sekundära vägar förbi flödet.
 
 ## Anti-patterns
 

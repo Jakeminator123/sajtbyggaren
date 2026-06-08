@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Scaffold-/Dossier-modell
 
 Sanningskälla:
@@ -13,7 +20,7 @@ Sanningskälla:
 |------|------------|------|
 | **Scaffold** | Sajtens grammatik (route-struktur, sektionsgrammatik, kvalitetsregler, tillåtna Dossiers). | Inte en mall, inte en starter, inte en boilerplate. |
 | **Scaffold Variant** | Visuellt uttryck inom en Scaffold (typografi, färg, motif). | Inte en theme i Tailwind-mening. Inte en skin. |
-| **Dossier** | Återanvändbar capability-modul. Klass: soft / hybrid / hard. | Inte en komponent. Inte en plugin. |
+| **Dossier** | Återanvändbar capability-modul. Klass: soft / hard (ADR 0012 tog bort `hybrid`). | Inte en komponent. Inte en plugin. |
 | **Selection Profile** | Embedding- och LLM-input som styr Scaffold Selector. | Inte en if-else word matcher. |
 | **Quality Contract** | Per-Scaffold-justering av page-quality-traits (vikter, must-pass, avoid). | Inte en separat scorecard. |
 | **Compatibility Filter** | Hård filtrering av Dossier-kandidater mot Selected Scaffold. | Inte en "embedding score". |
@@ -106,7 +113,7 @@ packages/generation/orchestration/dossiers/<class>/<dossierId>/
   prompt.md                  # promptfragment som injiceras i Generation Package
   code-contract.json         # must / avoid för genererad kod
   examples.md                # konkreta scaffold-specifika realiseringar
-  env-contract.json          # (hybrid/hard) requires, designModeBehavior, integrationModeBehavior
+  env-contract.json          # (hard) requires, designModeBehavior, integrationModeBehavior
   integration-contract.json  # (hard) extern API + auth-flöde
   evals.json                 # (hard) regression-tester
 ```

@@ -1,6 +1,20 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Preview Runtime
 
 Sanningskälla: [`preview-runtime-policy.v1.json`](../../governance/policies/preview-runtime-policy.v1.json). Interface skissas i `packages/preview-runtime/` när den fasen börjar (utkast i kommentarerna nedan).
+
+> **Status 2026-06 (ADR 0033):** `LocalRuntime` (`local-next`) är den **faktiska
+> default-runtimen** idag (policyfältet `default: local`). Vercel Sandbox-adaptern
+> är **primärt förstahandsval/intended primary** (`status: primary`) men väljs
+> explicit via `VIEWSER_PREVIEW_MODE` (Vercel Sandbox-läget) tills default-flippen
+> (Bite C) är verifierad. `StackBlitzRuntime` är **pausad** (`status: paused`) —
+> inte default, blockerar inte. `FlyRuntime` är en framtida slot.
 
 ## Princip
 
@@ -11,20 +25,26 @@ Produktkoden (`packages/generation`, `packages/builder`, `apps/`) talar bara om 
 ```mermaid
 flowchart LR
     iface["PreviewRuntime (interface)"]
-    sb[StackBlitzRuntime]
-    fly[FlyRuntime]
     local[LocalRuntime]
+    vsb["Vercel Sandbox-adapter"]
+    fly[FlyRuntime]
+    sb[StackBlitzRuntime]
 
-    iface --> sb
-    iface --> fly
     iface --> local
+    iface --> vsb
+    iface --> fly
+    iface --> sb
 ```
 
-| Implementation | Status | Använd när |
+Statusvärdena nedan speglar `preview-runtime-policy.v1.json` (`default: local`;
+Vercel Sandbox = `primary`; `fly` = `secondary`; `stackblitz` = `paused`).
+
+| Implementation | Status (policy) | Använd när |
 |----------------|--------|-----------|
-| `StackBlitzRuntime` | primary | iteration på Next.js-sajt utan tunga server-integrationer; default i dev |
-| `FlyRuntime` | secondary | sajten kräver riktig build (Stripe, DB, eller andra `hard`-Dossier-SDK:er); produktnära smoke-test |
-| `LocalRuntime` | developer-only | felsökning på utvecklarmaskin, ingen användarvänd preview |
+| `LocalRuntime` (`local-next`) | default + developer-only | **faktisk default idag**; lokal dev/felsökning och garanterad fallback när Vercel-auth saknas |
+| Vercel Sandbox-adapter | primary (intended, ADR 0033) | användarvänd preview med publik HTTPS-URL (fungerar i alla browsers); kärnflödet prompt → företagshemsida → preview → följdprompt → ny version; väljs via `VIEWSER_PREVIEW_MODE` (Vercel Sandbox-läget) tills default-flippen verifierats |
+| `FlyRuntime` | secondary (framtida) | sajten kräver riktig build (Stripe, DB, eller andra `hard`-Dossier-SDK:er); produktnära smoke-test |
+| `StackBlitzRuntime` | paused (ADR 0033) | ingen idag — pausad referens; kräver Chromium-isolation + lång init (Safari/Firefox kan inte ladda embeddet, B125) |
 
 ## Quality Gate
 
@@ -45,7 +65,12 @@ Det vi inte tar med - exakta förbjudna termer står i [`naming-dictionary.v1.js
   runtime-termer och tydlig adapter-kind.
 - Runtime-specifik kod inne i `packages/generation/`. Det stannar i `packages/preview-runtime/`.
 
-## Implementation: WebContainer / StackBlitz
+## Implementation: WebContainer / StackBlitz (pausad referens)
+
+> `StackBlitzRuntime` är **pausad** (ADR 0033) och är inte default. Avsnittet
+> nedan bevaras som teknisk referens om/när embeddet återupptas; det beskriver
+> inte dagens preview-väg (som är `local-next`, med Vercel Sandbox som primärt
+> opt-in-val).
 
 `StackBlitzRuntime` bygger på `@webcontainer/api`. Implementationsdetaljer (boot/mount/spawn/server-ready, COOP/COEP-headers, vanliga fel) ligger i [`docs/integrations/webcontainers-notes.md`](../integrations/webcontainers-notes.md). Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline lever i [`docs/integrations/stackblitz-research.md`](../integrations/stackblitz-research.md). Det ursprungliga underlaget låg i `referens/preview-runtime/konversation.txt` (borttaget i referens-städningen, finns kvar i git-historiken).
 
