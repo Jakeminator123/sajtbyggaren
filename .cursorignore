@@ -23,7 +23,7 @@ build
 out
 .vercel
 
-# Reserve the destination for the B13a architecture-move (see
+# Reserve the destination for the B13a -move (see
 # docs/known-issues.md). The bare `build` rule above matches at any
 # depth, including `packages/generation/build/`, which would hide the
 # new package from agent indexing once the move PR lands. Pre-allow
