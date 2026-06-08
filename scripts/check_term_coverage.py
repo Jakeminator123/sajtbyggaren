@@ -1098,6 +1098,16 @@ COMMON_WORDS = {
     # Same SaaS-name category as Bokadirekt / OpenStreetMap / TripAdvisor
     # above.
     "YouTube",
+    # section_builder slice (2026-06-08) — two new soft instructions-only
+    # Dossiers (team-roster, trust-guarantees) mounted by the section_add
+    # follow-up role. The names below are the React component identifiers in
+    # their manifest ``exposes`` lists; the sections themselves are rendered by
+    # the existing render_section_team / render_section_trust_proof helpers, so
+    # these are descriptive component names (same treatment as the
+    # FaqAccordion / ReviewsDisplay dossier-exposes family above), not canonical
+    # domain terms. Canonical capability slugs (team-section, guarantees) live
+    # in capability-map.v1.json.
+    "TeamRoster", "TeamMemberCard", "TrustGuarantees", "GuaranteeBullet",
     # Viewser-internal React component + context symbols introduced by the
     # mobile-adaptation passes (2026-05-25/26). Same category as
     # PromptStageIndicator / RunHistory / ApplyRunsContext above: viewser-

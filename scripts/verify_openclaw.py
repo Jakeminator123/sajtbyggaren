@@ -149,6 +149,20 @@ def _check_decisions() -> list[Check]:
             f"action={question.get('action')}",
         )
     )
+
+    section = json.loads(decide_to_json("lägg till en sektion om garantier"))
+    section_ok = (
+        section.get("action") == "patch_plan_request"
+        and section.get("router", {}).get("editKind") == "section_add"
+    )
+    checks.append(
+        Check(
+            "Beslut: 'lägg till en sektion om garantier' -> edit_instruction/section_add",
+            section_ok,
+            f"action={section.get('action')} "
+            f"editKind={section.get('router', {}).get('editKind')}",
+        )
+    )
     return checks
 
 

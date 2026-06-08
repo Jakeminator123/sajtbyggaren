@@ -56,7 +56,7 @@ kontext) → ut (strukturerad mutation) → genom samma guards.
 |---|---|---|---|
 | `copy_editor` | KLAR (A1, commit 109ba60) | fri text → copyDirective {company-name\|tagline\|about\|services, value} | leak/grounding/schema/honesty |
 | `stylist` | nästa (prompt B) | fri text → tema/visual-directive (primär/accent-färg, font, ton) | tema-schema, honesty |
-| `section_builder` | planerad (prompt C) | fri text → section_add (team/FAQ/garantier/recensioner) | sanktionerade typer |
+| `section_builder` | KLAR (prompt C, jakob-be) | fri text → section_add (team/FAQ/garantier/recensioner) → capability+dossier genom apply-kedjan | sanktionerade typer, okänd typ = ärlig no-op |
 | `reviewer` | planerad | läser artefakter → förbättringsförslag (read-only) | ingen mutation |
 | `layout` / `route_builder` | senare | layout/route-mutation | apply-kapabilitet krävs |
 
@@ -106,7 +106,10 @@ mer. Token-budget per nivå.
 ## 9. Nästa konkreta steg
 
 1. `stylist`-rollen (prompt B): fri/sammansatt färg + tema (höjer samma
-   förståelse-tak som A1, men för stil).
-2. `section_builder` (prompt C): apply-kapabilitet för nya sektioner.
-3. Roll-registry-modul (Fas 1) när 2-3 roller finns.
+   förståelse-tak som A1, men för stil). KLAR.
+2. `section_builder` (prompt C): apply-kapabilitet för nya sektioner. KLAR —
+   `section_add` router-intent + `run_followup_chain`-väg (typ→capability→dossier
+   genom befintliga apply-kedjan) + `team-roster`/`trust-guarantees` dossiers.
+3. Roll-registry-modul (Fas 1) när 2-3 roller finns (copy_editor + stylist +
+   section_builder klara — registryt är nu meningsfullt).
 4. Extern Docker-dirigent (Fas 2) när registryt är stabilt.

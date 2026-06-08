@@ -225,6 +225,88 @@ def test_followup_chain_capability_followup_does_not_restyle(
     assert "primaryColorHex" not in (v2_pi.get("brand") or {})
 
 
+@pytest.mark.parametrize(
+    "prompt,capability,dossier",
+    [
+        ("lägg till en sektion om garantier", "guarantees", "trust-guarantees"),
+        ("lägg till en FAQ-sektion", "faq-section", "faq-accordion"),
+        ("lägg till en team-sektion", "team-section", "team-roster"),
+        ("lägg till en sektion med recensioner", "reviews", "reviews-display"),
+    ],
+)
+def test_followup_chain_section_add_mounts_dossier_and_creates_new_version(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    prompt: str,
+    capability: str,
+    dossier: str,
+) -> None:
+    """A sanctioned section_add goes router -> (section capability) -> apply ->
+    targeted build: the capability lands in requestedCapabilities and its
+    implementing dossier is secured in selectedDossiers.required (the SAME apply
+    machinery component_add uses), creating the next immutable version."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, _base = _seed_init_build(tmp_path)
+
+    result = run_followup_chain(
+        SITE_ID,
+        prompt,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["applied"] is True
+    assert result["editKind"] == "section_add"
+    assert result["version"] == 2
+    applied = [c["capability"] for c in result["appliedCapabilities"]]
+    assert capability in applied
+
+    v2_pi = json.loads(
+        (prompt_inputs / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    assert capability in v2_pi.get("requestedCapabilities", [])
+    required = (v2_pi.get("selectedDossiers") or {}).get("required") or []
+    assert dossier in required, f"{dossier} must be mounted in selectedDossiers.required"
+
+    # Honest signal with do_build=False (skipped, no false preview refresh) and
+    # the section lands on the root/home route by default.
+    assert result["affectedRoutes"] == ["home"]
+    assert result["appliedVisibleEffect"] is False
+    assert result["previewShouldRefresh"] is False
+
+
+def test_followup_chain_section_add_unsupported_type_is_honest_no_op(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An unsupported/unknown section type is an HONEST no-op: section_add is
+    classified, but no capability mounts, so no version is written and the stage
+    explains why (never a faked section)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, _base = _seed_init_build(tmp_path)
+
+    result = run_followup_chain(
+        SITE_ID,
+        "lägg till en sektion om färger",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["applied"] is False
+    assert result["stage"] == "section_unsupported"
+    assert result["editKind"] == "section_add"
+    assert not (prompt_inputs / f"{SITE_ID}.v2.project-input.json").exists()
+    assert any("sektionstyp" in note.lower() for note in result["notes"])
+
+
 def test_followup_question_is_honest_no_op(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

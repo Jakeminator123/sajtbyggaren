@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "team-roster",
+  "enabled": true,
+  "label": "Team Roster",
+  "capability": "team-section",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a team/staff section: a responsive grid of monogram cards, each showing a member's name and role, server-rendered with semantic markup and no client JS. Team data is static project-input content (company.team) - the section renders nothing for an empty team rather than inventing people. Reuses the existing render_section_team renderer; the section_builder follow-up role mounts it for a 'team' section_add through the same apply chain component_add uses.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["TeamRoster", "TeamMemberCard"],
+  "lastVerified": "2026-06-08"
+}

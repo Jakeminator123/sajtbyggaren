@@ -124,6 +124,7 @@ def apply_patch_plan(
     runs_dir: Path | None = None,
     trace_run_dir: Path | str | None = None,
     theme_directive: ThemeDirective | None = None,
+    added_capabilities: list[str] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
 
@@ -142,6 +143,16 @@ def apply_patch_plan(
     theme directive is present apply writes the next version even if the patch
     plan carries no capability patch (a theme-only restyle), so a
     ``visual_style`` follow-up materialises instead of being a no-op.
+
+    ``added_capabilities`` (optional, the section_builder ``section_add`` edit)
+    carries capability slugs the caller already resolved from a sanctioned section
+    type (``packages.generation.followup.section_directives.resolve_section_capabilities``,
+    which only returns capabilities that HAVE an implementing Dossier). They are
+    mounted exactly like an applied ``component_add`` capability - added to
+    ``requestedCapabilities`` and their implementing Dossier secured in
+    ``selectedDossiers.required`` - so the same targeted render applies, no new
+    render path. Like a theme-only restyle, a section-only follow-up (no patch,
+    no theme) with ``added_capabilities`` still writes the next version.
 
     ``trace_run_dir`` (optional) is the directory of the **new** version's run,
     if one already exists, to append an append-only apply Engine Event to its
@@ -211,8 +222,17 @@ def apply_patch_plan(
         or theme_directive.toneVibe
     )
 
-    # 2. Empty valid plan AND no theme -> nothing to apply (not an error). No write.
-    if not plan.patches and not theme_changes:
+    # A section_add carries pre-resolved capability slugs (each already verified
+    # to have an implementing Dossier by the caller). Like a theme-only restyle it
+    # counts as a real change, so a section-only follow-up still writes the next
+    # version below.
+    section_capabilities = [
+        cap for cap in (added_capabilities or []) if isinstance(cap, str) and cap.strip()
+    ]
+
+    # 2. Empty valid plan AND no theme AND no section capability -> nothing to
+    #    apply (not an error). No write.
+    if not plan.patches and not theme_changes and not section_capabilities:
         return _trace(
             ApplyResult(
                 applied=False,
@@ -257,6 +277,20 @@ def apply_patch_plan(
                     "uppfinna ett nytt runtime-kontrakt. Eskalera till operatör "
                     "(ADR) eller dela upp planen.",
                 ],
+            )
+        )
+
+    # section_add: the caller's pre-resolved section capabilities are applied
+    # exactly like a mapped component_add capability - unioned into
+    # requestedCapabilities and their Dossier secured in selectedDossiers.required
+    # below. The synthetic patchField has no contentBlocks route, so the targeted
+    # render defaults the affected route to the root (home), where sections land.
+    for capability in section_capabilities:
+        if any(entry.capability == capability for entry in capabilities):
+            continue
+        capabilities.append(
+            AppliedCapability(
+                patchField=f"sectionAdd:{capability}", capability=capability
             )
         )
 

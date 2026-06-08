@@ -179,6 +179,54 @@ _COMPONENT_INTENTS = {
     "kontaktuppgifter": "contact_info", "banner": "banner",
 }
 
+# Section type phrase -> sanctioned section-type slug (section_builder role,
+# docs/openclaw-2.0-conductor.md + skills/section-add/SKILL.md). A section_add
+# ("lägg till en sektion om garantier", "lägg till en FAQ-sektion") adds a WHOLE
+# sanctioned section - distinct from a component_add (a single widget) and a
+# route_add (a new page). The slug rides on RouterDecision.componentIntent; the
+# apply chain (packages/generation/followup/section_directives.py) resolves it to
+# a capability + dossier. An unrecognised type still classifies as section_add so
+# the apply chain can do an HONEST no-op with a reason - the router never invents
+# a section type.
+_SECTION_TYPES = {
+    # team / personal
+    "team": "team", "teamet": "team", "teammedlemmar": "team",
+    "personal": "team", "personalen": "team", "medarbetare": "team",
+    "medarbetarna": "team", "anställda": "team", "kollegor": "team",
+    "staff": "team",
+    # faq / frågor
+    "faq": "faq", "frågor": "faq", "vanliga frågor": "faq",
+    "frågor och svar": "faq", "frågor & svar": "faq",
+    # trust / garantier
+    "garanti": "trust", "garantier": "trust", "garantin": "trust",
+    "garantierna": "trust", "trygghet": "trust", "trygghetsgaranti": "trust",
+    "förtroende": "trust", "fördelar": "trust", "trust": "trust",
+    "guarantees": "trust",
+    # reviews / recensioner
+    "recensioner": "reviews", "recension": "reviews", "recensionerna": "reviews",
+    "omdömen": "reviews", "omdöme": "reviews", "kundomdömen": "reviews",
+    "kundrecensioner": "reviews", "testimonials": "reviews", "reviews": "reviews",
+    "referenser": "reviews",
+}
+
+# Phrases checked longest-first so "vanliga frågor" wins over a bare "frågor"
+# (both map to faq, but specificity keeps the match deterministic and honest).
+_SECTION_TYPE_PHRASES = tuple(sorted(_SECTION_TYPES, key=len, reverse=True))
+
+# Words that signal a WHOLE-section add ("en sektion", "en X-sektion").
+_SECTION_NOUNS = (
+    "sektion", "sektionen", "sektioner", "section", "sections", "avsnitt",
+)
+
+# componentIntent slug -> section-type slug, for the section types that are ALSO
+# component nouns (faq/recensioner). Used so "lägg till en FAQ-sektion" (the type
+# IS the object) is a section_add, while "lägg en knapp i team-sektionen" (a
+# different widget added INTO a named section) stays component_add.
+_COMPONENT_INTENT_SECTION_TYPE = {
+    "faq_accordion": "faq",
+    "reviews_display": "reviews",
+}
+
 _ORDINAL_WORDS = {
     "första": 1, "andra": 2, "tredje": 3, "fjärde": 4, "femte": 5,
     "sjätte": 6, "sjunde": 7, "åttonde": 8, "nionde": 9, "tionde": 10,
@@ -345,6 +393,28 @@ def _detect_component(text: str) -> tuple[str | None, str | None]:
     return None, None
 
 
+def _detect_section_type(text: str) -> str | None:
+    """Return the sanctioned section-type slug a clause names, or None."""
+    for phrase in _SECTION_TYPE_PHRASES:
+        if _word_present(text, phrase):
+            return _SECTION_TYPES[phrase]
+    return None
+
+
+def _is_section_object(component_intent: str | None, section_type: str | None) -> bool:
+    """True when the section itself is the object being added.
+
+    A clause with no component noun adds the section directly. A clause that DOES
+    carry a component noun is a section_add only when that component IS the
+    section type (faq/recensioner are component nouns too); any other widget means
+    the user is adding a component INTO a section -> component_add.
+    """
+    if component_intent is None:
+        return True
+    mapped = _COMPONENT_INTENT_SECTION_TYPE.get(component_intent)
+    return mapped is not None and mapped == section_type
+
+
 def _detect_position(text: str) -> str | None:
     for phrase, value in _POSITION_PHRASES:
         if _word_present(text, phrase):
@@ -498,6 +568,34 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
         result.scope = "route"
         return result
 
+    # section_add (section_builder role): a WHOLE sanctioned section
+    # ("lägg till en sektion om garantier", "lägg till en FAQ-sektion"). Needs an
+    # add/create verb + an explicit section noun ("sektion"/"section"/"avsnitt",
+    # incl. an "X-sektion" compound). Distinct from component_add (a widget) and
+    # route_add (a new page). The type slug rides on componentIntent; an
+    # unrecognised type still classifies as section_add so the apply chain can do
+    # an HONEST no-op with a reason (the router never invents a type). A different
+    # widget added INTO a named section (a component noun that is NOT the section
+    # type) stays component_add via _is_section_object.
+    has_section_word = _any_word(work, _SECTION_NOUNS)
+    section_type = _detect_section_type(work)
+    # An ordinal reference ("andra sektionen", "sista sektionen") points at an
+    # EXISTING section as a LOCATION, not a new section to add - that stays
+    # component_add ("lägg till X i andra sektionen"). A bare position ("överst")
+    # is a placement for the new section and does not disqualify section_add.
+    section_is_location = target is not None and target.sectionOrdinal is not None
+    if (
+        (has_add or has_create)
+        and has_section_word
+        and not section_is_location
+        and _is_section_object(component_intent, section_type)
+    ):
+        result.editKind = "section_add"
+        result.scope = "section"
+        result.componentIntent = section_type
+        result.target = target
+        return result
+
     # component_remove (fix 2): only with a concrete object - a bare "ta bort"
     # is ambiguous, not a remove with an empty target.
     if has_remove:
@@ -587,6 +685,7 @@ def _propagate_coordinated_objects(
 _BUILD_BY_EDIT: dict[EditKind, BuildRequirement] = {
     "component_add": "targeted_rebuild",
     "component_remove": "targeted_rebuild",
+    "section_add": "targeted_rebuild",
     "layout_change": "targeted_rebuild",
     "route_add": "targeted_rebuild",
     "visual_style": "targeted_rebuild",
@@ -597,6 +696,7 @@ _BUILD_BY_EDIT: dict[EditKind, BuildRequirement] = {
 _CONTEXT_BY_EDIT: dict[EditKind, ContextLevel] = {
     "component_add": "artifacts_plus_sections",
     "component_remove": "artifacts_plus_sections",
+    "section_add": "artifacts_plus_sections",
     "layout_change": "artifacts_plus_sections",
     "route_add": "artifacts_plus_sections",
     "visual_style": "artifacts",

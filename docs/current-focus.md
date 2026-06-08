@@ -18,6 +18,18 @@ Startpromptar och rollgränser finns i
 >   annars legacy-väg, ingen dubbel-build. CLI-bevisat (PR #207, restyle → rosa).
 > - `"gör färgen rosa"` klassas som `visual_style` (44e0618 — färgnamn som
 >   style-adjektiv; `"lägg till en blå knapp"` förblir `component_add`).
+> - **`section_add` (section_builder-rollen) inne på jakob-be:** router klassar
+>   "lägg till en sektion om garantier/team/FAQ/recensioner" som `section_add`
+>   med typ-slug, och `run_followup_chain` resolverar typ→capability (faq-section/
+>   reviews/team-section/guarantees, alla med implementerande dossier) och kör
+>   SAMMA apply-kedja som `component_add` (requestedCapabilities +
+>   selectedDossiers.required) → ny immutabel version → targeted render. Två nya
+>   soft instructions-only dossiers (`team-roster`, `trust-guarantees`) som
+>   återanvänder `render_section_team`/`render_section_trust_proof`. Okänd/ostödd
+>   typ = ärlig no-op (`stage=section_unsupported`). `verify_openclaw.py` 6/6 grön
+>   (ny section_add-beslutsrad). Regression: "lägg till en blå knapp" =
+>   `component_add`, "lägg till en sida om X" = `route_add`, "...i andra
+>   sektionen" = `component_add` (sektion som plats, inte ny sektion).
 > - copy-frasning: `rubrik/huvudrubrik → hero-tagline` + `"NYTT istället för
 >   GAMMALT"` (3f9bc28); `copyDirectiveModel` är nu **primärt** förståelse-lager
 >   för copy-edits, deterministiken som validator (109ba60, A1).
@@ -34,11 +46,17 @@ Startpromptar och rollgränser finns i
 > (se AGENTS.md) — studera, ändra aldrig.
 >
 > **Nästa produktvärde (en smal slice i taget):**
-> 1. `stylist`-roll (fri/sammansatt färg+tema) — pågår på jakob-be.
-> 2. **`section_add` genom OpenClaw apply-kedjan** — "lägg till en sektion om
->    garantier/team/FAQ" → ny version, synlig i preview. (#211 UI har redan
->    module-drag-and-drop-prep som väntar på detta backend-stöd.)
-> 3. Roll-registry → senare extern Docker-dirigent (Fas 1/2 i planen).
+> 1. `stylist`-roll (fri/sammansatt färg+tema) — inne på jakob-be.
+> 2. **`section_add` genom OpenClaw apply-kedjan** — INNE på jakob-be (se "Redan
+>    gjort" ovan). (#211 UI har redan module-drag-and-drop-prep mot detta backend-
+>    stöd.) Kvarvarande nyans: de befintliga deterministiska render_section_*-
+>    renderarna är data-drivna (team kräver `company.team`, reviews kräver
+>    reviews-content), så `appliedVisibleEffect` blir ärligt `false` på en sajt
+>    utan det innehållet — dossiern monteras men sektionen kräver content/LLM-
+>    codegen för att synas. faq/trust renderar oftast redan från
+>    blueprint/USP/businessFacts.
+> 3. `route_add` ("lägg till en sida om X") — prio 3 i diagnosen, nästa slice.
+> 4. Roll-registry → senare extern Docker-dirigent (Fas 1/2 i planen).
 >
 > **Regler för varje slice:** ett extremt smalt uppdrag, `verify_openclaw.py`
 > grön före merge, ett FloatingChat-användarcase, landa på `jakob-be`, ingen

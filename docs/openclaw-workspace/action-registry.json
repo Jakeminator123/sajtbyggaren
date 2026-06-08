@@ -20,8 +20,8 @@
       "id": "section_add",
       "skill": "skills/section-add/SKILL.md",
       "routerEditKind": "section_add",
-      "status": "planned",
-      "note": "Mount one sanctioned section/dossier (team/faq/garantier/recensioner) via the apply chain. Next builder slice."
+      "status": "supported",
+      "note": "Mount one sanctioned section (team/faq/garantier/recensioner) via the apply chain: router section_add -> resolve type to capability (faq-section/reviews/team-section/guarantees) with an implementing dossier -> apply (requestedCapabilities + selectedDossiers.required) -> targeted render. Unknown/unsupported type = honest no-op."
     },
     {
       "id": "layout_change",
