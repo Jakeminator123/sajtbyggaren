@@ -143,6 +143,13 @@ Commands are documented in the README under "Snabbstart". Key commands:
 - Each `scripts/build_site.py` run writes the npm project under
   `<generated-dir>/<siteId>/builds/<timestamp>/`. For a manual `npm run dev`,
   `cd` into the newest `builds/*` directory, not the site root.
+- Cloud Agent secrets often inject `VIEWSER_PREVIEW_MODE=[REDACTED]`
+  (Vercel sandbox). That wins over `apps/viewser/.env.local` in
+  `process.env`, so local preview (`POST /api/preview/<siteId>`) returns
+  `vercel_auth` unless you start Viewser with an explicit override, e.g.
+  `VIEWSER_PREVIEW_MODE=local-next npm run dev` in tmux. Vercel sandbox
+  preview still needs a fresh `VERCEL_OIDC_TOKEN` from
+  `vercel env pull apps/viewser/.env.vercel.local`.
 - Cloud Agent secrets often set `SAJTBYGGAREN_EVALS_DIR` (and
   `SAJTBYGGAREN_GENERATED_DIR`). That is fine for builder work, but
   `tests/test_cleanup_dev_artifacts.py::test_default_evals_dir_is_inside_data_evals_artifacts_mini`
