@@ -239,10 +239,17 @@ function ensureFreshVercelOidcToken() {
     "Viewser dev → hämtar färsk VERCEL_OIDC_TOKEN (vercel env pull)…\n",
   );
   try {
+    // DEP0190 / säkerhet: spawna `vercel` SHELL-FRITT (shell: false) med args som
+    // array, så ingen shell-sträng byggs (ingen injektionsyta, ingen
+    // args+shell:true-deprecation). På Windows är CLI:n en `.cmd`-shim som kräver
+    // explicit extension när shell saknas; övriga plattformar använder `vercel`.
+    // Saknas binären returnerar spawnSync ett fel (status != 0 / result.error)
+    // som fångas av else-grenen nedan -> ärlig degrade (best-effort token-pull).
+    const vercelBin = process.platform === "win32" ? "vercel.cmd" : "vercel";
     const result = spawnSync(
-      "vercel",
+      vercelBin,
       ["env", "pull", envFile, "--environment=development", "--yes"],
-      { cwd: repoRoot, stdio: "ignore", shell: true, timeout: 60_000 },
+      { cwd: repoRoot, stdio: "ignore", shell: false, timeout: 60_000 },
     );
     if (result.status === 0) {
       process.stdout.write("Viewser dev → OIDC-token uppdaterad.\n");
