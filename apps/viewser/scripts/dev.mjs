@@ -267,39 +267,55 @@ if (mode === "vercel-sandbox") {
 // Pass through extra argv (allt efter scriptnamnet). Tillåter t.ex.
 // `npm run dev -- --port 3001`.
 const passthroughArgs = process.argv.slice(2);
-const nextArgs = ["next", "dev", ...(useHttps ? ["--experimental-https"] : []), ...passthroughArgs];
+const nextDevArgs = ["dev", ...(useHttps ? ["--experimental-https"] : []), ...passthroughArgs];
 
-// Använd shell:true så att `npx` löser sig till `npx.cmd` på Windows utan
-// att vi behöver hardkoda extension-uppslagning. stdio: "inherit" så
-// next.js egen TTY-output (ANSI-färger, ✓ Ready, etc.) går igenom orört.
-//
 // `detached: !IS_WINDOWS` gör child:en till en egen process group leader
-// på Unix så vi vid shutdown kan signala HELA trädet (shell + npx + next-
-// dev) via `process.kill(-pid, signal)` istället för bara shell-wrappern.
-// På Windows hanteras tree-kill via `taskkill /T /F` i `killTree()`
-// nedan (detached på Windows skapar bara en ny process group, vilket
-// inte räcker — vi behöver det dedikerade tree-kill-anropet).
-// Utan detta dör shell:et men `next dev`-processen lever vidare och
-// håller port 3000 låst, vilket bryter nästa `npm run dev` — exakt
-// det Codex P1-fyndet på parkerade PR #85 beskrev.
-const child = spawn("npx", nextArgs, {
-  cwd: VIEWSER_ROOT,
-  stdio: "inherit",
-  shell: true,
-  detached: !IS_WINDOWS,
-  env: {
-    ...process.env,
-    VIEWSER_PREVIEW_MODE: mode,
-    // Speglar `useHttps` så `next.config.ts` kan verifiera att
-    // dispatchern valt rätt transport utan att gissa via
-    // `process.argv.includes("--experimental-https")` — den check:en
-    // ger false-positiva varningar i Turbopack-workers vars argv inte
-    // ärver parent-processens flaggor. Env-variabeln är auktoritativ
-    // signal "dispatchern har redan satt rätt transport" och tystar
-    // varningen utan att försvaga själva mode→headers-rail:en.
-    VIEWSER_DISPATCHER_HTTPS: useHttps ? "1" : "0",
-  },
-});
+// på Unix så vi vid shutdown kan signala HELA trädet via
+// `process.kill(-pid, signal)` istället för bara wrappern. På Windows
+// hanteras tree-kill via `taskkill /T /F` i `killTree()` nedan (detached på
+// Windows skapar bara en ny process group, vilket inte räcker). Utan detta
+// lever `next dev` vidare och håller port 3000 låst, vilket bryter nästa
+// `npm run dev` — Codex P1-fyndet på parkerade PR #85.
+const childEnv = {
+  ...process.env,
+  VIEWSER_PREVIEW_MODE: mode,
+  // Speglar `useHttps` så `next.config.ts` kan verifiera att
+  // dispatchern valt rätt transport utan att gissa via
+  // `process.argv.includes("--experimental-https")` — den check:en
+  // ger false-positiva varningar i Turbopack-workers vars argv inte
+  // ärver parent-processens flaggor. Env-variabeln är auktoritativ
+  // signal "dispatchern har redan satt rätt transport" och tystar
+  // varningen utan att försvaga själva mode→headers-rail:en.
+  VIEWSER_DISPATCHER_HTTPS: useHttps ? "1" : "0",
+};
+
+// DEP0190 / säkerhet: spawna `next` SHELL-FRITT via node + den lokala
+// next-binären i stället för `npx` med `shell: true`. shell:true + args
+// triggar Node-deprecationen DEP0190 ("passing args to a child process with
+// shell option true can lead to security vulnerabilities"). Även om argumenten
+// här är operatörsstyrda (`npm run dev -- ...`, inte nätinput) eliminerar den
+// shell-fria vägen injektionsytan helt: argv passeras som en array till en
+// riktig binär, aldrig ihopklistrat i en shell-sträng. `process.execPath` =
+// samma node som kör dispatchern. stdio: "inherit" bevarar next.js TTY-output.
+// Faller tillbaka till `npx` (shell:true) ENBART om den lokala next-binären
+// inte hittas (ovanligt — apps/viewser har egen node_modules); npx kräver
+// shell:true för .cmd-resolution på Windows efter CVE-2024-27980.
+const nextBin = resolve(VIEWSER_ROOT, "node_modules", "next", "dist", "bin", "next");
+const child = existsSync(nextBin)
+  ? spawn(process.execPath, [nextBin, ...nextDevArgs], {
+      cwd: VIEWSER_ROOT,
+      stdio: "inherit",
+      shell: false,
+      detached: !IS_WINDOWS,
+      env: childEnv,
+    })
+  : spawn("npx", ["next", ...nextDevArgs], {
+      cwd: VIEWSER_ROOT,
+      stdio: "inherit",
+      shell: true,
+      detached: !IS_WINDOWS,
+      env: childEnv,
+    });
 
 // killTree: skicka signal till hela process-trädet under `child`, inte
 // bara shell-wrappern. Plattforms-specifik:
