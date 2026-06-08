@@ -19,7 +19,7 @@ I gamla repot blev orden `brief`, `scaffold`, `context`, `contracts`, `quality g
 - `brief` är aldrig en lös sammanfattning. Det är `Site Brief` enligt naming-dictionary, alltid.
 - `autofix` är aldrig generiskt. Skriv **mekanisk autofix** eller **LLM-fix** explicit.
 - `quality gate` är inte F2 eller F3. Det finns EN gate. Tier-uppdelning får uppstå först om eval visar att det behövs.
-- `preview` är `Preview Runtime`, inte VM, sandbox, preview-host eller webcontainer.
+- `preview` är `Preview Runtime`, inte VM, preview-host eller webcontainer. `sandbox` är bara tillåtet som registrerat alias under Preview Runtime (Vercel Sandbox), inte som fri catch-all-term.
 
 ## Hur det upprätthålls
 

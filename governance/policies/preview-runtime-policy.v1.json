@@ -1,11 +1,11 @@
 {
   "$schema": "../schemas/preview-runtime-policy.schema.json",
   "policyId": "preview-runtime-policy.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin. ADR 0033: vercel-sandbox är primärt förstahandsval (intended primary, status=primary), MEN faktisk runtime-default (fältet 'default') är fortfarande local/local-next tills default-flip (Bite C) är verifierad. local är garanterad fallback/dev, fly framtida, stackblitz pausad. Policyn ska aldrig peka 'default' på en runtime som koden inte använder ännu.",
+  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin. ADR 0033: vercel-sandbox är primärt förstahandsval (intended primary, status=primary), MEN fältet 'default' speglar FAKTISK runtime-default = local/local-next (apps/viewser/.env.example, dev-fallback utan Vercel-auth). stackblitz är pausad (status=paused) och får aldrig anges som default här eller i Viewser-env. fly är framtida. Policyn ska aldrig peka 'default' på en runtime som koden inte använder ännu.",
   "principles": [
-    "Preview Runtime är en abstraktion. Produktkoden talar bara om 'Preview Runtime', aldrig 'VM' eller 'sandbox'.",
+    "Preview Runtime är en abstraktion. Produktkoden talar bara om 'Preview Runtime', aldrig 'VM', 'webcontainer' eller oregistrerade sandbox-synonymer (registrerade alias finns i naming-dictionary.v1.json).",
     "vercel-sandbox är primärt förstahandsval för användarpreview (ADR 0033, status=primary), men fältet 'default' speglar FAKTISK default = local/local-next tills default-flip/Bite C verifierats - intended primary != actual default. local är den garanterade fallbacken. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
     "Det finns EN Quality Gate; nya lager läggs först om eval-batchen visar bevisat behov (se ADR 0016)."
   ],

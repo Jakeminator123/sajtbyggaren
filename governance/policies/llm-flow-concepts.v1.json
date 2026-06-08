@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/llm-flow-concepts.schema.json",
   "policyId": "llm-flow-concepts.v1",
-  "version": 2,
+  "version": 3,
   "status": "draft-but-authoritative",
   "northStar": "One controlled generation lane from user intent to promoted site. No hidden secondary init path may bypass this policy.",
   "phaseBlocks": [
@@ -217,7 +217,7 @@
       "id": "preview_runtime",
       "order": 100,
       "canonicalName": "Preview Runtime",
-      "purpose": "Run the generated site in a runtime abstraction. Implementations: LocalRuntime, StackBlitzRuntime, FlyRuntime.",
+      "purpose": "Run the generated site in a runtime abstraction. Implementations: VercelSandboxRuntime (primary per ADR 0033), LocalRuntime (actual default/fallback), StackBlitzRuntime (paused), FlyRuntime (future).",
       "inputArtifacts": [
         "finalFiles",
         "runtimeConfig"
@@ -304,10 +304,10 @@
     {
       "term": "Preview Runtime",
       "id": "previewRuntime",
-      "definition": "Abstraction for where generated sites run. Examples: StackBlitzRuntime, LocalRuntime, FlyRuntime.",
+      "definition": "Abstraction for where generated sites run. Examples: VercelSandboxRuntime, LocalRuntime, StackBlitzRuntime (paused), FlyRuntime.",
       "avoid": [
         "VM as product term",
-        "sandbox as catch-all"
+        "unregistered sandbox as catch-all product term"
       ]
     },
     {
