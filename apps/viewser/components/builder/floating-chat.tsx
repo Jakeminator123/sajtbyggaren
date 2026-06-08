@@ -498,10 +498,19 @@ function summarizeCopyDirectives(
 }
 
 type Position = { x: number; y: number };
+type Size = { width: number; height: number };
 
 const PANEL_WIDTH = 360;
 const PANEL_HEIGHT = 460;
 const PANEL_MIN_HEIGHT = 220;
+// Resize-gränser (operatör-önskan 2026-06-07: dra i hörnen som ett
+// webbläsarfönster). Bredden får inte bli smalare än chip-raden tål
+// (~320) och inte bredare än att den täcker hela previewen i onödan.
+// Höjden delar PANEL_MIN_HEIGHT som golv; taket clamp:as mot viewporten
+// i clampSize så panelen + toolbar-raden alltid får plats.
+const PANEL_MIN_WIDTH = 320;
+const PANEL_MAX_WIDTH = 720;
+const PANEL_MAX_HEIGHT = 900;
 const VIEWPORT_PADDING = 16;
 /**
  * Toolbar-pillen (375/768/1024/Full + Verktyg) sitter kant-i-kant
@@ -514,8 +523,8 @@ const VIEWPORT_PADDING = 16;
  * default-position nederst till höger).
  */
 const TOOLBAR_ROW_HEIGHT = 40;
-const PANEL_FOOTPRINT_HEIGHT = PANEL_HEIGHT + TOOLBAR_ROW_HEIGHT;
 const STORAGE_KEY_POSITION = "sajtbyggaren:floating-chat:position";
+const STORAGE_KEY_SIZE = "sajtbyggaren:floating-chat:size";
 const STORAGE_KEY_MINIMIZED = "sajtbyggaren:floating-chat:minimized";
 const STORAGE_KEY_QUICK_PROMPTS = "sajtbyggaren:floating-chat:quick-prompts";
 // Första-gångs-hinten "Så funkar det" (kärnloopen: följdprompt → ny
@@ -620,6 +629,20 @@ function readStoredPosition(): Position | null {
   }
 }
 
+function readStoredSize(): Size | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY_SIZE);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Size>;
+    if (typeof parsed.width !== "number" || typeof parsed.height !== "number")
+      return null;
+    return { width: parsed.width, height: parsed.height };
+  } catch {
+    return null;
+  }
+}
+
 function readStoredMinimized(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -669,6 +692,30 @@ function clampToViewport(
     y: Math.min(Math.max(VIEWPORT_PADDING, pos.y), maxY),
   };
 }
+
+// Clamp:ar panel-storleken mot min/max-konstanterna OCH viewporten så att
+// panelen + toolbar-raden (TOOLBAR_ROW_HEIGHT) alltid får plats med
+// VIEWPORT_PADDING på båda kanter. Anropas vid hydrering, under resize-drag
+// och vid window-resize.
+function clampSize(size: Size): Size {
+  const maxWidth =
+    typeof window !== "undefined"
+      ? Math.min(PANEL_MAX_WIDTH, window.innerWidth - 2 * VIEWPORT_PADDING)
+      : PANEL_MAX_WIDTH;
+  const maxHeight =
+    typeof window !== "undefined"
+      ? Math.min(
+          PANEL_MAX_HEIGHT,
+          window.innerHeight - TOOLBAR_ROW_HEIGHT - 2 * VIEWPORT_PADDING,
+        )
+      : PANEL_MAX_HEIGHT;
+  return {
+    width: Math.min(Math.max(PANEL_MIN_WIDTH, size.width), Math.max(PANEL_MIN_WIDTH, maxWidth)),
+    height: Math.min(Math.max(PANEL_MIN_HEIGHT, size.height), Math.max(PANEL_MIN_HEIGHT, maxHeight)),
+  };
+}
+
+const PANEL_DEFAULT_SIZE: Size = { width: PANEL_WIDTH, height: PANEL_HEIGHT };
 
 function defaultPosition(width: number, height: number): Position {
   if (typeof window === "undefined") return { x: 0, y: 0 };
@@ -1241,8 +1288,13 @@ export function FloatingChat({
   tools,
 }: FloatingChatProps) {
   const [position, setPosition] = useState<Position | null>(null);
+  // Panel-storlek (desktop). Startar på default 360×460 = nuvarande fasta
+  // mått (matchar SSR/first paint); hydreras från localStorage post-mount.
+  // Resize-handles på panelens kanter/hörn skriver hit under drag.
+  const [size, setSize] = useState<Size>(PANEL_DEFAULT_SIZE);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   // Första-gångs-hinten "Så funkar det". Startar dold (false) → layout-
   // effekten öppnar den post-mount om den aldrig setts. Persisteras vid
   // dismiss så den bara visas en gång per webbläsare.
@@ -1303,6 +1355,21 @@ export function FloatingChat({
     originX: number;
     originY: number;
   } | null>(null);
+  // Resize-drag-state. ``edge`` är en sträng-union av väderstreck
+  // (n/s/e/w + hörn) — hålls inline (inte namngiven PascalCase-typ) så
+  // term-coverage --strict inte flaggar den som okänd domän-term.
+  const resizeStartRef = useRef<{
+    pointerX: number;
+    pointerY: number;
+    originW: number;
+    originH: number;
+    originX: number;
+    originY: number;
+    edge: "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+  } | null>(null);
+  // Synkron spegel av size så drag-/window-resize-clamp:en kan läsa
+  // aktuell storlek utan stale closures (samma motiv som dragStartRef).
+  const sizeRef = useRef<Size>(size);
   const headerRef = useRef<HTMLDivElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1349,10 +1416,14 @@ export function FloatingChat({
     void (async () => {
       await Promise.resolve();
       if (cancelled) return;
+      const storedSize = readStoredSize();
+      const initialSize = storedSize ? clampSize(storedSize) : PANEL_DEFAULT_SIZE;
+      setSize(initialSize);
+      const footprint = initialSize.height + TOOLBAR_ROW_HEIGHT;
       const stored = readStoredPosition();
       const initial = stored
-        ? clampToViewport(stored, PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT)
-        : defaultPosition(PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT);
+        ? clampToViewport(stored, initialSize.width, footprint)
+        : defaultPosition(initialSize.width, footprint);
       setPosition(initial);
       setIsMinimized(readStoredMinimized());
       setQuickPromptsOpen(readStoredQuickPromptsOpen());
@@ -1378,17 +1449,35 @@ export function FloatingChat({
     }
   }, []);
 
-  // Håll position innanför viewport vid resize.
+  // Synka sizeRef varje gång size ändras så clamp:arna i drag-/window-
+  // resize-handlers läser aktuell storlek utan att behöva size i deps.
+  useEffect(() => {
+    sizeRef.current = size;
+  }, [size]);
+
+  // Håll panel-storlek + position innanför viewport vid window-resize.
   useEffect(() => {
     function handleResize() {
+      setSize((current) => clampSize(current));
       setPosition((current) => {
         if (!current) return current;
-        return clampToViewport(current, PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT);
+        const s = clampSize(sizeRef.current);
+        return clampToViewport(current, s.width, s.height + TOOLBAR_ROW_HEIGHT);
       });
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Persistera panel-storlek (gated på hydrering som övriga preferenser).
+  useEffect(() => {
+    if (!hasHydratedRef.current) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY_SIZE, JSON.stringify(size));
+    } catch {
+      // Tyst — quota / disabled localStorage får inte krascha UI.
+    }
+  }, [size]);
 
   // Persistera position.
   useEffect(() => {
@@ -1475,11 +1564,12 @@ export function FloatingChat({
       if (!start) return;
       const dx = event.clientX - start.pointerX;
       const dy = event.clientY - start.pointerY;
+      const s = sizeRef.current;
       setPosition(
         clampToViewport(
           { x: start.originX + dx, y: start.originY + dy },
-          PANEL_WIDTH,
-          PANEL_FOOTPRINT_HEIGHT,
+          s.width,
+          s.height + TOOLBAR_ROW_HEIGHT,
         ),
       );
     },
@@ -1497,6 +1587,75 @@ export function FloatingChat({
       }
       dragStartRef.current = null;
       setIsDragging(false);
+    },
+    [],
+  );
+
+  // Resize-drag: en handler-fabrik per kant/hörn. Startar drag, fångar
+  // pointern på själva handtaget (inte headern) och sparar origin-mått +
+  // origin-position så väst-/nord-drag kan hålla motsatt kant fast.
+  const handleResizePointerDown = useCallback(
+    (edge: "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw") =>
+      (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (isMobile || isMinimized || !position) return;
+        if (event.button !== 0) return;
+        // Stoppa propagation så headerns drag-handler aldrig triggas och
+        // preventDefault så ingen text selekteras under resize.
+        event.stopPropagation();
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        resizeStartRef.current = {
+          pointerX: event.clientX,
+          pointerY: event.clientY,
+          originW: size.width,
+          originH: size.height,
+          originX: position.x,
+          originY: position.y,
+          edge,
+        };
+        setIsResizing(true);
+      },
+    [isMobile, isMinimized, position, size],
+  );
+
+  const handleResizePointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const start = resizeStartRef.current;
+      if (!start) return;
+      const dx = event.clientX - start.pointerX;
+      const dy = event.clientY - start.pointerY;
+      const { edge } = start;
+      let width = start.originW;
+      let height = start.originH;
+      if (edge.includes("e")) width = start.originW + dx;
+      if (edge.includes("w")) width = start.originW - dx;
+      if (edge.includes("s")) height = start.originH + dy;
+      if (edge.includes("n")) height = start.originH - dy;
+      const clamped = clampSize({ width, height });
+      // Väst-/nord-drag: håll motsatt (höger/nederkant) fast genom att
+      // flytta x/y med den faktiska (clamp:ade) storleksdiffen.
+      let x = start.originX;
+      let y = start.originY;
+      if (edge.includes("w")) x = start.originX + (start.originW - clamped.width);
+      if (edge.includes("n")) y = start.originY + (start.originH - clamped.height);
+      setSize(clamped);
+      setPosition(
+        clampToViewport({ x, y }, clamped.width, clamped.height + TOOLBAR_ROW_HEIGHT),
+      );
+    },
+    [],
+  );
+
+  const handleResizePointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!resizeStartRef.current) return;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer-capture kan vara avslutad redan — inget att göra.
+      }
+      resizeStartRef.current = null;
+      setIsResizing(false);
     },
     [],
   );
@@ -2008,8 +2167,8 @@ export function FloatingChat({
           // Bottom-rundningen lever på toolbar-raden istället.
           isMobile
             ? "pb-safe inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-3xl"
-            : "w-[360px] rounded-t-2xl",
-          isDragging
+            : "rounded-t-2xl",
+          isDragging || isResizing
             ? "cursor-grabbing transition-none"
             : "motion-safe:transition-[box-shadow] motion-safe:duration-150",
         )}
@@ -2025,7 +2184,8 @@ export function FloatingChat({
             : {
                 left: position.x,
                 top: position.y,
-                height: PANEL_HEIGHT,
+                width: size.width,
+                height: size.height,
                 minHeight: PANEL_MIN_HEIGHT,
               }
         }
@@ -2404,6 +2564,38 @@ export function FloatingChat({
           className="hidden"
           aria-hidden
         />
+
+        {/* Resize-handtag (desktop): 4 kanter + 4 hörn. Wrappern är
+          pointer-events-none så den aldrig blockerar chat-innehållet;
+          varje handtag är pointer-events-auto med rätt resize-cursor.
+          z-50 lägger dem ovanför headern så top-kanten resize:ar i
+          stället för att dra (handleResizePointerDown stopPropagation:ar
+          så headerns drag aldrig triggas). Dolda på mobil (bottom-sheet). */}
+        {!isMobile ? (
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-50">
+            {(
+              [
+                ["n", "top-0 right-3 left-3 h-1.5 cursor-ns-resize"],
+                ["s", "right-3 bottom-0 left-3 h-1.5 cursor-ns-resize"],
+                ["e", "top-3 right-0 bottom-3 w-1.5 cursor-ew-resize"],
+                ["w", "top-3 bottom-3 left-0 w-1.5 cursor-ew-resize"],
+                ["ne", "top-0 right-0 h-3 w-3 cursor-nesw-resize"],
+                ["nw", "top-0 left-0 h-3 w-3 cursor-nwse-resize"],
+                ["se", "right-0 bottom-0 h-3 w-3 cursor-nwse-resize"],
+                ["sw", "bottom-0 left-0 h-3 w-3 cursor-nesw-resize"],
+              ] as const
+            ).map(([edge, cls]) => (
+              <div
+                key={edge}
+                onPointerDown={handleResizePointerDown(edge)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                className={cn("pointer-events-auto absolute", cls)}
+              />
+            ))}
+          </div>
+        ) : null}
       </aside>
 
       {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-
@@ -2430,8 +2622,8 @@ export function FloatingChat({
           className="border-border/60 bg-card/95 pointer-events-auto fixed z-40 hidden items-center justify-center gap-0.5 rounded-b-2xl border border-t-0 p-1 shadow-2xl backdrop-blur-xl md:flex"
           style={{
             left: position.x,
-            top: position.y + PANEL_HEIGHT,
-            width: PANEL_WIDTH,
+            top: position.y + size.height,
+            width: size.width,
           }}
         >
           {DEVICE_PRESET_OPTIONS.map((option, idx) => {

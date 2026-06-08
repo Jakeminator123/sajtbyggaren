@@ -7,6 +7,7 @@ import {
   type BuilderAction,
 } from "@/components/builder/builder-actions";
 import {
+  AddModuleDialog,
   AskAiDialog,
   AssetUploaderDialog,
   ColorPickerDialog,
@@ -99,6 +100,7 @@ type DialogId =
   | "variant"
   | "color"
   | "asset"
+  | "module"
   | "scrape"
   | "rebuild"
   | "ask"
@@ -203,6 +205,15 @@ export function BuilderShell({
         disabled: isBuilding,
       },
       {
+        id: "module",
+        label: "Lägg till modul",
+        description: "Dra in en sektion på en sida",
+        icon: "module",
+        group: "Innehåll",
+        onSelect: openDialogFactory("module"),
+        disabled: isBuilding,
+      },
+      {
         id: "scrape",
         label: "Hämta från URL",
         description: "Skrapa info från en sajt",
@@ -221,14 +232,12 @@ export function BuilderShell({
         onSelect: openDialogFactory("rebuild"),
         disabled: isBuilding,
       },
-      {
-        id: "history",
-        label: "Versioner",
-        description: "Bläddra tidigare bygg",
-        icon: "history",
-        group: "Bygg",
-        onSelect: onOpenHistory,
-      },
+      // OBS: tidigare fanns även ett "Versioner"-objekt här som öppnade
+      // EXAKT samma console-drawer som "Konsol" (båda → setConsoleOpen(true))
+      // — en dubblett som lovade två ingångar men gav en. Versions-bläddring
+      // bor numera entydigt i inspector-panelens Versioner-tab samt i
+      // hinten "Visa versioner" i FloatingChat (onShowVersions=onOpenHistory).
+      // Konsolen behåller sin egen ärliga etikett (runs/inputs/tokens).
       {
         id: "console",
         label: "Konsol",
@@ -259,7 +268,6 @@ export function BuilderShell({
     [
       isBuilding,
       openDialogFactory,
-      onOpenHistory,
       onOpenConsole,
       onNewSite,
     ],
@@ -315,6 +323,16 @@ export function BuilderShell({
       />
       <AssetUploaderDialog
         open={openDialog === "asset"}
+        onOpenChange={closeDialog}
+        siteId={siteId}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
+        onBuildDone={onBuildDone}
+        isBuilding={isBuilding}
+        baseRunId={pendingBaseRunId?.baseRunId ?? null}
+      />
+      <AddModuleDialog
+        open={openDialog === "module"}
         onOpenChange={closeDialog}
         siteId={siteId}
         onBuildStart={handleBuildStart}

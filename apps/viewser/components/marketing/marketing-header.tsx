@@ -50,10 +50,14 @@ export function MarketingHeader() {
           <Image
             src="/sajtbyggaren_logo.png"
             alt="Sajtbyggaren"
-            width={106}
+            width={90}
             height={22}
-            style={{ width: "auto" }}
             priority
+            // Höjd via ``h-[22px]``; ``w-auto`` + ``style.width:auto`` bevarar
+            // aspect-ratio (intrinsisk 1750×426) och tystar Next:s
+            // "width or height modified, but not the other"-varning.
+            style={{ width: "auto" }}
+            className="h-[22px] w-auto object-contain"
           />
         </Link>
 
