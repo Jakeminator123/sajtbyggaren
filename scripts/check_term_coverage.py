@@ -719,9 +719,10 @@ COMMON_WORDS = {
     # lokala UI-symboler i apps/viewser/components/builder/dialogs/
     # add-module-dialog.tsx. AddModuleDialog är en React-komponent,
     # AddModuleDialogProps dess props-typ, ModuleDef modul-katalogens
-    # rad-typ — inga canonical domänbegrepp (samma behandling som
+    # rad-typ, SectionType den lokala union:en av backend-sanktionerade
+    # section_add-typer — inga canonical domänbegrepp (samma behandling som
     # ColorPickerDialog / ScrapeUrlDialog ovan).
-    "AddModuleDialog", "AddModuleDialogProps", "ModuleDef",
+    "AddModuleDialog", "AddModuleDialogProps", "ModuleDef", "SectionType",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",
