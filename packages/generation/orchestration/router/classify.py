@@ -82,6 +82,24 @@ _STYLE_ADJECTIVES = (
     "lugnare", "modernt", "snyggt",
 )
 
+# Color names read as visual-style adjectives so "gör färgen rosa" / "gör den
+# blå" classify as visual_style (the previous lexicon only had abstract
+# adjectives like premium/modern/mörk, so a bare color fell through to
+# unclear). A color still needs style CONTEXT to count as an edit (an
+# intensifier like "gör"/"mer", a change/style verb, or a site ref), so
+# "vad betyder rosa?" stays answer_only and "lägg till en blå knapp" stays
+# component_add (the add verb + component noun win before the visual_style
+# branch, and there is no style context). 2026-06-08 router slice.
+_STYLE_COLORS = (
+    "rosa", "röd", "rött", "röda", "blå", "blått", "blåa", "grön", "grönt",
+    "gröna", "gul", "gult", "gula", "lila", "orange", "svart", "svarta",
+    "vit", "vitt", "vita", "grå", "grått", "gråa", "brun", "brunt", "bruna",
+    "beige", "turkos", "guld", "gyllene", "silver", "marinblå", "ljusblå",
+    "mörkblå", "ljusgrön", "mörkgrön",
+    "pink", "red", "blue", "green", "yellow", "purple", "black", "white",
+    "gray", "grey", "brown", "teal", "navy", "gold",
+)
+
 _STYLE_VERBS = (
     "snygga till", "fräscha upp", "modernisera", "restyla", "restyle",
     "piffa upp", "piffa", "polera", "styla om", "designa om", "snygga",
@@ -419,7 +437,7 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     has_create = _any_word(work, _CREATE_VERBS)
     has_new = _any_word(work, _NEW_PAGE_CUES)
     has_style_verb = _any_word(work, _STYLE_VERBS)
-    has_style_adj = _any_word(work, _STYLE_ADJECTIVES)
+    has_style_adj = _any_word(work, _STYLE_ADJECTIVES) or _any_word(work, _STYLE_COLORS)
     has_style_noun = _any_word(work, _STYLE_NOUNS)
     has_redesign = _any_word(work, _REDESIGN_VERBS)
     has_layout_verb = _any_word(work, _LAYOUT_VERBS)

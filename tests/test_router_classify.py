@@ -140,6 +140,9 @@ COVERAGE: list[tuple[str, str, str]] = [
     # edit_instruction - visual_style
     ("gör sidan mer premium", "edit_instruction", "targeted_rebuild"),
     ("ändra färgen till blått", "edit_instruction", "targeted_rebuild"),
+    ("gör färgen rosa", "edit_instruction", "targeted_rebuild"),
+    ("gör den rosa", "edit_instruction", "targeted_rebuild"),
+    ("gör sidan blå", "edit_instruction", "targeted_rebuild"),
     ("gör om hela sidan från grunden", "edit_instruction", "full_rebuild"),
     # edit_instruction - copy_change
     ("skriv om rubriken på startsidan", "edit_instruction", "artifact_patch_only"),
@@ -478,3 +481,56 @@ def test_p2_10_find_url_unit_keeps_path_strips_scheme_and_punctuation():
     assert _find_url("se aftonbladet.se/sport?x=1 nu") == "aftonbladet.se/sport?x=1"
     assert _find_url("kolla www.någonannan.se/a/b") == "någonannan.se/a/b"
     assert _find_url("ingen url här alls") is None
+
+
+# ---------------------------------------------------------------------------
+# 2026-06-08 router slice: color names are visual_style adjectives so the
+# "gör <noun> <color>" / "gör den <color>" family classifies as a style edit
+# (previously only "ändra färgen till X" worked). The hard regression: an
+# additive component request that happens to mention a color ("lägg till en
+# blå knapp") must stay component_add and must NEVER restyle the whole site.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "gör färgen rosa",
+        "gör den rosa",
+        "gör sidan blå",
+        "gör bakgrunden grön",
+        "make it pink",
+    ],
+)
+def test_color_make_phrasing_is_visual_style(prompt: str):
+    """"gör färgen rosa" and friends -> edit_instruction / visual_style /
+    targeted_rebuild (the slice that completes "ändra färgen…" parity)."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.editKind == "visual_style"
+    assert d.buildRequirement == "targeted_rebuild"
+
+
+@pytest.mark.parametrize(
+    "prompt,intent",
+    [
+        ("lägg till en blå knapp", "button"),
+        ("lägg till ett rött kontaktformulär", "contact_form"),
+    ],
+)
+def test_colored_component_add_is_not_a_global_restyle(prompt: str, intent: str):
+    """Regression: an ADD request that mentions a color is component_add, NOT
+    visual_style - a colored component must never restyle the whole site."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.editKind == "component_add"
+    assert d.componentIntent == intent
+
+
+def test_bare_color_word_question_is_not_an_edit():
+    """A bare color with no style context stays answer_only (same fix-1 guard
+    as bare style adjectives like "premium")."""
+    d = classify_message("vad betyder rosa?")
+    assert d.editKind == "none"
+    assert d.buildRequirement == "none"
+    assert d.shouldStartPreview is False
