@@ -26,5 +26,5 @@ Sajtbyggaren bygger om `Jakeminator123/sajtmaskin` med `master` som referensbran
 4. Fas 1 runtime (Site Brief).
 5. Fas 2 runtime (Orchestration).
 6. Fas 3 runtime (Codegen, Finalize, Quality Gate).
-7. PreviewRuntime (StackBlitz först).
+7. PreviewRuntime (Vercel Sandbox primär per ADR 0033; `local-next` faktisk default/fallback; StackBlitz pausad).
 8. apps/web sist; followup-flöde först när init är 9.0/10.

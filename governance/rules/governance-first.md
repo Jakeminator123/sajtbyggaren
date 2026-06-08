@@ -13,7 +13,7 @@ Sajtbyggaren styrs av JSON-policies under [`governance/policies/`](../policies/)
 
 - Om ett koncept berör flera mappar måste det definieras i en policy under `governance/policies/` **innan** det skrivs i kod.
 - Inga begrepp får ha synonymer eller alias som inte är registrerade i [`governance/policies/naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json).
-- Inga termer i listan `globallyForbidden` får återinföras (`v0`, `tier1`, `tier2`, `tier3`, `preview-host`, `sandbox` som produktterm, m.fl.).
+- Inga termer i listan `globallyForbidden` får återinföras (`v0`, `tier1`, `tier2`, `tier3`, `preview-host`, m.fl.). `sandbox` får bara användas som registrerat alias för `Preview Runtime` / Vercel Sandbox enligt [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json), inte som fri produktterm.
 - Alla policies måste valideras mot motsvarande JSON Schema i [`governance/schemas/`](../schemas/) innan ändring committas. Kör `scripts/governance_validate.py`.
 - `.cursor/rules/*.mdc` är speglar av filer i `governance/rules/`. Redigera ALDRIG `.cursor/rules/` direkt; kör `scripts/rules_sync.py` istället.
 
