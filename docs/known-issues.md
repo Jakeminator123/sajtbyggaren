@@ -259,7 +259,7 @@ integrate christopher-ui discovery and asset workflow`, merge
   om kanonisk plats innan entry kan stängas helt. Fix: open. Test: open.
 ### Övriga öppna
 
-- **`B125` Hög** (produktblocker innan launch) - Embedded
+- **`B125` Låg-Medel** (var Hög; till stor del adresserad av vercel-sandbox, se Status nedan) - Embedded
   StackBlitz/WebContainer-preview i Viewser stöds officiellt bara i
   Chromium-browsers (Chrome 110+, Edge, Brave, Vivaldi). Safari och
   Firefox kan inte ladda embeddet eftersom WebContainer kräver
@@ -305,7 +305,14 @@ integrate christopher-ui discovery and asset workflow`, merge
   scope för B125. Status idag: dokumenterad i README.md "Browser-stöd
   för preview-läge", `docs/product-operating-context.md` "Runtime och
   preview", och `docs/integrations/webcontainers-notes.md`. Källa:
-  operatörrapport 2026-05-18 (post-B123/B124-diskussion). Fix: open.
+  operatörrapport 2026-05-18 (post-B123/B124-diskussion).
+  **Status 2026-06-08 (nedgraderad Hög->Låg-Medel):** vercel-sandbox (ADR 0033)
+  serverar en publik https-`vercel.run`-iframe UTAN cross-origin-isolation, så
+  den laddar i Safari/Firefox och löser i praktiken Chromium-only-begränsningen
+  utan egen infra-park (kandidat 4 ovan, fast via Vercel Sandbox). Den är dock
+  opt-in (default-mode är fortf. `local-next`), så B125 hålls öppen tills
+  default-flippen (ADR 0033) är gjord och fallbacken verifierad i icke-Chromium.
+  Fix: open.
   Test: open.
 
 - **`B155` Medel-Hög** - Följdpromptar som uttrycker fri copy- eller

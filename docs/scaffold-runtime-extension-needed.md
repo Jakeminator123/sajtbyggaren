@@ -1,6 +1,12 @@
 # Scaffold runtime extension — handoff to Jakob
 
-**Status:** Required before week-1 scaffold expansion can run end-to-end.
+**Status:** KLAR / HISTORIK (uppdaterad 2026-06-08). Kärngapet är stängt:
+`restaurant-hospitality` är runtime-aktiv (`_RUNTIME_SCAFFOLD_HINTS` i
+`packages/generation/discovery/resolve.py`, via Path A per-route-armar) och
+Path B section-dispatchern (`render_route_generic` + `_SECTION_RENDERERS` i
+`packages/generation/build/dispatcher.py`) finns sedan B146-porten. Dokumentet
+behålls som referens för nästa scaffold; det blockerar inget längre.
+(Ursprunglig status: Required before week-1 scaffold expansion can run end-to-end.)
 **Owner:** Jakob (backend).
 **Branch scope:** This document describes work in `scripts/`, `packages/generation/discovery/`, `packages/generation/planning/` and `tests/` — all off-limits for `christopher-*` branches per `governance/rules/branch-scope-ui-ux.md`.
 
