@@ -10,6 +10,12 @@ Konsoliderar PowerShell-defaults, glob-disciplin, read-only-shell-beteende, serv
 
 ## Standardskal
 
+- **Agenten i denna workspace:** `Shell`-verktyget kör operatörens PowerShell 7 (Windows).
+  Default:a därför till pwsh-syntax i **alla** `Shell`-anrop — anta aldrig bash. Kedja med
+  `;` (inte `&&`/`||`), använd inte reserverade automatiska variabler som egna namn
+  (`$pid`, `$args`, `$input`, `$error`), och blanda inte `??` med metodanrop på samma rad
+  (`($x ?? '').Substring(...)` parsar fel — dela upp i två steg). Anpassa till POSIX
+  (`bash`/`zsh`) **bara** när du faktiskt kör på Linux/macOS (cloud-agent/Christopher).
 - **Operatören (Jakob), lokalt:** Windows 10+ med PowerShell 7 (`pwsh`). Använd pwsh-syntax: `$env:NAMN` för miljövariabler, here-strings (`@"..."@`) i stället för bash-heredoc.
 
   ```powershell
