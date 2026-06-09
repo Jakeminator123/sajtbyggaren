@@ -84,7 +84,7 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `a5db2dd` (2026-06-09 UTC, `jakob-be` HEAD — merge-tåget #235 (`b584638`), #237 (`13bf768`), #236 (`3aefa0d`), #229 (`a74ad24`), #228 (`4144ecf`), sedan docs-refresh (`61c8963`) + pwsh-regel (`a5db2dd`); `main` = `16278c1`, sync till main väntar operatörsbeslut).
+Last verified state: `340e2cd` (2026-06-09 UTC, `jakob-be` HEAD — dagens merge-tåg #235 (`b584638`), #237 (`13bf768`), #236 (`3aefa0d`), #229 (`a74ad24`), #228 (`4144ecf`) + docs/regel-housekeeping (`61c8963`/`a5db2dd`/`340e2cd`); `main` = `16278c1`, sync till main väntar operatörsbeslut).
 Nya PRs sedan föregående checkpoint: #235, #237, #236, #229, #228 — alla mergade på `jakob-be`, ej `main`. Live-loop-beviset kördes grönt (se ovan).
 
 ## Öppna PR att känna till
