@@ -217,15 +217,21 @@ export function hasVercelSandboxAuth(): boolean {
  * re-implementeras här så runnern är fristående.
  */
 function resolveGeneratedDir(): string {
-  const envOverride = process.env.SAJTBYGGAREN_GENERATED_DIR;
-  if (envOverride && envOverride.trim()) {
-    return path.resolve(envOverride.trim());
-  }
   // cwd-OBEROENDE: härled repo-roten från denna fils plats, inte
   // process.cwd(). Filen ligger på ``<repo>/apps/viewser/lib/<fil>.ts`` →
   // tre nivåer upp från ``lib/`` är repo-roten.
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const repoRoot = path.resolve(moduleDir, "..", "..", "..");
+  const envOverride = process.env.SAJTBYGGAREN_GENERATED_DIR;
+  if (envOverride && envOverride.trim()) {
+    const raw = envOverride.trim();
+    // En RELATIV env-väg resolvas mot REPO-ROTEN så den matchar
+    // Python-sidans ``resolve_generated_dir`` (REPO_ROOT / relative); en
+    // absolut väg används oförändrad.
+    return path.isAbsolute(raw)
+      ? path.resolve(raw)
+      : path.resolve(repoRoot, raw);
+  }
   return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
 }
 
