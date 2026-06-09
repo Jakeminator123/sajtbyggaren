@@ -100,7 +100,7 @@ Nya PRs sedan föregående checkpoint: #235, #237, #236, #229, #228 — alla mer
 
 - **Begrepp- & backoffice-sammanhållning** (`cursor/begrepp-och-backoffice-sammanh-llning-9ea2`,
   draft mot `[REDACTED]`): docs/governance/backoffice-tung städ-PR. Registrerar `Golden Path`
-  som canonical term (ADR 0039, naming-dict v27), lägger begreppskarta i `docs/glossary.md`
+  som canonical term (ADR 0039, naming-dict v28), lägger begreppskarta i `docs/glossary.md`
   (golden/blueprint/DNA/scorecard), binder ihop golden-ytorna i runbooken, döper om
   "golden truth"→"snapshot baseline" i två testkommentarer, lägger en read-only Golden Path-
   status-vy i backoffice + vy-audit (`docs/backoffice/overview.md`) och synliggör

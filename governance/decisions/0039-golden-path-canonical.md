@@ -39,7 +39,7 @@ motivering.
 ### 1. Golden Path är canonical (registreras nu)
 
 `Golden Path` registreras som canonical term i `naming-dictionary.v1.json`
-(v27). Definition: produktens **kanoniska huvudflöde** —
+(v28; v27 togs av ADR 0038 Mounted Section under denna PR:s livstid). Definition: produktens **kanoniska huvudflöde** —
 `prompt -> företagshemsida -> preview -> följdprompt -> ny version` — och den
 smala vertikala skiva av motorn som bevisar att huvudflödet lever
 (`Project Input -> Site Brief -> Site Plan -> Generation Package ->
@@ -82,7 +82,7 @@ utan ett nytt ord.
 
 ## Verifiering
 
-- `python scripts/governance_validate.py` — naming-dictionary v27 validerar.
+- `python scripts/governance_validate.py` — naming-dictionary v28 validerar.
 - `python scripts/check_term_coverage.py --strict` — grön (Golden Path är nu
   registrerad och flaggas inte längre som okänd kandidat).
 - `python -m pytest tests/test_cross_policy_consistency.py
