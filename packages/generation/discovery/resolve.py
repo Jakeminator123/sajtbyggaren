@@ -125,6 +125,21 @@ _CAPABILITY_ALIASES: dict[str, str] = {
     "faq": "faq-section",
     "map": "location",
     "testimonials": "reviews",
+    # Wizard-UI:s äldre/icke-canonical sluggar (msg-0056/msg-0057): #247
+    # bytte FUNCTION_GROUPS till canonical för menu/team-section/reviews/
+    # gallery, men äldre payloads (och kvarvarande val) kan fortfarande
+    # skicka *-display-/embed-formerna. Skyddsnätet mappar dem till
+    # capability-map.v1.json-nycklarna så valet aldrig landar som
+    # capability-unknown-brus.
+    "menu-display": "menu",
+    "team-display": "team-section",
+    "reviews-display": "reviews",
+    "image-gallery": "gallery",
+    "pricing-display": "pricing",
+    "map-embed": "location",
+    "opening-hours": "hours",
+    "newsletter-signup": "newsletter-subscribe",
+    "video-hero": "hero-video",
 }
 
 

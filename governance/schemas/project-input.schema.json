@@ -252,7 +252,7 @@
         "mountedSections": {
           "type": "array",
           "maxItems": 16,
-          "description": "Synliga sektions-injektioner härledda ur en section_add-följdprompt (ADR 0035, GAP-followup-prompt-content-passthrough). Varje post säger att en monterad sektion ska renderas INLINE som ett block på en befintlig route (i stället för dagens mount-only / egen-route-only), vid en valfri position. Renderaren (render_home m.fl.) läser fältet direkt ur Project Input och injicerar sektionen i route-ordningen ENDAST när den har en registrerad render_section_*-renderare och grundat innehåll — annars förblir den ärligt mount-only. Listan ersätts per version (inte ackumulerad). Rå följdprompt renderas aldrig som kundcopy; sectionId/routeId är slutna referenser till befintliga sektioner och routes.",
+          "description": "Synliga sektions-injektioner härledda ur en section_add-följdprompt (ADR 0038, GAP-followup-prompt-content-passthrough). Varje post säger att en monterad sektion ska renderas INLINE som ett block på en befintlig route (i stället för dagens mount-only / egen-route-only), vid en valfri position. Renderaren (render_home m.fl.) läser fältet direkt ur Project Input och injicerar sektionen i route-ordningen ENDAST när posten passerar render-allowlisten (scaffold+route+sektion, speglad mot resolverns INLINE_SECTION_*-allowlists) OCH har en registrerad render_section_*-renderare OCH grundat innehåll — annars förblir den ärligt mount-only. Listan ersätts per version (inte ackumulerad). Rå följdprompt renderas aldrig som kundcopy; sectionId/routeId är slutna referenser till befintliga sektioner och routes.",
           "items": {
             "type": "object",
             "additionalProperties": false,
