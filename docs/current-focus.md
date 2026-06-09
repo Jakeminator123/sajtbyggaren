@@ -55,21 +55,23 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 
 **Nästa prioriteringar:**
 
-1. **Punkt 1-slicen till Christopher (lovad i msg-0057):** utöka `/api/discovery-options`
-   med `recommendedPages` + `recommendedCapabilities` per kategori (routen läser redan
-   `discovery-taxonomy.v1.json`) + komplettera resolverns `_CAPABILITY_ALIASES` med UI-aliasen
-   (menu-display/team-display/reviews-display/image-gallery, ev. pricing-display/map-embed/
-   opening-hours). Därefter punkt 2: businessFamily-ankare i governance (ADR + taxonomi-fält).
+1. **OpenClaw 2.0 / agentroller i llm-flödet — AVBLOCKAT:** F1-readiness var gated på
+   synlig `section_add`, som nu är inne (#240/#248). Plan:
+   `docs/heavy-llm-flow/openclaw-2.0-conductor.md` + `openclaw-f1-readiness.md`.
+   Strukturera rollerna (router/section_builder/stylist/copy) på den befintliga motorn.
 2. **Evals / golden path + manuell score + manuella /studio-checkar:** kör
    `scripts/run_golden_path_eval.py --mode deterministic` + `scripts/run_eval_suite.py quick`,
    sätt manuell 1–10 i Backoffice. Inkludera kontrastfärg-testet ("gör sajten mörkblå") OCH
    den manuella section_add-checken: "lägg till en öppettider-sektion överst" på LSB-sajt med
    riktiga öppettider → block efter hero + ärlig toast (deterministiskt bevisat; klicket kvar).
-3. **#237-resten (extern granskning, äkta risk):** `build()`-API:t har kvar `auto_prune=True`
-   som default ( `--followup`-CLI + OpenClaw `--apply` ärver den mot canonical dirs, caps satta
-   i `.env`). Liten PR: flippa default till `False` + tråda genom `build_targeted_version`/
-   `run_followup_chain` + explicit opt-in där retention önskas. Därefter: fler inline-typer/
-   routes/scaffolds för section_add (skiva 2+), följdprompt copy literal-replace, OpenClaw F1.
+3. **Punkt 2 till Christopher (businessFamily-ankare):** governance-slice (ADR +
+   family-fält per kategori i discovery-taxonomy) så UI:ts 8 familjer slutar vara UI-påhitt.
+   (Punkt 1 LEVERERAD: #251 exponerar `recommendedPages` i `/api/discovery-options`;
+   taxonomin saknar `recommendedCapabilities` — eget taxonomi-fält om det önskas, se
+   msg-0058.) Därefter: section_add skiva 2+ (fler typer/routes/scaffolds), fler starters
+   i runtime, följdprompt copy literal-replace.
+   Två cloud-agent-prompter är skrivna och redo (backoffice-grind A/B + Vercel-hosted
+   sandbox-preview) — se chatlogg 2026-06-09 sen kväll.
 
 **Öppna blockers / att-göra:**
 
@@ -96,15 +98,16 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `9dce32a` (2026-06-09 sen kväll UTC, `jakob-be` HEAD — kvällens merge-tåg
-#238 (`d7b87a4`), #239 (`924f1d3`), #241 (`8faeb90`), #242 (`b5d6ec2`), #243 (`e63d46d`),
-#244 (`a645699`), #240 (`72f5563`), #245 (`4b85469`), #246 (`647eb9e`), #247 (`c67a7af`),
-#248 (`16e3ae6`), #249 (`b03770f`, granskningsrunda 2: modulprompt-format + sidzoner +
-slug-skyddsnät + docs-MCP-not) och #225 (`9dce32a`, testsvit-hygien: test_viewser_files
-splittad i 7 temafiler + storleksvakt, test-namn-paritet 186=186); `main` = `16278c1`,
-sync till main väntar operatörsbeslut — kvällens delta är STORT, en main-sync bör
-övervägas snart). Post-merge-sanity: governance 19/19, rules_sync OK, ruff 0, sviter gröna.
-Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
+Last verified state: `79bedef` (2026-06-10 strax efter midnatt UTC+2, `jakob-be` HEAD —
+kvällens/nattens merge-tåg, FEMTON PR:ar: #238 (`d7b87a4`), #239 (`924f1d3`),
+#241 (`8faeb90`), #242 (`b5d6ec2`), #243 (`e63d46d`), #244 (`a645699`), #240 (`72f5563`),
+#245 (`4b85469`), #246 (`647eb9e`), #247 (`c67a7af`), #248 (`16e3ae6`),
+#249 (`b03770f`, granskningsrunda 2), #225 (`9dce32a`, testsvit-split 186=186),
+#250 (`dbfb905`, auto_prune default OFF i hela API-kedjan — #237-fällan stängd) och
+#251 (`79bedef`, recommendedPages i /api/discovery-options, msg-0056 punkt 1 levererad);
+`main` = `16278c1`, sync till main väntar operatörsbeslut — deltat är MYCKET STORT,
+en main-sync bör övervägas snarast). Post-merge-sanity: governance 19/19, rules_sync OK,
+ruff 0, sviter gröna. Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
 
 ## Öppna PR att känna till
 
