@@ -62,14 +62,16 @@ Nya PRs sedan föregående checkpoint: PR #218 (Cursor-regler 29→12, docs/gove
 
 ## Öppna PR att känna till
 
+- **#219** (`cursor/glue1-section-add → jakob-be`): feat(core-loop) Glue 1 — en
+  färsk build persisterar en hittbar Project Input på disk. Backend, mot prio 1
+  ovan (gating för synlig `section_add`). Öppen för review.
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga
   säkerhet** — live-lane, INTE vår att merga/fixa.
 - **#216** (`cursor/floating-chat-split-61b7 → christopher`): FloatingChat-split i
-  Christophers lane. Redundant nu — spliten är redan inne på `jakob-be` via #217;
-  rekommendera Christopher att stänga #216 (eller rebasa bort split-commiten).
+  Christophers lane — numera stängd (spliten är inne på `jakob-be` via #217).
 
-Ingen öppen backend/heavy-LLM-PR mot `jakob-be`. Christophers UI-arbete sker på
-`christopher` (gamla `christopher-ui` är fryst legacy med parkerad auth/billing).
+Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst
+legacy med parkerad auth/billing).
 
 ## Vem uppdaterar denna fil
 
