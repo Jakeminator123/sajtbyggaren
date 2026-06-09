@@ -104,3 +104,15 @@ VERCEL_TOKEN=... ; VERCEL_TEAM_ID=... ; VERCEL_PROJECT_ID=...
 git status --short --branch
 gh pr checks <nr>                                   # CI-status för en PR
 gh pr merge <nr> --squash                            # squash-merge (t.ex. mot jakob-be)
+
+
+---
+
+
+JAKOBS EGNA KOMMANDON:
+
+python build_site.py
+
+eller:
+
+python dev_generate.py
