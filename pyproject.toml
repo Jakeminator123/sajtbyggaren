@@ -8,7 +8,7 @@ dependencies = [
   "streamlit>=1.49",
   "jsonschema>=4.23",
   "pydantic>=2.9",
-  "openai>=1.50",
+  "openai>=2.41,<3",
 ]
 
 [project.optional-dependencies]
