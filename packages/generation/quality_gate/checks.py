@@ -291,6 +291,32 @@ _PLACEHOLDER_PATTERNS = [
     ("PLATSHÅLLARE", re.compile(r"platshållare", re.IGNORECASE)),
     ("REPLACE_ME", re.compile(r"\bREPLACE_ME\b", re.IGNORECASE)),
     ("<insert ... here>", re.compile(r"<insert\b[^>]*\bhere>", re.IGNORECASE)),
+    # Generic-AI English boilerplate that leaks into Swedish customer
+    # copy. Anchored to English determiners so they cannot match real
+    # Swedish business prose (which uses "ditt företag" / "företagsnamn").
+    ("your company", re.compile(r"\byour company\b", re.IGNORECASE)),
+    ("company name", re.compile(r"\bcompany name\b", re.IGNORECASE)),
+    # Imperative "Insert <det> ..." scaffolding (e.g. "Insert your text
+    # here"). The determiner requirement keeps it off code identifiers
+    # like insertBefore() and off any bare Swedish word.
+    (
+        "insert <placeholder>",
+        re.compile(
+            r"\binsert\s+(?:your|the|a|an|company|customer|business|text|"
+            r"image|logo|tagline|name)\b",
+            re.IGNORECASE,
+        ),
+    ),
+    # Empty section heading: <h1></h1>, <h2> </h2>, <h3>&nbsp;</h3>. A
+    # rendered heading element with no real text is a structural
+    # placeholder, never legitimate copy.
+    (
+        "empty section heading",
+        re.compile(
+            r"<h([1-6])\b[^>]*>(?:\s|&nbsp;|&#160;)*</h\1>",
+            re.IGNORECASE,
+        ),
+    ),
 ]
 
 
