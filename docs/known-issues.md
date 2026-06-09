@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 135 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (av 0), 5 unknown, 141 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -634,7 +634,114 @@ samma kodmönster lever vidare här — därav posten:
   komplettera chunk-grep med browser-baserad assertion. Källa: extern
   review 2026-05-27 (PR #131). Fix: open. Test: open.
 
+## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
+
+Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna
+granskningsagenter verifierade dem mot kod (jakob-be @ 2dbe3f9). Sex
+fixades direkt i bug-sweep round 1 (`65e5cec`, se Stängda). Fyra
+bekräftade men ofixade registreras här; resten var redan kända
+(B119/B155/B89), avsiktliga (recommendedPages-halvwire, msg-0058) eller
+medvetna fallbacks (change-set-baseline).
+
+- **`B164` Medel-Hög** - OpenClaw apply-bridge-fel EFTER att kedjan skrivit
+  Project Input/version ger tyst dubbelbygge. `runOpenClawFollowupApply`
+  returnerar `null` vid timeout (10 min)/exit!=0/trunkerad stdout/parse-fel
+  (`apps/viewser/lib/openclaw-runner.ts:244-285`), och
+  `app/api/prompt/route.ts` faller då tyst till legacy Phase 1+2 — som
+  bygger en ANDRA version ovanpå chain-versionen som redan landade
+  (`build_site.py` KÖR-7 skriver PI före targeted render). Kräver
+  fel-efter-apply-timing; vanlig no-op (`applied=false`) är säker.
+  Förslag: detektera nyligen skriven version för siteId före legacy-fallback,
+  eller returnera strukturerat fel i stället för tyst fallback (hänger ihop
+  med #7 bridge-null-diagnostik). Källa: extern RO-granskning 2026-06-09,
+  verifierad 2026-06-10. Fix: open. Test: open.
+- **`B166` Medel** - Shallow merge vid wizardens "Hämta från webbplats":
+  scrape-patchen byggs fält-för-fält på toppnivå
+  (`apps/viewser/components/discovery-wizard/steps/foundation-step.tsx:101-123`)
+  och appliceras med shallow spread (`discovery-wizard.tsx:150-152`), så hela
+  `contact`/`brand`-objektet ERSÄTTS. `scripts/scrape_site.py:run()` fyller
+  dessutom alltid komplett contact-shape med tomma strängar — operatörens
+  redan ifyllda `openingHours`/`toneTags` m.m. nollas tyst. Fix kräver
+  nested fält-merge som bevarar operatörsvärden. Christophers lane
+  (apps/viewser UI). Källa: extern RO-granskning 2026-06-09, verifierad
+  2026-06-10. Fix: open. Test: open.
+- **`B169` Medel** - Global `promptInFlight`-mutex i `/api/prompt`
+  (`route.ts:131,366-386`) serialiserar ALLA sajter i processen — ett
+  långsamt bygge på site A blockerar init/follow-up på site B.
+  `build-runner.ts:23-40` fixade redan samma antipattern med per-site-mutex.
+  Byt till `Map<siteId, Promise>`; kräver uppdatering av source-lock-testet
+  som låser globala kön (`tests/test_viewser_api_prompt.py:191-203`).
+  Serialisering per site ska bevaras (versionsrace-skyddet). Källa: extern
+  RO-granskning 2026-06-09, verifierad 2026-06-10. Fix: open. Test: open.
+- **`B172` Låg-Medel** - `detectLatestRunIdByMtime`
+  (`apps/viewser/lib/build-runner.ts:147-175`) saknar siteId-filter: på
+  SUCCESS med trunkerad stdout (ingen `runId:`-rad) plockas globalt nyaste
+  run under `data/runs/` — ett parallellt bygge på annan site kan ge fel
+  runId i `/api/prompt`-svaret. Failure-vägen är redan skyddad (B42).
+  Fix: filtrera kandidater på siteId (läs `build-result.json`/run-meta)
+  innan mtime-val. Källa: extern RO-granskning 2026-06-09, verifierad
+  2026-06-10. Fix: open. Test: open.
+
 ## Stängda - regression-test säkrar fixet
+
+- **`B163` Hög** (stängd 2026-06-10, bug-sweep round 1) - Stale preview efter
+  lyckad OpenClaw-apply i local-next-läge. Legacy-vägen stoppar previewn i
+  `runBuild` (`build-runner.ts` -> `stopAndWaitPreviewServer`) så nästa
+  preview-start plockar upp nya `current.json`, men OpenClaw-applyns
+  early-return i `app/api/prompt/route.ts` hoppade över stoppet —
+  `startPreviewServer` är idempotent och återanvände en levande `next start`
+  vars cwd är GAMLA build-katalogen, så iframen visade föregående version
+  trots ny run. Kunde maskera följdprompt-effekter (jfr current-focus-
+  caveaten "färgskiftet syntes knappt"). Early-return-vägen stoppar nu
+  previewn (idempotent, fel bryter aldrig svaret). Källa: extern
+  RO-granskning 2026-06-09, verifierad 2026-06-10. Fix: `65e5cec`. Test:
+  `tests/test_bug_sweep_b163_b171.py::test_b163_openclaw_apply_early_return_stops_local_preview`.
+- **`B165` Medel** (stängd 2026-06-10, bug-sweep round 1) - apex<->www
+  host-mismatch i scrape-crawlen. `collect_links` jämförde länk-host strikt
+  mot operatörens ursprungs-URL; när sajten redirectar `example.com` ->
+  `www.example.com` (eller tvärtom) filtrerades alla interna länkar bort som
+  externa och bara startsidan crawlades — kontakt-/om-sidor missades.
+  `_comparable_host` normaliserar nu bort `www.`-prefixet vid jämförelsen
+  (övriga hosts filtreras fortfarande). Källa: extern RO-granskning
+  2026-06-09, verifierad 2026-06-10. Fix: `65e5cec`. Test:
+  `tests/test_scrape_site_links.py::test_collect_links_keeps_www_links_when_base_is_apex`
+  + `tests/test_scrape_site_links.py::test_collect_links_still_filters_foreign_hosts`.
+- **`B167` Medel** (stängd 2026-06-10, bug-sweep round 1) - Prune-guarden
+  kollade bara port 3000. Local-next-previews (`next start` spawnade av
+  `local-preview-server.ts`) lyssnar på 4100-4199 och håller build-kataloger
+  under `.generated/` öppna; med Viewser stängd och caps satta kunde prune
+  radera en aktiv previews build. Både `scripts/prune_generated_previews.py`
+  och `packages/generation/maintenance/auto_prune.py` skannar nu 3000 +
+  4100-4199 (`PREVIEW_PORT_BASE`/`PREVIEW_PORT_RANGE`, speglar
+  local-preview-server.ts). Källa: extern RO-granskning 2026-06-09,
+  verifierad 2026-06-10. Fix: `65e5cec`. Test:
+  `tests/test_auto_prune.py::test_auto_prune_all_refuses_when_preview_port_listening`
+  + `tests/test_prune_generated_previews.py::test_prune_refuses_when_preview_port_is_in_use`.
+- **`B168` Medel** (stängd 2026-06-10, bug-sweep round 1) -
+  `/api/generate-image` läste bara `process.env.OPENAI_API_KEY` (utan
+  repo-rotens `.env`-fallback som chatten har via `openaiEnv`), så AI-bilder
+  gav "nyckel saknas" i den dokumenterade single-source-setupen (nyckel i
+  rot-`.env`, tom rad i `apps/viewser/.env.local`). Routen går nu via
+  exporterade `openaiEnv` (även `OPENAI_IMAGE_MODEL`/`OPENAI_IMAGE_QUALITY`).
+  Källa: extern RO-granskning 2026-06-09, verifierad 2026-06-10. Fix:
+  `65e5cec`. Test:
+  `tests/test_bug_sweep_b163_b171.py::test_b168_generate_image_uses_openai_env_fallback`.
+- **`B170` Låg** (stängd 2026-06-10, bug-sweep round 1) - Token Meter visade
+  $0 när USD-priserna bara stod i rotens `.env`:
+  `OPENAI_INPUT_USD_PER_1K`/`OPENAI_OUTPUT_USD_PER_1K` lästes bara från
+  `process.env` (till skillnad från nyckel/modell). Nu via `openaiEnv`;
+  `.env.example` lämnar priserna tomma i stället för `=0` så roten vinner.
+  Källa: extern RO-granskning 2026-06-09, verifierad 2026-06-10. Fix:
+  `65e5cec`. Test:
+  `tests/test_bug_sweep_b163_b171.py::test_b170_token_meter_prices_use_openai_env`.
+- **`B171` Låg** (stängd 2026-06-10, bug-sweep round 1) - Cachade
+  OpenAI-klienter (`lib/openai.ts` + `lib/asset-store/vision.ts`) skapades en
+  gång och behöll gammal nyckel efter nyckelbyte i `.env` under en
+  långkörande dev-session -> 401 tills `next dev` startades om. Klienten
+  återskapas nu när nyckeln ändras (cachad nyckel jämförs per anrop).
+  Källa: extern RO-granskning 2026-06-09, verifierad 2026-06-10. Fix:
+  `65e5cec`. Test:
+  `tests/test_bug_sweep_b163_b171.py::test_b171_openai_clients_recreated_on_key_change`.
 
 - **`B158` Låg-Medel** (stängd 2026-06-01, hardening-slice) - Hero-/CTA-knappen
   renderade fortfarande placeholder-telefonen `+46 8 000 00 00` även när

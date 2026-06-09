@@ -260,6 +260,37 @@ def test_prune_refuses_when_port_3000_is_in_use(
 
 
 @pytest.mark.tooling
+def test_prune_refuses_when_preview_port_is_in_use(
+    isolated_env: dict[str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """B167: en local-next-preview på 41xx blockerar ``--apply`` även när
+    Viewser-porten 3000 är ledig. Guarden kollade tidigare bara 3000."""
+    _make_preview(isolated_env["generated"], "site-a", mtime_offset=-1)
+    _make_preview(isolated_env["generated"], "site-b", mtime_offset=-2)
+
+    def fake_port_in_use(port: int, *_args: Any, **_kwargs: Any) -> bool:
+        return port == 4105
+
+    monkeypatch.setattr(
+        "prune_generated_previews.is_port_in_use", fake_port_in_use
+    )
+
+    with pytest.raises(SystemExit, match="port 4105 is in use"):
+        prune(
+            generated_dir=isolated_env["generated"],
+            prompt_inputs_dir=isolated_env["prompt_inputs"],
+            runs_dir=isolated_env["runs"],
+            apply=True,
+        )
+
+    assert {p.name for p in isolated_env["generated"].iterdir()} == {
+        "site-a",
+        "site-b",
+    }
+
+
+@pytest.mark.tooling
 def test_prune_keep_per_site_caps_oldest(tmp_path: Path) -> None:
     """Per-site cap keeps the N newest entries within the same siteId group.
 

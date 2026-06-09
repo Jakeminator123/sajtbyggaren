@@ -28,8 +28,10 @@ the Scout-RO spec from 2026-05-15:
   no-op until a future architecture introduces versioned subdirs.
 - **Live-target guard.** Refuses to operate when a process appears to
   be using the target tree: a TCP listener on port 3000 (Next.js dev
-  default) blocks the run unconditionally; per-process cwd checks run
-  when ``psutil`` is importable and warn-only otherwise.
+  default) ELLER på någon local-next-preview-port 4100-4199 (B167, se
+  ``apps/viewser/lib/local-preview-server.ts``) blocks the run
+  unconditionally; per-process cwd checks run when ``psutil`` is
+  importable and warn-only otherwise.
 - **Off-limits.** Never touches ``data/runs/``, ``data/prompt-inputs/``
   or any ``.env*`` file. Operates strictly under the resolved
   ``.generated/`` root.
@@ -67,6 +69,10 @@ RUNS_DIR = REPO_ROOT / "data" / "runs"
 DEFAULT_KEEP_PER_SITE = 3
 DEFAULT_KEEP_TOTAL = 10
 NEXT_DEV_PORT = 3000
+# Local-next preview-portar. Speglar PORT_BASE/PORT_RANGE i
+# apps/viewser/lib/local-preview-server.ts — håll i sync (B167).
+PREVIEW_PORT_BASE = 4100
+PREVIEW_PORT_RANGE = 100
 
 DRY_RUN_ENV_VAR = "SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN"
 GENERATED_DIR_ENV_VAR = "SAJTBYGGAREN_GENERATED_DIR"
@@ -405,9 +411,21 @@ def prune(
     )
 
     if apply and not skip_live_check:
-        if is_port_in_use(NEXT_DEV_PORT):
+        # B167: guarden kollade tidigare bara Viewser-porten 3000. En
+        # local-next-preview (``next start`` spawnad av Viewser) lyssnar på
+        # 4100-4199 och håller en build-katalog under .generated/ öppen —
+        # den måste också blockera prune även när Viewser själv är stängd.
+        busy_ports = [
+            port
+            for port in (
+                NEXT_DEV_PORT,
+                *range(PREVIEW_PORT_BASE, PREVIEW_PORT_BASE + PREVIEW_PORT_RANGE),
+            )
+            if is_port_in_use(port)
+        ]
+        for port in busy_ports:
             report.skipped_live_reasons.append(
-                f"port {NEXT_DEV_PORT} is in use - refusing to prune while a "
+                f"port {port} is in use - refusing to prune while a "
                 "preview/dev server is running"
             )
         cwd_matches = detect_processes_using_dir(generated_dir)

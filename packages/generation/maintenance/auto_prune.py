@@ -17,9 +17,12 @@ default of "do nothing".
 
 Safety:
 
-- Port 3000 guard: if ``localhost:3000`` has a TCP listener, the entire
-  auto-prune is skipped (an active dev-server preview must not have its
-  ``.generated/<siteId>/`` directory pulled out from under it). Same
+- Port guard: if ``localhost:3000`` (Viewser dev) OR any local-next
+  preview port ``4100-4199`` (see ``apps/viewser/lib/local-preview-server.ts``)
+  has a TCP listener, the entire auto-prune is skipped (an active
+  preview must not have its ``.generated/<siteId>/`` directory pulled
+  out from under it; B167 — the guard previously only checked 3000, so
+  a preview on 41xx with Viewser closed was unprotected). Same
   defence-in-depth as ``scripts/prune_generated_previews.py``.
 - ``data/prompt-inputs/`` deletes the oldest current-pointer files
   (``<siteId>.project-input.json``) and removes their sidecar
@@ -112,6 +115,12 @@ def _read_max(env_var: str) -> int | None:
     return value
 
 
+# Local-next preview port range. Mirrors PORT_BASE/PORT_RANGE in
+# apps/viewser/lib/local-preview-server.ts — keep in sync (B167).
+PREVIEW_PORT_BASE = 4100
+PREVIEW_PORT_RANGE = 100
+
+
 def _is_port_in_use(port: int = 3000, host: str = "127.0.0.1") -> bool:
     """Return ``True`` when something is already listening on ``port``.
 
@@ -127,6 +136,21 @@ def _is_port_in_use(port: int = 3000, host: str = "127.0.0.1") -> bool:
             return True
     except (ConnectionRefusedError, TimeoutError, OSError):
         return False
+
+
+def _any_preview_port_in_use() -> bool:
+    """True när Viewser (3000) ELLER någon local-next-preview (4100-4199) kör.
+
+    B167: guarden kollade bara 3000 — en `next start`-preview på 41xx
+    (spawnad av local-preview-server.ts) med Viewser avstängd skyddades
+    inte mot prune av sin egen build-katalog.
+    """
+    if _is_port_in_use(3000):
+        return True
+    return any(
+        _is_port_in_use(port)
+        for port in range(PREVIEW_PORT_BASE, PREVIEW_PORT_BASE + PREVIEW_PORT_RANGE)
+    )
 
 
 def prune_runs(
@@ -324,11 +348,12 @@ def auto_prune_all(
     if max_runs is None and max_generated is None and max_prompt_inputs is None:
         return report
 
-    if not skip_port_guard and _is_port_in_use():
+    if not skip_port_guard and _any_preview_port_in_use():
         report.skipped_due_to_dev_server = True
         if verbose:
             print(
-                "auto-prune: skipped (port 3000 in use; live dev-preview detected)",
+                "auto-prune: skipped (port 3000 or a preview port 4100-4199 "
+                "in use; live dev-preview detected)",
                 file=sys.stderr,
             )
         return report
