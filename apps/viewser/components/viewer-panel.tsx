@@ -343,7 +343,8 @@ export function ViewerPanel({
   // läget tillåter en StackBlitz-fallback (``CAN_FALL_BACK_TO_STACKBLITZ``,
   // dvs ``stackblitz``/``auto``). Styr renderingen av den lazy-laddade
   // ``<StackblitzPreview/>`` — så hela ``@stackblitz/sdk``-modulgrafen
-  // laddas FÖRST här (via next/dynamic), aldrig vid en vanlig
+  // laddas FÖRST här (via en runtime ``import()``, se loader-effekten
+  // nedan), aldrig vid en vanlig
   // ``vercel-sandbox``/``local-next``-studioladdning.
   const [useStackblitz, setUseStackblitz] = useState(false);
   // Den lazy-laddade StackBlitz-preview-komponenten. Hålls i state och laddas
@@ -542,7 +543,8 @@ export function ViewerPanel({
 
       // Steg 2: lämna över till den LEGACY/PAUSADE StackBlitz-vägen. Hela
       // ``@stackblitz/sdk``-grafen lever i ``<StackblitzPreview/>`` som
-      // laddas via ``next/dynamic`` — så filhämtningen (``/api/runs/<runId>/
+      // laddas via en runtime ``import()`` (loader-effekten nedan) — så
+      // filhämtningen (``/api/runs/<runId>/
       // files``), browser-kind-checken och embedden sker FÖRST när den
       // komponenten faktiskt renderas (dvs här, i stackblitz/auto-läge),
       // aldrig vid en normal vercel-sandbox/local-next-studioladdning.
@@ -569,11 +571,27 @@ export function ViewerPanel({
   useEffect(() => {
     if (!useStackblitz || StackblitzPreviewComp) return;
     let cancelled = false;
-    void STACKBLITZ_PREVIEW_IMPORT().then((mod) => {
-      if (!cancelled) {
-        setStackblitzPreviewComp(() => mod.StackblitzPreview);
-      }
-    });
+    void STACKBLITZ_PREVIEW_IMPORT()
+      .then((mod) => {
+        if (!cancelled) {
+          setStackblitzPreviewComp(() => mod.StackblitzPreview);
+        }
+      })
+      .catch(() => {
+        // Chunk-laddningen kan faila (nät-glapp, utgången deploy, blockad
+        // vendor-chunk). Utan denna catch blev ``useStackblitz`` kvar true
+        // medan ``StackblitzPreviewComp`` förblev null → tyst blank canvas.
+        // Degradera ärligt via samma unavailable-banner som övriga
+        // preview-fel (med "Försök igen"-knapp) i stället för tyst blankt.
+        if (cancelled) return;
+        setUseStackblitz(false);
+        setUnavailable({
+          title: "Förhandsvisningen kunde inte laddas",
+          message:
+            "Komponenten för förhandsvisningen kunde inte hämtas (nätverksfel eller utgången version).",
+          hint: "Kontrollera nätverket och tryck Försök igen, eller ladda om sidan.",
+        });
+      });
     return () => {
       cancelled = true;
     };
@@ -908,7 +926,8 @@ export function ViewerPanel({
           centrerar wrappern när max-width är satt; transition håller
           resize-rörelsen smooth.
 
-          ``<StackblitzPreview/>`` laddas via ``next/dynamic`` och RENDERAS
+          ``<StackblitzPreview/>`` laddas via en runtime ``import()`` (loader-
+          effekten ovan) och RENDERAS
           bara här, när ``showStackblitz`` är true (stackblitz/auto efter att
           Steg 1 inte gällt/misslyckats). Det är så ``@stackblitz/sdk`` hålls
           UTANFÖR ViewerPanel:s eager-chunk — en normal vercel-sandbox/

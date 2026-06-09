@@ -28,6 +28,7 @@ import {
 } from "@/components/builder/inspector/run-diff";
 import {
   CompareEmptyHint,
+  ComparePreviewLoadError,
   DiffView,
   VersionsEmptyState,
 } from "@/components/builder/inspector/versions-tab/diff-view";
@@ -216,14 +217,15 @@ export function VersionsTab({
   // Modal-state lever lokalt här eftersom det är en peer-yta till diff-
   // panelen — inte en globalt delad state. (GAP-viewser-side-by-side-preview.)
   const [comparePreviewOpen, setComparePreviewOpen] = useState(false);
-  // Den lazy-laddade jämförelsemodalen. Laddas via en RUNTIME ``import()`` i
-  // ``openComparePreview`` (event-handler) först när operatören öppnar den —
-  // aldrig via top-level ``dynamic()`` (som skulle pre-scripta SDK-chunken i
-  // studio.html). När komponenten väl är satt stannar den monterad så
-  // öppna/stäng-animationen beter sig EXAKT som förr (Base UI behåller popup:en
-  // i DOM under exit-transition så länge den ligger kvar med A+B valda).
+  // Den lazy-laddade jämförelsemodalen. Laddas via en runtime ``import()`` i
+  // ``openComparePreview`` (aldrig top-level ``dynamic()``) först när operatören
+  // öppnar den; stannar sedan monterad så öppna/stäng-animationen är oförändrad.
   const [ComparePreviewModalComp, setComparePreviewModalComp] =
     useState<ComponentType<ComparePreviewModalComponentProps> | null>(null);
+  // Sätts om jämförelsemodalens lazy ``import()`` failar (annars tyst död knapp).
+  const [comparePreviewError, setComparePreviewError] = useState<string | null>(
+    null,
+  );
 
   // Fetch /api/runs vid mount + manuell refresh. Cancel-flagga skyddar
   // mot setState efter unmount (samma mönster som use-run-artefacts).
@@ -462,16 +464,21 @@ export function VersionsTab({
     setComparePreviewOpen(false);
   }, []);
 
-  // Öppna jämförelsemodalen. Laddar dess komponent via en RUNTIME ``import()``
-  // FÖRSTA gången (event-handler, inte top-level dynamic()) så StackBlitz-
-  // grafen hålls utanför studio-sidans eager ``<script>``-graf. ``setState`` i
-  // ``.then``-callbacken (asynkront) → inget react-hooks/set-state-in-effect.
+  // Öppna jämförelsemodalen och ladda dess komponent via en runtime ``import()``
+  // (event-handler, inte top-level dynamic()). Failar importen visas ett fel.
   const openComparePreview = useCallback(() => {
+    setComparePreviewError(null);
     setComparePreviewOpen(true);
     if (ComparePreviewModalComp) return;
-    void COMPARE_PREVIEW_MODAL_IMPORT().then((mod) => {
-      setComparePreviewModalComp(() => mod.ComparePreviewModal);
-    });
+    void COMPARE_PREVIEW_MODAL_IMPORT()
+      .then((mod) => {
+        setComparePreviewModalComp(() => mod.ComparePreviewModal);
+      })
+      .catch(() => {
+        // Importen kan faila (nät/utgången deploy) → kort fel, inte tyst blankt.
+        setComparePreviewOpen(false);
+        setComparePreviewError("Visuell jämförelse kunde inte laddas.");
+      });
   }, [ComparePreviewModalComp]);
 
   // Quick-action: Jämför de två senaste runs för aktuell sajt.
@@ -588,6 +595,10 @@ export function VersionsTab({
         canOpenComparePreview={canOpenComparePreview}
         onOpenComparePreview={openComparePreview}
       />
+
+      {comparePreviewError ? (
+        <ComparePreviewLoadError message={comparePreviewError} />
+      ) : null}
 
       <RunList
         runs={siteRuns}

@@ -2,7 +2,9 @@
 
 `apps/viewser` är en **localhost-only operator-prototype** för Sajtbyggaren. Den
 binder ihop PromptBuilder, `scripts/build_site.py`, run history och preview av
-senaste run via StackBlitz. Den kan deployas som preview/diagnostik-yta, men
+senaste run via en `Preview Runtime` (`local-next` är default, Vercel Sandbox är
+primärt opt-in-val, StackBlitz-vägen pausad — ADR 0033). Den kan deployas som
+preview/diagnostik-yta, men
 prompt-, build- och scrape-actions är lokala verktyg som shellar Python-skript
 och returnerar därför 501 i hosted Vercel-runtime. Inget i denna app är en
 canonical runtime; den är ett dev-verktyg före Sprint 4.
@@ -25,8 +27,8 @@ canonical runtime; den är ett dev-verktyg före Sprint 4.
 
 - Next.js 16 + Tailwind 4 + shadcn/ui (samma som `marketing-base`)
 - Server-side libs: `openai`, `zod`
-- `@stackblitz/sdk` är ett **klient-side** beroende som laddas lazy via
-  dynamisk import (`next/dynamic` + `await import("@stackblitz/sdk")`) i
+- `@stackblitz/sdk` är ett **klient-side** beroende som laddas lazy via en
+  runtime `import()` (`await import("@stackblitz/sdk")`) i
   StackBlitz-preview-vägen — det är ingen server-side adapter. Vägen är
   pausad bakom `vercel-sandbox`/`local-next` (ADR 0033) och dess modulgraf
   hämtas först när preview-läget är `stackblitz`/`auto` (eller jämförelse-

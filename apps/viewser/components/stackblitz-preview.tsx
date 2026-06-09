@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
  * StackblitzPreview — LEGACY / PAUSED WebContainer-preview-väg (ADR 0033).
  *
  * Detta är den ENDA modulen i Viewsers preview-canvas som når
- * ``await import("@stackblitz/sdk")``. Den laddas via ``next/dynamic``
- * (``ssr: false``) från ``ViewerPanel`` och RENDERAS bara när preview-läget
- * är ``stackblitz``/``auto`` (descriptorns ``canFallbackToStackblitz ===
- * true``). Eftersom hela StackBlitz-modulgrafen ligger bakom den dynamiska
- * komponentgränsen ingår den INTE i ViewerPanel:s eager-laddade chunk — en
+ * ``await import("@stackblitz/sdk")``. Den laddas via en runtime ``import()``
+ * (klient-only, ingen SSR) från ``ViewerPanel`` och RENDERAS bara när
+ * preview-läget är ``stackblitz``/``auto`` (descriptorns
+ * ``canFallbackToStackblitz === true``). Eftersom hela StackBlitz-modulgrafen
+ * ligger bakom den lazy komponentgränsen ingår den INTE i ViewerPanel:s
+ * eager-laddade chunk — en
  * normal ``vercel-sandbox``/``local-next``-studioladdning hämtar därför
  * aldrig stackblitz-chunken över nätet (det var bundle-bloat:en före denna
  * split: ``await import`` i ViewerPanel självt prefetchades via sidans

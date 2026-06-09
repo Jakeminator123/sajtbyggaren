@@ -959,6 +959,7 @@ COMMON_WORDS = {
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
+    "ComparePreviewLoadError",  # lokal felkomponent i versions-tab/diff-view.tsx (modal-import-fallback)
     "RunHistorySkeleton",  # lokal Skeleton-komponent i run-history.tsx (Wave 3 Steg 8)
     # Marknadssajt (2026-06-01, scout-marketing-site) — nya lokala UI-/route-
     # symboler i apps/viewser/app/(marketing|console) + components/marketing/*.
