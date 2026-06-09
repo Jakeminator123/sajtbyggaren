@@ -73,10 +73,9 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 
 **Öppna blockers / att-göra:**
 
-- **#225** (testsvit-hygien, draft): rebase PÅGÅR via agent i isolerad worktree (porta
-  c5343c5-låsen till split-strukturen + test-namn-paritet). Mergas efter grönt + granskning.
 - **Manuella klick-checkar kvar:** #228 review-summary (Ändra→steg-hopp) + #240 öppettider-
-  inline i /studio + #245 badge-utseende. Täcks inte av automatiska tester.
+  inline i /studio + #245/#249 modul-dialogen (badges, en-modul-per-bygge, inaktiva sidzoner).
+  Täcks inte av automatiska tester.
 - Följdprompt copy: "ändra X till Y" parafraserar i stället för literal replace; ärlig
   no-op-feedback saknas (UI). Rotorsak i docs/gaps/GAP-followup-prompt-content-passthrough.md.
 - Branch-städning gjord (21 mergade/täckta remote-brancher raderade). Kvar för operatörsbeslut:
@@ -97,18 +96,18 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `16e3ae6` (2026-06-09 sen kväll UTC, `jakob-be` HEAD — kvällens merge-tåg
+Last verified state: `9dce32a` (2026-06-09 sen kväll UTC, `jakob-be` HEAD — kvällens merge-tåg
 #238 (`d7b87a4`), #239 (`924f1d3`), #241 (`8faeb90`), #242 (`b5d6ec2`), #243 (`e63d46d`),
 #244 (`a645699`), #240 (`72f5563`), #245 (`4b85469`), #246 (`647eb9e`), #247 (`c67a7af`),
-#248 (`16e3ae6`) + inbox-svar (`2c59d1a`); `main` = `16278c1`, sync till main väntar
-operatörsbeslut — kvällens delta är STORT, en main-sync bör övervägas snart).
-Post-merge-sanity efter tåget: governance 19/19, rules_sync OK, ruff 0, riktade sviter gröna.
+#248 (`16e3ae6`), #249 (`b03770f`, granskningsrunda 2: modulprompt-format + sidzoner +
+slug-skyddsnät + docs-MCP-not) och #225 (`9dce32a`, testsvit-hygien: test_viewser_files
+splittad i 7 temafiler + storleksvakt, test-namn-paritet 186=186); `main` = `16278c1`,
+sync till main väntar operatörsbeslut — kvällens delta är STORT, en main-sync bör
+övervägas snart). Post-merge-sanity: governance 19/19, rules_sync OK, ruff 0, sviter gröna.
+Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
 
 ## Öppna PR att känna till
 
-- **#225** (`cursor/test-suite-hygiene-foundation-3737 → jakob-be`, draft): testsvit-hygien.
-  Rebase PÅGÅR via agent (konfliktytan = EN commit, c5343c5 StackBlitz-lås → portas till
-  split-strukturen med test-namn-paritet). Mergas efter grönt + granskning.
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
   (publik POST utan auth/rate-limit kan starta sandboxar). Behålls som arkitektur-referens;
   görs om på färsk bas med auth/rate-limit designat från start när runtime-spåret väljs aktivt.
