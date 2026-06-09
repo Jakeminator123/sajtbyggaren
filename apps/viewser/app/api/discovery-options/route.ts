@@ -4,6 +4,10 @@ import path from "node:path";
 
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  HOSTED_LOCAL_ONLY_NOTICE,
+  isHostedVercelRuntime,
+} from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 
 type taxonomyCategory = {
@@ -269,6 +273,14 @@ export async function GET(request: NextRequest) {
       error instanceof Error
         ? error.message
         : "Unknown error while reading discovery options.";
+    // Hosted Vercel reads the taxonomy/scaffold policy files from disk at
+    // runtime. They are bundled via `outputFileTracingIncludes` in
+    // `next.config.ts`, but if a hosted deploy ever fails to resolve them we
+    // degrade honestly (empty options + Swedish notice) instead of a raw 500
+    // that would leave the wizard stuck with no explanation.
+    if (isHostedVercelRuntime()) {
+      return NextResponse.json({ options: [], hostedNotice: HOSTED_LOCAL_ONLY_NOTICE });
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
