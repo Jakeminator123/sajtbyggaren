@@ -6,17 +6,22 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-09)
+## Status nu (2026-06-09, kväll)
 
-**Git:** `main = 16278c1` (PR #212 officiell). `jakob-be = a9504d7`, rent träd,
-**38 commits före main** — sedan föregående checkpoint (`2ffce4a`) har landat på
-`jakob-be`: Lane A docs-honesty-cleanup (merge `76b5ae4`), Cursor-regel-
-konsolidering 29→12 via #218 (`4139285` + merge `11b4f19`), OpenClaw
-F1-readiness-plan (plan-only, gated; `6e08ce9` + merge `0c89942`), Glue 1 —
-färsk build persisterar hittbar Project Input — via #219 (`892ef8e` + merge
-`2ad3655`) och docs-steward-städning (handoff-slim + current-focus-refresh) via
-#220 (merge `a9504d7`). Sync `jakob-be → main` väntar **operatörsbeslut** — pusha
-aldrig main per slice.
+**Git:** `main = 16278c1` (PR #212, oförändrad). `jakob-be = 4144ecf`, rent träd,
+**87 commits före main**. Idag landade på `jakob-be` (merge-tåg, ett i taget, alla guards gröna):
+
+- **#235** `fix(builder)`: hissa Google Fonts `@import` överst i genererad `globals.css`.
+- **#237** `fix(builder)`: gör `build_site.py` auto-prune **opt-in** (`--allow-prune`). En
+  manuell/smoke `--dossier`-build raderar inte längre `data/prompt-inputs/`-sidecars,
+  `data/runs/` eller `.generated/` när `SAJTBYGGAREN_MAX_*`-caps är satta i `.env`. Viewser
+  opt:ar in explicit (`build-runner.ts`), så produktflödets retention är oförändrad.
+- **#236** `refactor(builder)`: brief-generering → `packages/generation/brief/site_brief.py`
+  (megafil-slice 4; `build_site_brief` inte längre inline; painter-palma-paritet höll).
+- **#229** `docs`: Cloud Agent preview-mode-not (retargetad `main → jakob-be`, docs-only).
+- **#228** `feat(viewser)`: lätt review-summary på sista wizard-steget + UI-honesty-slices.
+
+Sync `jakob-be → main` väntar **operatörsbeslut** — pusha aldrig main per slice.
 
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
 befintliga in-repo-motorn — inte en ny parallell motor, inte extern Docker/
@@ -27,30 +32,36 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 [`docs/heavy-llm-flow/openclaw-2.0-conductor.md`](heavy-llm-flow/openclaw-2.0-conductor.md).
 `sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` = strikt read-only (AGENTS.md).
 
-**Nästa 3 prioriteringar:** (Glue 1-gaten är nu grön via #219 — se nedan.)
+**Live-loop-bevis (2026-06-09): GRÖNT.** Manuell /studio-körning på `bil-ab-17331b`:
+följdprompt "gör sajten grönvit" → ny version (v6→v9), bygge + alla quality gates ok, och
+preview-iframen renderade automatiskt nya versionen utan krasch (local-next). Data-/
+versionslagret grönt (`themeApplied: true`, stabilt `projectId`). **Caveat:** färgskiftet
+syntes knappt — sajten var redan grön (lågkontrast-testfall, ingen loop-bugg). Verifiera
+tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fasen.
 
-1. **Synlig render av `section_add`** + sida/position-placering — gör mount-only
-   (`applied=true` men `appliedVisibleEffect=false`) till faktiskt synligt i
-   preview. Största produkthävstången nu.
-2. Följdprompt copy-fix: "ändra denna text X till Y" ska göra literal replace via
-   `packages/generation/followup/copy_directives.py` (inte parafrasera/regenerera)
-   och ge ärlig no-op när inget kunde appliceras. Egen lane — delad bygg-write-set,
-   kör ej parallellt med prio 1.
-3. **OpenClaw F1 — registry-runtime:** gör `docs/openclaw-workspace/action-registry.json`
-   körbar (kod läser registret och väljer roll), inte bara dokumentation.
-   Readiness-planen finns i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
-   (plan-only). *Gås igenom med operatören innan kod skrivs.*
+**Nästa prioriteringar:**
 
-**Öppna blockers:**
+1. **Slice 5 — render helpers → `packages/generation/build/render_helpers.py`** (sista
+   megafil-slicen på planen; prompten är skriven + verifierad och nu avblockad efter #236).
+   19 funktioner + 11 konstanter, beteendebevarande, draft-PR mot `jakob-be`. Branca av
+   **senaste** `jakob-be` (`4144ecf`), lokalisera symboler via namn (inte radnummer).
+2. **Evals / golden path + manuell score** — nu när loopen är grön: kör
+   `scripts/run_golden_path_eval.py --mode deterministic` + `scripts/run_eval_suite.py quick`,
+   sätt manuell 1–10 i Backoffice. Inkludera kontrastfärg-testet ovan.
+3. **Synlig render av `section_add`** + sida/position — fortfarande mount-only
+   (`applied=true`, `appliedVisibleEffect=false`). Störst produkthävstång efter slicen.
+   (Följdprompt copy literal-replace + OpenClaw F1 registry-runtime står kvar därefter.)
 
-- Glue 1 — **stängd via #219**: en färsk build persisterar nu en hittbar Project
-  Input på disk (CLI/exempel-vägen; prompt-vägen skrev redan sidecaren). Inte
-  längre en gate för synlig `section_add`.
-- `section_add` är mount-only för alla nio sanktionerade typer; synlig render +
-  exakt placering återstår (Sprint-3B-spåret).
-- Följdprompt copy: "ändra denna text X till Y" parafraserar/regenererar i stället
-  för literal replace, och ärlig no-op-feedback saknas (UI). Rotorsak i
-  docs/gaps/GAP-followup-prompt-content-passthrough.md.
+**Öppna blockers / att-göra:**
+
+- **#225** (`cursor/test-suite-hygiene-foundation-3737 → jakob-be`, draft): testsvit-hygien.
+  i konflikt mot nya `jakob-be` efter #236 — behöver **rebase av författaren** mot
+  `4144ecf` (konflikt i `test_viewser_files`/storleksvakt). Inte mergad, inte vår att tvinga.
+- **Manuell review-summary wizard-check (#228):** klick-checken på Bilder-steget (hoppa steg,
+  kontakt/about-popup) täcks INTE av automatiska tester — separat manuell 5/5-verifiering kvar.
+- `section_add` mount-only för alla nio typer; synlig render + placering återstår.
+- Följdprompt copy: "ändra X till Y" parafraserar i stället för literal replace; ärlig
+  no-op-feedback saknas (UI). Rotorsak i docs/gaps/GAP-followup-prompt-content-passthrough.md.
 
 **Cloud-lanes (status):**
 
@@ -65,18 +76,19 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `a9504d7` (2026-06-09 UTC, `jakob-be` HEAD — efter #218 (`11b4f19`), OpenClaw F1-readiness-plan (`0c89942`), Glue 1 via #219 (`2ad3655`) och docs-steward-städning via #220 (`a9504d7`); `main` = `16278c1` via PR #212, sync till main väntar operatörsbeslut).
-Nya PRs sedan föregående checkpoint: PR #218 (Cursor-regler 29→12), PR #219 (Glue 1 — färsk build persisterar Project Input) och PR #220 (docs-steward: handoff-slim + current-focus-refresh). Alla mergade på `jakob-be`, ej `main`.
+Last verified state: `4144ecf` (2026-06-09 UTC, `jakob-be` HEAD — efter dagens merge-tåg #235 (`b584638`), #237 prune-fix (`13bf768`), #236 brief-slice4 (`3aefa0d`), #229 docs (`a74ad24`) och #228 review-summary (`4144ecf`); `main` = `16278c1`, sync till main väntar operatörsbeslut).
+Nya PRs sedan föregående checkpoint: #235, #237, #236, #229, #228 — alla mergade på `jakob-be`, ej `main`. Live-loop-beviset kördes grönt (se ovan).
 
 ## Öppna PR att känna till
 
-- **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga
-  säkerhet** — live-lane, INTE vår att merga/fixa.
-- **#216** (`cursor/floating-chat-split-61b7 → christopher`): FloatingChat-split i
-  Christophers lane — numera stängd (spliten är inne på `jakob-be` via #217).
+- **#225** (`cursor/test-suite-hygiene-foundation-3737 → jakob-be`, draft): testsvit-hygien.
+  i konflikt efter #236 — väntar på författar-rebase mot `4144ecf`. Inte vår att tvinga.
+- **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
+  (publik POST utan auth/rate-limit kan starta sandboxar) — INTE vår att merga/fixa.
 
-Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst
-legacy med parkerad auth/billing).
+Slice 5-prompten (render helpers) är skriven och avblockad men **ännu inte PR:ad**; körs via
+cloud-agent (måste re-synca till `4144ecf` först — dess snapshot är ~70 commits gammal) eller
+lokalt. Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
 ## Vem uppdaterar denna fil
 
