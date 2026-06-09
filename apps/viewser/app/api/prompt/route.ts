@@ -6,6 +6,7 @@ import {
   hostedPythonRuntimeUnavailable,
   isHostedVercelRuntime,
 } from "@/lib/hosted-python-runtime";
+import { stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { runOpenClawFollowupApply } from "@/lib/openclaw-runner";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
@@ -193,6 +194,22 @@ async function runPromptBuildOnce(
       // its run as the authoritative build so the EXISTING client flow (pick
       // runId -> refresh preview via onBuildDone) works unchanged — no legacy
       // build runs (the chain already built the targeted version).
+      //
+      // B163: the legacy path stops the local preview inside runBuild (see
+      // build-runner.ts) so the NEXT preview start picks up the freshly
+      // published current.json. This early-return path skipped that stop, and
+      // startPreviewServer is idempotent (reuses a live `next start` whose cwd
+      // is the OLD build dir) — so the iframe kept serving the previous
+      // version after a successful OpenClaw apply. Stop the preview here too;
+      // idempotent no-op when none is running, and never fails the response.
+      // (vercel-sandbox previews restart per request and are unaffected.)
+      if (payload.siteId) {
+        try {
+          await stopAndWaitPreviewServer(payload.siteId);
+        } catch {
+          // Preview-stop must never break a successful apply response.
+        }
+      }
       let bridgeBuildResult: Record<string, unknown> = {};
       try {
         bridgeBuildResult = await readBuildResult(chainRunId);

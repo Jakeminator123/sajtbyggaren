@@ -300,6 +300,39 @@ def test_auto_prune_all_refuses_when_port_3000_listening(
             conn.close()
 
 
+def test_auto_prune_all_refuses_when_preview_port_listening(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """B167: en local-next-preview på 41xx (Viewser på 3000 stängd) blockerar.
+
+    Guarden kollade tidigare bara port 3000 — en ``next start``-preview
+    spawnad av local-preview-server.ts (4100-4199) höll en build-katalog
+    under .generated/ öppen utan att skyddas. Monkeypatchar portproben i
+    stället för att binda en riktig socket så testet är deterministiskt.
+    """
+    from packages.generation.maintenance import auto_prune as auto_prune_module
+
+    monkeypatch.setenv(MAX_RUNS_ENV_VAR, "1")
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    for index in range(3):
+        (runs / f"r{index}").mkdir()
+
+    def fake_port_in_use(port: int = 3000, host: str = "127.0.0.1") -> bool:
+        return port == 4105
+
+    monkeypatch.setattr(auto_prune_module, "_is_port_in_use", fake_port_in_use)
+
+    report = auto_prune_all(
+        runs_dir=runs,
+        prompt_inputs_dir=tmp_path / "pi",
+        verbose=False,
+    )
+    assert report.skipped_due_to_dev_server is True
+    assert report.runs_removed == []
+    assert all((runs / f"r{i}").is_dir() for i in range(3))
+
+
 def test_build_site_skips_auto_prune_when_runs_dir_overridden() -> None:
     """tmp_path-based smoke-tests must not trigger production auto-prune.
 

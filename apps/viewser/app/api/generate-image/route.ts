@@ -7,6 +7,7 @@ import type {
   AssetRole,
 } from "@/lib/asset-store/types";
 import { assertLocalhost } from "@/lib/localhost-guard";
+import { openaiEnv } from "@/lib/openai";
 
 /**
  * POST /api/generate-image — generera en bild med OpenAI GPT Image 1.5
@@ -285,16 +286,20 @@ function buildFullPrompt(req: GenerateRequest): string {
  * frontend kan visa dem direkt utan att läcka API-detaljer.
  */
 async function callOpenAIImageAPI(req: GenerateRequest): Promise<Buffer> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey || !apiKey.trim()) {
+  // B168: gå via openaiEnv (process.env -> repo-rotens .env) precis som
+  // chatten i lib/openai.ts. Tidigare lästes bara process.env här, så AI-
+  // bilder gav "nyckel saknas" i den dokumenterade single-source-setupen
+  // (nyckel i rot-.env, tom rad i apps/viewser/.env.local).
+  const apiKey = openaiEnv("OPENAI_API_KEY");
+  if (!apiKey) {
     throw new Error(
-      "OPENAI_API_KEY saknas i env. Sätt den i apps/viewser/.env.local " +
-        "(samma värde som scripts/build_site.py använder).",
+      "OPENAI_API_KEY saknas i env. Sätt den i repo-rotens .env (single " +
+        "source) eller i apps/viewser/.env.local.",
     );
   }
 
-  const model = (process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1.5").trim();
-  const quality = (process.env.OPENAI_IMAGE_QUALITY ?? "medium").trim();
+  const model = (openaiEnv("OPENAI_IMAGE_MODEL") ?? "gpt-image-1.5").trim();
+  const quality = (openaiEnv("OPENAI_IMAGE_QUALITY") ?? "medium").trim();
   const config = ROLE_CONFIG[req.role];
 
   const payload: Record<string, unknown> = {

@@ -137,12 +137,15 @@ function parseVisionJson(raw: string, role: AssetRole): VisionResult {
 }
 
 let visionClient: OpenAI | null = null;
+let visionClientKey: string | null = null;
 
 function getClient(): OpenAI | null {
   const apiKey = openaiEnv("OPENAI_API_KEY");
   if (!apiKey) return null;
-  if (!visionClient) {
+  // B171: återskapa klienten om nyckeln bytts (speglar lib/openai.ts).
+  if (!visionClient || visionClientKey !== apiKey) {
     visionClient = new OpenAI({ apiKey });
+    visionClientKey = apiKey;
   }
   return visionClient;
 }

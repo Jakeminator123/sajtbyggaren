@@ -256,9 +256,22 @@ def fetch_html(url: str) -> tuple[str, str | None]:
         return "", f"Encoding-fel: {exc}"
 
 
+def _comparable_host(host: str) -> str:
+    """Host för intern/extern-jämförelse: gemener + utan ``www.``-prefix.
+
+    B165: operatörer anger ofta apex-domänen (``example.com``) medan sajten
+    redirectar till ``www.example.com`` och länkar internt med www-prefix.
+    ``fetch_html`` följer redirecten för HTML:en men ``collect_links``
+    jämförde host strikt mot ursprungs-URL:en — alla www-länkar
+    filtrerades bort som externa och bara startsidan crawlades.
+    """
+    host = host.lower()
+    return host[4:] if host.startswith("www.") else host
+
+
 def collect_links(soup: BeautifulSoup, base_url: str) -> list[str]:
     """Returnera unika, internt-prioriterade länkar från startsidan."""
-    base_host = urlparse(base_url).hostname or ""
+    base_host = _comparable_host(urlparse(base_url).hostname or "")
     scored: list[tuple[int, str]] = []
     seen: set[str] = set()
     for anchor in soup.find_all("a", href=True):
@@ -269,8 +282,8 @@ def collect_links(soup: BeautifulSoup, base_url: str) -> list[str]:
         absolute = absolute.split("#")[0].rstrip("/")
         if not absolute or absolute in seen:
             continue
-        # Bara interna länkar (samma host).
-        link_host = urlparse(absolute).hostname or ""
+        # Bara interna länkar (samma host; apex och www räknas som samma sajt).
+        link_host = _comparable_host(urlparse(absolute).hostname or "")
         if link_host and link_host != base_host:
             continue
         seen.add(absolute)

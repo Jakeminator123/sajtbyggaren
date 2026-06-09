@@ -6,7 +6,9 @@ import { readRepoEnvVar } from "./generated-dir";
 // settings, so the API key only has to live in ONE file. process.env still
 // wins (shell / Cloud / dev.mjs pass-through / apps/viewser/.env.local), so
 // this only kicks in when the key/model is absent from the Viewser env.
-function openaiEnv(name: string): string | undefined {
+// Exported (B168) so other API routes (generate-image) share the exact same
+// resolution order instead of reading bare process.env and missing the root.
+export function openaiEnv(name: string): string | undefined {
   const fromProcess = process.env[name]?.trim();
   if (fromProcess) return fromProcess;
   return readRepoEnvVar(name)?.trim() || undefined;
@@ -27,13 +29,17 @@ export type UsageSummary = {
 };
 
 const DEFAULT_MODEL = openaiEnv("OPENAI_MODEL") ?? "gpt-4o";
-const INPUT_USD_PER_1K = Number(process.env.OPENAI_INPUT_USD_PER_1K ?? "0");
-const OUTPUT_USD_PER_1K = Number(process.env.OPENAI_OUTPUT_USD_PER_1K ?? "0");
+// B170: USD-priserna gick tidigare bara via process.env, till skillnad från
+// nyckel/modell ovan — Token Meter visade $0 när priserna bara stod i rotens
+// .env. Samma openaiEnv-fallback som övriga OpenAI-inställningar.
+const INPUT_USD_PER_1K = Number(openaiEnv("OPENAI_INPUT_USD_PER_1K") ?? "0");
+const OUTPUT_USD_PER_1K = Number(openaiEnv("OPENAI_OUTPUT_USD_PER_1K") ?? "0");
 const DEFAULT_MAX_OUTPUT_TOKENS = 1500;
 const MAX_INPUT_CHARS_PER_MESSAGE = 8000;
 const MAX_MESSAGES_PER_REQUEST = 40;
 
 let openaiClient: OpenAI | null = null;
+let openaiClientKey: string | null = null;
 
 function getClient(): OpenAI {
   const apiKey = openaiEnv("OPENAI_API_KEY");
@@ -43,8 +49,11 @@ function getClient(): OpenAI {
         "source) eller i apps/viewser/.env.local.",
     );
   }
-  if (!openaiClient) {
+  // B171: återskapa klienten om nyckeln bytts under en långkörande dev-
+  // session — den gamla cachen gav 401 tills next dev startades om.
+  if (!openaiClient || openaiClientKey !== apiKey) {
     openaiClient = new OpenAI({ apiKey });
+    openaiClientKey = apiKey;
   }
   return openaiClient;
 }
