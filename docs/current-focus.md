@@ -6,13 +6,14 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-08)
+## Status nu (2026-06-09)
 
-**Git:** `main = 16278c1` (PR #212 officiell — hero-fix, Bite C, `section_add`-
-breddning, governance/cleanup). `jakob-be = e03e1d1`, rent träd, **7 commits
-före main** (runda-2-batch: FloatingChat-honesty, dev.mjs-fix, lane-grant,
-AddModuleDialog-fix, docs-städning). Sync `jakob-be → main` väntar
-**operatörsbeslut** — pusha aldrig main per slice.
+**Git:** `main = 16278c1` (PR #212 officiell). `jakob-be = 2ffce4a`, rent träd,
+**14 commits före main** — inne sedan #212: OpenClaw-docs-mirror-script
+(`942f41b`), #214 (governance preview/capability-nyanser), #213 (AGENTS
+`VIEWSER_PREVIEW_MODE`-not), #215 (megafil-refaktorplan, docs-only), Bite
+C-formuleringsfix (`36e8cdb`), #217 (FloatingChat-split på jakob-be). Sync
+`jakob-be → main` väntar **operatörsbeslut** — pusha aldrig main per slice.
 
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
 befintliga in-repo-motorn — inte en ny parallell motor, inte extern Docker/
@@ -42,29 +43,28 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 - `section_add` är mount-only för alla nio sanktionerade typer; synlig render +
   exakt placering återstår (Sprint-3B-spåret).
 
-**Parallella lanes (FÖRBEREDDA, ej startade):** prompt-filer ligger i
-[`docs/agent-prompts/cloud-grind/`](agent-prompts/cloud-grind/). Hårda,
-disjunkta write-set:
+**Cloud-lanes (status):**
 
-| Lane | Roll | Branch | Write-set | Off-limits |
-| --- | --- | --- | --- | --- |
-| A — docs-honesty-rest | Steward | `jakob-be` | SOUL/TOOLS fas-nyans, status-ord, docs-checker | runtime-kod |
-| B — FloatingChat-split | Builder | `christopher` | `apps/viewser/components/builder/floating-chat.tsx` + nya syskonfiler | `/api/prompt`, Python, kontrakt |
-| C — backend-refaktorplan | Scout/Steward | `jakob-be` | en ny `docs/`-planfil | all kod |
+| Lane | Vad | Status |
+| --- | --- | --- |
+| A — docs-honesty-cleanup | architecture/glossary-honesty + arkivflytt + frontmatter + checker | klar på `cursor/lane-a-docs-cleanup`, väntar PR/review mot `jakob-be` |
+| B — FloatingChat-split | split `floating-chat.tsx` → syskonmoduler (behavior-preserving) | **inne** på `jakob-be` via #217 (`2ffce4a`); #216 mot `christopher` redundant |
+| C — backend-refaktorplan | megafil-refaktorplan (docs-only) | **inne** via #215 (`2dadf09`) — ingen refaktor körd, gated |
 
-**Lane B-not:** refaktor (inte buggfix) i Christophers UI-lane → behavior-
-preserving + per-ändrings-OK (det stående grant:et täcker bara buggfixar).
+**OpenClaw F1-readiness (separat lokal lane):** plan/scout-only worktree-prompt
+klar att köra i Agent-läge → producerar `docs/heavy-llm-flow/openclaw-f1-readiness.md`
+(ingen runtime-kod; gated på synlig section_add + Lane A + refaktor-beslut).
 
-Last verified state: `e03e1d1` (2026-06-08 UTC, `jakob-be` HEAD — manuell focus-refresh + slimning per current-focus-hygiene; `main` = `b49d1f7`/`16278c1` via PR #212, runda-2-sync väntar operatörsbeslut).
-Nya PRs sedan föregående checkpoint: ingen ny merge till `main` sedan PR #212 (sync(jakob-be->main): hero-fix + Bite C + section_add broadening + governance/cleanup batch).
+Last verified state: `2ffce4a` (2026-06-09 UTC, `jakob-be` HEAD — efter #214/#213/#215/#217 + OpenClaw-mirror + Bite C-formuleringsfix; `main` = `16278c1` via PR #212, sync till main väntar operatörsbeslut).
+Nya PRs sedan föregående checkpoint: PR #214 (governance preview/capability-nyanser); PR #213 (AGENTS VIEWSER_PREVIEW_MODE-not); PR #215 (megafil-refaktorplan, docs-only); PR #217 (FloatingChat-split på jakob-be). Alla mergade till `jakob-be`, ej till `main`.
 
 ## Öppna PR att känna till
 
-- **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop (prompt →
-  sandbox → preview). **Parkerad pga säkerhet** — live-lane, INTE vår att
-  merga/fixa.
-- **#213** (`cursor/dev-env-setup-a8bd`): docs — Cloud Agent
-  `VIEWSER_PREVIEW_MODE`-override-not. Liten docs-PR; granska/merga vid tillfälle.
+- **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga
+  säkerhet** — live-lane, INTE vår att merga/fixa.
+- **#216** (`cursor/floating-chat-split-61b7 → christopher`): FloatingChat-split i
+  Christophers lane. **Redundant** — spliten är redan inne på `jakob-be` via #217;
+  rekommendera Christopher att stänga #216 (eller rebasa bort split-commiten).
 
 Ingen öppen backend/heavy-LLM-PR mot `jakob-be`. Christophers UI-arbete sker på
 `christopher` (gamla `christopher-ui` är fryst legacy med parkerad auth/billing).
