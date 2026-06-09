@@ -2166,7 +2166,7 @@ def build(
     do_build: bool = True,
     runs_dir: Path | None = None,
     generated_dir: str | Path | None = None,
-    auto_prune: bool = True,
+    auto_prune: bool = False,
     prompt_inputs_dir: Path | None = None,
 ) -> tuple[Path, Path]:
     """Generate a site and Engine Run artefakts. Returns (target, run_dir).
@@ -2178,16 +2178,16 @@ def build(
     ``packages.generation.maintenance.auto_prune_all`` before Phase 0 so
     ``data/runs/``, ``data/prompt-inputs/`` and ``.generated/`` stay under
     the caps configured in ``.env``. Disabled automatically when ``runs_dir``
-    is overridden (tests with ``tmp_path``). The ``build_site.py`` CLI now
-    leaves this OFF unless ``--allow-prune`` is passed, so a manual or smoke
-    ``--dossier`` build can NEVER silently delete existing prompt-input
-    sidecars / runs / previews just because ``SAJTBYGGAREN_MAX_*`` caps are
-    set (the data-loss trap a smoke build would otherwise hit when there are
-    more sites on disk than the cap). The Viewser product flow opts in
-    explicitly via ``--allow-prune`` (apps/viewser/lib/build-runner.ts), and
-    the prompt-driven create path keeps its own sweep in
-    ``scripts/prompt_to_project_input.py``, so retention behaviour there is
-    unchanged.
+    is overridden (tests with ``tmp_path``). Default is ``False`` — pruning is
+    OPT-IN at every entry point (external review follow-up to PR #237: the CLI
+    flip alone left the Python API and the ``--followup``/OpenClaw chain
+    inheriting ``True`` against canonical dirs, so a direct ``build()`` call or
+    a follow-up build could still silently delete existing prompt-input
+    sidecars / runs / previews when ``SAJTBYGGAREN_MAX_*`` caps are set). The
+    Viewser product flow opts in explicitly via ``--allow-prune``
+    (apps/viewser/lib/build-runner.ts), and the prompt-driven create path keeps
+    its own sweep in ``scripts/prompt_to_project_input.py``, so product
+    retention behaviour is unchanged.
 
     ``prompt_inputs_dir`` (Glue 1): where to persist a discoverable Project
     Input sidecar for a fresh init build that did not come through
@@ -2843,6 +2843,7 @@ def build_targeted_version(
     generated_dir: str | Path | None = None,
     require_internal_chain: bool = True,
     build_fn: Any = build,
+    auto_prune: bool = False,
 ) -> Any:
     """KÖR-7d: targeted render + version-build for a kor-7c-applied version.
 
@@ -3016,6 +3017,7 @@ def build_targeted_version(
             do_build=do_build,
             runs_dir=runs_dir,
             generated_dir=generated_dir,
+            auto_prune=auto_prune,
         )
     except SystemExit:
         failed_run = _find_new_run_dir(runs_root, runs_before)
@@ -3142,6 +3144,7 @@ def run_followup_chain(
     runs_dir: Path | None = None,
     generated_dir: str | Path | None = None,
     output_dir: Path | None = None,
+    auto_prune: bool = False,
 ) -> dict[str, Any]:
     """KÖR-7 follow-up bridge as a real user path (CLI E2E wiring).
 
@@ -3406,6 +3409,7 @@ def run_followup_chain(
         do_build=do_build,
         runs_dir=runs_dir,
         generated_dir=generated_dir,
+        auto_prune=auto_prune,
     )
 
     return _result(
@@ -3518,6 +3522,9 @@ def main() -> int:
             do_build=not args.skip_build,
             runs_dir=runs_dir,
             generated_dir=args.generated_dir,
+            # Same opt-in contract as the --dossier path: a manual --followup
+            # build must never prune canonical history unless asked to.
+            auto_prune=args.allow_prune,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
