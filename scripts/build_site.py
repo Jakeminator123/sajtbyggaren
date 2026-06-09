@@ -37,6 +37,7 @@ LLM status (as of Sprint 2B):
 from __future__ import annotations
 
 import argparse
+import copy
 import importlib
 import io
 import json
@@ -511,6 +512,104 @@ def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
     key = "followUpPrompt" if mode == "followup" else "originalPrompt"
     value = prompt_meta.get(key)
     return value if isinstance(value, str) else None
+
+
+def _persist_init_project_input_sidecar(
+    dossier: dict[str, Any],
+    prompt_meta: dict[str, Any] | None,
+    prompt_inputs_dir: Path,
+) -> dict[str, Any] | None:
+    """Glue 1 (core loop): persist a discoverable Project Input sidecar for a
+    fresh init build, so the next follow-up prompt can find it on disk.
+
+    A follow-up resolves the Project Input from
+    ``data/prompt-inputs/<siteId>.{project-input,meta}.json`` (``read_existing_meta``
+    / ``read_base_run_snapshot`` in ``scripts/prompt_to_project_input.py``). A build
+    driven straight from a curated example or any ad-hoc dossier path - the builder
+    MVP path (``build_site.py --dossier examples/<slug>.project-input.json``) - never
+    went through ``prompt_to_project_input.generate``, so no sidecar exists and the
+    very next follow-up dies with "Follow-up meta sidecar saknas": the core loop
+    (create -> preview -> follow-up) breaks on a freshly built site. The Viewser
+    prompt path already writes the sidecar via ``generate`` before ``build`` runs, so
+    that path is unaffected.
+
+    This writes the v1 sidecar (immutable ``<siteId>.v1.*`` snapshots + the current
+    pointers) the first time such a site is built, reusing the SAME
+    ``write_project_input`` spine ``generate`` uses - no new format. Strictly additive
+    and idempotent:
+
+    - A build already backed by a sidecar (the prompt path / every follow-up
+      version) carries ``projectId`` on ``prompt_meta`` and is left untouched.
+    - A site whose sidecar already exists on disk is left untouched (never clobbers
+      existing version truth).
+
+    Returns the enriched init ``prompt_meta`` (``projectId`` + ``version=1``) so the
+    run's ``input.json`` / ``build-result.json`` record the same identity the sidecar
+    pins - exactly like a prompt-driven init build - keeping the run consistent with
+    the persisted v1 snapshot for ``read_base_run_snapshot``. Returns ``None`` when
+    nothing was persisted (the caller keeps the original ``prompt_meta``).
+
+    Honest degrade: any failure (e.g. a dossier that does not validate against
+    project-input.schema.json) is logged and skipped, never crashing a build that
+    succeeds today.
+    """
+    # Already backed by a prompt-inputs sidecar (prompt path / follow-up version).
+    if _prompt_meta_project_id(prompt_meta) is not None:
+        return None
+    site_id = dossier.get("siteId")
+    if not isinstance(site_id, str) or not site_id:
+        return None
+    try:
+        from scripts.prompt_to_project_input import (
+            _build_project_dna_snapshot,
+            _current_meta_path,
+            _validate_against_schema,
+            write_project_input,
+        )
+
+        # Never clobber an existing version pointer (idempotent re-build).
+        if _current_meta_path(prompt_inputs_dir, site_id).exists():
+            return None
+
+        project_input = copy.deepcopy(dossier)
+        _validate_against_schema(project_input)
+        now = datetime.now(UTC).isoformat(timespec="seconds")
+        meta: dict[str, Any] = {
+            "projectId": uuid.uuid4().hex,
+            "version": 1,
+            "mode": "init",
+            "siteId": site_id,
+            "scaffoldId": project_input["scaffoldId"],
+            "variantId": project_input["variantId"],
+            "createdAt": now,
+        }
+        meta["projectDna"] = _build_project_dna_snapshot(
+            project_input,
+            previous_project_input=None,
+            previous_project_dna=None,
+            version=1,
+            mode="init",
+            follow_up_prompt=None,
+        )
+        _project_input_path, meta_path = write_project_input(
+            project_input, meta, output_dir=prompt_inputs_dir
+        )
+    except Exception as exc:  # noqa: BLE001
+        print(
+            "Glue 1: kunde inte persistera Project Input-sidecar för "
+            f"{dossier.get('siteId')!r}: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return None
+
+    return {
+        "mode": "init",
+        "projectId": meta["projectId"],
+        "version": 1,
+        "scaffoldId": meta["scaffoldId"],
+        "variantId": meta["variantId"],
+        "metaPath": _to_repo_relative(meta_path),
+    }
 
 
 _PLACEHOLDER_CONTACT_VALID_FIELDS = (
@@ -3996,6 +4095,7 @@ def build(
     runs_dir: Path | None = None,
     generated_dir: str | Path | None = None,
     auto_prune: bool = True,
+    prompt_inputs_dir: Path | None = None,
 ) -> tuple[Path, Path]:
     """Generate a site and Engine Run artefakts. Returns (target, run_dir).
 
@@ -4007,6 +4107,14 @@ def build(
     ``data/runs/``, ``data/prompt-inputs/`` and ``.generated/`` stay under
     the caps configured in ``.env``. Disabled automatically when ``runs_dir``
     is overridden (tests with ``tmp_path``).
+
+    ``prompt_inputs_dir`` (Glue 1): where to persist a discoverable Project
+    Input sidecar for a fresh init build that did not come through
+    ``prompt_to_project_input.generate`` (see
+    ``_persist_init_project_input_sidecar``). A canonical build (``runs_dir``
+    unset) persists to ``data/prompt-inputs/``; an isolated build (``runs_dir``
+    overridden, e.g. tests/evals) only persists when this is given explicitly,
+    so the canonical history stays clean.
     """
     started = time.monotonic()
 
@@ -4020,6 +4128,25 @@ def build(
     scaffold_id = dossier["scaffoldId"]
     variant_id = dossier["variantId"]
     prompt_meta = load_prompt_input_meta(dossier_path, dossier)
+
+    # Glue 1 (core loop): make sure a fresh init build leaves a discoverable
+    # Project Input sidecar so the next follow-up can find it on disk. Canonical
+    # builds (runs_dir unset) persist to data/prompt-inputs/; an isolated build
+    # only persists when an explicit prompt_inputs_dir is given, so tests/evals
+    # never write to the canonical history. A build already backed by a sidecar
+    # (the Viewser prompt path / any follow-up version) is left untouched.
+    if prompt_inputs_dir is not None:
+        persist_dir: Path | None = prompt_inputs_dir
+    elif runs_dir is None:
+        persist_dir = PROMPT_INPUTS_DIR
+    else:
+        persist_dir = None
+    if persist_dir is not None:
+        enriched_prompt_meta = _persist_init_project_input_sidecar(
+            dossier, prompt_meta, persist_dir
+        )
+        if enriched_prompt_meta is not None:
+            prompt_meta = enriched_prompt_meta
 
     scaffold_dir = SCAFFOLDS_DIR / scaffold_id
     scaffold = load_json(scaffold_dir / "scaffold.json")
