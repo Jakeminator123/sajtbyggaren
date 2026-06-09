@@ -155,6 +155,13 @@ Commands are documented in the README under "Snabbstart". Key commands:
   `tests/test_cleanup_dev_artifacts.py::test_default_evals_dir_is_inside_data_evals_artifacts_mini`
   asserts the repo-default evals path — unset `SAJTBYGGAREN_EVALS_DIR` (or
   point it at `data/evals/artifacts/mini`) for a fully green full suite.
+- Cloud Agent injected secrets can set `VIEWSER_PREVIEW_MODE` to the Vercel
+  sandbox value, which overrides `apps/viewser/.env.local` (`process.env`
+  wins over dotenv). For local preview without Vercel OIDC, start Viewser
+  with an explicit override:
+  `VIEWSER_PREVIEW_MODE=local-next npm run dev` (tmux session `viewser-dev`).
+  Otherwise `POST /api/preview/<siteId>` returns `vercel_auth` even though
+  `.env.local` says `local-next`.
 - Long-running dev servers (Next.js preview, Streamlit backoffice) should run
   under tmux on Cloud Agent VMs (portal config under
   `/exec-daemon/tmux.portal.conf`).

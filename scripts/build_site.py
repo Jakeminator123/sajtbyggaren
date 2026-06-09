@@ -226,6 +226,24 @@ _has_copy_directives = _prompt_meta_exports._has_copy_directives
 _placeholder_contact_warning_message = _prompt_meta_exports._placeholder_contact_warning_message
 _prompt_meta_wizard_must_have = _prompt_meta_exports._prompt_meta_wizard_must_have
 
+# Brief generation (slice 4, behavior-preserving extraction per
+# docs/refactor/megafiles-plan.md Del 2): the Phase-1 brief builders now live in
+# ``packages.generation.brief.site_brief`` (beside extract.py/models.py). They
+# are re-exported here via eager attribute binds (same pattern as the tokens/
+# assets/prompt-meta blocks above) so every existing spelling keeps resolving:
+# ``build()`` calls ``build_site_brief`` as a bare name, and tests do
+# ``from scripts.build_site import build_site_brief_mock`` /
+# ``project_input_to_brief_prompt`` / ``resolve_brief_model``. ``utc_now`` stays
+# in this module (the io-helpers slice has not landed yet) and is bridged via a
+# lazy ``from scripts.build_site import utc_now`` inside
+# ``build_site_brief_mock``'s body. The new module is imported directly as a
+# submodule (NOT via brief/__init__) to keep the import graph cycle-free.
+_brief_site_exports = importlib.import_module("packages.generation.brief.site_brief")
+build_site_brief = _brief_site_exports.build_site_brief
+build_site_brief_mock = _brief_site_exports.build_site_brief_mock
+resolve_brief_model = _brief_site_exports.resolve_brief_model
+project_input_to_brief_prompt = _brief_site_exports.project_input_to_brief_prompt
+
 
 def __getattr__(name: str) -> Any:
     """Lazy re-export from the build subpackage modules.
@@ -979,16 +997,51 @@ def patch_globals_css(
         token_overrides,
         typography_overlay=typography_overlay,
     )
+    font_marker = "/* sajtbyggaren-font-import:start */"
+    font_end = "/* sajtbyggaren-font-import:end */"
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
-    if marker in original:
-        before, _, rest = original.partition(marker)
+
+    # Strip any previously emitted regions so re-patching (follow-up
+    # rebuilds) stays idempotent: the hoisted font @import block at the
+    # top AND the variant-tokens block further down.
+    base_contents = original
+    if font_marker in base_contents:
+        before, _, rest = base_contents.partition(font_marker)
+        _, _, after = rest.partition(font_end)
+        base_contents = f"{before}{after}"
+    if marker in base_contents:
+        before, _, rest = base_contents.partition(marker)
         _, _, after = rest.partition(end)
-        base_contents = f"{before}{after}".rstrip()
-    else:
-        base_contents = original.rstrip()
-    # Append last so starter defaults earlier in globals.css cannot win the cascade.
-    new_contents = f"{base_contents}\n\n{marker}\n{block}{end}\n"
+        base_contents = f"{before}{after}"
+    base_contents = base_contents.strip()
+
+    # Hoist the Google Fonts @import line(s) out of the variant block to
+    # the absolute top of the file. CSS requires every @import rule to
+    # precede all other rules; appending the variant block verbatim put
+    # the font @import after the starter's :root/@layer rules, which
+    # triggers the build/browser warning "@import rules must precede all
+    # rules" on every build. (Longer-term fix: load the webfont via
+    # next/font/google or a <link> in the Next layout instead of a CSS
+    # @import — the layout already preconnects to fonts.googleapis.com.)
+    import_lines: list[str] = []
+    body_lines: list[str] = []
+    for line in block.splitlines():
+        if line.lstrip().startswith("@import"):
+            import_lines.append(line)
+        else:
+            body_lines.append(line)
+    block_body = "\n".join(body_lines)
+
+    font_region = ""
+    if import_lines:
+        font_region = f"{font_marker}\n" + "\n".join(import_lines) + f"\n{font_end}\n\n"
+
+    # Variant tokens appended last so starter defaults earlier in
+    # globals.css cannot win the cascade.
+    new_contents = (
+        f"{font_region}{base_contents}\n\n{marker}\n{block_body}\n{end}\n"
+    )
     write(css, new_contents)
     return warnings
 
@@ -1685,249 +1738,6 @@ def assert_routes_present(target: Path, routes: list[str]) -> None:
 # ---------------------------------------------------------------------------
 # Mock artefacts (no LLM yet)
 # ---------------------------------------------------------------------------
-
-
-_OPERATOR_DIRECTIVE_NOTE_PREFIX = "Operator: "
-_MOOD_VISUAL_NOTE_PREFIX = "Visual mood: "
-
-
-def _mood_visual_note_blocks(dossier: dict) -> list[str]:
-    """Return planner notes from existing mood-image Vision metadata."""
-    blocks: list[str] = []
-    for ref in _iter_mood_refs(dossier):
-        subject = ref.get("visionSubject")
-        confidence = ref.get("visionConfidence")
-        has_subject = isinstance(subject, str) and bool(subject.strip())
-        has_confidence = isinstance(confidence, str) and bool(confidence.strip())
-        if not has_subject and not has_confidence:
-            continue
-
-        parts: list[str] = []
-        alt = ref.get("alt")
-        if isinstance(alt, str) and alt.strip():
-            parts.append(alt.strip())
-        if has_subject:
-            parts.append(f"subject: {subject.strip()}")
-        if has_confidence:
-            parts.append(f"confidence: {confidence.strip()}")
-        if parts:
-            blocks.append(f"{_MOOD_VISUAL_NOTE_PREFIX}{'; '.join(parts)}")
-    return blocks
-
-
-def _apply_operator_directive_note(brief: dict, dossier: dict) -> None:
-    """Prepend deterministic operator and mood context to Site Brief notes.
-
-    Gap 5 adds ``directives.notesForPlanner`` with prefix ``"Operator: "``.
-    Gap 9 adds existing Vision metadata from ``moodImages`` with prefix
-    ``"Visual mood: "`` when those fields are already present on the
-    AssetRef. Missing/empty inputs leave the brief untouched.
-    """
-    blocks: list[str] = []
-    directives = dossier.get("directives")
-    if isinstance(directives, dict):
-        raw_note = directives.get("notesForPlanner")
-        if isinstance(raw_note, str):
-            note = raw_note.strip()
-            if note:
-                blocks.append(f"{_OPERATOR_DIRECTIVE_NOTE_PREFIX}{note}")
-
-    blocks.extend(_mood_visual_note_blocks(dossier))
-    if not blocks:
-        return
-
-    existing = brief.get("notesForPlanner")
-    if isinstance(existing, str) and existing.strip():
-        blocks.append(existing.strip())
-    brief["notesForPlanner"] = "\n\n".join(blocks)
-
-
-def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
-    """Mock Site Brief derived from the dossier (no LLM).
-
-    Returns the canonical Site Brief artefakt shape locked in
-    ``governance/schemas/site-brief.schema.json`` (ADR 0013). Project Input
-    fields are projected into the canonical fields rather than written
-    alongside; the per-Project-Input data still lives in the source file
-    under ``examples/`` for downstream phases that need the raw company /
-    trust-signal payload.
-
-    ``requestedCapabilities`` honours an explicit value from the Project
-    Input, including an explicit empty list. Only when the field is absent
-    does the builder fall back to the service-id stub.
-    """
-    requested = dossier.get("requestedCapabilities")
-    if requested is None:
-        requested = [svc["id"] for svc in dossier["services"]]
-    company = dossier["company"]
-    location = dossier.get("location") or {}
-    tone_block = dossier.get("tone") or {}
-    if isinstance(tone_block, dict):
-        tone_words = [tone_block.get("primary")] + list(tone_block.get("secondary") or [])
-        tone = [t for t in tone_words if t]
-    else:
-        tone = list(tone_block)
-    location_parts = [
-        location.get("city"),
-        location.get("region"),
-        location.get("country"),
-    ]
-    location_hint = ", ".join(p for p in location_parts if p) or None
-    brief = {
-        "runId": run_id,
-        "language": dossier["language"],
-        "rawPrompt": project_input_to_brief_prompt(dossier),
-        "businessTypeGuess": company.get("businessType"),
-        "pageCount": None,
-        "tone": tone,
-        "targetAudience": [],
-        "requestedCapabilities": list(requested),
-        "locationHint": location_hint,
-        "conversionGoals": list(dossier.get("conversionGoals") or []),
-        "servicesMentioned": [svc["id"] for svc in dossier.get("services", [])],
-        "contentDepth": None,
-        "notesForPlanner": (
-            f"Mock brief for Project Input '{dossier.get('siteId')}' - planningModel "
-            "wires in Sprint 2B."
-        ),
-        "sourceModelRole": "briefModel",
-        "modelUsed": "mock",
-        "briefSource": "mock-no-key",
-        "briefError": None,
-        "createdAt": utc_now().isoformat(timespec="seconds"),
-        "scaffoldHint": scaffold["id"],
-    }
-    _apply_operator_directive_note(brief, dossier)
-    return brief
-
-
-def resolve_brief_model() -> str:
-    """Resolve briefModel via the canonical helper in packages.generation.brief.
-
-    Thin local wrapper kept only so the rest of this module can call it
-    without importing through `packages.generation.brief.resolve_brief_model`
-    everywhere.
-    """
-    from packages.generation.brief import resolve_brief_model as _resolve
-
-    return _resolve()
-
-
-def _join_values(values: list[Any]) -> str:
-    return ", ".join(str(value) for value in values if value)
-
-
-def project_input_to_brief_prompt(dossier: dict) -> str:
-    """Create deterministic briefModel input from a Project Input.
-
-    Builder examples already contain structured Project Input data, while
-    briefModel expects a raw prompt. This adapter only restates existing facts
-    so Phase 1 can run without inventing additional planning behavior.
-    """
-    company = dossier["company"]
-    location = dossier["location"]
-    tone = dossier.get("tone", {})
-    selected = dossier.get("selectedDossiers", {})
-
-    services = "\n".join(
-        f"- {service['id']}: {service['label']} — {service['summary']}"
-        for service in dossier.get("services", [])
-    )
-    trust = "\n".join(f"- {item}" for item in dossier.get("trustSignals", []))
-
-    return (
-        "Build a business website from this Project Input.\n\n"
-        f"Company: {company.get('name')}\n"
-        f"Business type: {company.get('businessType')}\n"
-        f"Tagline: {company.get('tagline')}\n"
-        f"Story: {company.get('story')}\n"
-        f"Location: {location.get('city')}, {location.get('region')}, {location.get('country')}\n"
-        f"Service areas: {_join_values(location.get('serviceAreas', []))}\n"
-        f"Language: {dossier.get('language')}\n"
-        f"Tone primary: {tone.get('primary')}\n"
-        f"Tone secondary: {_join_values(tone.get('secondary', []))}\n"
-        f"Tone avoid: {_join_values(tone.get('avoid', []))}\n"
-        f"Conversion goals: {_join_values(dossier.get('conversionGoals', []))}\n"
-        f"Requested capabilities: {_join_values(dossier.get('requestedCapabilities', []))}\n"
-        f"Required dossiers: {_join_values(selected.get('required', []))}\n\n"
-        "Services:\n"
-        f"{services}\n\n"
-        "Trust signals:\n"
-        f"{trust}\n"
-    )
-
-
-def _mock_brief_after_llm_failure(
-    run_id: str,
-    dossier: dict,
-    scaffold: dict,
-    *,
-    error: str,
-    attempted_model: str | None,
-) -> dict:
-    brief = build_site_brief_mock(run_id, dossier, scaffold)
-    brief.update(
-        {
-            "briefSource": "mock-llm-error",
-            "briefError": error,
-            "attemptedModel": attempted_model,
-        }
-    )
-    return brief
-
-
-def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
-    """Build Site Brief with briefModel when available, otherwise mock fallback."""
-    from packages.generation.brief import has_openai_api_key
-
-    if not has_openai_api_key():
-        print("No OPENAI_API_KEY - using mock Site Brief")
-        return build_site_brief_mock(run_id, dossier, scaffold)
-
-    model: str | None = None
-    try:
-        model = resolve_brief_model()
-        prompt = project_input_to_brief_prompt(dossier)
-
-        from packages.generation.brief import extract_site_brief, site_brief_to_artifact
-
-        print(f"Calling briefModel ({model}) for Site Brief")
-        result = extract_site_brief(
-            prompt,
-            model=model,
-            language_hint=dossier.get("language"),
-        )
-        if result.source != "real":
-            error = result.error or f"briefModel returned fallback source {result.source}"
-            print(
-                f"Warning: briefModel failed - using mock Site Brief fallback ({error})",
-                file=sys.stderr,
-            )
-            return _mock_brief_after_llm_failure(
-                run_id,
-                dossier,
-                scaffold,
-                error=error,
-                attempted_model=model,
-            )
-
-        brief = site_brief_to_artifact(result, run_id=run_id, model=model)
-        brief["scaffoldHint"] = scaffold["id"]
-        _apply_operator_directive_note(brief, dossier)
-        return brief
-    except Exception as exc:  # noqa: BLE001
-        error = f"{type(exc).__name__}: {exc}"
-        print(
-            f"Warning: briefModel path failed - using mock Site Brief fallback ({error})",
-            file=sys.stderr,
-        )
-        return _mock_brief_after_llm_failure(
-            run_id,
-            dossier,
-            scaffold,
-            error=error,
-            attempted_model=model,
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -2742,11 +2552,20 @@ def build(
     ``runs_dir`` defaults to ``RUNS_DIR`` (``data/runs``); pass an isolated
     path (``tmp_path`` in tests) to keep the canonical history clean.
     ``generated_dir`` overrides where the dev-preview site is emitted.
-    ``auto_prune`` runs the opt-in retention sweep from
+    ``auto_prune`` runs the retention sweep from
     ``packages.generation.maintenance.auto_prune_all`` before Phase 0 so
     ``data/runs/``, ``data/prompt-inputs/`` and ``.generated/`` stay under
     the caps configured in ``.env``. Disabled automatically when ``runs_dir``
-    is overridden (tests with ``tmp_path``).
+    is overridden (tests with ``tmp_path``). The ``build_site.py`` CLI now
+    leaves this OFF unless ``--allow-prune`` is passed, so a manual or smoke
+    ``--dossier`` build can NEVER silently delete existing prompt-input
+    sidecars / runs / previews just because ``SAJTBYGGAREN_MAX_*`` caps are
+    set (the data-loss trap a smoke build would otherwise hit when there are
+    more sites on disk than the cap). The Viewser product flow opts in
+    explicitly via ``--allow-prune`` (apps/viewser/lib/build-runner.ts), and
+    the prompt-driven create path keeps its own sweep in
+    ``scripts/prompt_to_project_input.py``, so retention behaviour there is
+    unchanged.
 
     ``prompt_inputs_dir`` (Glue 1): where to persist a discoverable Project
     Input sidecar for a fresh init build that did not come through
@@ -4033,6 +3852,17 @@ def main() -> int:
             "the sibling folder ../sajtbyggaren-output/.generated."
         ),
     )
+    parser.add_argument(
+        "--allow-prune",
+        action="store_true",
+        help=(
+            "Opt in to the retention sweep (auto_prune_all) before building. "
+            "OFF by default so a manual or smoke `--dossier` build NEVER deletes "
+            "existing data/prompt-inputs/ sidecars, data/runs/ or .generated/ "
+            "previews when SAJTBYGGAREN_MAX_* caps are set in .env. The Viewser "
+            "product flow passes this explicitly to keep its retention behaviour."
+        ),
+    )
     args = parser.parse_args()
 
     runs_dir = Path(args.runs_dir).resolve() if args.runs_dir else None
@@ -4067,6 +3897,7 @@ def main() -> int:
         do_build=not args.skip_build,
         runs_dir=runs_dir,
         generated_dir=args.generated_dir,
+        auto_prune=args.allow_prune,
     )
     return 0
 
