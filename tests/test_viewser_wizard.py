@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
 
 import pytest
 
-from tests.support.viewser import VIEWSER_DIR
+from tests.support.viewser import REPO_ROOT, VIEWSER_DIR
 
 
 @pytest.mark.tooling
@@ -34,6 +35,41 @@ def test_discovery_options_route_reads_taxonomy_and_omits_starter_id() -> None:
         "fallbackLabel",
     ):
         assert field in text, f"Discovery-options-routen saknar fältet {field!r}."
+
+
+@pytest.mark.tooling
+def test_discovery_options_route_exposes_recommended_pages_from_taxonomy() -> None:
+    """Inbox msg-0056 punkt 1: /api/discovery-options ska exponera taxonomins
+    recommendedPages per kategori så FunctionsStep kan hämta sidförslag från
+    API:t med TS-cachen i wizard-constants som fallback (samma mönster som
+    kategori-options idag)."""
+    route = (VIEWSER_DIR / "app" / "api" / "discovery-options" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    options_ts = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-options.ts"
+    ).read_text(encoding="utf-8")
+
+    assert "recommendedPages: asStringArray(category.recommendedPages)" in route, (
+        "Discovery-options-routen ska exponera taxonomins recommendedPages "
+        "per kategori (sanerade via asStringArray)."
+    )
+    assert "recommendedPages?: readonly string[]" in options_ts, (
+        "discoveryOption-typen ska bära recommendedPages som optionellt fält "
+        "så TS-cache-fallbacken (som saknar fältet) fortsätter typchecka."
+    )
+
+    taxonomy = json.loads(
+        (REPO_ROOT / "governance" / "policies" / "discovery-taxonomy.v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for category in taxonomy["categories"]:
+        pages = category.get("recommendedPages")
+        assert isinstance(pages, list) and pages, (
+            f"Kategori {category['id']!r} saknar recommendedPages i taxonomin — "
+            "API-fältet skulle bli tomt för den kategorin."
+        )
 
 
 @pytest.mark.tooling

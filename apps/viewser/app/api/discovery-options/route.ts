@@ -15,6 +15,7 @@ type taxonomyCategory = {
   activeScaffoldId?: string;
   fallbackScaffoldId?: string;
   defaultVariantId: string;
+  recommendedPages?: string[];
   operatorNotes?: string;
 };
 
@@ -242,6 +243,10 @@ export async function GET(request: NextRequest) {
           contentBranch: category.contentBranch,
           supportStatus: category.supportStatus,
           defaultVariantId: category.defaultVariantId,
+          // msg-0056 punkt 1: taxonomins sidförslag per kategori, så
+          // FunctionsStep kan hämta förslagen från API:t med TS-cachen
+          // (RELEVANT_PAGES_BY_FAMILY m.fl.) som fallback.
+          recommendedPages: asStringArray(category.recommendedPages),
           targetScaffoldLabel:
             scaffoldLabels.get(category.targetScaffoldId) ??
             category.targetScaffoldId,
