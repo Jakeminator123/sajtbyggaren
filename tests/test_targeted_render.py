@@ -826,6 +826,138 @@ def test_orchestrator_diffs_active_build_with_route_map(
 
 
 # ---------------------------------------------------------------------------
+# #221 P2: union the surfaced section route(s) with the patch-derived route(s)
+# ---------------------------------------------------------------------------
+
+
+def test_orchestrator_unions_patch_and_section_routes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A follow-up combining a normal patch (home) with a visible section_add
+    (faq) must report BOTH routes. Letting the patch route override the surfaced
+    section route dropped "faq" (#221 P2); the affected set is the UNION,
+    order-preserving (patch route first, then surfaced section route)."""
+    from scripts.build_site import build_targeted_version
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+
+    apply_result = ApplyResult(
+        applied=True,
+        siteId=SITE_ID,
+        version=2,
+        previousVersion=1,
+        projectInputPath=str(v2_path),
+        # A normal component patch on home AND a section_add (no contentBlocks
+        # route, so affected_routes_from_apply only yields "home").
+        appliedCapabilities=[
+            AppliedCapability(patchField=HOME_FIELD, capability="contact-form"),
+            AppliedCapability(
+                patchField="sectionAdd:faq-section", capability="faq-section"
+            ),
+        ],
+        sectionRoutesSurfaced=["faq"],
+    )
+    result = build_targeted_version(
+        v2_path,
+        apply_result=apply_result,
+        # The surfaced section route the chain passes from sectionRoutesSurfaced.
+        affected_routes=["faq"],
+        do_build=True,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "gen",
+        build_fn=_make_fake_build(status="ok", applied_visible_effect=True),
+    )
+    assert result.affectedRoutes == ["home", "faq"]
+
+
+def test_orchestrator_union_avoids_false_out_of_scope_warning(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """#221 P2 (the deeper symptom): when a patch changes /home and a section_add
+    renders a new /faq, both must be in scope. With the union, a real /faq change
+    no longer trips the 'routes outside the expected changed' warning."""
+    from packages.generation.build.immutable_builds import write_active_pointer
+    from scripts.build_site import build_targeted_version
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "gen"
+
+    # Previous ACTIVE build: home only, no /faq yet.
+    prev_run = runs_dir / "run-prev"
+    (prev_run / "generated-files" / "app").mkdir(parents=True)
+    (prev_run / "generated-files" / "app" / "page.tsx").write_text(
+        "HOME-OLD", encoding="utf-8"
+    )
+    (prev_run / "build-result.json").write_text(
+        json.dumps({"siteId": SITE_ID, "activeBuildId": "20260601T000000Z"}),
+        encoding="utf-8",
+    )
+    site_dir = generated_dir / SITE_ID
+    (site_dir / "builds" / "20260601T000000Z").mkdir(parents=True)
+    write_active_pointer(site_dir, "20260601T000000Z", "builds/20260601T000000Z")
+
+    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None):
+        run_dir = Path(runs_dir) / "run-new"
+        app = run_dir / "generated-files" / "app"
+        app.mkdir(parents=True)
+        # home changed (the patch) AND /faq added (the surfaced section).
+        (app / "page.tsx").write_text("HOME-NEW", encoding="utf-8")
+        (app / "faq").mkdir()
+        (app / "faq" / "page.tsx").write_text("FAQ", encoding="utf-8")
+        (run_dir / "trace.ndjson").write_text("", encoding="utf-8")
+        (run_dir / "build-result.json").write_text(
+            json.dumps(
+                {
+                    "siteId": SITE_ID,
+                    "status": "ok",
+                    "version": 2,
+                    "appliedVisibleEffect": True,
+                    "activeBuildId": "20260603T120000Z",
+                    "prompt": {"previousVersion": 1},
+                }
+            ),
+            encoding="utf-8",
+        )
+        target = run_dir / "target"
+        target.mkdir()
+        return target, run_dir
+
+    apply_result = ApplyResult(
+        applied=True,
+        siteId=SITE_ID,
+        version=2,
+        previousVersion=1,
+        projectInputPath=str(v2_path),
+        appliedCapabilities=[
+            AppliedCapability(patchField=HOME_FIELD, capability="contact-form"),
+            AppliedCapability(
+                patchField="sectionAdd:faq-section", capability="faq-section"
+            ),
+        ],
+        sectionRoutesSurfaced=["faq"],
+    )
+    result = build_targeted_version(
+        v2_path,
+        apply_result=apply_result,
+        affected_routes=["faq"],
+        do_build=True,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        build_fn=fake_build,
+    )
+    assert result.affectedRoutes == ["home", "faq"]
+    assert set(result.changedRoutes) == {"home", "faq"}
+    # Both changed routes are in scope (union) -> no false out-of-scope warning.
+    assert all("utanför" not in note for note in result.notes), result.notes
+
+
+# ---------------------------------------------------------------------------
 # KÖR-7-STAB #176: FAILED targeted builds still trace their outcome
 # ---------------------------------------------------------------------------
 

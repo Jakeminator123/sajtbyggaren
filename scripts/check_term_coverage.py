@@ -402,6 +402,17 @@ COMMON_WORDS = {
     "FetchedRunsPayload",
     "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
     "StackblitzFileMap",
+    # Bundle-bloat-fix (ADR 0033): den LEGACY/PAUSADE StackBlitz-embed-vägen
+    # bröts ut till en egen lazy-laddad komponent (apps/viewser/components/
+    # stackblitz-preview.tsx) så @stackblitz/sdk inte prefetchas i ViewerPanel:s
+    # eager-chunk. Lokala UI-komponent-/prop-/state-identifierare, inte domänbegrepp.
+    "StackblitzPreview", "StackblitzPreviewProps", "StackblitzStatus",
+    # Inlinade props-shapes för de runtime-``import()``-laddade komponenterna
+    # (viewer-panel respektive versions-tab) — lokala TS-typer, inte domänbegrepp.
+    "StackblitzPreviewComponentProps", "ComparePreviewModalComponentProps",
+    # State-variabler som håller de runtime-laddade komponenterna (måste vara
+    # PascalCase för att renderas som JSX) + Reacts ``ComponentType``-typ.
+    "StackblitzPreviewComp", "ComparePreviewModalComp", "ComponentType",
     # Bite C (ADR 0033) — vercel-sandbox preview wiring TS-symboler. Lokala
     # viewser/preview-identifierare (route-response-shape + session-registry),
     # inte domänbegrepp. Samma behandling som PreviewServerInfo / FilesPayload.
@@ -791,6 +802,11 @@ COMMON_WORDS = {
     "ProgressTrack", "ProgressValue",
     # Python stdlib + tredjepart-symboler i scrape_site.py och build_site.py
     "BeautifulSoup", "RequestException", "ChunkedEncodingError", "ConnectionError",
+    # Pillow (PIL) submodulnamn som asset-parity-testets avkodade pixel-jämförelse
+    # använder (tests/test_build_assets_parity.py). Externa bibliotekssymboler
+    # (samma kategori som BeautifulSoup / RequestException ovan), inte canonical
+    # domänbegrepp.
+    "ImageChops", "ImageStat",
     # Node typings
     "ProcessEnv",
     # Intake-flödets historiska namn (refererat i Sajtmaskin-port-kommentarer)
@@ -959,6 +975,7 @@ COMMON_WORDS = {
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
+    "ComparePreviewLoadError",  # lokal felkomponent i versions-tab/diff-view.tsx (modal-import-fallback)
     "RunHistorySkeleton",  # lokal Skeleton-komponent i run-history.tsx (Wave 3 Steg 8)
     # Marknadssajt (2026-06-01, scout-marketing-site) — nya lokala UI-/route-
     # symboler i apps/viewser/app/(marketing|console) + components/marketing/*.
