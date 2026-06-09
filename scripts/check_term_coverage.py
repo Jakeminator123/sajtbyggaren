@@ -627,6 +627,11 @@ COMMON_WORDS = {
     # Lokal UI-komponent, inte ett canonical domänbegrepp — samma allowlist-
     # logik som FoundationSummary/SummaryRow ovan.
     "ReviewSummary",
+    # Branschsök i steg 1 (2026-06-09): fritextsök/typeahead som mappar
+    # yrken/synonymer → businessFamily + siteType
+    # (apps/viewser/components/discovery-wizard/industry-search.tsx).
+    # Lokala UI-symboler, inte canonical domänbegrepp.
+    "IndustrySearch", "IndustryMatch",
     "PayloadAlignmentPopover", "ContextChips", "ContextChip",
     "VibeMicroPreview", "VibeSwatchRow",
     # Lucide-icon-namn använda i samma komponenter:
@@ -743,6 +748,9 @@ COMMON_WORDS = {
     # rad-typ — inga canonical domänbegrepp (samma behandling som
     # ColorPickerDialog / ScrapeUrlDialog ovan).
     "AddModuleDialog", "AddModuleDialogProps", "ModuleDef",
+    # ModuleEffect (2026-06-09, ADR 0038-konsumtion): per-modul synlighets-
+    # utfall i AddModuleDialog ("inline" | "route" | "registered").
+    "ModuleEffect",
     # Dialog-toast-ärlighet (2026-06-09): viewser-lokala callback-/signal-
     # typer i apps/viewser/components/builder/use-followup-build.ts som trådar
     # follow-up-byggets visible-effect (appliedVisibleEffect/previewShouldRefresh)
