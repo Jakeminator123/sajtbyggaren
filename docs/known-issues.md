@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (av 0), 5 unknown, 141 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 0), 5 unknown, 142 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -655,16 +655,6 @@ medvetna fallbacks (change-set-baseline).
   eller returnera strukturerat fel i stället för tyst fallback (hänger ihop
   med #7 bridge-null-diagnostik). Källa: extern RO-granskning 2026-06-09,
   verifierad 2026-06-10. Fix: open. Test: open.
-- **`B166` Medel** - Shallow merge vid wizardens "Hämta från webbplats":
-  scrape-patchen byggs fält-för-fält på toppnivå
-  (`apps/viewser/components/discovery-wizard/steps/foundation-step.tsx:101-123`)
-  och appliceras med shallow spread (`discovery-wizard.tsx:150-152`), så hela
-  `contact`/`brand`-objektet ERSÄTTS. `scripts/scrape_site.py:run()` fyller
-  dessutom alltid komplett contact-shape med tomma strängar — operatörens
-  redan ifyllda `openingHours`/`toneTags` m.m. nollas tyst. Fix kräver
-  nested fält-merge som bevarar operatörsvärden. Christophers lane
-  (apps/viewser UI). Källa: extern RO-granskning 2026-06-09, verifierad
-  2026-06-10. Fix: open. Test: open.
 - **`B169` Medel** - Global `promptInFlight`-mutex i `/api/prompt`
   (`route.ts:131,366-386`) serialiserar ALLA sajter i processen — ett
   långsamt bygge på site A blockerar init/follow-up på site B.
@@ -684,6 +674,20 @@ medvetna fallbacks (change-set-baseline).
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B166` Medel** (stängd 2026-06-10, operatörsbeslut efter eval-rundan —
+  dominant problem `contact`) - Shallow merge vid wizardens "Hämta från
+  webbplats": scrape-patchen byggdes fält-för-fält på toppnivå
+  (`apps/viewser/components/discovery-wizard/steps/foundation-step.tsx`)
+  och applicerades med shallow spread (`discovery-wizard.tsx:150-152`), så
+  hela `contact`/`brand`-objektet ERSATTES. `scripts/scrape_site.py:run()`
+  fyller dessutom alltid komplett contact-shape med tomma strängar —
+  operatörens redan ifyllda `openingHours`/`toneTags` m.m. nollades tyst.
+  Nu: `mergeNestedPreservingOperator` merge:ar contact/brand per subfält
+  med operatörens ifyllda värde som vinnare (scrape fyller bara luckor).
+  Christophers lane; fixad under stående buggfix-grant med inbox-notis
+  (msg-0060). Källa: extern RO-granskning 2026-06-09, verifierad
+  2026-06-10. Fix: `8f0681d`. Test:
+  `tests/test_viewser_wizard.py::test_b166_scrape_patch_merges_contact_and_brand_preserving_operator`.
 - **`B163` Hög** (stängd 2026-06-10, bug-sweep round 1) - Stale preview efter
   lyckad OpenClaw-apply i local-next-läge. Legacy-vägen stoppar previewn i
   `runBuild` (`build-runner.ts` -> `stopAndWaitPreviewServer`) så nästa
