@@ -29,6 +29,17 @@ versionshistoriken inklusive innan flytten.
 - `codeowners-proposal.md` — förslag utan aktivt arbete (ingen `.github/CODEOWNERS`).
   Flyttad från `docs/`.
 
+## Steward-pass 2026-06-09 (docs-steward-cleanup)
+
+- `current-focus-2026-06-09-pre-refresh.md` — full snapshot av `docs/current-focus.md`
+  precis före steward-refresh till `0c89942` (stale `Last verified state: 2ffce4a` +
+  "14 commits före main" bumpades till verklig HEAD/`32`). Superseded av
+  `docs/current-focus.md`.
+- `handoff-history-2026-06-09.md` — historik utbruten ur `docs/handoff.md` (allt som
+  låg under topblockets historiklinje `---`). `docs/handoff.md` behåller bara det
+  auktoritativa toppblocket + länk hit. Superseded av `docs/handoff.md` toppblock +
+  `docs/current-focus.md`. `git log --follow docs/handoff.md` visar hela historiken.
+
 ## Markerade historical *på plats* (ej flyttade)
 
 Vissa historiska docs behölls på sin ursprungssökväg och fick bara
