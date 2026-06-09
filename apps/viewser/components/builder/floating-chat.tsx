@@ -203,10 +203,15 @@ function summarizeCopyDirectives(
       continue;
     }
     if (directive.target === "tagline") {
+      // Scope-eko (2026-06-09): rubrik/tagline-copyDirective träffar ALLTID
+      // startsidans hero (``company.heroHeadline``-override / tagline). Vi
+      // namnger sidan explicit så en operatör som tittade på en undersida inte
+      // tror att DEN sidans rubrik ändrades — undersid-rubriker är inte
+      // adresserbara copyDirectives än (relä till Jakob, topic followup-targeting).
       if (directive.operation === "include-token") {
-        lines.push(`Jag la in "${payload}" i hero-texten.`);
+        lines.push(`Jag la in "${payload}" i hero-texten på startsidan.`);
       } else {
-        lines.push(`Jag uppdaterade rubriken till "${payload}".`);
+        lines.push(`Jag uppdaterade rubriken till "${payload}" på startsidan.`);
       }
       continue;
     }
@@ -784,7 +789,7 @@ function summarizeBuildResult(
     if (effect && effect.applied === false) {
       if (effect.reason === "visible_files_unchanged") {
         return {
-          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter (företagsnamn, rubrik, tagline) — större layout- och strukturändringar som att centrera hero eller lägga till en sektion stöds inte än.${unappliedNote}`,
+          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter på startsidan (företagsnamn, rubrik, tagline) — rubriker på undersidor och större layout-/strukturändringar (centrera hero, lägga till sektion) stöds inte än.${unappliedNote}`,
           variant: "info",
         };
       }
