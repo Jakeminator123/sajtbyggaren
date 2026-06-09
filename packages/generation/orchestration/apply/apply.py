@@ -362,24 +362,46 @@ def apply_patch_plan(
         resolve_inline_section_placements,
     )
 
-    # Reconcile ``mountedSections`` against the MERGED version's full
-    # ``requestedCapabilities`` - not just this apply call's section_capabilities.
-    # ``merge_followup_project_input`` deep-copies the previous version (carrying
-    # any earlier inline directives + the union of requestedCapabilities forward),
-    # so the authoritative inline set is "every inline-eligible capability still
-    # requested on this version". Computing it from the merged caps makes the
-    # directive COMPOSE across versions: a section mounted in v2 stays inline in a
-    # v3 copy/theme follow-up (it is still requested) instead of being silently
-    # dropped, and a capability that is genuinely no longer requested falls out.
-    # The list is still per-version (rebuilt from the current merged state, never
-    # appended to), so it can never drift from what the build can render.
-    merged_caps = [
+    # Inline-eligible capabilities for THIS version are the union of:
+    #
+    #   1. CARRIED FORWARD: capabilities of the previous version's
+    #      ``mountedSections`` entries that are STILL requested on the merged
+    #      version (``merge_followup_project_input`` deep-copies the previous
+    #      version, so the prior directive + the requestedCapabilities union ride
+    #      along). This keeps the directive COMPOSING across versions - a section
+    #      mounted in v2 survives a v3 copy/theme follow-up - while a capability
+    #      that is genuinely no longer requested falls out.
+    #   2. NEW: ONLY this apply call's ``section_capabilities`` (the explicit
+    #      section_add intent). Codex review fix: deriving new placements from the
+    #      FULL merged ``requestedCapabilities`` meant a plain ``component_add``
+    #      that happened to mount an inline-capable capability (e.g. hours via a
+    #      widget patch) silently injected a whole NEW home section the user
+    #      never asked for. Only a section_add may CREATE an inline placement;
+    #      everything else can at most PRESERVE one.
+    #
+    # The list is still per-version (rebuilt, never appended to), so it cannot
+    # drift from what the build can render.
+    merged_caps = {
         cap
         for cap in (merged.get("requestedCapabilities") or [])
         if isinstance(cap, str) and cap.strip()
-    ]
-    inline_placements = resolve_inline_section_placements(merged_caps, merged)
+    }
     directives = merged.get("directives")
+    carried_caps: list[str] = []
+    prior_mounted = (
+        directives.get("mountedSections") if isinstance(directives, dict) else None
+    )
+    if isinstance(prior_mounted, list):
+        for prev in prior_mounted:
+            if not isinstance(prev, dict):
+                continue
+            cap = prev.get("capability")
+            if isinstance(cap, str) and cap in merged_caps and cap not in carried_caps:
+                carried_caps.append(cap)
+    eligible_caps = carried_caps + [
+        cap for cap in section_capabilities if cap not in carried_caps
+    ]
+    inline_placements = resolve_inline_section_placements(eligible_caps, merged)
     if inline_placements:
         if not isinstance(directives, dict):
             directives = {}
