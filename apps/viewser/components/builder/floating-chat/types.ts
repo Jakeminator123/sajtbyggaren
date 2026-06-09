@@ -119,6 +119,16 @@ export type FloatingChatProps = {
    * när panelen inte är minimerad.
    */
   tools?: ReactNode;
+  /**
+   * UX-glue (msg-0050 b): en räknare som BuilderShell bumpar varje gång ETT
+   * BYGGE FRÅN EN ANNAN YTA (en dialog eller inspector-snabbprompt) blir klart
+   * (ok/degraded). När värdet ändras expanderar FloatingChat ur minimerat läge
+   * och flyttar focus till composern så operatören kan skriva nästa följdprompt
+   * direkt — utan att först leta upp/öppna chatten. FloatingChat:s EGNA byggen
+   * bumpar den INTE (composern har redan focus där). Initialt 0 / utelämnad →
+   * ingen effekt vid mount (vi jämför mot föregående värde via en ref).
+   */
+  focusComposerSignal?: number;
 };
 
 /**

@@ -622,6 +622,11 @@ COMMON_WORDS = {
     "EmptyState",
     # GAP-viewser-wizard-first-impression — rikare foundation+visual UI:
     "FamilyCard", "FoundationSummary", "SummaryRow",
+    # Lätt review-summary (2026-06-09): hopfällbar "granska dina svar"-rad sist
+    # på Bilder-steget (apps/viewser/components/discovery-wizard/review-summary.tsx).
+    # Lokal UI-komponent, inte ett canonical domänbegrepp — samma allowlist-
+    # logik som FoundationSummary/SummaryRow ovan.
+    "ReviewSummary",
     "PayloadAlignmentPopover", "ContextChips", "ContextChip",
     "VibeMicroPreview", "VibeSwatchRow",
     # Lucide-icon-namn använda i samma komponenter:
@@ -738,6 +743,12 @@ COMMON_WORDS = {
     # rad-typ — inga canonical domänbegrepp (samma behandling som
     # ColorPickerDialog / ScrapeUrlDialog ovan).
     "AddModuleDialog", "AddModuleDialogProps", "ModuleDef",
+    # Dialog-toast-ärlighet (2026-06-09): viewser-lokala callback-/signal-
+    # typer i apps/viewser/components/builder/use-followup-build.ts som trådar
+    # follow-up-byggets visible-effect (appliedVisibleEffect/previewShouldRefresh)
+    # upp till studio-toasten. Inga canonical domänbegrepp — samma lokala
+    # allowlist som AddModuleDialog/ModuleDef ovan.
+    "FollowupVisibleEffect", "OnFollowupBuildDone",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",

@@ -198,6 +198,14 @@ export function PagesTab({
           <FileText className="h-3 w-3" aria-hidden />
           Sidor i sajten ({routes.length})
         </div>
+        {routes.length > 0 ? (
+          <p className="text-muted-foreground border-border/50 mb-2 rounded-md border border-dashed px-2.5 py-1.5 text-[11px] leading-snug">
+            Text- och sektionsändringar landar i nuläget mest tillförlitligt på
+            startsidan. Ändringar på undersidor kan rapporteras ärligt som
+            &quot;ingen synlig ändring&quot; tills per-sida-redigering är
+            inkopplad i backend.
+          </p>
+        ) : null}
         {routes.length === 0 ? (
           <p className="text-muted-foreground text-[12px] italic">
             Ingen routePlan registrerad i denna run.

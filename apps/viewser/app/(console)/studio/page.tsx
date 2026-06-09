@@ -4,6 +4,7 @@ import { RefreshCw, WifiOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BuilderShell } from "@/components/builder/builder-shell";
+import type { FollowupVisibleEffect } from "@/components/builder/use-followup-build";
 import { usePendingBuild } from "@/components/builder/use-pending-build";
 import { ConsoleDrawer } from "@/components/console-drawer";
 import { DevicePresetProvider } from "@/components/device-preset-context";
@@ -338,16 +339,40 @@ export default function Home() {
     runId: string,
     outcome: PromptBuildOutcome,
     siteId?: string,
+    visibleEffect?: FollowupVisibleEffect,
   ) {
     // Bygget landade — visa toast så operatören ser status även om
     // FloatingChat eller PromptBuilder inte är synlig (t.ex. på liten
     // skärm där hero scrollats ur sikte). FloatingChat visar fortfarande
     // sin egen rad med detaljer; toasten är en kort sammanfattning.
+    //
+    // Ärlighet (dialog-vägen, 2026-06-09): ``visibleEffect`` bär den
+    // granulära signal som FloatingChat redan har. En follow-up som byggde
+    // en ny version UTAN synlig effekt (mount-only section_add) eller en
+    // ren no-op får INTE samma gröna "klart" som en verklig ändring —
+    // annars upprepar dialog-toasten exakt den falska success vi tog bort i
+    // FloatingChat. ``visible``/``unknown`` (init + äldre payloads) behåller
+    // det neutrala success-beteendet.
     if (outcome === "ok") {
-      toast.show({
-        variant: "success",
-        description: `Bygget klart för ${runId}.`,
-      });
+      if (visibleEffect === "registered") {
+        toast.show({
+          variant: "info",
+          title: "Ändringen registrerades",
+          description:
+            "Den nya versionen byggdes, men ändringen syns inte i previewen ännu — sektionen monteras men renderas inte automatiskt på sidan.",
+        });
+      } else if (visibleEffect === "none") {
+        toast.show({
+          variant: "info",
+          title: "Ingen synlig ändring",
+          description: `Bygget gick igenom (${runId}) men ingen synlig ändring landade i previewen.`,
+        });
+      } else {
+        toast.show({
+          variant: "success",
+          description: `Bygget klart för ${runId}.`,
+        });
+      }
     } else if (outcome === "degraded") {
       toast.show({
         variant: "warning",
@@ -528,7 +553,7 @@ export default function Home() {
               // istället i handleBuildDone (success-path), via TTL-guarden
               // i usePendingBuild (5 min) och via "Iterera"-toggle.
             }}
-            onBuildDone={(runId, outcome) => {
+            onBuildDone={(runId, outcome, visibleEffect) => {
               // Bygget producerade en riktig version (ok/degraded) → iterationen
               // konsumerades och ska inte oavsiktligt återanvändas av nästa
               // fri-text-prompt. Vid ``failed`` BEHÅLLER vi base-run:en: error-
@@ -536,8 +561,10 @@ export default function Home() {
               // tillbaka till latest (matchar onBuildEnd-kommentaren ovan).
               // Signaturen i BuilderShell skickar inte siteId vidare; det löser
               // handleBuildDone själv via runs-listan när den re-fetchar.
+              // ``visibleEffect`` (dialog-vägen) trådas vidare så studio-toasten
+              // blir ärlig om mount-only/no-op-byggen.
               if (outcome !== "failed") setPendingBaseRunId(null);
-              handleBuildDone(runId, outcome);
+              handleBuildDone(runId, outcome, undefined, visibleEffect);
             }}
             onNewSite={() => {
               // Återgår till pre-build-läget: rensar både selectedRunId
