@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Builder MVP
 
 Deterministisk byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Sedan Sprint 2B anropar fas 1 riktiga `briefModel` och fas 2 `planningModel` (via `packages/generation/planning/produce_site_plan`) när `OPENAI_API_KEY` finns, med mock fallback för båda. Sedan Sprint 3A (ADR 0015) producerar fas 3 strukturerad `codegenModel`-manifest (`packages/generation/codegen/`), riktiga Quality Gate-checks (`packages/generation/quality_gate/`) och Repair Pipeline (`packages/generation/repair/`). Sprint 3B (ADR 0016) aktiverade Repair Pipeline med första mekaniska fixen `ensure-default-export` plus sandwich-loopen som re-kör Quality Gate efter mutation. Sprint 3B-next (ADR 0017) kopplar in **första riktiga codegenModel-anropet** för `marketing-base`-starter med `OPENAI_API_KEY`: LLM emittar `rationale` + 0-3 `riskNotes` med structured fallback (`real` / `mock-llm-error` / `mock-no-key` / `deterministic-v1`). LLM-fix och Quality Gate-scoring mot Page Quality Traits kommer i senare sprintar (5+ respektive 3C).

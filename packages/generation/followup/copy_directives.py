@@ -28,6 +28,7 @@ from packages.generation.followup.text import (
     _customer_safe_planner_note,
     _normalise_followup_text,
     _string_value,
+    _text_outside_quotes,
 )
 
 _COPY_DIRECTIVE_TAGLINE_KEYWORDS: tuple[str, ...] = (
@@ -349,6 +350,16 @@ _REPLACE_MARKERS: tuple[str, ...] = (
     "instead of",
 )
 
+# Section-add intent: a "ny ... sektion"/"new ... section" phrasing (the
+# section_builder's additive ask). Matched on the instruction skeleton (quoted
+# OLD/NEW copy removed) so a quoted value that merely mentions "ny sektion"
+# (e.g. ``ändra rubriken till "Ny sektion om oss"``) is NOT mistaken for a
+# section add. ``[^.!?]*`` keeps the match inside one sentence; ``avsnitt`` is
+# the common Swedish synonym for "section".
+_SECTION_ADD_INTENT_RE = re.compile(
+    r"\bny(?:tt|a)?\b[^.!?]*\b(?:sektion|sektionen|sektioner|avsnitt|section|sections)\b"
+)
+
 
 def _title_case_company_name(value: str) -> str:
     """Capitalise an all-lowercase company name without mangling intended case.
@@ -436,7 +447,14 @@ def _classify_copy_target(text_norm: str) -> str | None:
     # unnamed or unknown service is an honest no-op. Placed before the generic
     # name branch so "byt namnet på tjänsten till X" is service-scoped, not a
     # company rename.
-    if _contains_any(
+    # Services keywords are matched on WORD boundaries (not substring) so a
+    # compound noun like "tjänsteföretag" inside the operator's prompt (or
+    # inside quoted OLD copy) does NOT misroute a generic edit to a services
+    # no-op. "ändra tjänsten till X" still matches ("tjänsten" is a whole
+    # word); "tjänsteföretag" does not. ``_contains_any_word`` handles the
+    # multi-word phrases ("service description") too - the boundary anchors
+    # wrap the whole phrase. Fixes the 2026-06-09 lask-ab misroute.
+    if _contains_any_word(
         text_norm, _COPY_DIRECTIVE_SERVICES_KEYWORDS
     ) and not _contains_any_word(text_norm, _COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS):
         return "services"
@@ -673,6 +691,201 @@ def _extract_include_token(follow_up_prompt: str) -> str | None:
             return token
     match = _QUOTED_SPAN_RE.search(follow_up_prompt)
     return match.group(1) if match else None
+
+
+# --- literal find-and-replace (ADR 0034 vag A, literal slice) ----------------
+# "andra denna text \"X\" till \"Y\"" is the simplest follow-up an operator can
+# write: quote the visible OLD text X and give the NEW value Y. The classifier
+# has no stable target keyword for a bare "denna text", so this path locates X
+# in the CURRENT copy fields (tagline / heroHeadline / story / services[].
+# summary) and replaces it verbatim. No field matches X -> honest no-op (we
+# never guess a target or fabricate copy). The rendered hero H1 is regenerated
+# from the blueprint, so an operator who quotes the big hero line (which is not
+# a stored field) correctly gets an honest no-op surfaced via
+# appliedVisibleEffect rather than a silent paraphrase (2026-06-09 lask-ab).
+_LITERAL_TEXT_ANCHOR_KEYWORDS: tuple[str, ...] = (
+    "denna text",
+    "den har texten",
+    "den här texten",
+    "texten",
+    "text",
+    "this text",
+    "the text",
+)
+
+
+def _extract_literal_old_new(
+    follow_up_prompt: str,
+) -> tuple[str | None, str | None]:
+    """Pull ``(OLD, NEW)`` from a literal replace phrasing, or ``(None, None)``.
+
+    Handles three shapes:
+      - ``"NEW" istallet for "OLD"`` (NEW precedes the marker, OLD follows it);
+      - two quoted spans separated by a replace verb/marker (OLD first, NEW
+        last) - e.g. ``andra "X" til att saga "Y"``;
+      - a single quoted OLD span followed by an unquoted/colon ``till``/``to``
+        value - e.g. ``andra denna text "X" till Y``.
+    """
+    marker_new = _value_before_replace_marker(follow_up_prompt)
+    spans = list(_QUOTED_SPAN_RE.finditer(follow_up_prompt))
+    if marker_new is not None:
+        lowered = follow_up_prompt.lower()
+        marker_pos = min(
+            pos for pos in (lowered.find(m) for m in _REPLACE_MARKERS) if pos != -1
+        )
+        old_after = next(
+            (m.group(1) for m in spans if m.start() > marker_pos), None
+        )
+        return (
+            (old_after.strip() if old_after else None),
+            (marker_new.strip() or None),
+        )
+    if not spans:
+        return None, None
+    old_value = spans[0].group(1).strip()
+    if len(spans) >= 2:
+        return (old_value or None), (spans[-1].group(1).strip() or None)
+    tail = follow_up_prompt[spans[0].end() :]
+    new_value = _extract_replace_value(tail)
+    return (old_value or None), (new_value.strip() if new_value else None)
+
+
+def _extract_literal_replace_directives(
+    follow_up_prompt: str,
+    merged: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Literal find-and-replace on the current copy fields.
+
+    Returns a single targeted ``replace-text`` directive when the operator
+    quoted an OLD value that exactly matches (normalised) a current
+    ``tagline``/``heroHeadline``/``story`` or a service ``summary``, else
+    ``[]`` (honest no-op). The NEW value runs through ``_safe_copy_payload`` so
+    the raw instruction can never become customer copy. Needs the merged
+    Project Input (the current site state), so it is wired into
+    ``merge_followup_project_input``, not the stateless ``_extract_copy_directives``.
+    """
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return []
+    has_replace = _contains_any_word(
+        text, _COPY_DIRECTIVE_REPLACE_KEYWORDS
+    ) or _contains_any(text, _REPLACE_MARKERS)
+    has_text_anchor = _contains_any(text, _LITERAL_TEXT_ANCHOR_KEYWORDS)
+    if not (has_replace or has_text_anchor):
+        return []
+    old_value, new_value = _extract_literal_old_new(follow_up_prompt)
+    if not old_value or not new_value:
+        return []
+    old_norm = _normalise_followup_text(old_value)
+    if not old_norm:
+        return []
+    company = merged.get("company")
+    company = company if isinstance(company, dict) else {}
+    # Editable single-value copy fields, in priority order. tagline +
+    # heroHeadline both feed the hero line; story is the about copy.
+    for target, field, cap in (
+        ("tagline", "tagline", 140),
+        ("tagline", "heroHeadline", 140),
+        ("about-text", "story", _COPY_DIRECTIVE_ABOUT_MAX_LENGTH),
+    ):
+        current = company.get(field)
+        if isinstance(current, str) and _normalise_followup_text(current) == old_norm:
+            payload = _safe_copy_payload(
+                new_value, follow_up_prompt=follow_up_prompt, max_length=cap
+            )
+            if payload is None:
+                return []
+            return [
+                {
+                    "target": target,
+                    "operation": "replace-text",
+                    "payload": payload,
+                    # "prompt-rule": deterministic, prompt-derived (the schema
+                    # enum allows prompt-rule | llm | explicit). The literal
+                    # find-and-replace is a deterministic rule, not an LLM call.
+                    "source": "prompt-rule",
+                }
+            ]
+    for service in merged.get("services") or []:
+        if not isinstance(service, dict):
+            continue
+        summary = service.get("summary")
+        if isinstance(summary, str) and _normalise_followup_text(summary) == old_norm:
+            ref = service.get("id") or service.get("label")
+            if not (isinstance(ref, str) and ref.strip()):
+                return []
+            payload = _safe_copy_payload(
+                new_value,
+                follow_up_prompt=follow_up_prompt,
+                max_length=_COPY_DIRECTIVE_SERVICES_MAX_LENGTH,
+            )
+            if payload is None:
+                return []
+            return [
+                {
+                    "target": "services",
+                    "operation": "replace-text",
+                    "payload": payload,
+                    "targetRef": ref.strip()[:80],
+                    "source": "prompt-rule",
+                }
+            ]
+    return []
+
+
+def _followup_is_additive_request(skeleton_text: str) -> bool:
+    """True when the instruction skeleton is an ADDITIVE (add/include) request.
+
+    ``skeleton_text`` is the normalised follow-up with the quoted OLD/NEW copy
+    removed (``_text_outside_quotes``), so a quoted value that happens to read
+    additively never drives this. Additive = an include keyword (``lägg
+    till``/``inkludera``/...) OR a section-add phrasing (``ny ... sektion``).
+    An additive follow-up is never a copy-REPLACE even when it quotes the NEW
+    content (the quoted span is the new copy, not an OLD string to swap).
+    """
+    if _contains_any_word(skeleton_text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS):
+        return True
+    return bool(_SECTION_ADD_INTENT_RE.search(skeleton_text))
+
+
+def _followup_requested_copy_replace(follow_up_prompt: str) -> bool:
+    """True when the follow-up asked to REPLACE a specific quoted copy string.
+
+    Used by the build's honest-effect signal (ROW 3): when the operator clearly
+    asked to SWAP visible text (a genuine replace verb / replace marker PLUS a
+    quoted OLD span) but no copyDirective actually applied, an unrelated byte
+    diff must NOT be reported as a successful edit. The signal answers "did the
+    operator's REPLACE intent land?".
+
+    Tightened (#224 P2): an ADDITIVE follow-up that merely quotes the NEW copy -
+    e.g. ``lägg till en FAQ-sektion med texten "Vanliga frågor"`` - is NOT a
+    copy-replace. Such a prompt may well have added a visible section, so it
+    must report the honest visible change, never a phantom
+    ``copy_directive_not_applied`` no-op. Two guards make this honest:
+
+    1. additive phrasing (include keyword / ``ny ... sektion``) -> not a replace;
+    2. a genuine REPLACE signal is required - a replace verb or replace marker,
+       NOT a bare ``texten`` anchor (which is exactly what mis-fired on the
+       additive ``... med texten "..."`` phrasing).
+
+    Both run on the instruction skeleton (quoted spans removed) so a verb or
+    section noun inside the quoted OLD/NEW copy never drives the signal. The
+    legitimate literal copy-replace honesty case (a quoted OLD span + replace
+    verb that truly no-ops) still returns ``True``.
+    """
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text:
+        return False
+    if not _QUOTED_SPAN_RE.search(follow_up_prompt):
+        return False
+    # Match the operator's instruction skeleton, not the quoted OLD/NEW copy.
+    # Fall back to the full text only when the entire message was quoted.
+    skeleton = _text_outside_quotes(follow_up_prompt) or text
+    if _followup_is_additive_request(skeleton):
+        return False
+    return _contains_any_word(
+        skeleton, _COPY_DIRECTIVE_REPLACE_KEYWORDS
+    ) or _contains_any(skeleton, _REPLACE_MARKERS)
 
 
 def _extract_copy_directives(

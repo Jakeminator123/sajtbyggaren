@@ -1,11 +1,21 @@
+---
+status: active
+owner: ui
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Viewser MVP
 
-`apps/viewser` är en **localhost-only operator-prototype** som binder ihop
-PromptBuilder, build-triggning, run history och preview av senaste run. Den är
-inte en canonical runtime och kommer att ersättas av Sprint 4 LocalRuntime /
-StackBlitzRuntime när de finns. Hosted Vercel-deploys får visa UI/read-only
-diagnostik, men prompt/build/scrape-actions blockas med 501 eftersom de ännu
-shellar repo-lokala Python-skript.
+`apps/viewser` är **operator-UI:t** (localhost-first prototyp) som binder ihop
+PromptBuilder, discovery-wizard, build-triggning, follow-up, run history och
+preview av senaste build. Den driver hela kärnloopen `prompt → företagshemsida
+→ preview → följdprompt → ny version`. Preview körs via en `Preview Runtime`:
+**`local-next` är faktisk default** och Vercel Sandbox är primärt opt-in-val
+(se [`preview-runtime.md`](preview-runtime.md) + ADR 0033). Den tidigare
+`StackBlitz`-embedden är **pausad** (ADR 0033). Hosted Vercel-deploys får visa
+UI/read-only diagnostik, men prompt/build/scrape-actions blockas med 501 eftersom
+de shellar repo-lokala Python-skript.
 
 ## Avgränsning
 
@@ -25,7 +35,7 @@ Viewser är ett dev-verktyg, inte en produkt. Den får inte:
 |---|---|
 | Project Input          | Konkret kundprojekt (t.ex. `painter-palma`). Filer: `examples/<siteId>.project-input.json`. |
 | PromptBuilder          | Fri init-prompt och follow-up prompt versions ovanpå Builder MVP |
-| Viewer                 | StackBlitz embed av Generated Files-snapshot |
+| Viewer / Preview       | Förhandsvisning av senaste build via `Preview Runtime` (`local-next` default; Vercel Sandbox opt-in primär; StackBlitz-embed pausad, ADR 0033). |
 | Token Meter            | Lokal aggregering av OpenAI usage + buildResult |
 
 `painter-palma` är ett **Project Input**, **inte** en Dossier. En Dossier är
@@ -44,12 +54,21 @@ Klassen är `soft` eller `hard` (se ADR 0012).
    lokal runtime. På hosted Vercel returnerar routen 501.
 5. Run-artefakter hamnar i `data/runs/<runId>/` enligt builder MVP.
 6. Viewer Panel hämtar filtrerat filträd via `GET /api/runs/<runId>/files`.
-7. `@stackblitz/sdk.embedProject` mountar projektfilerna i browsern.
+7. Preview renderas via vald `Preview Runtime` — se **"Två driftlägen"** nedan
+   (`local-next` spawnar en lokal `next start`; Vercel Sandbox-läget bygger/kör
+   i en isolerad sandbox och iframe:ar en publik URL). Den pausade StackBlitz-
+   vägen (`@stackblitz/sdk` + filträd-mount) beskrivs i "Filhämtning för preview"
+   nedan som legacy/pausad referens.
 
 API-mekanism: **Next.js App Router route handlers** (`app/api/.../route.ts`).
 Vi använder inte Server Actions i denna runda.
 
-## Filhämtning för preview
+## Filhämtning för preview (StackBlitz-vägen, pausad)
+
+> Avsnittet beskriver fil-mountningen för den **pausade** StackBlitz-embedden
+> (ADR 0033). Dagens default-preview (`local-next`) och opt-in-primären (Vercel
+> Sandbox) beskrivs i "Två driftlägen" nedan; de kör en riktig Next.js-build i
+> stället för att mounta ett filträd i browsern.
 
 `lib/stackblitz-files.ts` läser källan i denna prioritetsordning:
 

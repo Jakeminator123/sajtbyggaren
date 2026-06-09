@@ -203,6 +203,122 @@ def test_apply_creates_next_version_with_capability(
     ) + "\n"
 
 
+def test_section_add_surfacing_survives_duplicate_capability_from_patch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """#221 P2: when the SAME capability arrives BOTH via a component patch and a
+    section_add, the capability-dedupe must NOT suppress the section_add visible
+    surfacing. faq-section is mounted exactly once, but /faq is still surfaced.
+
+    Before the fix, ``section_capabilities_applied`` was derived from the merged
+    ``capabilities`` filtered by ``sectionAdd:`` patchField; the dedupe kept only
+    the component-patch entry (no ``sectionAdd:`` prefix), so the surfacing never
+    ran and /faq stayed invisible even on local-service-business.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    v1_pi, _v1_meta, _v1_path, _ = _init_site(tmp_path)
+    # The generated electrician site is the wizard-route scaffold faq surfaces on.
+    assert v1_pi["scaffoldId"] == "local-service-business"
+
+    # The component patch already classifies to faq-section (the dedupe target),
+    # AND the section_add resolves the SAME capability (the duplicate).
+    result = apply_patch_plan(
+        _capability_patch(capability="faq-section"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        added_capabilities=["faq-section"],
+    )
+
+    assert result.applied is True
+    # The section_add surfacing still ran despite the duplicate capability.
+    assert result.sectionRoutesSurfaced == ["faq"]
+
+    v2_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    # faq-section mounted exactly once (no double-add to requestedCapabilities).
+    assert v2_pi["requestedCapabilities"].count("faq-section") == 1
+
+    v2_meta = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.meta.json").read_text(encoding="utf-8")
+    )
+    assert v2_meta["appliedPatchPlan"]["sectionRoutesSurfaced"] == ["faq"]
+    assert "FAQ" in (v2_meta.get("wizardMustHave") or [])
+
+
+def test_component_add_of_inline_capable_capability_does_not_create_inline_section(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Codex review fix (ADR 0038): only a section_add may CREATE an inline
+    placement. A plain ``component_add`` that happens to mount an
+    inline-capable capability (``hours`` via a widget patch) must mount the
+    capability WITHOUT injecting a whole new home section the user never
+    asked for - so ``directives.mountedSections`` is not written.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    v1_pi, _v1_meta, _v1_path, _ = _init_site(tmp_path)
+    assert v1_pi["scaffoldId"] == "local-service-business"
+
+    result = apply_patch_plan(
+        _capability_patch(capability="hours"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        # No added_capabilities: this is a component_add, not a section_add.
+    )
+    assert result.applied is True
+
+    v2_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    assert "hours" in v2_pi["requestedCapabilities"]
+    mounted = (v2_pi.get("directives") or {}).get("mountedSections")
+    assert mounted is None, (
+        "component_add must not create an inline mountedSections entry; "
+        f"got {mounted!r}"
+    )
+
+
+def test_section_add_inline_placement_survives_unrelated_component_add(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The carry-forward half of the Codex fix: an inline section created by a
+    REAL section_add in v2 must survive an unrelated component_add in v3 (its
+    capability is still requested), while the v3 apply itself creates nothing
+    new."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+
+    # v2: real section_add mounts hours inline.
+    section_result = apply_patch_plan(
+        PatchPlan(patches=[], valid=True),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        added_capabilities=["hours"],
+    )
+    assert section_result.applied is True
+    v2_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    v2_mounted = (v2_pi.get("directives") or {}).get("mountedSections") or []
+    assert any(m.get("sectionId") == "hours-summary" for m in v2_mounted)
+
+    # v3: unrelated component_add (contact-form).
+    component_result = apply_patch_plan(
+        _capability_patch(capability="contact-form"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+    )
+    assert component_result.applied is True
+    v3_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v3.project-input.json").read_text(encoding="utf-8")
+    )
+    v3_mounted = (v3_pi.get("directives") or {}).get("mountedSections") or []
+    assert any(m.get("sectionId") == "hours-summary" for m in v3_mounted), (
+        "the v2 inline section must be carried forward into v3 "
+        f"(capability still requested); got {v3_mounted!r}"
+    )
+
+
 def test_apply_unions_capabilities_without_dropping_existing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

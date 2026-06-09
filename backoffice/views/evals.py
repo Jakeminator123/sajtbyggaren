@@ -421,7 +421,11 @@ def view_evals() -> None:
     st.title("Evals och telemetri")
     st.caption(
         "Smoke- och regressionssignal över examples-dossiers. Inte 1-10 kvalitetsbetyg "
-        "— det lägger vi separat som manuellt scorecard. Detaljer i `docs/evals.md`."
+        "— det lägger vi separat som manuellt scorecard. Två scorecard-betydelser: "
+        "automatiskt `scorecard`-fält på `Quality Result` (från `Quality Gate`) och "
+        "det manuella 1-10 nedan — inget tredje 'Quality Scorecard'-begrepp. "
+        "`Golden Path`-status finns i Status-fliken. Detaljer i `docs/evals.md`, "
+        "begreppskarta i `docs/glossary.md`."
     )
 
     try:

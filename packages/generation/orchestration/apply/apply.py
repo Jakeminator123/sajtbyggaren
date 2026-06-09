@@ -125,6 +125,7 @@ def apply_patch_plan(
     trace_run_dir: Path | str | None = None,
     theme_directive: ThemeDirective | None = None,
     added_capabilities: list[str] | None = None,
+    section_positions: dict[str, str] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
 
@@ -347,6 +348,101 @@ def apply_patch_plan(
     )
     _ensure_required_dossiers(merged, mounted_dossiers)
 
+    # 5b2. section_add INLINE render (ADR 0038): a mounted section capability that
+    #      maps to an inline section on a supported scaffold is recorded as a
+    #      ``directives.mountedSections`` entry on the NEW version's Project Input
+    #      so the renderer injects the section as a block on its route (instead of
+    #      staying mount-only / dedicated-route-only). The list is replaced per
+    #      version (never accumulated): re-run from the same base does not stack
+    #      duplicates, and a section that is no longer requested drops out. Render
+    #      time owns honesty - the renderer skips an id with no registered
+    #      renderer, one already in the route order, or one whose section renders
+    #      empty - so writing the entry here never forces a visible effect.
+    from packages.generation.followup.section_directives import (
+        resolve_inline_section_placements,
+    )
+
+    # Inline-eligible capabilities for THIS version are the union of:
+    #
+    #   1. CARRIED FORWARD: capabilities of the previous version's
+    #      ``mountedSections`` entries that are STILL requested on the merged
+    #      version (``merge_followup_project_input`` deep-copies the previous
+    #      version, so the prior directive + the requestedCapabilities union ride
+    #      along). This keeps the directive COMPOSING across versions - a section
+    #      mounted in v2 survives a v3 copy/theme follow-up - while a capability
+    #      that is genuinely no longer requested falls out.
+    #   2. NEW: ONLY this apply call's ``section_capabilities`` (the explicit
+    #      section_add intent). Codex review fix: deriving new placements from the
+    #      FULL merged ``requestedCapabilities`` meant a plain ``component_add``
+    #      that happened to mount an inline-capable capability (e.g. hours via a
+    #      widget patch) silently injected a whole NEW home section the user
+    #      never asked for. Only a section_add may CREATE an inline placement;
+    #      everything else can at most PRESERVE one.
+    #
+    # The list is still per-version (rebuilt, never appended to), so it cannot
+    # drift from what the build can render.
+    merged_caps = {
+        cap
+        for cap in (merged.get("requestedCapabilities") or [])
+        if isinstance(cap, str) and cap.strip()
+    }
+    directives = merged.get("directives")
+    carried_caps: list[str] = []
+    prior_mounted = (
+        directives.get("mountedSections") if isinstance(directives, dict) else None
+    )
+    if isinstance(prior_mounted, list):
+        for prev in prior_mounted:
+            if not isinstance(prev, dict):
+                continue
+            cap = prev.get("capability")
+            if isinstance(cap, str) and cap in merged_caps and cap not in carried_caps:
+                carried_caps.append(cap)
+    eligible_caps = carried_caps + [
+        cap for cap in section_capabilities if cap not in carried_caps
+    ]
+    inline_placements = resolve_inline_section_placements(eligible_caps, merged)
+    if inline_placements:
+        if not isinstance(directives, dict):
+            directives = {}
+            merged["directives"] = directives
+        # Position precedence: an EXPLICIT position from THIS call's router target
+        # wins; otherwise carry forward the position a prior version already
+        # recorded for the same section (so a v2 "överst" survives a v3 follow-up
+        # that does not re-mention the section); otherwise the default slot.
+        new_positions = section_positions or {}
+        prior_positions: dict[str, str] = {}
+        prior = directives.get("mountedSections")
+        if isinstance(prior, list):
+            for prev in prior:
+                if isinstance(prev, dict):
+                    cap = prev.get("capability")
+                    pos = prev.get("position")
+                    if isinstance(cap, str) and pos in ("top", "bottom", "before-contact"):
+                        prior_positions[cap] = pos
+        entries: list[dict[str, str]] = []
+        for placement in inline_placements:
+            entry = {
+                "sectionId": placement["sectionId"],
+                "routeId": placement["routeId"],
+                "capability": placement["capability"],
+            }
+            # Coarse placement from the router target ("överst"/"längst ner").
+            # Only the schema-valid positions are honoured; anything else (incl.
+            # left/right/center, which are intra-section, not route-order) drops
+            # to the default before-contact slot.
+            position = new_positions.get(placement["capability"]) or prior_positions.get(
+                placement["capability"]
+            )
+            if position in ("top", "bottom", "before-contact"):
+                entry["position"] = position
+            entries.append(entry)
+        directives["mountedSections"] = entries
+    elif isinstance(directives, dict):
+        # No inline-eligible capability remains requested -> the directive must
+        # not linger (honest: nothing inline to render this version).
+        directives.pop("mountedSections", None)
+
     # visual_style restyle: set the named brand/tone fields from the directive's
     # EXPLICIT values (patch-driven; the prompt is never re-parsed here). These
     # are schema-declared Project Input fields rendered by patch_globals_css, so
@@ -360,6 +456,51 @@ def apply_patch_plan(
         theme_applied = apply_theme_directive(merged, theme_directive)
 
     _validate_against_schema(merged)
+
+    # 5c. section_add visible surfacing (the section_builder's visible-render
+    #     follow-up). A mounted section capability that has a dedicated, grounded
+    #     visible route is surfaced by recording its wizard ``mustHave`` label on
+    #     the NEW version's meta sidecar; the next targeted build then emits the
+    #     dedicated page (reusing the existing render_* + extra-routes plumbing),
+    #     so the deterministic file-diff reports an honest appliedVisibleEffect.
+    #     Only the synthetic section_add capabilities (``sectionAdd:`` patchField)
+    #     are considered - a component_add never changes the route plan here. A
+    #     capability with no dedicated visible route, or with no grounded content,
+    #     stays mount-only (honest mounted-but-no-content) and is reported in the
+    #     notes. Behaviour-preserving: the label lands ONLY on this version's meta
+    #     (per-site, per-version), so init builds and other sites are untouched,
+    #     and a scaffold whose renderer set does not emit the wizard route keeps
+    #     the section mount-only at build time.
+    surfaced_routes: list[str] = []
+    surfaced_wizard_pages: list[str] = []
+    section_mount_only: list[dict[str, str]] = []
+    # Visible surfacing considers the pre-resolved section_add capabilities
+    # DIRECTLY (deduped, order-preserving), not the merged ``capabilities`` list
+    # filtered by ``sectionAdd:`` patchField. When the SAME capability ALSO
+    # arrives via a component patch, the dedupe above keeps only the patch entry
+    # (whose patchField is not ``sectionAdd:``), which would otherwise drop the
+    # section_add surfacing intent and leave the dedicated route invisible even
+    # on a wizard-route scaffold (#221 P2). The section_add intent is preserved
+    # separately from capability-dedupe, independent of how the capability was
+    # mounted. Each entry is already verified to have an implementing Dossier by
+    # the caller, so it is genuinely mounted.
+    section_capabilities_applied: list[str] = []
+    for capability in section_capabilities:
+        if capability not in section_capabilities_applied:
+            section_capabilities_applied.append(capability)
+    if section_capabilities_applied:
+        from packages.generation.followup.section_directives import (
+            resolve_visible_section_pages,
+        )
+
+        visible_pages, section_mount_only = resolve_visible_section_pages(
+            section_capabilities_applied, merged
+        )
+        for page in visible_pages:
+            if page["wizardLabel"] not in surfaced_wizard_pages:
+                surfaced_wizard_pages.append(page["wizardLabel"])
+            if page["routeId"] not in surfaced_routes:
+                surfaced_routes.append(page["routeId"])
 
     # 6. Build the meta sidecar by carrying the prior version's meta forward and
     #    overriding only the per-version keys (projectId stays the canonical
@@ -388,11 +529,27 @@ def apply_patch_plan(
         meta["followUpPrompt"] = follow_up_prompt
     if base_run_id is not None:
         meta["baseRunId"] = base_run_id
+    # section_add visible surfacing: union the surfaced wizard ``mustHave``
+    # labels into the next version's meta so the build emits the dedicated page.
+    # Order-preserving + idempotent: re-surfacing the same page never duplicates
+    # it, and any labels the operator already had carry forward.
+    if surfaced_wizard_pages:
+        existing_pages = meta.get("wizardMustHave")
+        pages = (
+            [page for page in existing_pages if isinstance(page, str)]
+            if isinstance(existing_pages, list)
+            else []
+        )
+        for label in surfaced_wizard_pages:
+            if label not in pages:
+                pages.append(label)
+        meta["wizardMustHave"] = pages
     meta["appliedPatchPlan"] = {
         "source": "kor-7c-artifact-apply",
         "patchCount": len(plan.patches),
         "appliedCapabilities": [entry.model_dump() for entry in capabilities],
         "themeApplied": theme_applied,
+        "sectionRoutesSurfaced": list(surfaced_routes),
     }
     meta["projectDna"] = _build_project_dna_snapshot(
         merged,
@@ -420,6 +577,17 @@ def apply_patch_plan(
             f"Applicerade restyle (brand/tone) i v{next_version} från "
             "visual_style-direktivet."
         )
+    if surfaced_wizard_pages:
+        notes.append(
+            "Synliggjorde sektion(er) som dedikerad route "
+            f"({', '.join(surfaced_routes)}) via wizardMustHave "
+            f"({', '.join(surfaced_wizard_pages)}); targeted render avgör "
+            "appliedVisibleEffect."
+        )
+    for entry in section_mount_only:
+        notes.append(
+            f"Sektion {entry['capability']!r} förblir mount-only: {entry['reason']}"
+        )
     result = ApplyResult(
         applied=True,
         siteId=site_id,
@@ -429,6 +597,7 @@ def apply_patch_plan(
         projectInputPath=str(project_input_path),
         metaPath=str(meta_path),
         appliedCapabilities=capabilities,
+        sectionRoutesSurfaced=list(surfaced_routes),
         notes=notes,
     )
 

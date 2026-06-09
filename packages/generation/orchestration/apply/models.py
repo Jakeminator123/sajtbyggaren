@@ -94,3 +94,9 @@ class ApplyResult(BaseModel):
     appliedCapabilities: list[AppliedCapability] = Field(default_factory=list)
     unmapped: list[UnmappedPatch] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    # Logical route ids a section_add surfaced as a NEW visible dedicated page
+    # (e.g. ``["faq"]``) by recording the wizard label on the next version's
+    # meta sidecar. Empty for component_add, restyle, and mount-only section
+    # adds. The targeted-render layer uses it to attribute the affected route to
+    # the surfaced page instead of the home default.
+    sectionRoutesSurfaced: list[str] = Field(default_factory=list)

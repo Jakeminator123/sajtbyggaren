@@ -1,0 +1,41 @@
+<!-- AUTO-GENERATED FROM governance/rules/07-docs-focus-handoff.md. Do not edit directly. Run: python scripts/rules_sync.py -->
+---
+description: Håll current-focus och handoff korta, aktuella och kopplade till nästa agentarbete; flytta historik till arkiv och bevara de ankare verktygen kräver.
+globs: docs/current-focus.md,docs/handoff.md,docs/archive/**,docs/agent-prompts/**
+alwaysApply: false
+---
+
+# Current-focus och handoff
+
+Gäller när du ändrar status-/handoff-docs. Konsoliderar current-focus-hygien och handoff-disciplin.
+
+## `docs/current-focus.md`
+
+Ska kunna läsas på cirka 30 sekunder. Den är nästa agents första källa — staplad historik vilseleder. Får innehålla:
+
+1. **Status nu** — aktuellt git-läge (main + arbets-branch SHA), `Last verified state: <sha>`-raden och `Nya PRs sedan föregående checkpoint:`-raden.
+2. **Nästa 3 prioriteringar** — numrerad lista, en rad var.
+3. **Öppna blockers** — kort punktlista.
+4. **Öppna PR att känna till** — varje öppen PR nämns vid nummer (`focus_check.py` korsar mot detta).
+5. **Länkar** — handoff, agent-prompts, openclaw-plan, branch-/teamregler.
+6. Stabil referens som sällan ändras ("Vem uppdaterar denna fil", "Branchmodellen (kort)", "Loopen vi följer", "Arkiv").
+
+## Vad som ska bort (till arkiv, inte raderas)
+
+- Gamla `## Current objective (<datum>)`-block. Bara det aktuella statusblocket får finnas; äldre flyttas till `docs/archive/current-focus-<datum>-*.md`.
+- `## Föregående checkpoint`-kedjan: behåll **högst ett** historiskt block; flytta äldre till arkivet med en arkivlänk.
+- Stale PR-listor, "Direkt nästa fokus", "Aktiv kö" m.m. som inte längre styr nästa agents arbete.
+
+## Hårda krav (bryt dem inte vid slimning)
+
+- Behåll en `` Last verified state: `<sha>` ``-rad direkt följd av en `## `-rubrik (`scripts/steward_auto_bump.py` och `scripts/focus_check.py` förlitar sig på detta).
+- Behåll en `## Föregående checkpoint`-sektion (auto-bumpens ankare).
+- Flytta, radera inte. Snapshotta hela den gamla filen till `docs/archive/` innan du skriver om.
+
+## `docs/handoff.md`
+
+Översta blocket är auktoritativt. Allt under historiklinjen behandlas som historik och verifieras mot git/GitHub innan det styr arbete.
+
+## Före större agentpass
+
+Om `current-focus.md`, `handoff.md` och GitHub-läget skiljer sig: gör en Steward-refresh innan Builder får ny implementation. Städningen görs av Steward (eller en docs/governance-cloudagent) vid focus-refresh.

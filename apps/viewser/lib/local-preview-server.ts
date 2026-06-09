@@ -42,29 +42,21 @@ import { existsSync, readFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import path from "node:path";
 
+import { resolveGeneratedDir } from "./generated-dir";
+
 const PORT_BASE = 4100;
 const PORT_RANGE = 100;
 const HEALTH_RETRIES = 30;
 const HEALTH_INTERVAL_MS = 200;
 
-/**
- * Resolverar var ``build_site.py`` skrivit den genererade Next.js-
- * sajten. Speglar logiken i AGENTS.md ("default
- * ``../sajtbyggaren-output/.generated/<siteId>/``, kan overridas med
- * env ``SAJTBYGGAREN_GENERATED_DIR``"). På Cloud Agent VM:n resolveras
- * default-pathen till ``/sajtbyggaren-output/.generated/``.
- */
-function resolveGeneratedDir(): string {
-  const envOverride = process.env.SAJTBYGGAREN_GENERATED_DIR;
-  if (envOverride && envOverride.trim()) {
-    return path.resolve(envOverride.trim());
-  }
-  // Default: ../sajtbyggaren-output/.generated/ relativt repo-roten.
-  // Viewser körs från apps/viewser/ så vi behöver kliva upp två steg
-  // till repo-roten + ut och in i sajtbyggaren-output.
-  const repoRoot = path.resolve(process.cwd(), "..", "..");
-  return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
-}
+// Var ``build_site.py`` skrivit den genererade Next.js-sajten resolveras nu
+// av den DELADE ``resolveGeneratedDir`` i ``./generated-dir`` (samma resolver
+// som vercel-sandbox-runnern och samma regler som Pythons
+// ``resolve_generated_dir``): cwd-oberoende repo-rot, repo-root-relativ
+// resolution av ett relativt ``SAJTBYGGAREN_GENERATED_DIR`` och repo-rotens
+// ``.env`` som single source. Tidigare egen kopia härledde repo-roten från
+// ``process.cwd()`` och resolverade relativa värden mot cwd — det fick
+// buildern och previewen att peka på olika mappar.
 
 // Build id format YYYYMMDDTHHMMSSZ with an optional -NN collision suffix.
 // Validated before joining to a path so a tampered or corrupt current.json

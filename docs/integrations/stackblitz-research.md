@@ -1,3 +1,15 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Pausad referens. StackBlitz-runtimen är pausad
+> (ADR 0033); dagens preview-väg beskrivs i
+> [`docs/architecture/preview-runtime.md`](../architecture/preview-runtime.md).
+> Behålls *på plats* (länkas från architecture-docs). Se `docs/archive/README.md`.
+
 # StackBlitz research for an AI-powered code editing product
 
 > **Status:** extern research, inte beslut. Materialet är insamlat 2026-05-18

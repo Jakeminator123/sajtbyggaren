@@ -55,3 +55,8 @@ data/evals/golden-path/
 data/taxonomies/sni/sni-2025.v1.json
 
 övrigt/
+
+# Index-only exclusion: keep openclaw-docs/ READABLE by agents (Read/grep)
+# but out of the semantic index so the ~13 MB mirror does not bloat search.
+# (.cursorignore would also block Read; .cursorindexingignore only de-indexes.)
+openclaw-docs/

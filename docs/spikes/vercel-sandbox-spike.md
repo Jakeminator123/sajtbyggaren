@@ -1,3 +1,15 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historisk spike (flag-gated PoC). Resultatet
+> ligger till grund för ADR 0033. Aktuell runtime-status:
+> [`docs/architecture/preview-runtime.md`](../architecture/preview-runtime.md).
+> Behålls *på plats*. Se `docs/archive/README.md`.
+
 # Spike: Vercel-sandbox-preview (flag-gated PoC)
 
 > Status: spike / proof-of-concept. **INTE** en `PreviewRuntime`-adapter.

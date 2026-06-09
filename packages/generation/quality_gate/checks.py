@@ -285,12 +285,78 @@ def _is_contact_href(href: str, contact_route_path: str | None) -> bool:
 # samma kategori som "Lorem ipsum" i en hero-rubrik. Reviewer-fynd på PR
 # #129 + #133. Lägg inte tillbaka dev-markers utan att samtidigt smala
 # scope:t till bara customer-copy-extensions.
+# Patterns scanned per physical line (literal tokens / single-line shapes).
 _PLACEHOLDER_PATTERNS = [
     ("Lorem ipsum", re.compile(r"lorem ipsum", re.IGNORECASE)),
     ("TBD", re.compile(r"\bTBD\b", re.IGNORECASE)),
     ("PLATSHÅLLARE", re.compile(r"platshållare", re.IGNORECASE)),
     ("REPLACE_ME", re.compile(r"\bREPLACE_ME\b", re.IGNORECASE)),
     ("<insert ... here>", re.compile(r"<insert\b[^>]*\bhere>", re.IGNORECASE)),
+    # Generic-AI English template slop. Narrowed (PR #244 review) to clear
+    # placeholder SHAPES only - "your company name/website/...", "welcome to
+    # your company", a bracketed "[company name]", or "company name (goes) here"
+    # - so legitimate English prose on a ``language == "en"`` site ("we help
+    # your company grow", "our company name has meant quality since 1999") is
+    # NOT a false positive. placeholder-copy-scan is a warning lane, and a false
+    # warning erodes trust in the gate. Swedish copy uses "ditt företag" /
+    # "företagsnamn" and never trips these.
+    (
+        "your company template",
+        re.compile(
+            # Deliberately NOT bare "your company name": that also appears in
+            # legit form prompts ("tell us your company name"). The unfilled
+            # "your company name" template is caught by the bracketed pattern
+            # below ("{your company name}") or by "... goes here".
+            r"\byour company (?:website|page|site|logo|here)\b"
+            r"|\bwelcome to your company\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "company name placeholder",
+        re.compile(r"\bcompany name (?:goes here|here)\b", re.IGNORECASE),
+    ),
+    (
+        "bracketed company placeholder",
+        # Requires a TWO-word placeholder phrase ("company name", "your
+        # company", "your company name") inside the brackets. A bare
+        # ``{company}`` / ``{ company }`` is deliberately NOT matched: in TSX
+        # source that is a legitimate JSX expression interpolating a variable
+        # named ``company`` (Codex review fix), not leaked placeholder copy.
+        re.compile(
+            r"[\[{]\s*(?:your\s+company(?:\s+name)?|company\s+name)\s*[\]}]",
+            re.IGNORECASE,
+        ),
+    ),
+    # Imperative "Insert <det> ..." scaffolding (e.g. "Insert your text
+    # here"). The determiner requirement keeps it off code identifiers
+    # like insertBefore() and off any bare Swedish word.
+    (
+        "insert <placeholder>",
+        re.compile(
+            r"\binsert\s+(?:your|the|a|an|company|customer|business|text|"
+            r"image|logo|tagline|name)\b",
+            re.IGNORECASE,
+        ),
+    ),
+]
+
+# Patterns scanned over the WHOLE file text so a pretty-printed element that
+# spans physical lines is still caught (PR #244 review): the per-line scan
+# misses ``<h2>\n   \n</h2>``. ``\s`` already matches newlines, so the same
+# regex catches both single-line and multi-line empty headings; the match's
+# start offset is mapped back to a 1-based line number for the finding.
+_PLACEHOLDER_TEXT_PATTERNS = [
+    # Empty section heading: <h1></h1>, <h2> </h2>, <h3>&nbsp;</h3>, and the
+    # pretty-printed multi-line form. A rendered heading element with no real
+    # text is a structural placeholder, never legitimate copy.
+    (
+        "empty section heading",
+        re.compile(
+            r"<h([1-6])\b[^>]*>(?:\s|&nbsp;|&#160;)*</h\1>",
+            re.IGNORECASE,
+        ),
+    ),
 ]
 
 
@@ -554,13 +620,19 @@ def run_placeholder_copy_scan_check(target_dir: Path) -> CheckResult:
         if any(part in _POLICY_SCAN_SKIP_DIRS for part in path.parts) or path.suffix not in _TEXT_EXTENSIONS:
             continue
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
+            text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        for line_no, line in enumerate(lines, start=1):
+        rel = path.relative_to(target_dir)
+        for line_no, line in enumerate(text.splitlines(), start=1):
             for label, pattern in _PLACEHOLDER_PATTERNS:
                 if pattern.search(line):
-                    findings.append(f"{path.relative_to(target_dir)}:{line_no}: {label}")
+                    findings.append(f"{rel}:{line_no}: {label}")
+        # Whole-text scan for shapes that may span pretty-printed lines.
+        for label, pattern in _PLACEHOLDER_TEXT_PATTERNS:
+            for match in pattern.finditer(text):
+                line_no = text.count("\n", 0, match.start()) + 1
+                findings.append(f"{rel}:{line_no}: {label}")
     return CheckResult(
         name="placeholder-copy-scan",
         status="failed" if findings else "ok",

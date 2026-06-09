@@ -1,3 +1,13 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historisk audit — behållen som referens (ej
+> sanningskälla). Nuläge: `docs/current-focus.md`. Se `docs/archive/README.md`.
+
 # Embeddings readiness audit — 2026-05-25
 
 **Roll:** Scout, read-only.

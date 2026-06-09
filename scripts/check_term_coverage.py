@@ -65,6 +65,11 @@ EXCLUDE_DIRS = {
     # symbols are spike-local implementation names, not canonical Sajtbyggaren
     # domain terms - same treatment as the MIN_IDE workspace above.
     "openclaw-mvp",
+    # Lokal spegel av docs.openclaw.ai (gitignored, openclaw-docs/), hämtad av
+    # scripts/fetch_openclaw_docs.py. Externt referensmaterial som Cursor får
+    # indexera men vars OpenClaw-termer inte är Sajtbyggaren-domänbegrepp -
+    # samma behandling som MIN_IDE/openclaw-mvp ovan.
+    "openclaw-docs",
     # Local Cursor canvas mirror (gitignored, docs/heavy-llm-flow/canvases/).
     # Cursor only renders canvases from ~/.cursor/projects/<ws>/canvases/; we
     # keep a portable copy in-repo so it survives folder-jumps/restarts. The
@@ -397,6 +402,17 @@ COMMON_WORDS = {
     "FetchedRunsPayload",
     "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
     "StackblitzFileMap",
+    # Bundle-bloat-fix (ADR 0033): den LEGACY/PAUSADE StackBlitz-embed-vägen
+    # bröts ut till en egen lazy-laddad komponent (apps/viewser/components/
+    # stackblitz-preview.tsx) så @stackblitz/sdk inte prefetchas i ViewerPanel:s
+    # eager-chunk. Lokala UI-komponent-/prop-/state-identifierare, inte domänbegrepp.
+    "StackblitzPreview", "StackblitzPreviewProps", "StackblitzStatus",
+    # Inlinade props-shapes för de runtime-``import()``-laddade komponenterna
+    # (viewer-panel respektive versions-tab) — lokala TS-typer, inte domänbegrepp.
+    "StackblitzPreviewComponentProps", "ComparePreviewModalComponentProps",
+    # State-variabler som håller de runtime-laddade komponenterna (måste vara
+    # PascalCase för att renderas som JSX) + Reacts ``ComponentType``-typ.
+    "StackblitzPreviewComp", "ComparePreviewModalComp", "ComponentType",
     # Bite C (ADR 0033) — vercel-sandbox preview wiring TS-symboler. Lokala
     # viewser/preview-identifierare (route-response-shape + session-registry),
     # inte domänbegrepp. Samma behandling som PreviewServerInfo / FilesPayload.
@@ -606,6 +622,16 @@ COMMON_WORDS = {
     "EmptyState",
     # GAP-viewser-wizard-first-impression — rikare foundation+visual UI:
     "FamilyCard", "FoundationSummary", "SummaryRow",
+    # Lätt review-summary (2026-06-09): hopfällbar "granska dina svar"-rad sist
+    # på Bilder-steget (apps/viewser/components/discovery-wizard/review-summary.tsx).
+    # Lokal UI-komponent, inte ett canonical domänbegrepp — samma allowlist-
+    # logik som FoundationSummary/SummaryRow ovan.
+    "ReviewSummary",
+    # Branschsök i steg 1 (2026-06-09): fritextsök/typeahead som mappar
+    # yrken/synonymer → businessFamily + siteType
+    # (apps/viewser/components/discovery-wizard/industry-search.tsx).
+    # Lokala UI-symboler, inte canonical domänbegrepp.
+    "IndustrySearch", "IndustryMatch",
     "PayloadAlignmentPopover", "ContextChips", "ContextChip",
     "VibeMicroPreview", "VibeSwatchRow",
     # Lucide-icon-namn använda i samma komponenter:
@@ -722,6 +748,15 @@ COMMON_WORDS = {
     # rad-typ — inga canonical domänbegrepp (samma behandling som
     # ColorPickerDialog / ScrapeUrlDialog ovan).
     "AddModuleDialog", "AddModuleDialogProps", "ModuleDef",
+    # ModuleEffect (2026-06-09, ADR 0038-konsumtion): per-modul synlighets-
+    # utfall i AddModuleDialog ("inline" | "route" | "registered").
+    "ModuleEffect",
+    # Dialog-toast-ärlighet (2026-06-09): viewser-lokala callback-/signal-
+    # typer i apps/viewser/components/builder/use-followup-build.ts som trådar
+    # follow-up-byggets visible-effect (appliedVisibleEffect/previewShouldRefresh)
+    # upp till studio-toasten. Inga canonical domänbegrepp — samma lokala
+    # allowlist som AddModuleDialog/ModuleDef ovan.
+    "FollowupVisibleEffect", "OnFollowupBuildDone",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",
@@ -775,6 +810,11 @@ COMMON_WORDS = {
     "ProgressTrack", "ProgressValue",
     # Python stdlib + tredjepart-symboler i scrape_site.py och build_site.py
     "BeautifulSoup", "RequestException", "ChunkedEncodingError", "ConnectionError",
+    # Pillow (PIL) submodulnamn som asset-parity-testets avkodade pixel-jämförelse
+    # använder (tests/test_build_assets_parity.py). Externa bibliotekssymboler
+    # (samma kategori som BeautifulSoup / RequestException ovan), inte canonical
+    # domänbegrepp.
+    "ImageChops", "ImageStat",
     # Node typings
     "ProcessEnv",
     # Intake-flödets historiska namn (refererat i Sajtmaskin-port-kommentarer)
@@ -943,6 +983,7 @@ COMMON_WORDS = {
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
+    "ComparePreviewLoadError",  # lokal felkomponent i versions-tab/diff-view.tsx (modal-import-fallback)
     "RunHistorySkeleton",  # lokal Skeleton-komponent i run-history.tsx (Wave 3 Steg 8)
     # Marknadssajt (2026-06-01, scout-marketing-site) — nya lokala UI-/route-
     # symboler i apps/viewser/app/(marketing|console) + components/marketing/*.

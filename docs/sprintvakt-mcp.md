@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Sprintvakt MCP V1
 
 Sprintvakt V1 är en lokal koordineringsyta för Jakob och Christopher. Den ska

@@ -109,6 +109,36 @@ def _normalise_followup_text(text: str) -> str:
     return normalised.strip()
 
 
+# Quote characters an operator may wrap OLD copy in (straight + curly, single
+# + double). Kept local to this shared module so ``_text_outside_quotes`` has
+# no dependency on ``copy_directives`` (which imports FROM here). The
+# copyDirective value extractors keep their own quote handling because they
+# need the quoted spans verbatim; this constant is classification-only.
+_QUOTE_CHARS = "'\"\u201c\u201d\u2018\u2019"
+_PAIRED_QUOTE_RE = re.compile(rf"[{_QUOTE_CHARS}][^{_QUOTE_CHARS}]*[{_QUOTE_CHARS}]")
+
+
+def _text_outside_quotes(text: str) -> str:
+    """Normalised follow-up text with fully-quoted spans removed.
+
+    A follow-up like ``ändra denna text "…exklusiv och modern känsla…" till
+    "…"`` must not let the OLD copy inside the quotes drive intent/target
+    keyword matching: words such as ``känsla``/``modern``/``tjänsteföretag``
+    belong to the text being REPLACED, not to the operator's instruction. We
+    drop every fully paired quote span first, then apply the same
+    normalisation as ``_normalise_followup_text`` so callers keyword-match the
+    instruction skeleton only.
+
+    Only fully paired spans are removed; a lone stray quote leaves the rest of
+    the instruction intact so a legitimate instruction is never eaten. When the
+    operator quoted their ENTIRE message (nothing left outside the quotes) the
+    result is empty and the caller should fall back to the full normalised
+    text rather than treat the message as unclassifiable.
+    """
+    without_quotes = _PAIRED_QUOTE_RE.sub(" ", text or "")
+    return _normalise_followup_text(without_quotes)
+
+
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     return any(keyword in text for keyword in keywords)
 

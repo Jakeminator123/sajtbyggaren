@@ -15,7 +15,7 @@ docs(steward)-commits senaste 100, se
 ## Förutsättningar (läs först, i denna ordning)
 1. `AGENTS.md` — repo-konventioner och godkända kommandon
 2. `governance/rules/team-workflow.md` — Steward-loopen steg 8
-3. `governance/rules/branch-discipline.md` — branch-flödet
+3. `governance/rules/04-branch-and-team.md` — branch-flödet
 4. `governance/rules/bug-scope-discipline.md` — NEVER ändra known-issues.md
 5. `docs/current-focus.md` — se hur den är strukturerad idag
    (rad 33-65: "Last verified state"-blocket)

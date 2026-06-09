@@ -996,7 +996,15 @@ def test_build_calls_run_npm_with_documented_timeouts(monkeypatch, tmp_path: Pat
     project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
     build_site.build(project_input_path, do_build=True, runs_dir=tmp_path)
 
-    install_calls = [c for c in captured if c["command"][:2] == ["npm", "install"]]
+    # The install step uses ``npm ci`` when a lockfile is present (the
+    # default for starter-derived builds) and falls back to ``npm install``
+    # when none was copied. Accept either so the timeout assertion keeps
+    # covering whichever command actually ran.
+    install_calls = [
+        c
+        for c in captured
+        if c["command"][:2] in (["npm", "install"], ["npm", "ci"])
+    ]
     build_calls = [c for c in captured if c["command"][:2] == ["npm", "run"]]
 
     assert build_calls, "build(do_build=True) must call run_npm for npm run build"

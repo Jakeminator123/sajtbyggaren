@@ -20,6 +20,7 @@ from packages.generation.codegen import produce_codegen_artefakt
 
 
 @pytest.mark.tooling
+@pytest.mark.e2e
 @pytest.mark.skipif(
     os.environ.get("SAJTBYGGAREN_E2E") != "1"
     or not os.environ.get("OPENAI_API_KEY"),

@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Team Workflow
 
 Milestone: Team Parallel Work v1.
@@ -60,7 +67,7 @@ i stället, till exempel backend, frontend, contract, docs eller review.
 
 ## PR-regel
 
-- Direct-main enligt `governance/rules/branch-discipline.md` gäller som
+- Direct-main enligt `governance/rules/04-branch-and-team.md` gäller som
   default.
 - PR används när operatören ber om PR/branch, vid Cloud/Grind-arbete, eller
   när ändringen är stor/riskabel och operatören väljer PR-flöde.

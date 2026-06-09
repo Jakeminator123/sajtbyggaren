@@ -15,7 +15,9 @@ canonical source for "what is currently in scope":
   test_docs_freshness.py).
 - The matching cursor rule mirror file exists under `.cursor/rules/`
   so agents that read `.cursor/rules/` directly also pick up the
-  bug-scope-discipline rule (rules_sync.py contract).
+  bug-/PR-review rule (rules_sync.py contract). The bug-scope content
+  now lives in the consolidated 12-bug-and-pr-review rule, scoped via
+  globs to docs/known-issues.md, .github/** and tests/**.
 """
 
 from __future__ import annotations
@@ -29,8 +31,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "list_open_bugs.py"
 KNOWN_ISSUES = REPO_ROOT / "docs" / "known-issues.md"
-RULE_SOURCE = REPO_ROOT / "governance" / "rules" / "bug-scope-discipline.md"
-RULE_MIRROR = REPO_ROOT / ".cursor" / "rules" / "bug-scope-discipline.mdc"
+RULE_SOURCE = REPO_ROOT / "governance" / "rules" / "12-bug-and-pr-review.md"
+RULE_MIRROR = REPO_ROOT / ".cursor" / "rules" / "12-bug-and-pr-review.mdc"
 
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -217,7 +219,7 @@ def test_known_issues_summary_line_matches_script(
         "  > **Aktivt bug-scope:** N aktiva, M misplaced "
         "(...), K unknown, L stängda. Kör `python scripts/list_open_bugs.py` "
         "för full lista. Format-disciplin: se "
-        "governance/rules/bug-scope-discipline.md."
+        "governance/rules/12-bug-and-pr-review.md."
     )
     assert int(match.group("active")) == len(state["active"]), (
         f"Summary line says {match.group('active')} aktiva but the script "
@@ -238,20 +240,24 @@ def test_known_issues_summary_line_matches_script(
 
 
 @pytest.mark.tooling
-def test_rule_source_exists_and_is_alwaysapply() -> None:
-    """The rule must exist in the governance source dir AND be marked
-    `alwaysApply: true` so agents pick it up without explicit globbing.
+def test_rule_source_exists_and_is_scoped() -> None:
+    """The rule must exist in the governance source dir as the consolidated
+    bug-/PR-review rule, scoped via `globs` (alwaysApply: false) so it loads
+    when agents touch the bug-/PR-/CI surfaces.
     """
     assert RULE_SOURCE.exists(), (
-        "governance/rules/bug-scope-discipline.md saknas. Skapa rule-källan; "
+        "governance/rules/12-bug-and-pr-review.md saknas. Skapa rule-källan; "
         "rules_sync.py speglar den till .cursor/rules/."
     )
     text = RULE_SOURCE.read_text(encoding="utf-8")
     assert text.startswith("---"), (
         "Rule-filen måste börja med en frontmatter-block med `description:` "
-        "och `alwaysApply:`-fält."
+        "och `globs:`/`alwaysApply:`-fält."
     )
-    assert "alwaysApply: true" in text
+    assert "alwaysApply: false" in text
+    assert "globs:" in text and "docs/known-issues.md" in text, (
+        "Rule-filen måste vara scopead via globs och täcka docs/known-issues.md."
+    )
     assert "scripts/list_open_bugs.py" in text, (
         "Rule-filen måste namnge scripts/list_open_bugs.py så agenter "
         "vet exakt vilket kommando som ska köras."
@@ -260,17 +266,17 @@ def test_rule_source_exists_and_is_alwaysapply() -> None:
 
 @pytest.mark.tooling
 def test_rule_mirror_exists_and_matches_source() -> None:
-    """`.cursor/rules/bug-scope-discipline.mdc` must exist and carry the
+    """`.cursor/rules/12-bug-and-pr-review.mdc` must exist and carry the
     auto-generated header that `rules_sync.py` writes. Mirrors the
     contract enforced by `python scripts/rules_sync.py --check`.
     """
     assert RULE_MIRROR.exists(), (
-        ".cursor/rules/bug-scope-discipline.mdc saknas. "
+        ".cursor/rules/12-bug-and-pr-review.mdc saknas. "
         "Kör `python scripts/rules_sync.py` för att skapa spegeln."
     )
     mirror_text = RULE_MIRROR.read_text(encoding="utf-8")
     source_text = RULE_SOURCE.read_text(encoding="utf-8")
-    assert "AUTO-GENERATED FROM governance/rules/bug-scope-discipline.md" in mirror_text
+    assert "AUTO-GENERATED FROM governance/rules/12-bug-and-pr-review.md" in mirror_text
     assert source_text in mirror_text, (
         "Spegeln är out-of-sync mot källan. Kör `python scripts/rules_sync.py`."
     )

@@ -1,8 +1,45 @@
+---
+status: active
+owner: governance
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Glossary
 
 Alla begrepp som finns i Sajtbyggarens governance, förklarade i en mänsklig ton. Den maskinläsbara sanningskällan är [`naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - här återges samma termer i löpande text och i den ordning de dyker upp i flödet.
 
 Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förbjudet i kod om det inte uttryckligen står i `aliasesAllowed` på respektive term.
+
+## Begreppskarta - golden, blueprint, DNA, scorecard
+
+Den här kartan finns för att binda ihop fyra begrepp som lätt blandas ihop.
+Sanningskällan är fortfarande `naming-dictionary.v1.json`; det här är den
+mänskliga förklaringen av hur de förhåller sig till varandra.
+
+| Canonical term | Betyder | Ägs av (fil/område) | Förbjudna/utgångna alias | Använd INTE för |
+| --- | --- | --- | --- | --- |
+| `Golden Path` | Produktens kanoniska huvudflöde (`prompt -> företagshemsida -> preview -> följdprompt -> ny version`) och den smala motor-skivan som bevisar att det lever. | `scripts/run_golden_path_eval.py` (mätning) + `docs/llm-golden-path-runbook.md` (flöde) | happy-path, main-flow, core-path, goldenflow | snapshot-/golden-master-tester (se "golden" nedan) |
+| Blueprint (fältgrupper) | Åtta valfria fältgrupper (`Business Facts`, `Positioning`, `Content Strategy`, `Conversion`, `Section Plan`, `Content Blocks`, `Visual Direction`, `Quality Risks`) på de tre befintliga artefakterna (ADR 0036). | naming-dict + `packages/generation/planning/blueprint.py` | (samlingsnamn, ej eget canonical-ord) | en sparad artefakt - det finns ingen `site-blueprint.json` |
+| `Blueprint Repair` | `repairModel`-passet i `Repair Pipeline` som patchar namngivna blueprint-fält (kor-5). | `packages/generation/repair` | — | hela blueprint-konceptet |
+| `Project DNA` | Persistent projekt-state över versioner: `scaffoldId`, `variantId`, valda dossiers, theme-tokens, språk, route-baseline. Init skapar, follow-up patchar, redesign forkar. | `data/projects/` + `project-dna.v1.json` | projectState, projectMeta | blueprint-fältgrupperna - DNA är vad projektet *är*, blueprint är planinnehåll |
+
+**"golden" betyder två olika saker** - håll isär dem:
+
+1. `Golden Path` = huvudflödet ovan (produktbegrepp).
+2. "snapshot baseline" = den vanliga test-idiomatiken där ett fruset facit
+   jämförs byte-för-byte (t.ex. `tests/test_section_treatments_json_parity.py`,
+   `tests/test_build_tokens_parity.py`). Detta är **inte** Golden Path. Säg
+   "snapshot baseline" eller "fruset facit", inte "golden", i sådan testtext.
+
+**scorecard finns redan i två betydelser** - inget tredje "Quality Scorecard"-ord
+ska uppfinnas:
+
+1. Automatiskt: fältet `scorecard` på `Quality Result` (från `Quality Gate`,
+   härlett ur `page-quality-traits`). Maskinmätt.
+2. Manuellt: operatörens 1-10-bedömning per case, sparad separat under
+   `data/evals/.../manual-scorecards/` och redigerad i backoffice
+   ("Evals och telemetri"). Blandas aldrig in i `quality-result.json`.
 
 ## Stora bilden - en körning
 
@@ -29,7 +66,7 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Scaffold Registry` | Centralt index över giltiga `Scaffold`-id:n. Sanningskälla i `scaffold-contract.v1.json:primaryScaffoldRegistry`. |
 | `Selection Profile` | Per-`Scaffold`-fil med embedding-text, semanticSignals, negativeSignals, llmClassificationHints. Det är **denna** som styr `Scaffold Selector`, inte ordmatchning. |
 | `Quality Contract` | Per-`Scaffold`-fil med scorecard-vikter, must-pass och avoid. Härleder från `page-quality-traits` men kan justera per `Scaffold`. |
-| `Project Input` | Strukturerad tolkning av init-promptens kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: `examples/<siteId>.project-input.json`. Alias: `Deep Brief`. **Är inte en Dossier.** |
+| `Project Input` | Strukturerad tolkning av init-promptens kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: committade exempel ligger i `examples/<siteId>.project-input.json`; **runtime/följdprompt-versioner** (Viewser `/api/prompt`) skrivs som immutabla snapshots i `data/prompt-inputs/<siteId>.vN.project-input.json`. Alias: `Deep Brief`. **Är inte en Dossier.** |
 | `Dossier` | Återanvändbar capability/legokloss som kan kopplas på en `Route`/section/slot. Klass: `soft` eller `hard`. Default-kompatibel med alla `Scaffolds`. |
 | `Dossier Class` | En av `soft` (frontend/content utan secrets) eller `hard` (kräver env/backend/auth/betalning/extern API). ADR 0012 tog bort `hybrid` - en Dossier som behöver mock i designläge är `hard` med `mockMode`-konfiguration. |
 | `Soft Dossier` | Återanvändbar frontend/content capability. Exempel: `pacman-game`, `mouse-reactive-background`, `pricing-calculator`. |
@@ -58,7 +95,7 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Repair Pipeline` | Centraliserad reparationskedja: normalize → mechanical fixes → typecheck/syntax → optional LLM fix → re-check → final. Får bo på exakt **EN** plats: `packages/generation/repair/`. Det löser den utspridda fix-rörran från sajtmaskin. |
 | `Quality Gate` | Mätbar acceptansgräns. **EN** gate på `packages/generation/quality_gate/`. Inte en F2/F3-tier-uppdelning. |
 | `Code Contract` | Per-`Dossier`-fil (`code-contract.json`) som listar must/avoid för den kod LLM:en får producera när `Dossier`n aktiveras. |
-| `Env Contract` | Per-`Dossier`-fil (`env-contract.json`) för hybrid/hard-Dossiers. Listar requires + designModeBehavior + integrationModeBehavior. |
+| `Env Contract` | Per-`Dossier`-fil (`env-contract.json`) för hard-Dossiers (ADR 0012 tog bort `hybrid`). Listar requires + designModeBehavior + integrationModeBehavior. |
 
 ## Plan, Routes, Specs
 
@@ -75,9 +112,9 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 
 | Term | Vad det är |
 |------|------------|
-| `Preview Runtime` | Abstraktion för var en genererad sajt körs. Implementationer: `LocalRuntime`, `StackBlitzRuntime`, `FlyRuntime`. Produktkoden talar bara om `Preview Runtime`. |
+| `Preview Runtime` | Abstraktion för var en genererad sajt körs. Implementationer: `LocalRuntime` (nuvarande default `local-next`), `vercel-sandbox`-adapter (opt-in primär, ADR 0033), `StackBlitzRuntime` (pausad), `FlyRuntime` (framtida). Produktkoden talar bara om `Preview Runtime`. |
 | `LocalRuntime` | Implementation som kör genererade filer på utvecklarens egen Node. Implementationsordning: byggs först (lättast att felsöka). |
-| `StackBlitzRuntime` | Implementation som kör genererade Next.js-sajter via `WebContainer` i browserfliken. Default i policy. Byggs efter `LocalRuntime`. |
+| `StackBlitzRuntime` | Implementation som kör genererade Next.js-sajter via `WebContainer` i browserfliken. Pausad (ADR 0033) - INTE default. Nuvarande default är `local-next` (`LocalRuntime`); `vercel-sandbox` är opt-in primär adapter. |
 | `FlyRuntime` | Implementation som kör genererade sajter på Fly.io VM. Används bara när `StackBlitz` inte räcker (hard-Dossiers, Stripe, DB). |
 | `WebContainer` | Browser-baserad Node.js-runtime (StackBlitz-tekniken). Underliggande för `StackBlitzRuntime`. Inte en produktterm utanför det paketet. |
 | `Preview Session` | Aktiv session från en `Preview Runtime`: id, url, kind, createdAt. Returneras av `PreviewRuntime.start()`. |

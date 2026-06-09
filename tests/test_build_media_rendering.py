@@ -229,6 +229,19 @@ def test_layout_uses_og_fallback_when_no_upload() -> None:
 
 
 @pytest.mark.tooling
+def test_layout_emits_metadata_base() -> None:
+    """Every generated site must set ``metadataBase`` so relative OG/Twitter
+    image URLs resolve to absolute ones (otherwise Next.js warns on every
+    render and falls back to localhost). The value is env-driven
+    (NEXT_PUBLIC_SITE_URL > Vercel deploy URL > localhost) so the build stays
+    deterministic and no deploy domain needs to live in the Project Input."""
+    layout = render_layout(_minimal_dossier(), dossier_routes=["/"])
+    assert "metadataBase: new URL(metadataBaseUrl)," in layout
+    assert "process.env.NEXT_PUBLIC_SITE_URL" in layout
+    assert "VERCEL_PROJECT_PRODUCTION_URL" in layout
+
+
+@pytest.mark.tooling
 def test_layout_emits_preconnect_to_google_fonts() -> None:
     """Sprint 1.1: preconnect-hints är obligatoriska för LCP — utan dem
     kan första paint blockeras 300-700ms av font-loading."""

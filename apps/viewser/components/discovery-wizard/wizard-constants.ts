@@ -755,20 +755,186 @@ export const RECOMMENDED_FUNCTIONS_BY_FAMILY: Record<
   BusinessFamilyId,
   readonly string[]
 > = {
-  service: ["fn-team", "fn-contact", "fn-quote", "fn-reviews", "fn-about"],
-  ecommerce: ["fn-catalog", "fn-cart", "fn-checkout", "fn-faq", "fn-contact"],
-  restaurant: ["fn-menu", "fn-tableresv", "fn-map", "fn-hours", "fn-gallery"],
-  health: ["fn-team", "fn-booking", "fn-pricing", "fn-map", "fn-contact"],
-  creative: ["fn-gallery", "fn-about", "fn-contact"],
+  // Utökade förval (2026-06-09, operatörsfynd "bilsajt fick för få/fel
+  // sidförslag"): listorna breddades mot taxonomins recommendedPages per
+  // kategori (governance/policies/discovery-taxonomy.v1.json) som facit —
+  // t.ex. auto→Karta, healthcare→FAQ, salon→Bildgalleri. Fortfarande en
+  // UI-cache; det API-drivna kontraktet är reläat till backend (inbox
+  // topic wizard-page-suggestions).
+  service: [
+    "fn-team",
+    "fn-contact",
+    "fn-quote",
+    "fn-reviews",
+    "fn-about",
+    "fn-map",
+    "fn-faq",
+    "fn-pricing",
+  ],
+  ecommerce: [
+    "fn-catalog",
+    "fn-cart",
+    "fn-checkout",
+    "fn-faq",
+    "fn-contact",
+    "fn-reviews",
+    "fn-newsletter",
+  ],
+  restaurant: [
+    "fn-menu",
+    "fn-tableresv",
+    "fn-map",
+    "fn-hours",
+    "fn-gallery",
+    "fn-reviews",
+  ],
+  health: [
+    "fn-team",
+    "fn-booking",
+    "fn-pricing",
+    "fn-map",
+    "fn-contact",
+    "fn-faq",
+    "fn-reviews",
+  ],
+  creative: ["fn-gallery", "fn-about", "fn-contact", "fn-pricing", "fn-booking"],
   construction: [
     "fn-gallery",
     "fn-team",
     "fn-pricing",
     "fn-quote",
     "fn-reviews",
+    "fn-map",
+    "fn-faq",
   ],
-  consulting: ["fn-team", "fn-pricing", "fn-contact", "fn-blog", "fn-reviews"],
+  consulting: [
+    "fn-team",
+    "fn-pricing",
+    "fn-contact",
+    "fn-blog",
+    "fn-reviews",
+    "fn-faq",
+  ],
   landing: ["fn-contact", "fn-newsletter"],
+};
+
+/**
+ * Sidor som auto-förväljs per familj UTÖVER de som härleds via
+ * funktions-valens `pageMustHave`. Behövs för sidor som inte har någon
+ * funktions-koppling alls — t.ex. "Portfolio / Case" (referensjobb) som
+ * taxonomin rekommenderar för portfolio/construction-kategorierna men
+ * som ingen FunctionChoice pekar på.
+ */
+export const RECOMMENDED_EXTRA_PAGES_BY_FAMILY: Partial<
+  Record<BusinessFamilyId, readonly MustHaveOption[]>
+> = {
+  creative: ["Portfolio / Case"],
+  construction: ["Portfolio / Case"],
+};
+
+/**
+ * Vilka av de 15 sidorna i `MUST_HAVE_OPTIONS` som är RELEVANTA att visa
+ * direkt i sidrutnätet för en given familj. Övriga sidor döljs bakom en
+ * "Visa fler sidor"-toggle (operatörsfynd 2026-06-09: en bilverkstad såg
+ * "Meny / Matsedel" som förslag — irrelevanta sidor ska inte se ut som
+ * rekommendationer). Valda sidor visas ALLTID, även utanför listan, så
+ * inget val kan gömmas. Grundad i taxonomins recommendedPages per
+ * kategori; UI-cache tills backend serverar detta via discovery-options.
+ */
+export const RELEVANT_PAGES_BY_FAMILY: Record<
+  BusinessFamilyId,
+  readonly MustHaveOption[]
+> = {
+  service: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Priser och paket",
+    "Bokning online",
+    "Bildgalleri",
+    "Kundrecensioner",
+    "FAQ",
+    "Vårt team",
+    "Karta / Hitta hit",
+    "Blogg / Nyheter",
+  ],
+  ecommerce: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Webshop / Produkter",
+    "FAQ",
+    "Kundrecensioner",
+    "Bildgalleri",
+    "Blogg / Nyheter",
+    "Nyhetsbrev",
+  ],
+  restaurant: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Meny / Matsedel",
+    "Bokning online",
+    "Bildgalleri",
+    "Karta / Hitta hit",
+    "Kundrecensioner",
+    "FAQ",
+    "Nyhetsbrev",
+  ],
+  health: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Bokning online",
+    "Priser och paket",
+    "Vårt team",
+    "Karta / Hitta hit",
+    "FAQ",
+    "Bildgalleri",
+    "Kundrecensioner",
+  ],
+  creative: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Portfolio / Case",
+    "Bildgalleri",
+    "Bokning online",
+    "Priser och paket",
+    "Blogg / Nyheter",
+  ],
+  construction: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Portfolio / Case",
+    "Bildgalleri",
+    "Kundrecensioner",
+    "Priser och paket",
+    "Vårt team",
+    "FAQ",
+    "Karta / Hitta hit",
+  ],
+  consulting: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Vårt team",
+    "Priser och paket",
+    "Blogg / Nyheter",
+    "FAQ",
+    "Kundrecensioner",
+    "Portfolio / Case",
+    "Nyhetsbrev",
+  ],
+  landing: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+    "Nyhetsbrev",
+    "Blogg / Nyheter",
+    "FAQ",
+  ],
 };
 
 export const FUNCTION_GROUPS: FunctionGroup[] = [
@@ -778,14 +944,18 @@ export const FUNCTION_GROUPS: FunctionGroup[] = [
     description: "Vad besökaren ska kunna läsa om er.",
     iconKey: "info",
     choices: [
-      { id: "fn-team", label: "Visa team", capability: "team-display", pageMustHave: "Vårt team" },
+      // Canonical capability-sluggar per msg-0057 (capability-map.v1.json):
+      // menu/team-section/reviews/gallery. De gamla UI-aliasen
+      // (menu-display/team-display/reviews-display/image-gallery) läggs som
+      // skyddsnät i resolverns alias-tabell i Jakobs punkt 1-slice.
+      { id: "fn-team", label: "Visa team", capability: "team-section", pageMustHave: "Vårt team" },
       { id: "fn-pricing", label: "Pris-lista", capability: "pricing-display", pageMustHave: "Priser och paket" },
-      { id: "fn-gallery", label: "Bildgalleri", capability: "image-gallery", pageMustHave: "Bildgalleri" },
+      { id: "fn-gallery", label: "Bildgalleri", capability: "gallery", pageMustHave: "Bildgalleri" },
       { id: "fn-map", label: "Karta & vägbeskrivning", capability: "map-embed", pageMustHave: "Karta / Hitta hit" },
       { id: "fn-hours", label: "Öppettider", capability: "opening-hours" },
       { id: "fn-faq", label: "FAQ", capability: "faq-section", pageMustHave: "FAQ" },
       { id: "fn-blog", label: "Blogg / nyheter", capability: "blog", pageMustHave: "Blogg / Nyheter" },
-      { id: "fn-reviews", label: "Kundrecensioner", capability: "reviews-display", pageMustHave: "Kundrecensioner" },
+      { id: "fn-reviews", label: "Kundrecensioner", capability: "reviews", pageMustHave: "Kundrecensioner" },
       { id: "fn-about", label: "Om oss / Om mig", capability: "about-page", pageMustHave: "Om oss / Om mig" },
     ],
   },
@@ -823,7 +993,7 @@ export const FUNCTION_GROUPS: FunctionGroup[] = [
     iconKey: "food",
     visibleForFamilies: ["restaurant"],
     choices: [
-      { id: "fn-menu", label: "Meny / matsedel", capability: "menu-display", pageMustHave: "Meny / Matsedel" },
+      { id: "fn-menu", label: "Meny / matsedel", capability: "menu", pageMustHave: "Meny / Matsedel" },
       { id: "fn-orderonline", label: "Online-beställning", capability: "online-ordering" },
       { id: "fn-tableresv", label: "Bordsbokning", capability: "table-reservation", pageMustHave: "Bokning online" },
     ],

@@ -9,6 +9,12 @@ export type discoveryOption = {
   defaultVariantId: string;
   targetScaffoldLabel: string;
   fallbackLabel?: string;
+  /**
+   * Taxonomins sidförslag per kategori (svenska sidetiketter, t.ex.
+   * "Startsida / Hero") från /api/discovery-options. Saknas i TS-cache-
+   * fallbacken; konsumenter behåller wizard-constants-listorna som fallback.
+   */
+  recommendedPages?: readonly string[];
   operatorNotes?: string;
 };
 

@@ -53,6 +53,7 @@ from packages.generation.build.contact_placeholders import (
 )
 from packages.generation.build.dispatcher import (
     _SECTION_RENDERERS,
+    _call_section_renderer,
     _load_scaffold_sections,
     _operator_pin_for_section,
     _treatment_for_section,
@@ -470,7 +471,20 @@ def render_layout(
         '  subsets: ["latin"],\n'
         "});\n"
         "\n"
+        # metadataBase gör relativa OG-/Twitter-bild-URL:er absoluta så att
+        # social-delning fungerar i preview/produktion. Utan den varnar
+        # Next.js vid varje render och faller tillbaka på localhost. Värdet
+        # tas från NEXT_PUBLIC_SITE_URL, annars Vercel-deployens URL, annars
+        # localhost. Split-join på localhost-strängen speglar
+        # commerce-base/lib/utils.ts och undviker url-literal-lint.
+        "const metadataBaseUrl = process.env.NEXT_PUBLIC_SITE_URL\n"
+        "  ? process.env.NEXT_PUBLIC_SITE_URL\n"
+        "  : process.env.VERCEL_PROJECT_PRODUCTION_URL\n"
+        "    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`\n"
+        '    : ["http", "://", "localhost", ":", "3000"].join("");\n'
+        "\n"
         "export const metadata: Metadata = {\n"
+        "  metadataBase: new URL(metadataBaseUrl),\n"
         f"  title: {_js_string_literal(company['name'])},\n"
         f"  description: {_js_string_literal(company['tagline'])},\n"
         f"{metadata_extras_block}"
@@ -1373,6 +1387,100 @@ def _collect_home_icons(dossier: dict, dossier_routes: list[str]) -> list[str]:
     return icons_used
 
 
+# Render-time allowlist for inline section injection (ADR 0038, defense in
+# depth): ``(scaffoldId, routeId) -> allowed section ids``. The schema permits
+# any string in ``directives.mountedSections[].sectionId``, and apply enforces
+# the canonical allowlist when IT writes the directive - but a hand-edited or
+# stale Project Input must not be able to inject an arbitrary registered
+# section (e.g. ``service-list``) onto a page the ADR never sanctioned. This
+# table MIRRORS ``INLINE_SECTION_PLACEMENTS`` + ``INLINE_SECTION_SCAFFOLDS`` +
+# ``INLINE_SECTION_ROUTES`` in ``packages/generation/followup/
+# section_directives.py``; it is duplicated here (same pattern as
+# ``_FORBIDDEN_ENV_PATTERN`` in quality_gate/checks.py) because the build layer
+# must not import the followup layer. Parity is locked by
+# ``tests/test_section_directives.py`` so the two cannot silently drift.
+_INLINE_SECTION_ALLOWLIST: dict[tuple[str, str], frozenset[str]] = {
+    ("local-service-business", "home"): frozenset({"hours-summary"}),
+}
+
+
+def _mounted_section_ids_for_route(
+    dossier: dict,
+    route_id: str,
+    *,
+    existing_section_ids: list[str],
+    render_kwargs: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    """Resolve gated inline section injections for a route (ADR 0038).
+
+    Reads ``dossier.directives.mountedSections`` and returns
+    ``(top_ids, bottom_ids)`` - the section ids to inject at the top (right after
+    the leading section) and at the bottom (before the closing CTA) of the
+    route's section order. The ``before-contact`` position and the default
+    (no position) both land in ``bottom_ids``.
+
+    Render-time honesty gates - an entry is dropped (never raised on) unless ALL
+    hold, so a mounted section can never appear as an empty or phantom block:
+
+    - the entry targets THIS ``route_id``;
+    - ``(scaffoldId, routeId, sectionId)`` is in ``_INLINE_SECTION_ALLOWLIST``
+      (the ADR 0038 canonical set - a hand-edited/stale Project Input cannot
+      inject an arbitrary registered section);
+    - ``sectionId`` has a registered renderer in ``_SECTION_RENDERERS``
+      (``render_route_generic`` would SystemExit on an unknown id);
+    - the section is not already in ``existing_section_ids`` (no duplicate);
+    - the section renders non-empty grounded content for this dossier (the
+      renderer returns "" when the operator supplied no content).
+
+    Deterministic, offline. Order-preserving; a section id is injected at most
+    once even if requested twice.
+    """
+    directives = dossier.get("directives")
+    if not isinstance(directives, dict):
+        return [], []
+    entries = directives.get("mountedSections")
+    if not isinstance(entries, list):
+        return [], []
+    scaffold_id = dossier.get("scaffoldId")
+    allowed = (
+        _INLINE_SECTION_ALLOWLIST.get((scaffold_id, route_id))
+        if isinstance(scaffold_id, str)
+        else None
+    )
+    if not allowed:
+        return [], []
+    existing = set(existing_section_ids)
+    top_ids: list[str] = []
+    bottom_ids: list[str] = []
+    seen: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("routeId") != route_id:
+            continue
+        section_id = entry.get("sectionId")
+        if not isinstance(section_id, str) or not section_id:
+            continue
+        if section_id not in allowed:
+            continue
+        if section_id in existing or section_id in seen:
+            continue
+        renderer = _SECTION_RENDERERS.get(section_id)
+        if renderer is None:
+            continue
+        # Grounded-content gate: only inject when the section actually renders.
+        if not _call_section_renderer(renderer, dossier, render_kwargs).strip():
+            continue
+        seen.add(section_id)
+        position = entry.get("position")
+        if position == "top":
+            top_ids.append(section_id)
+        else:
+            # default / "before-contact" / "bottom" all land before the CTA.
+            bottom_ids.append(section_id)
+    return top_ids, bottom_ids
+
+
 def render_home(
     dossier: dict,
     dossier_routes: list[str],
@@ -1440,6 +1548,31 @@ def render_home(
     if not testimonials_will_render:
         section_order.append("trust-proof")
     section_order.append("faq")
+
+    # ADR 0038: inject section_add inline placements from
+    # ``directives.mountedSections`` before the closing contact-cta. The gate
+    # uses the SAME render kwargs the dispatcher passes each section so the
+    # grounded-content check renders the candidate exactly as it will appear.
+    # Default / before-contact / bottom land before the CTA; top lands right
+    # after the hero. ``contact-cta`` is appended LAST so an injected block can
+    # never displace the closing call-to-action.
+    render_kwargs: dict[str, Any] = {
+        "dossier_routes": dossier_routes,
+        "listing_route": listing_route,
+        "contact_path": contact_path,
+        "variant_id": variant_id,
+        "blueprint": blueprint,
+    }
+    top_ids, bottom_ids = _mounted_section_ids_for_route(
+        dossier,
+        "home",
+        existing_section_ids=[*section_order, "contact-cta"],
+        render_kwargs=render_kwargs,
+    )
+    if top_ids:
+        # After hero (index 0), before the rest of the body.
+        section_order[1:1] = top_ids
+    section_order.extend(bottom_ids)
     section_order.append("contact-cta")
 
     effective_sections = {

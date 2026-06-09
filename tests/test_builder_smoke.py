@@ -119,6 +119,39 @@ def test_builder_assertion_blocks_env_writes() -> None:
     safe.unlink()
 
 
+@pytest.mark.tooling
+def test_resolve_generated_dir_relative_env_anchors_to_repo_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A RELATIVE ``SAJTBYGGAREN_GENERATED_DIR`` resolves against the repo
+    root, not the process cwd. The Viewser TS resolvers
+    (``local-preview-server.ts`` / ``vercel-sandbox-runner.ts``) mirror this
+    so the builder writes and preview reads the SAME directory even when the
+    operator sets a relative override (otherwise output silently lands in the
+    sibling default while preview looks elsewhere)."""
+    from scripts.build_site import REPO_ROOT as BUILD_REPO_ROOT
+    from scripts.build_site import resolve_generated_dir
+
+    monkeypatch.setenv("SAJTBYGGAREN_GENERATED_DIR", "data/output/.generated")
+    assert (
+        resolve_generated_dir()
+        == (BUILD_REPO_ROOT / "data/output/.generated").resolve()
+    )
+
+
+@pytest.mark.tooling
+def test_resolve_generated_dir_absolute_env_used_verbatim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An ABSOLUTE env override is used as-is (parity with the TS resolvers,
+    which keep ``path.isAbsolute(raw)`` paths verbatim)."""
+    from scripts.build_site import resolve_generated_dir
+
+    absolute = tmp_path / "abs-generated"
+    monkeypatch.setenv("SAJTBYGGAREN_GENERATED_DIR", str(absolute))
+    assert resolve_generated_dir() == absolute.resolve()
+
+
 @pytest.fixture
 def nordic_trust_variant() -> dict:
     variant_path = (

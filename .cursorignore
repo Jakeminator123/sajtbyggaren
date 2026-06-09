@@ -95,12 +95,7 @@ data/starters/**/public/**/*.eot
 # Operator-only material som inte ska indexeras av Cursor
 # ---------------------------------------------------------------------------
 
-# `MIN_IDE/` is read-only inspiration material the operator keeps
-# locally (see governance/rules/workspace-discipline.md). Never
-# committed and not relevant for agent context.
-MIN_IDE/
 .git/
-konversation.txt
 .review-*/
 .streamlit/secrets.toml
 #.cursor/mcp.json
@@ -110,13 +105,6 @@ konversation.txt
 .cursor/plans/
 .cursor/tmp_*
 .vscode/*.local.json
-
-# `referens/` is a copy/fork workspace for external references. Even
-# the text content in there is operator-only inspiration, so the
-# whole tree is excluded from indexing.
-
-
-referens/
 
 # ---------------------------------------------------------------------------
 # Tmp och logs

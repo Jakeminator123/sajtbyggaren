@@ -521,3 +521,123 @@ def test_hero_rewrite_followup_surfaces_signal_in_build_result_and_trace(
     unapplied_event = events[event_names.index("followup.unapplied_intents_detected")]
     assert unapplied_event["status"] == "warning"
     assert "hero" in str(unapplied_event["reason"])
+
+
+# --- ROW 3 (copy-passthrough fix 2026-06-09): intent-applied honesty --------
+#
+# appliedVisibleEffect answers "did your intent land?", not just "did bytes
+# change?". When the operator explicitly asked to replace a quoted copy string
+# but no copyDirective applied, a regenerated paraphrase that changes bytes must
+# NOT be reported as a successful edit (the lask-ab trust bug).
+
+_COPY_REPLACE_PROMPT = 'ändra denna text "Den gamla hjälten" till "Den nya hjälten"'
+
+
+def _force_visible_change(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Force the ``visible_files_changed`` branch of the effect detector."""
+    import scripts.build_site as bs
+
+    monkeypatch.setattr(
+        bs,
+        "_find_previous_generated_files_snapshot",
+        lambda *a, **k: tmp_path / "prev-snapshot",
+    )
+    monkeypatch.setattr(bs, "_visible_snapshots_changed", lambda *a, **k: True)
+
+
+@pytest.mark.tooling
+def test_copy_replace_no_op_is_honest_even_when_bytes_change(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """ROW 3: an explicit quoted copy-replace request that produced NO
+    copyDirective reports applied=False even when an unrelated rebuild changed
+    visible bytes - a regenerated paraphrase must not look like a success."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {"mode": "followup", "followUpPrompt": _COPY_REPLACE_PROMPT}
+    dossier = {"company": {"name": "X"}}  # no directives.copyDirectives
+
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, dossier
+    )
+    assert effect == {"applied": False, "reason": "copy_directive_not_applied"}
+
+
+@pytest.mark.tooling
+def test_copy_replace_applied_reports_visible_change(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """ROW 3 guard: when the copyDirective DID apply, a visible byte change is
+    honestly reported as applied."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {"mode": "followup", "followUpPrompt": _COPY_REPLACE_PROMPT}
+    dossier = {
+        "company": {"name": "X"},
+        "directives": {
+            "copyDirectives": [
+                {
+                    "target": "tagline",
+                    "operation": "replace-text",
+                    "payload": "Den nya hjälten",
+                    "source": "prompt-rule",
+                }
+            ]
+        },
+    }
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, dossier
+    )
+    assert effect == {"applied": True, "reason": "visible_files_changed"}
+
+
+@pytest.mark.tooling
+def test_non_copy_followup_visible_change_unaffected(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """ROW 3 guard: a NON-copy-replace follow-up (tone/section change) keeps
+    reporting visible_files_changed - the honesty tightening only touches
+    explicit quoted copy-replace requests, so section_add stays unaffected."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {
+        "mode": "followup",
+        "followUpPrompt": "gör tonen mörkare och mer premium",
+    }
+    dossier = {"company": {"name": "X"}}
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, dossier
+    )
+    assert effect == {"applied": True, "reason": "visible_files_changed"}
+
+
+@pytest.mark.tooling
+def test_additive_section_add_with_quote_reports_visible_change(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """#224 P2: an additive 'lägg till en FAQ-sektion med texten "..."' that
+    added a visible section (bytes changed) must report applied=True, NOT a
+    phantom copy_directive_not_applied no-op. The quoted text is the NEW
+    section's copy, not an OLD string the operator asked to swap - so a
+    successful visible add is never reported as a failed copy no-op."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {
+        "mode": "followup",
+        "followUpPrompt": 'lägg till en FAQ-sektion med texten "Vanliga frågor"',
+    }
+    # A section_add records no copyDirectives - exactly the state that used to
+    # trip the copy_directive_not_applied branch.
+    dossier = {"company": {"name": "X"}}
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, dossier
+    )
+    assert effect == {"applied": True, "reason": "visible_files_changed"}

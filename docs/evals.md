@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Evals — observabilitet, inte kvalitetsbetyg
 
 Det här dokumentet beskriver hur Sajtbyggarens lokala eval-suite fungerar

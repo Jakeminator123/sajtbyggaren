@@ -1,4 +1,17 @@
+---
+status: historical
+owner: ui
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
 # PR #117 merge-handoff till Jakob
+
+> **Arkivnot (lane A, 2026-06):** Historisk merge-handoff (PR #117 är mergad).
+> Behålls *på plats* (inte flyttat till `docs/archive/`) eftersom filtexten
+> innehåller en branch-referens som blockeras av repo-secret-scannern vid
+> filflytt. Sanningskälla för nuläget: `docs/current-focus.md` + `docs/handoff.md`.
+> Se `docs/archive/README.md`.
 
 **Skapad:** 2026-05-26 (christopher-ui-lane)
 **För:** jakob-orchestrator / jakob-be-lane

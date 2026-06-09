@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Pipeline mapping
 
 Sajtbyggaren har **en** generation-vokabulär: `understand` -> `plan` -> `build`, registrerad i [engine-run.v1.json](../../governance/policies/engine-run.v1.json) och [llm-flow-concepts.v1.json](../../governance/policies/llm-flow-concepts.v1.json). Det är repots kontrakt och får inte konkurrera med någon annan top-level lista.

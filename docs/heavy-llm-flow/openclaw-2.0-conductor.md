@@ -56,7 +56,7 @@ kontext) → ut (strukturerad mutation) → genom samma guards.
 |---|---|---|---|
 | `copy_editor` | KLAR (A1, commit 109ba60) | fri text → copyDirective {company-name\|tagline\|about\|services, value} | leak/grounding/schema/honesty |
 | `stylist` | nästa (prompt B) | fri text → tema/visual-directive (primär/accent-färg, font, ton) | tema-schema, honesty |
-| `section_builder` | KLAR (prompt C, jakob-be) | fri text → section_add (team/FAQ/garantier/recensioner) → capability+dossier genom apply-kedjan | sanktionerade typer, okänd typ = ärlig no-op |
+| `section_builder` | KLAR (mount-only) | fri text → section_add → capability+dossier genom apply-kedjan. Nio typer (4c6ba67): team/faq/trust/reviews + gallery/pricing/hours/map/contact-form | MOUNT-ONLY: monterar capability men renderar inte synligt än (`appliedVisibleEffect=false`); synlig render = render-path-follow-up. Okänd typ (inkl. hero/services/cta-banner) = ärlig no-op |
 | `reviewer` | planerad | läser artefakter → förbättringsförslag (read-only) | ingen mutation |
 | `layout` / `route_builder` | senare | layout/route-mutation | apply-kapabilitet krävs |
 

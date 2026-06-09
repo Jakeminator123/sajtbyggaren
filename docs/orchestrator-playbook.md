@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Orkestrator-playbook
 
 Det här dokumentet är en copy-pastebar startpunkt för en Codex-agent som ska
@@ -40,7 +47,7 @@ Läs i denna ordning innan du gör ändringar:
 5. `docs/agent-prompts.md`
 6. `docs/handoff.md`
 7. relevanta B-ID:n i `docs/known-issues.md`
-8. `.cursor/BUGBOT.md` och `governance/rules/branch-discipline.md` om
+8. `.cursor/BUGBOT.md` och `governance/rules/04-branch-and-team.md` om
    passet använder PR, review eller branchstädning
 
 Kör sedan:
@@ -69,7 +76,7 @@ kärnflödet eller en tydlig blocker.
 ## Val av arbetssätt
 
 Standard är `main` + `backup-N`, enligt
-`governance/rules/branch-discipline.md`. Orkestratorn skapar inte egen
+`governance/rules/04-branch-and-team.md`. Orkestratorn skapar inte egen
 feature-branch eller PR om operatören inte uttryckligen ber om det.
 
 Använd direkt `main` för vanlig agentaktivitet efter skapad backup:

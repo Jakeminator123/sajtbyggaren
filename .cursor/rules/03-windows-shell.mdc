@@ -1,0 +1,88 @@
+<!-- AUTO-GENERATED FROM governance/rules/03-windows-shell.md. Do not edit directly. Run: python scripts/rules_sync.py -->
+---
+description: Operatörens lokala miljö är Windows/PowerShell 7 — använd pwsh-syntax (inte bash-antaganden), föredra Cursors fil-/sökverktyg, tolka tom shell-output rätt, stäng långkörande processer och håll safety-belts OFF-by-default.
+alwaysApply: true
+---
+
+# Shell och processer på Windows
+
+Konsoliderar PowerShell-defaults, glob-disciplin, read-only-shell-beteende, server-livscykel och CLI-safety-belt-defaults. Regeln är miljöberoende: den binder operatörens lokala Windows-miljö, inte alla agenter.
+
+## Standardskal
+
+- **Agenten i denna workspace:** `Shell`-verktyget kör operatörens PowerShell 7 (Windows).
+  Default:a därför till pwsh-syntax i **alla** `Shell`-anrop — anta aldrig bash. Kedja med
+  `;` (inte `&&`/`||`), använd inte reserverade automatiska variabler som egna namn
+  (`$pid`, `$args`, `$input`, `$error`), och blanda inte `??` med metodanrop på samma rad
+  (`($x ?? '').Substring(...)` parsar fel — dela upp i två steg). Anpassa till POSIX
+  (`bash`/`zsh`) **bara** när du faktiskt kör på Linux/macOS (cloud-agent/Christopher).
+- **Operatören (Jakob), lokalt:** Windows 10+ med PowerShell 7 (`pwsh`). Använd pwsh-syntax: `$env:NAMN` för miljövariabler, here-strings (`@"..."@`) i stället för bash-heredoc.
+
+  ```powershell
+  $env:OPENAI_API_KEY = "..."
+  Get-ChildItem .\docs
+  @"
+  commit body
+  "@ | git commit -F -
+  ```
+
+- **Christopher (macOS) och cloud-agenter (Linux/Unix):** native POSIX-shell (`bash`/`zsh`). pwsh-specifik syntax används inte där. Anpassa efter faktisk runtime, men ge Jakob PowerShell-kommandon när han ska köra själv.
+
+## Föredra Cursors verktyg framför Shell
+
+För fil- och sökoperationer: använd `Read`, `Glob`, `Grep`, `StrReplace`, `Write`, `Delete`, `EditNotebook`. De är plattformsoberoende. Spara `Shell` för riktiga shell-uppgifter: git, python, npm/npx, pytest, ruff, repo-script.
+
+Bannade Unix-verb i `Shell` på Windows (ger `not recognized as a name of a cmdlet`):
+
+| Unix | PowerShell-ersättning | Cursor-verktyg |
+| --- | --- | --- |
+| `head -N file` | `Get-Content file -TotalCount N` | `Read` med `limit` |
+| `tail -N file` | `Get-Content file -Tail N` | `Read` med `offset: -N` |
+| `cat file` | `Get-Content file` | `Read` |
+| `grep pattern` | `Select-String -Pattern pattern` | `Grep` |
+| `find . -name x` | `Get-ChildItem -Recurse -Filter x` | `Glob` |
+| `sed 's/a/b/'` | `(Get-Content f) -replace 'a','b' \| Set-Content f` | `StrReplace` |
+| `... \| head -N` | `... \| Select-Object -First N` | — |
+| `&&`-kedja | `;` eller `if ($?) { ... }` | — |
+
+Cross-platform-säkert i `Shell`: `git ...`, `python ...`, `npm`/`npx`, `pytest`, `ruff check`/`ruff format` och repo-script (`python scripts/rules_sync.py --check`, `governance_validate.py`, `check_term_coverage.py --strict`, `list_open_bugs.py`, `focus_check.py`).
+
+## Globs och gitignored-filer — tom output är inte bevis
+
+- `Get-ChildItem -Path . -Include "*.log"` matchar inget utan wildcard-suffix eller `-Recurse`. Använd `Get-ChildItem -Path .\* -Include "*.log" -Force` eller `-Filter`/`-Recurse`.
+- `git status` döljer gitignored-filer. Rapportera inte "inga filer att rensa" baserat på `git status` när uppgiften gäller gitignored-artefakter (logs, build-output). Lista filsystemet explicit med `-Force`.
+- Om ett glob-anrop ger tom output: cross-checka med alternativ syntax innan du rapporterar "inga filer".
+
+## Read-only-shell på Windows (Ask/Plan-mode)
+
+I Ask-/Plan-mode på Windows kan `Shell` returnera `exit_code: 0` med **tom stdout** trots att kommandot aldrig kördes (`workspace_readonly`-sandboxen stöds inte; bara network proxy, inte filesystem isolation). Det är inte success.
+
+1. Föredra `Read`/`Glob`/`Grep` för all inspektion i read-only-mode.
+2. Tom stdout + `exit_code: 0` = plattformsbegränsning. Hallucinera inte SHA, `git status` eller filinnehåll.
+3. Om protokollet kräver verifierad shell-smoke (t.ex. `git rev-parse HEAD` innan en audit): be operatören byta till Agent mode. Begränsningen gäller bara Windows; på Linux/macOS fungerar read-only-shell.
+
+## Långkörande processer (server-livscykel)
+
+En devserver/watcher är en lånad resurs.
+
+- Starta inte en server innan du kontrollerat om porten/processen redan används.
+- Säg vilken port som startades.
+- Stäng processen när testet/verifieringen är klar. Lämnas den medvetet igång: säg varför och på vilken port.
+
+## Multi-line-strängar
+
+PowerShell saknar bash-heredoc. Använd here-string (`@"..."@`) eller temp-fil under `$env:LOCALAPPDATA\Temp`. Fullständig commit-pattern finns i [`04-branch-and-team.md`](04-branch-and-team.mdc).
+
+## CLI-safety-belt-defaults (OFF by default)
+
+När ett script har både en destruktiv CLI-flagga (`--apply`, `--write`, `--commit`, `--delete`) och en safety-belt-env (`*_DRY_RUN`, `*_READONLY`):
+
+- Safety-belt-env ska defaulta till **OFF/inaktiv** när den är osatt. CLI-flaggan ensam ska räcka för att utlösa den destruktiva åtgärden. Safety-belten är opt-in, inte opt-out.
+- Dry-run/no-op uttrycks via **avsaknad** av `--apply`-flaggan, inte via en env-default som tvingar operatören att slå av safety-belten.
+- Lås båda riktningarna med test: ett som verifierar att `--apply` (env osatt) faktiskt skriver, och ett som verifierar att `*_DRY_RUN=true` blockerar `--apply`.
+
+```python
+# GOOD - env defaultar till inaktiv; CLI-flaggan räcker
+dry_run_env = _env_flag(os.environ.get("MY_DRY_RUN"), default=False)
+apply = args.apply and not dry_run_env
+```

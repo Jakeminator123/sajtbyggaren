@@ -246,6 +246,7 @@ def _find_tdz_chunk(site_dir: Path) -> tuple[Path, str] | None:
 
 @pytest.mark.tooling
 @pytest.mark.slow
+@pytest.mark.requires_node
 def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

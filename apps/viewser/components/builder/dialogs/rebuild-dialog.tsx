@@ -3,8 +3,8 @@
 import { Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useState } from "react";
 
+import type { OnFollowupBuildDone } from "@/components/builder/use-followup-build";
 import { classifyBuildStatus } from "@/components/prompt-builder";
-import type { PromptBuildOutcome } from "@/components/prompt-builder";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,7 +38,7 @@ type RebuildDialogProps = {
   siteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  onBuildDone: OnFollowupBuildDone;
 };
 
 type BuildApiResponse = {

@@ -1,4 +1,17 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
 # Path B backend Scout (post-PR #68 + PR #70 + V1.1 + V1.2)
+
+> **Arkivnot (lane A, 2026-06):** Historisk scout-rapport. Behålls *på plats*
+> eftersom sökvägen är inbäddad i flera runtime-kommentarer
+> (`scripts/check_term_coverage.py`, `packages/generation/planning/plan.py`,
+> `packages/generation/build/renderers.py`). Sanningskälla för nuläget:
+> `docs/current-focus.md` + `docs/handoff.md`. Se `docs/archive/README.md`.
 
 **Scope:** Verifiering av Christophers ursprungliga Path B-plan
 ([`docs/scaffold-runtime-extension-needed.md`](scaffold-runtime-extension-needed.md))

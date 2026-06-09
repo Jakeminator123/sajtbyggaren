@@ -1,15 +1,16 @@
 {
   "$schema": "../schemas/capability-map.schema.json",
   "policyId": "capability-map.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
-  "purpose": "Map abstract capability slugs (the strings briefModel emits in siteBrief.requestedCapabilities) to the Dossiers that can satisfy them. planningModel reads this in Sprint 2B to know which Dossiers are even candidates before running embedding + rerank.",
+  "purpose": "Map abstract capability slugs (the strings briefModel emits in siteBrief.requestedCapabilities) to the Dossiers that can satisfy them. planningModel reads this in Sprint 2B to know which Dossiers are even candidates before running embedding + rerank. v2 (2026-06-08): mount-only honesty for section_add capabilities — mounting does not promise visible preview render.",
   "principles": [
     "A capability slug is the contract; the Dossier is the implementation. New capabilities require either a Dossier under packages/generation/orchestration/dossiers/{soft,hard}/ or an explicit empty-list comment so codegen knows to surface the gap.",
     "Empty dossiers list is allowed - it means the capability is recognised but no implementation exists yet. The comment field documents the plan.",
     "default must be one of dossiers when set. It is the planningModel fallback when no other signal differentiates the candidates.",
     "Dossier IDs match folder names under packages/generation/orchestration/dossiers/{soft,hard}/. The dossier's manifest.json declares its class and capability.",
-    "Empty capability = gap, not feature. planningModel MUST NOT include a capability with an empty dossiers list in the implemented selectedDossiers of a Site Plan. It MAY surface the gap to the operator (e.g. via a notesForPlanner entry on the Site Brief) so the project either drops the capability, picks a different one or waits for the planned Dossier to be imported."
+    "Empty capability = gap, not feature. planningModel MUST NOT include a capability with an empty dossiers list in the implemented selectedDossiers of a Site Plan. It MAY surface the gap to the operator (e.g. via a notesForPlanner entry on the Site Brief) so the project either drops the capability, picks a different one or waits for the planned Dossier to be imported.",
+    "section_add follow-up (section_builder role): faq + team are visible on the local-service-business scaffold (they surface a grounded dedicated /faq or /team route via the wizard extra-route plumbing, so appliedVisibleEffect=true on a real render; team needs grounded company.team). Every other type is still mount-only: mounting a capability + Dossier into the next version (requestedCapabilities + selectedDossiers.required) does NOT promise visible preview render. An existing render_section_* helper is necessary but not sufficient; visible surfacing of the remaining types is a separate render-path concern (see packages/generation/followup/section_directives.py)."
   ],
   "capabilities": {
     "interactive-game": {
@@ -20,7 +21,7 @@
     "contact-form": {
       "dossiers": ["mailto-contact-form"],
       "default": "mailto-contact-form",
-      "comment": "mailto-contact-form is the safe default (soft, zero env, ships at build time). resend-contact-form (hard, server-side delivery via Resend API) is the planned import from MIN_IDE for sites that outgrow the mailto fallback."
+      "comment": "mailto-contact-form is the safe default (soft, zero env). Mount-only via section_add today; render_section_contact_cta exists but visible preview surfacing is not guaranteed until the dedicated render-path lands. resend-contact-form (hard) planned for server-side delivery."
     },
     "menu": {
       "dossiers": ["menu-display"],
@@ -35,27 +36,27 @@
     "gallery": {
       "dossiers": ["image-gallery"],
       "default": "image-gallery",
-      "comment": "image-gallery is a soft instructions-only Dossier rendering a responsive CSS-grid of atmosphere/portfolio photos with semantic alt, lazy loading and aspect-ratio reservation. No JS lightbox. Hard alternatives (yet-another-react-lightbox, photoswipe-react) are planned imports for sites needing fullscreen viewers."
+      "comment": "image-gallery is a soft instructions-only Dossier (CSS-grid gallery). Mount-only via section_add today; render_section_gallery exists but visible preview surfacing is not guaranteed until the dedicated render-path lands."
     },
     "hours": {
       "dossiers": ["opening-hours"],
       "default": "opening-hours",
-      "comment": "opening-hours is a soft instructions-only Dossier rendering a semantic definition list of weekday hours with closed-day handling, split-shift support and schema.org OpeningHoursSpecification JSON-LD. Live 'open now' status is reserved for the planned real-time-status hard dossier."
+      "comment": "opening-hours is a soft instructions-only Dossier (weekday hours + OpeningHours JSON-LD). Mount-only via section_add today; render_section_hours_summary exists but visible preview surfacing is not guaranteed until the dedicated render-path lands."
     },
     "reviews": {
       "dossiers": ["reviews-display"],
       "default": "reviews-display",
-      "comment": "reviews-display is a soft instructions-only Dossier rendering customer reviews/testimonials as a card grid with author, source provenance, optional star rating and schema.org Review JSON-LD. Reviews are static project-input content. Hard alternatives (google-places-reviews, trustpilot-widget) are planned imports for sites needing live review pulls."
+      "comment": "reviews-display is a soft instructions-only Dossier (card grid + Review JSON-LD; static project-input content). Mount-only via section_add today: render_section_reviews-testimonials exists but visible preview surfacing is not guaranteed until the dedicated render-path lands. Hard alternatives (google-places-reviews, trustpilot-widget) planned for live pulls."
     },
     "location": {
       "dossiers": ["map-embed"],
       "default": "map-embed",
-      "comment": "map-embed is a soft instructions-only Dossier rendering an OpenStreetMap iframe (no API key, GDPR-friendly) next to a semantic address block with native-app directions deep-links. No Google Maps JS SDK. Hard alternatives (google-maps-react, mapbox-gl) are planned imports for sites needing custom markers, routing or multi-location store locators."
+      "comment": "map-embed is a soft instructions-only Dossier (OSM iframe + address block). Mount-only via section_add today; render_map exists but visible preview surfacing is not guaranteed until the dedicated render-path lands."
     },
     "pricing": {
       "dossiers": ["pricing-table"],
       "default": "pricing-table",
-      "comment": "pricing-table is a soft instructions-only Dossier rendering 2-4 tier cards with feature checklists, optional 'most popular' badge and one CTA per tier (tel:/mailto:/external booking — same pattern as booking-cta). Server-rendered, no client toggle. Hard alternatives (stripe-pricing-table, paddle-checkout) are planned imports for sites needing card-on-file conversion."
+      "comment": "pricing-table is a soft instructions-only Dossier (tier cards + CTAs). Mount-only via section_add today; render_pricing exists but visible preview surfacing is not guaranteed until the dedicated render-path lands."
     },
     "hero-video": {
       "dossiers": ["video-hero"],
@@ -89,7 +90,7 @@
     "faq-section": {
       "dossiers": ["faq-accordion"],
       "default": "faq-accordion",
-      "comment": "faq-accordion is a soft instructions-only Dossier using native HTML <details>/<summary> (zero JS, full keyboard accessibility, indexable by Google) plus schema.org FAQPage JSON-LD for rich SERP snippets. Closes the Week 1 batch 3 (2026-05-24) gap — previously marked as planned MIN_IDE import."
+      "comment": "faq-accordion is a soft instructions-only Dossier (native <details>/<summary> + FAQPage JSON-LD). Visible via section_add on the local-service-business scaffold (2026-06-09): a faq section_add surfaces a grounded dedicated /faq route through the existing render_faq + wizard extra-route plumbing, so appliedVisibleEffect=true on a real render. Other scaffolds keep it mount-only until their renderer set opts into wizard routes."
     },
     "carousel": {
       "dossiers": [],
@@ -106,12 +107,12 @@
     "team-section": {
       "dossiers": ["team-roster"],
       "default": "team-roster",
-      "comment": "team-roster is a soft instructions-only Dossier for a team/staff section: a responsive grid of monogram cards (name + role) reusing the existing render_section_team renderer. Team data is static project-input content (company.team). Added for the section_builder follow-up role so 'lägg till en team-sektion' mounts a sanctioned section through the existing apply chain (requestedCapabilities + selectedDossiers.required)."
+      "comment": "team-roster is a soft instructions-only Dossier (monogram cards from company.team). Visible via section_add on the local-service-business scaffold (2026-06-09): a team section_add surfaces a grounded dedicated /team route (render_team) through the wizard extra-route plumbing when company.team has named members; an empty team stays honest mount-only (mounted-but-no-content). Other scaffolds keep it mount-only until their renderer set opts into wizard routes."
     },
     "guarantees": {
       "dossiers": ["trust-guarantees"],
       "default": "trust-guarantees",
-      "comment": "trust-guarantees is a soft instructions-only Dossier for a trust/guarantees block ('Varfor oss') as an icon bullet list, reusing the existing render_section_trust_proof renderer. Content is grounded in project-input trustSignals / uniqueSellingPoints / confirmed businessFacts (never invented claims). Added for the section_builder follow-up role so 'lägg till en sektion om garantier' mounts a sanctioned section through the existing apply chain."
+      "comment": "trust-guarantees is a soft instructions-only Dossier ('Varfor oss' icon bullets grounded in trustSignals/USPs/businessFacts). Mount-only via section_add today: render_section_trust_proof exists but visible preview surfacing is not guaranteed until the dedicated render-path lands."
     }
   }
 }

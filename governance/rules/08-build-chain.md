@@ -1,0 +1,78 @@
+---
+description: Disciplin för bygg-kedjan Project Input -> Site Brief -> Site Plan -> Generation Package -> build; en enda motor, embeddings före ordmatchning, och LLM-flödet berikar rälsen utan att ersätta den.
+globs: scripts/build_site.py,scripts/prompt_to_project_input.py,packages/generation/**,data/starters/**,governance/policies/**,governance/schemas/**,docs/heavy-llm-flow/**
+alwaysApply: false
+---
+
+# Byggkedjan
+
+Konsoliderar bygg-kedjans disciplin och heavy-LLM-flödets lager-modell. Finns för att slippa det namnkaos som dödade gamla `sajtmaskin`. Kompletterar [`06-governance-vocabulary-core.md`](06-governance-vocabulary-core.md) och [`05-product-direction-core.md`](05-product-direction-core.md).
+
+## Det enda flödet
+
+```text
+Init Prompt -> Project Input (Deep Brief) -> Starter -> Scaffold -> Variant
+  -> Dossier -> Generation Package -> Build -> Preview/Run-artefakter
+```
+
+Inga andra ord, inga mellanstationer, inga parallella axlar. Init och follow-up matar **samma** kedja — inga parallella pipelines.
+
+## Byggklossarna får aldrig blandas ihop
+
+| Roll | Vad det är | Var det bor |
+|------|------------|-------------|
+| **Project Input** | Konkret kundprojekt: företagsfakta, ton, tjänster, kontakt. | `examples/<siteId>.project-input.json` |
+| **Starter** | Körbar Next.js-kodbas, tom på företagsspecifik logik. | `data/starters/<starterId>/` |
+| **Scaffold** | Sajtens grammatik: routes, sektionsslots, kvalitetsregler. Inte en sida, inte ett repo, inte en mall. | `packages/generation/orchestration/scaffolds/<scaffoldId>/` |
+| **Variant** | Sajt-wide visuellt uttryck: tokens, typografi, motif. Bestämmer inte struktur/innehåll. | `.../scaffolds/<scaffoldId>/variants/<variantId>.json` |
+| **Dossier** | Återanvändbar capability/legokloss, default-kompatibel med alla Scaffolds. | `packages/generation/orchestration/dossiers/<class>/<dossierId>/` |
+| **Policy** | JSON som styr hur något får göras. | [`governance/policies/`](../policies/) |
+
+> Project Input beskriver. Starter bygger. Scaffold formar. Variant stylar. Dossier kopplas på. Policy styr.
+
+`painter-palma` är aldrig en Dossier. `pacman-game` är aldrig ett Project Input. Vercel templates är **Reference Templates** under `data/reference-templates/`, aldrig produktens skelett. Dossier-klasser är bara `soft` och `hard` (`hybrid` borttaget i ADR 0012). Mer i [`10-dossier-discipline.md`](10-dossier-discipline.md).
+
+## Init är inte follow-up
+
+- **Init** skapar `Project DNA`: Scaffold låses (`Scaffold Lock`), Variant mjuk-låses (`Variant Lock`), språk låses.
+- **Follow-up** läser DNA och klassificerar `FollowUp Intent` enligt [`project-dna.v1.json`](../policies/project-dna.v1.json) (`text-edit`, `section-add`, `section-remove`, `page-add`, `page-remove`, `restyle`, `redesign`, `clarify`).
+- Endast `redesign` får byta `scaffoldId`, via `Project Fork` (ny DNA-version med länk till föregående). "Passa aldrig på" att byta scaffold/variant under en `text-edit`/`section-add`.
+
+## Embeddings först, ordmatchning sist
+
+Scaffold-/Dossier-val sker enligt [`scaffold-selection.v1.json`](../policies/scaffold-selection.v1.json) och [`dossier-selection.v1.json`](../policies/dossier-selection.v1.json): Compatibility Filter -> Embedding top-K (domäner per [`embedding-policy.v1.json`](../policies/embedding-policy.v1.json)) -> Small LLM rerank (`mustReturnReasons: true`) -> Policy Gate -> Selection Trace (`data/runs/<runId>/`). `Word Matching` får bara vara svag signal/guardrail/fallback, **aldrig** primär selector. Mönstret `if prompt.includes("elektriker") return ...` är förbjudet och fångas av `tests/evals/scaffold-selection/`.
+
+## Sex hårda spärrar
+
+1. Inga LLM-anrop utanför registrerade `Model Role` i [`llm-models.v1.json`](../policies/llm-models.v1.json). Mock Mode markeras explicit (`briefSource=mock-no-key`/`mock-llm-error`).
+2. `Repair Pipeline` på exakt en plats: `packages/generation/repair/`. Inga fixar utanför `Fix Registry` ([`fix-registry.v1.json`](../policies/fix-registry.v1.json)).
+3. `Quality Gate` på exakt en plats: `packages/generation/quality_gate/`. En gate; inga parallella tier-axlar.
+4. `Preview Runtime` är en abstraktion. Produktkoden talar bara om `Preview Runtime`, aldrig `VM`/`webcontainer`/`preview-host`/oregistrerade `sandbox`-synonymer. Faktisk default idag: `local`/`local-next`; primärt förstahandsval (ADR 0033): `VercelSandboxRuntime`; `StackBlitzRuntime` pausad.
+5. Ingen kod implementerar Fix/Gate/Selector/Runtime utanför sin ägar-path i [`repo-boundaries.v1.json`](../policies/repo-boundaries.v1.json).
+6. `Vercel templates` = `Reference Templates`; codegen tar `Section Pattern`/`Style Signature`, inte filer rakt av.
+
+## Två motorer: räls vs intelligens
+
+- **Rälsen (finns, deterministisk):** Scaffold/Variant/Dossier/starters/routes/renderers/Quality Gate/repair/versioner/Preview Runtime. Svarar på "vad får systemet bygga, hur valideras det, hur körs det?".
+- **Intelligensen (byggs):** förståelse, positionering, copy, struktur-intent, designriktning, intent-routing, self-critique. Svarar på "vilken sida borde just den här användaren få?".
+
+LLM:en **fyller** rälsen med bättre beslut — den ersätter den inte.
+
+- **Klick-/wizard-vägen är förstaklass**, inte fallback. Alla ingångar (fri prompt, wizard, starter-/scaffold-/variant-/dossier-val, follow-up, asset-upload, scrape) matar samma kedja.
+- LLM:en **får**: välja avsikt/vinkel/copy/prioritet och skriva in i **befintliga** artefakter (Site Brief/Site Plan/Generation Package/Project Input).
+- LLM:en **får inte**: skriva fria Next.js-filer, hitta på claims/recensioner/placeholder-kontakt, mounta en dossier som inte finns, byta starter utan resolver eller skapa en ny scaffold på egen hand.
+- Handredigera **aldrig** genererad output som långsiktig fix; ändra källan eller apply-kedjan.
+
+## Förbjud canonicalisering, inte ord
+
+Arbetsnamn (blueprint, OpenClaw Router, LLM Orchestrator) är tillåtna i docs/körplan. Det som kräver operatörsbeslut + ADR är att göra dem till **sparade canonical artefakter, nya typer eller runtime-kontrakt**. Utöka hellre befintliga artefakter additivt; nya canonical fältnamn registreras i `naming-dictionary.v1.json`.
+
+## 60-sekunders-checklista innan kod skrivs
+
+1. Finns begreppet i `naming-dictionary.v1.json`? Annars stopp.
+2. Är ägar-pathen klar enligt `repo-boundaries.v1.json`?
+3. Rätt fas enligt [`engine-run.v1.json`](../policies/engine-run.v1.json)?
+4. Går jag via embedding + rerank + Policy Gate + Selection Trace, eller fuskar jag med Word Matching?
+5. Vid follow-up: respekterar jag Scaffold Lock och Variant Lock?
+6. Pratar jag om `Preview Runtime` (abstraktionen), inte implementationen?
+7. Bygger jag ett Project Input, en Dossier eller en Scaffold? Osäker — stoppa och fråga.

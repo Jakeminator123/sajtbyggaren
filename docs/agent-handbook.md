@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Agent-handbok
 
 Det här är vad varje AI-agent (eller mänsklig medhjälpare) behöver veta innan de börjar arbeta i Sajtbyggaren.
@@ -95,7 +102,7 @@ Projektet använder tre fasta agentroller:
 - **Steward-agent** - ordning och sanity. Jobbar primärt på arbets-branchen
   för docs som hör till pågående arbete; kan göra direkt-push till `main`
   för pure docs/governance-bumpar enligt
-  [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md).
+  [`governance/rules/04-branch-and-team.md`](../governance/rules/04-branch-and-team.md).
   Håller `docs/current-focus.md` och `docs/handoff.md` färska.
 
 Operatören beslutar riktning och godkänner risk. Extern GPT-reviewer kan ge
@@ -107,7 +114,7 @@ startprompter för rollerna finns i
 ## Parallella agenter
 
 När flera agenter jobbar samtidigt gäller rollfördelningen i
-[`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md)
+[`governance/rules/04-branch-and-team.md`](../governance/rules/04-branch-and-team.md)
 under rubriken "Parallella agenter". Sammanfattning:
 
 - Jakob-agent jobbar på `jakob-be`, Christopher-agent på `christopher`.
@@ -155,7 +162,7 @@ PR mot `main` öppnas när en sprint eller fas är klar och ska bli en
 officiell version — då används pull request-mallen i
 [`.github/pull_request_template.md`](../.github/pull_request_template.md).
 Bugbot körs på PR:n. Efter merge: post-merge-sync enligt
-[`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md).
+[`governance/rules/04-branch-and-team.md`](../governance/rules/04-branch-and-team.md).
 
 ## Post-build-verifiering utan preview
 

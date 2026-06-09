@@ -1,0 +1,56 @@
+---
+description: Svara alltid på svenska med riktiga svenska tecken (aldrig escape-sekvenser eller ASCII-translit), håll svaren korta/konkreta, och håll kodidentifierare på engelska.
+alwaysApply: true
+---
+
+# Språk, teckenformat och svarsstil
+
+Konsoliderar de tidigare reglerna för svenska svar, svarsstil och kod-på-engelska.
+
+## Språk
+
+- Svara alltid på svenska, även när användaren skriver på engelska eller blandar språk.
+- Etablerade tekniska termer (API, schema, scaffold, dossier, policy, runtime, codegen, build, lint, typecheck) får vara på engelska.
+- Egennamn och kommando-utdata översätts inte.
+- Narrera inte intern felsökning på engelska. Skriv inte självrättande mellansteg som "Found a bug" eller "Let me fix the parser" i chatten; gör ändringen och sammanfatta kort på svenska.
+
+## Teckenformat (gäller all text och alla verktygsanrop)
+
+- Använd alltid riktiga svenska tecken: `å`, `ä`, `ö`, `Å`, `Ä`, `Ö`. Filer sparas i UTF-8 (utan BOM).
+- Använd ALDRIG Unicode-escape-sekvenser i text som visas för användaren eller sparas i filer:
+  - Fel: `f\u00f6r`, `\u00e4r`, `fr\u00e5n`
+  - Rätt: `för`, `är`, `från`
+- Använd ALDRIG ASCII-transliteration som ersättning för svenska tecken:
+  - Fel: `ar`, `for`, `fran`, `nar`, `manskliga`, `kalla`
+  - Rätt: `är`, `för`, `från`, `när`, `mänskliga`, `källa`
+- Gäller alla format: markdown, JSON-strängar, kod-kommentarer, plan-filer, commit-meddelanden, terminalutdata och parametrar i verktygsanrop.
+- Om ett verktyg verkar vilja serialisera tecken som escape-sekvenser: skriv ändå riktiga tecken; verktyget hanterar UTF-8.
+- Avkoda inte svensk text som redan är UTF-8 med `unicode_escape` eller liknande. ASCII-folding får bara användas där fältet uttryckligen är ett tekniskt id (slug, filnamn, route-segment).
+- Inom ett dokument får inte två stavningar av samma ord blandas (`för` och `for`).
+
+## Språk per yta
+
+| Yta | Språk |
+|-----|-------|
+| Identifierare i kod (variabler, funktioner, klasser, typer, JSON-fältnamn, filnamn, mappnamn) | **Engelska** |
+| Doc-strings, kod-kommentarer, loggrader, felmeddelanden i kod | **Engelska** |
+| `governance/policies/*.json` fältnamn | **Engelska** |
+| `governance/policies/*.json` värdetext | Engelska eller svenska, valt per policy för läsbarhet |
+| `governance/rules/*.md`, `.cursor/rules/*.mdc`, `docs/`, ADR:er | **Svenska** |
+| `backoffice.py`-UI och övriga operatörsytor | **Svenska** |
+| Commit-meddelanden | **Engelska** (ÅÄÖ skrivs korrekt om de förekommer) |
+| Slutanvändarens prompter | **Auto-detekteras** och låses i `siteBrief.language` |
+| Genererad sajt-content | **Matchar `siteBrief.language`** om inget explicit override |
+
+- Inga svenska identifierare i kod (`tjänster`, `bokning`, `företag`, `omraden`). Operatörens kanoniska namn (`Site Brief`, `Scaffold`, `Dossier`) är engelska eftersom de är kanoniska identifierare i [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json), men vi pratar om dem på svenska.
+- Slutanvändarens språk är data, inte gissning: deterministisk språkdetektor eller fält, låst i `siteBrief.language`. Ett projekt har ett språk per version; språkbyte är en ny version, aldrig silent translation.
+
+## Svarsstil
+
+- Sikta på korta, koncentrerade svar. Föredra punktlistor framför löpande prosa. Måste ett svar bli långt: ha en TL;DR-rad eller fet sammanfattning högst upp.
+- När svaret jämför alternativ, listar status, prioriterar steg eller fördelar arbete per lane/agent: använd **matris/tabell** med tydliga kolumnrubriker och korta celler. Är posterna inte jämförbara räcker en punktlista.
+- Operatören (Jakob) är inte utvecklare i grunden. När ett tekniskt/dev-uttryck används första gången i en konversation: lägg en kort parentes direkt efter med vad det betyder i kontexten, t.ex. "Bugbot (automatisk kodgranskare som läser varje PR)". Återupprep inte förklaringen när den redan står tidigare i konversationen.
+- Förkortningar (PR, CI, SHA, ADR, MCP) får en parentes första gången per konversation. Egennamn (Bugbot, GitGuardian, Cursor, GitHub) översätts inte.
+- Statusfrågor besvaras med 1-3 rader. Pre-svar-utfyllnad ("Bra fråga!", "Visst!") är förbjuden.
+- Om något är osäkert: säg vad som är verifierat och vad som är antagande.
+- Längre förklaring är OK när operatören uttryckligen ber om det, vid arkitekturbeslut med trade-offs, eller när du måste varna för en risk. Börja då med kort sammanfattning, lägg detaljer efter.

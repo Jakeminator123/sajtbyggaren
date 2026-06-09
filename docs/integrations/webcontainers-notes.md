@@ -1,3 +1,15 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Pausad referens. StackBlitz/WebContainer-
+> runtimen är pausad (ADR 0033); dagens preview-väg beskrivs i
+> [`docs/architecture/preview-runtime.md`](../architecture/preview-runtime.md).
+> Behålls *på plats* (länkas från architecture-docs). Se `docs/archive/README.md`.
+
 # WebContainers / StackBlitz - implementationsnoteringar
 
 Underlag för att bygga `StackBlitzRuntime` när `packages/preview-runtime/stackblitz/` skapas. Originalkonversationen låg i `referens/preview-runtime/konversation.txt` (borttagen i referens-städningen, finns kvar i git-historiken).

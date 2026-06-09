@@ -15,7 +15,16 @@
  */
 import OpenAI from "openai";
 
+import { readRepoEnvVar } from "../generated-dir";
 import type { AssetPlacement, AssetRole, VisionConfidence } from "./types";
+
+// Single source of truth: fall back to the repo-root `.env` for shared OpenAI
+// settings so the key/model only have to live in ONE file. process.env wins.
+function openaiEnv(name: string): string | undefined {
+  const fromProcess = process.env[name]?.trim();
+  if (fromProcess) return fromProcess;
+  return readRepoEnvVar(name)?.trim() || undefined;
+}
 
 export interface VisionResult {
   subject: string;
@@ -26,7 +35,7 @@ export interface VisionResult {
   usedFallback: boolean;
 }
 
-const VISION_MODEL = process.env.OPENAI_VISION_MODEL ?? "gpt-4o";
+const VISION_MODEL = openaiEnv("OPENAI_VISION_MODEL") ?? "gpt-4o";
 
 const SYSTEM_INSTRUCTIONS = [
   "You analyse photos uploaded by an operator who is building a small business website.",
@@ -130,9 +139,10 @@ function parseVisionJson(raw: string, role: AssetRole): VisionResult {
 let visionClient: OpenAI | null = null;
 
 function getClient(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) return null;
+  const apiKey = openaiEnv("OPENAI_API_KEY");
+  if (!apiKey) return null;
   if (!visionClient) {
-    visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    visionClient = new OpenAI({ apiKey });
   }
   return visionClient;
 }
