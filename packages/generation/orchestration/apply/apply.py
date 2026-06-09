@@ -361,6 +361,42 @@ def apply_patch_plan(
 
     _validate_against_schema(merged)
 
+    # 5c. section_add visible surfacing (the section_builder's visible-render
+    #     follow-up). A mounted section capability that has a dedicated, grounded
+    #     visible route is surfaced by recording its wizard ``mustHave`` label on
+    #     the NEW version's meta sidecar; the next targeted build then emits the
+    #     dedicated page (reusing the existing render_* + extra-routes plumbing),
+    #     so the deterministic file-diff reports an honest appliedVisibleEffect.
+    #     Only the synthetic section_add capabilities (``sectionAdd:`` patchField)
+    #     are considered - a component_add never changes the route plan here. A
+    #     capability with no dedicated visible route, or with no grounded content,
+    #     stays mount-only (honest mounted-but-no-content) and is reported in the
+    #     notes. Behaviour-preserving: the label lands ONLY on this version's meta
+    #     (per-site, per-version), so init builds and other sites are untouched,
+    #     and a scaffold whose renderer set does not emit the wizard route keeps
+    #     the section mount-only at build time.
+    surfaced_routes: list[str] = []
+    surfaced_wizard_pages: list[str] = []
+    section_mount_only: list[dict[str, str]] = []
+    section_capabilities_applied = [
+        entry.capability
+        for entry in capabilities
+        if entry.patchField.startswith("sectionAdd:")
+    ]
+    if section_capabilities_applied:
+        from packages.generation.followup.section_directives import (
+            resolve_visible_section_pages,
+        )
+
+        visible_pages, section_mount_only = resolve_visible_section_pages(
+            section_capabilities_applied, merged
+        )
+        for page in visible_pages:
+            if page["wizardLabel"] not in surfaced_wizard_pages:
+                surfaced_wizard_pages.append(page["wizardLabel"])
+            if page["routeId"] not in surfaced_routes:
+                surfaced_routes.append(page["routeId"])
+
     # 6. Build the meta sidecar by carrying the prior version's meta forward and
     #    overriding only the per-version keys (projectId stays the canonical
     #    one). appliedPatchPlan is provenance on the sidecar - not a Project
@@ -388,11 +424,27 @@ def apply_patch_plan(
         meta["followUpPrompt"] = follow_up_prompt
     if base_run_id is not None:
         meta["baseRunId"] = base_run_id
+    # section_add visible surfacing: union the surfaced wizard ``mustHave``
+    # labels into the next version's meta so the build emits the dedicated page.
+    # Order-preserving + idempotent: re-surfacing the same page never duplicates
+    # it, and any labels the operator already had carry forward.
+    if surfaced_wizard_pages:
+        existing_pages = meta.get("wizardMustHave")
+        pages = (
+            [page for page in existing_pages if isinstance(page, str)]
+            if isinstance(existing_pages, list)
+            else []
+        )
+        for label in surfaced_wizard_pages:
+            if label not in pages:
+                pages.append(label)
+        meta["wizardMustHave"] = pages
     meta["appliedPatchPlan"] = {
         "source": "kor-7c-artifact-apply",
         "patchCount": len(plan.patches),
         "appliedCapabilities": [entry.model_dump() for entry in capabilities],
         "themeApplied": theme_applied,
+        "sectionRoutesSurfaced": list(surfaced_routes),
     }
     meta["projectDna"] = _build_project_dna_snapshot(
         merged,
@@ -420,6 +472,17 @@ def apply_patch_plan(
             f"Applicerade restyle (brand/tone) i v{next_version} från "
             "visual_style-direktivet."
         )
+    if surfaced_wizard_pages:
+        notes.append(
+            "Synliggjorde sektion(er) som dedikerad route "
+            f"({', '.join(surfaced_routes)}) via wizardMustHave "
+            f"({', '.join(surfaced_wizard_pages)}); targeted render avgör "
+            "appliedVisibleEffect."
+        )
+    for entry in section_mount_only:
+        notes.append(
+            f"Sektion {entry['capability']!r} förblir mount-only: {entry['reason']}"
+        )
     result = ApplyResult(
         applied=True,
         siteId=site_id,
@@ -429,6 +492,7 @@ def apply_patch_plan(
         projectInputPath=str(project_input_path),
         metaPath=str(meta_path),
         appliedCapabilities=capabilities,
+        sectionRoutesSurfaced=list(surfaced_routes),
         notes=notes,
     )
 

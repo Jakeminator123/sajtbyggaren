@@ -10,7 +10,7 @@
     "default must be one of dossiers when set. It is the planningModel fallback when no other signal differentiates the candidates.",
     "Dossier IDs match folder names under packages/generation/orchestration/dossiers/{soft,hard}/. The dossier's manifest.json declares its class and capability.",
     "Empty capability = gap, not feature. planningModel MUST NOT include a capability with an empty dossiers list in the implemented selectedDossiers of a Site Plan. It MAY surface the gap to the operator (e.g. via a notesForPlanner entry on the Site Brief) so the project either drops the capability, picks a different one or waits for the planned Dossier to be imported.",
-    "section_add follow-up (section_builder role) is mount-only today: mounting a capability + Dossier into the next version (requestedCapabilities + selectedDossiers.required) does NOT promise visible preview render or appliedVisibleEffect=true. An existing render_section_* helper is necessary but not sufficient; visible surfacing is a separate render-path concern (see packages/generation/followup/section_directives.py)."
+    "section_add follow-up (section_builder role): faq + team are visible on the local-service-business scaffold (they surface a grounded dedicated /faq or /team route via the wizard extra-route plumbing, so appliedVisibleEffect=true on a real render; team needs grounded company.team). Every other type is still mount-only: mounting a capability + Dossier into the next version (requestedCapabilities + selectedDossiers.required) does NOT promise visible preview render. An existing render_section_* helper is necessary but not sufficient; visible surfacing of the remaining types is a separate render-path concern (see packages/generation/followup/section_directives.py)."
   ],
   "capabilities": {
     "interactive-game": {
@@ -90,7 +90,7 @@
     "faq-section": {
       "dossiers": ["faq-accordion"],
       "default": "faq-accordion",
-      "comment": "faq-accordion is a soft instructions-only Dossier (native <details>/<summary> + FAQPage JSON-LD). Mount-only via section_add today: capability mounts into next version; render_section_faq exists but visible preview surfacing is not guaranteed until the dedicated render-path lands."
+      "comment": "faq-accordion is a soft instructions-only Dossier (native <details>/<summary> + FAQPage JSON-LD). Visible via section_add on the local-service-business scaffold (2026-06-09): a faq section_add surfaces a grounded dedicated /faq route through the existing render_faq + wizard extra-route plumbing, so appliedVisibleEffect=true on a real render. Other scaffolds keep it mount-only until their renderer set opts into wizard routes."
     },
     "carousel": {
       "dossiers": [],
@@ -107,7 +107,7 @@
     "team-section": {
       "dossiers": ["team-roster"],
       "default": "team-roster",
-      "comment": "team-roster is a soft instructions-only Dossier (monogram cards from company.team). Mount-only via section_add today: mounts through requestedCapabilities + selectedDossiers.required; render_section_team exists but appliedVisibleEffect may stay false until visible render-path work lands."
+      "comment": "team-roster is a soft instructions-only Dossier (monogram cards from company.team). Visible via section_add on the local-service-business scaffold (2026-06-09): a team section_add surfaces a grounded dedicated /team route (render_team) through the wizard extra-route plumbing when company.team has named members; an empty team stays honest mount-only (mounted-but-no-content). Other scaffolds keep it mount-only until their renderer set opts into wizard routes."
     },
     "guarantees": {
       "dossiers": ["trust-guarantees"],

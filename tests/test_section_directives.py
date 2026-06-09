@@ -25,7 +25,9 @@ if str(REPO_ROOT) not in sys.path:
 
 from packages.generation.followup.section_directives import (  # noqa: E402
     SECTION_TYPE_CAPABILITY,
+    VISIBLE_SECTION_ROUTES,
     resolve_section_capabilities,
+    resolve_visible_section_pages,
 )
 
 # Each sanctioned type slug -> (capability, default Dossier it must mount). The
@@ -103,3 +105,77 @@ def test_resolution_dedupes_repeated_and_mixed_types() -> None:
     )
     assert capabilities == ["gallery", "pricing"]
     assert [item["type"] for item in unsupported] == ["färger"]
+
+
+# ---------------------------------------------------------------------------
+# Visible section route resolution (faq/team visible-render slice).
+# ---------------------------------------------------------------------------
+
+_GROUNDED_PI = {
+    "company": {"team": [{"name": "Anna Ek", "role": "Grundare"}]},
+}
+
+
+def test_visible_routes_map_to_known_wizard_labels() -> None:
+    """The visible-route map only carries capabilities with a real wizard route
+    label + route id, so apply can record the label on the next version's meta.
+    """
+    assert VISIBLE_SECTION_ROUTES["faq-section"] == {
+        "wizardLabel": "FAQ",
+        "routeId": "faq",
+    }
+    assert VISIBLE_SECTION_ROUTES["team-section"] == {
+        "wizardLabel": "Vårt team",
+        "routeId": "team",
+    }
+
+
+def test_faq_section_surfaces_a_visible_route() -> None:
+    """faq-section is grounded by construction (render_faq answers generic
+    questions with the dossier's own areas/hours), so it surfaces /faq."""
+    visible, mount_only = resolve_visible_section_pages(["faq-section"], {})
+    assert visible == [
+        {"capability": "faq-section", "wizardLabel": "FAQ", "routeId": "faq"}
+    ]
+    assert mount_only == []
+
+
+def test_team_section_visible_only_with_grounded_team() -> None:
+    """team-section surfaces /team only when company.team has a named member;
+    an empty team stays mount-only (mounted-but-no-content), never a placeholder.
+    """
+    visible, mount_only = resolve_visible_section_pages(["team-section"], _GROUNDED_PI)
+    assert visible == [
+        {"capability": "team-section", "wizardLabel": "Vårt team", "routeId": "team"}
+    ]
+    assert mount_only == []
+
+    visible_empty, mount_only_empty = resolve_visible_section_pages(
+        ["team-section"], {"company": {"team": []}}
+    )
+    assert visible_empty == []
+    assert len(mount_only_empty) == 1
+    assert mount_only_empty[0]["capability"] == "team-section"
+    assert mount_only_empty[0]["reason"]
+
+
+def test_route_less_capability_stays_mount_only() -> None:
+    """A mounted capability with no dedicated visible route (e.g. guarantees)
+    is reported as mount-only with a reason - never surfaced as a phantom page.
+    """
+    visible, mount_only = resolve_visible_section_pages(["guarantees"], {})
+    assert visible == []
+    assert len(mount_only) == 1
+    assert mount_only[0]["capability"] == "guarantees"
+    assert mount_only[0]["reason"]
+
+
+def test_visible_pages_dedupe_and_split_mixed_input() -> None:
+    """A mix surfaces only the grounded route-capable types once; the rest stay
+    mount-only honestly."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["faq-section", "faq-section", "team-section", "guarantees"],
+        _GROUNDED_PI,
+    )
+    assert [page["routeId"] for page in visible] == ["faq", "team"]
+    assert [entry["capability"] for entry in mount_only] == ["guarantees"]

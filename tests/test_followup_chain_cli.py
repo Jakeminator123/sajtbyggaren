@@ -252,7 +252,13 @@ def test_followup_chain_section_add_mounts_dossier_and_creates_new_version(
     """A sanctioned section_add goes router -> (section capability) -> apply ->
     targeted build: the capability lands in requestedCapabilities and its
     implementing dossier is secured in selectedDossiers.required (the SAME apply
-    machinery component_add uses), creating the next immutable version."""
+    machinery component_add uses), creating the next immutable version.
+
+    Visible-render slice (faq/team on the local-service-business scaffold): a
+    section type with a dedicated, grounded visible route is surfaced as a NEW
+    page, so the honest file-diff reports appliedVisibleEffect=true and the
+    affected route is the surfaced page. Every other type stays mount-only
+    (appliedVisibleEffect=false, home-defaulted) - the honest contract."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     from scripts.build_site import run_followup_chain
 
@@ -281,11 +287,152 @@ def test_followup_chain_section_add_mounts_dossier_and_creates_new_version(
     required = (v2_pi.get("selectedDossiers") or {}).get("required") or []
     assert dossier in required, f"{dossier} must be mounted in selectedDossiers.required"
 
-    # Honest signal with do_build=False (skipped, no false preview refresh) and
-    # the section lands on the root/home route by default.
-    assert result["affectedRoutes"] == ["home"]
+    # do_build=False -> never a preview refresh (skipped is not shippable),
+    # regardless of whether the section became visible.
+    assert result["previewShouldRefresh"] is False
+
+    # Visible iff the capability has a dedicated route AND that route's grounded
+    # content exists in the built version AND the scaffold emits wizard routes.
+    visible_route = {"faq-section": "faq", "team-section": "team"}.get(capability)
+    scaffold_is_route_capable = v2_pi.get("scaffoldId") == "local-service-business"
+    team = ((v2_pi.get("company") or {}).get("team")) or []
+    team_grounded = any(
+        isinstance(m, dict) and str(m.get("name") or "").strip() for m in team
+    )
+    is_grounded = capability != "team-section" or team_grounded
+    if visible_route and scaffold_is_route_capable and is_grounded:
+        assert result["appliedVisibleEffect"] is True, result
+        assert result["affectedRoutes"] == [visible_route]
+    else:
+        # Mount-only: no dedicated visible route (or no grounded content / a
+        # scaffold that does not emit the route) -> honest no visible effect,
+        # affected route defaults to home.
+        assert result["appliedVisibleEffect"] is False, result
+        assert result["affectedRoutes"] == ["home"]
+
+
+def _seed_example_init_build(
+    tmp_path: Path, example_filename: str, site_id: str
+) -> tuple[Path, Path, Path]:
+    """Init-build a committed example into isolated dirs, persisting the
+    prompt-inputs sidecar so a follow-up can find it on disk.
+
+    Returns (prompt_inputs, runs_dir, generated_dir). Mock-safe (no npm).
+    """
+    from scripts.build_site import build
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "gen"
+    example = REPO_ROOT / "examples" / example_filename
+    build(
+        example,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        prompt_inputs_dir=prompt_inputs,
+    )
+    return prompt_inputs, runs_dir, generated_dir
+
+
+def _newest_build_app_pages(generated_dir: Path, site_id: str) -> list[str]:
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    assert builds, "expected at least one build directory"
+    app = builds[-1] / "app"
+    return sorted(
+        p.relative_to(app).as_posix() for p in app.rglob("page.tsx")
+    )
+
+
+def test_followup_chain_section_add_faq_and_team_render_visibly(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """End-to-end visible-render proof: on the local-service-business scaffold a
+    "lägg till en FAQ-sektion" / "lägg till en team-sektion" follow-up surfaces a
+    NEW grounded dedicated page, so the honest file-diff reports
+    appliedVisibleEffect=true and the affected route is the surfaced page.
+
+    Uses the painter-palma example because it is LSB and carries grounded
+    company.team (so /team is honest, not a placeholder)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_init_build(
+        tmp_path, "painter-palma.project-input.json", site_id
+    )
+    # Baseline: no /faq, no /team yet.
+    base_pages = _newest_build_app_pages(generated_dir, site_id)
+    assert "faq/page.tsx" not in base_pages
+    assert "team/page.tsx" not in base_pages
+
+    faq = run_followup_chain(
+        site_id,
+        "lägg till en FAQ-sektion",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert faq["stage"] == "built"
+    assert faq["editKind"] == "section_add"
+    assert faq["appliedVisibleEffect"] is True, faq
+    assert faq["affectedRoutes"] == ["faq"]
+    assert "faq/page.tsx" in _newest_build_app_pages(generated_dir, site_id)
+
+    team = run_followup_chain(
+        site_id,
+        "lägg till en team-sektion",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert team["appliedVisibleEffect"] is True, team
+    assert team["affectedRoutes"] == ["team"]
+    team_page = (
+        generated_dir
+        / site_id
+        / "builds"
+    )
+    newest = sorted(team_page.glob("*"))[-1] / "app" / "team" / "page.tsx"
+    markup = newest.read_text(encoding="utf-8")
+    # Grounded in company.team from the example - no invented people.
+    assert "Anders Holm" in markup
+    assert "Lina Sjöberg" in markup
+
+
+def test_followup_chain_section_add_guarantees_stays_mount_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """guarantees has no dedicated visible route, so a "lägg till garantier"
+    follow-up mounts the capability + dossier but renders no new page: honest
+    appliedVisibleEffect=false, no preview refresh (mount-only kept)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_init_build(
+        tmp_path, "painter-palma.project-input.json", site_id
+    )
+    base_pages = _newest_build_app_pages(generated_dir, site_id)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en sektion om garantier",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert result["applied"] is True
+    assert result["editKind"] == "section_add"
+    assert "guarantees" in [c["capability"] for c in result["appliedCapabilities"]]
+    # Mount-only: capability mounted, but no new page and no visible effect.
     assert result["appliedVisibleEffect"] is False
     assert result["previewShouldRefresh"] is False
+    assert _newest_build_app_pages(generated_dir, site_id) == base_pages
 
 
 def test_followup_chain_section_add_unsupported_type_is_honest_no_op(
