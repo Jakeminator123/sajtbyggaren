@@ -36,7 +36,12 @@ Conventions: identifiers + comments in English (governance/rules/code-in-english
 
 from __future__ import annotations
 
-__all__ = ["SECTION_TYPE_CAPABILITY", "resolve_section_capabilities"]
+__all__ = [
+    "SECTION_TYPE_CAPABILITY",
+    "VISIBLE_SECTION_ROUTES",
+    "resolve_section_capabilities",
+    "resolve_visible_section_pages",
+]
 
 # Sanctioned section-type slug (router ``componentIntent`` for ``section_add``)
 # -> capability slug (``capability-map.v1.json`` key). Every value resolves to a
@@ -69,6 +74,122 @@ _SANCTIONED = (
     "team, faq, garantier/trust, recensioner, galleri, priser, öppettider, "
     "karta, kontaktformulär"
 )
+
+# Section capabilities that can be surfaced as a VISIBLE dedicated route instead
+# of staying mount-only. Each maps the mounted capability slug to the wizard
+# ``mustHave`` label that ``produce_site_plan`` already knows how to emit as a
+# real page (planning._WIZARD_ROUTE_DEFINITIONS) plus that page's logical route
+# id. Surfacing reuses the EXISTING render_* helper + extra-routes plumbing (no
+# new render engine): the section_builder records the label on the next
+# version's meta sidecar, so the targeted build emits the dedicated page and the
+# deterministic file-diff reports an honest ``appliedVisibleEffect``.
+#
+# Only the local-service-business scaffold emits these wizard routes
+# (planning._WIZARD_ROUTE_SCAFFOLDS), so a section_add on any other scaffold
+# stays honestly mount-only. Kept narrow on purpose (faq + team first); the
+# remaining route-capable types (gallery/pricing/location) can follow the same
+# pattern once proven.
+VISIBLE_SECTION_ROUTES: dict[str, dict[str, str]] = {
+    "faq-section": {"wizardLabel": "FAQ", "routeId": "faq"},
+    "team-section": {"wizardLabel": "Vårt team", "routeId": "team"},
+}
+
+
+def _capability_has_grounded_content(capability: str, project_input: dict) -> bool:
+    """Honest content gate for a visible section route.
+
+    A visible route is only surfaced when the operator/dossier actually supplies
+    the grounded content its renderer reads. With no grounded content the
+    section stays mount-only (mounted-but-no-content); the renderer must never
+    invent a placeholder section.
+
+    - ``faq-section``: grounded by construction. ``render_faq`` answers a small
+      set of generic questions with the dossier's own service areas / opening
+      hours (or a grounded blueprint FAQ) and never invents prices or
+      warranties, so it always has honest content.
+    - ``team-section``: grounded only when ``company.team`` lists at least one
+      named member. An empty team would render a dashed "vi fyller på snart"
+      placeholder, which is NOT grounded content, so it stays mount-only.
+    """
+    if capability == "faq-section":
+        return True
+    if capability == "team-section":
+        company = project_input.get("company") if isinstance(project_input, dict) else None
+        team = company.get("team") if isinstance(company, dict) else None
+        return isinstance(team, list) and any(
+            isinstance(member, dict) and str(member.get("name") or "").strip()
+            for member in team
+        )
+    return False
+
+
+def resolve_visible_section_pages(
+    capabilities: list[str],
+    project_input: dict,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Split mounted section capabilities into visible-route vs mount-only.
+
+    Returns ``(visible, mount_only)`` where:
+
+    - ``visible`` is ``[{"capability", "wizardLabel", "routeId"}]`` for the
+      de-duplicated capabilities that BOTH have a dedicated visible route
+      (``VISIBLE_SECTION_ROUTES``) AND carry grounded content. Surfacing one
+      makes the targeted render emit a NEW page -> honest
+      ``appliedVisibleEffect=true``.
+    - ``mount_only`` is ``[{"capability", "reason"}]`` for every mounted
+      capability kept mount-only - either because it has no dedicated visible
+      route yet, or because the operator supplied no grounded content for it
+      (the honest mounted-but-no-content signal).
+
+    Deterministic, offline, no LLM. ``project_input`` is the merged next-version
+    Project Input the apply step is about to write (so the grounded-content gate
+    reflects exactly what the build will render).
+    """
+    visible: list[dict[str, str]] = []
+    mount_only: list[dict[str, str]] = []
+    seen: set[str] = set()
+    surfaced_routes: set[str] = set()
+    for capability in capabilities:
+        if not isinstance(capability, str) or not capability.strip():
+            continue
+        if capability in seen:
+            continue
+        seen.add(capability)
+        route = VISIBLE_SECTION_ROUTES.get(capability)
+        if route is None:
+            mount_only.append(
+                {
+                    "capability": capability,
+                    "reason": (
+                        f"Capability {capability!r} har ingen dedikerad synlig "
+                        "render-väg ännu; sektionen monteras men syns inte (följd)."
+                    ),
+                }
+            )
+            continue
+        if not _capability_has_grounded_content(capability, project_input):
+            mount_only.append(
+                {
+                    "capability": capability,
+                    "reason": (
+                        f"Capability {capability!r} saknar grundat innehåll i "
+                        "Project Input (mounted-but-no-content); ingen synlig "
+                        "sektion renderas."
+                    ),
+                }
+            )
+            continue
+        if route["routeId"] in surfaced_routes:
+            continue
+        surfaced_routes.add(route["routeId"])
+        visible.append(
+            {
+                "capability": capability,
+                "wizardLabel": route["wizardLabel"],
+                "routeId": route["routeId"],
+            }
+        )
+    return visible, mount_only
 
 
 def resolve_section_capabilities(

@@ -5265,9 +5265,18 @@ def run_followup_chain(
     #    which reuses build() (immutable build dir + atomic current.json swap on
     #    ok/degraded only + honest appliedVisibleEffect). No new build engine.
     new_version_path = Path(apply_result.projectInputPath)
+    # A section_add that surfaced a dedicated visible route (e.g. ["faq"]) has no
+    # contentBlocks patch field, so affected_routes_from_apply yields nothing and
+    # the targeted layer would default to the home route. Pass the surfaced route
+    # ids so the affected-route attribution + per-route change verification line
+    # up with the page the section actually landed on (honest signal).
+    section_affected_routes = list(
+        getattr(apply_result, "sectionRoutesSurfaced", []) or []
+    )
     targeted = build_targeted_version(
         new_version_path,
         apply_result=apply_result,
+        affected_routes=section_affected_routes or None,
         do_build=do_build,
         runs_dir=runs_dir,
         generated_dir=generated_dir,

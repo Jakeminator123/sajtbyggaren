@@ -5,14 +5,26 @@ Lägg till EN sanktionerad sektion på en befintlig route genom att MONTERA dess
 capability+dossier via apply-kedjan, så en följdprompt ("lägg till en
 FAQ-sektion") ger en ny immutabel version med sektionen monterad.
 
-> **MOUNT-ONLY (viktigt — undvik falsk success):** section_add MONTERAR
-> capability + dossier i nästa version (`requestedCapabilities` +
-> `selectedDossiers.required`), men de soft-dossiers är instruktioner-only och
-> den deterministiska targeted-rendern visar INTE automatiskt en ny sektion på
-> sidan. Resultatet är ärligt `applied=true` (version skriven) men
-> `appliedVisibleEffect=false`/`previewShouldRefresh=false` (inget syns ännu).
-> Synlig render av en monterad sektion + exakt sida/position-placering är en
-> separat render-path-follow-up (Sprint 3B-spåret), inte denna skill.
+> **SYNLIGT för faq + team (flippat 2026-06-09), MOUNT-ONLY för resten:**
+> section_add MONTERAR alltid capability + dossier i nästa version
+> (`requestedCapabilities` + `selectedDossiers.required`).
+>
+> För `faq` och `team` (på scaffolden local-service-business) ytas sektionen
+> dessutom som en *grundad dedikerad route* (`/faq` via render_faq, `/team` via
+> render_team) genom den befintliga wizard-extra-route-vägen: apply skriver
+> wizard-mustHave-etiketten på nästa versions meta-sidecar, så targeted-bygget
+> genererar en ny sida och fil-diffen rapporterar ärligt
+> `appliedVisibleEffect=true`/`previewShouldRefresh=true` (på ett shippbart
+> bygge). `faq` är grundad per konstruktion; `team` kräver grundad
+> `company.team` — en tom lista förblir ärligt mount-only
+> (mounted-but-no-content), aldrig en påhittad platshållare. På andra scaffolds
+> förblir faq/team mount-only tills deras renderare väljer in wizard-routes.
+>
+> För de övriga typerna (trust/garantier, recensioner, galleri, priser,
+> öppettider, karta, kontaktformulär) gäller fortfarande mount-only: dossiern
+> monteras men targeted-rendern visar INTE en ny sektion, så det blir ärligt
+> `applied=true` men `appliedVisibleEffect=false`/`previewShouldRefresh=false`.
+> galleri/priser/karta kan följa samma dedikerad-route-mönster härnäst.
 
 ## Sanktionerade sektionstyper
 Originalfyra: team, faq, garantier/trust, recensioner. Breddat 2026-06-08
@@ -36,11 +48,15 @@ Endast per-sajt Project Input/version ändras; delade mallar rörs aldrig.
 ## Honesty
 Okänd/ostödd sektionstyp -> ärlig no-op (`stage=section_unsupported`) med
 anledning. Synlig-effekt-signalen (`appliedVisibleEffect`/
-`previewShouldRefresh`) kommer från kedjan, aldrig påhittad. FloatingChat
+`previewShouldRefresh`) kommer från fil-diffen i kedjan, aldrig påhittad: en
+synlig route genereras bara när grundat innehåll finns (faq alltid, team bara
+med grundad `company.team`), annars förblir det ärligt mount-only. FloatingChat
 (`summarizeOpenClawBridge`) grindar success-raden på `previewShouldRefresh`, så
 en mount-only-montering rapporteras ärligt som "registrerad men syns inte än"
 — aldrig "genomförde ändringen".
 
 ## Status
-supported (mount-only) — router + apply-väg + 9 typer + tester + verify_openclaw
-inne på `jakob-be` (se `../../action-registry.json`). Synlig render = follow-up.
+supported — router + apply-väg + 9 typer + tester + verify_openclaw inne på
+`jakob-be` (se `../../action-registry.json`). Synlig render landad för `faq` +
+`team` på local-service-business (grundad dedikerad route); övriga sju typer är
+fortfarande mount-only (följd: galleri/priser/karta nästa).
