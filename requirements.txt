@@ -5,7 +5,8 @@
 streamlit>=1.49
 jsonschema>=4.23
 pydantic>=2.9
-openai>=1.50
+# code uses the v2 Responses API (client.responses.parse); cap <3 until a v3 migration is vetted
+openai>=2.41,<3
 pillow>=10.0
 
 # discovery wizard URL-scrape (scripts/scrape_site.py)
