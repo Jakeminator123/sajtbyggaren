@@ -9,7 +9,7 @@
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
     "Synonym/alias accepteras endast om det står i 'aliasesAllowed' och då bara som dokumentationskommentar; kod och policies använder alltid kanoniskt namn.",
     "Förbjudna alias (se 'aliasesForbidden') får inte återinföras.",
-    "Nya termer måste deklareras här innan de används någon annanstans (se rules/term-discipline.md)."
+    "Nya termer måste deklareras här innan de används någon annanstans (se rules/06-governance-vocabulary-core.md)."
   ],
   "terms": [
     {
