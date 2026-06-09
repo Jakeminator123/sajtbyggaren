@@ -24,8 +24,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from packages.generation.followup.section_directives import (  # noqa: E402
+    INLINE_SECTION_PLACEMENTS,
+    INLINE_SECTION_ROUTES,
     SECTION_TYPE_CAPABILITY,
     VISIBLE_SECTION_ROUTES,
+    resolve_inline_section_placements,
     resolve_section_capabilities,
     resolve_visible_section_pages,
 )
@@ -251,3 +254,66 @@ def test_scaffold_gate_matches_canonical_wizard_scaffold_set() -> None:
         ["faq-section"], {"scaffoldId": "definitely-not-a-wizard-scaffold"}
     )
     assert visible_off == []
+
+
+# ---------------------------------------------------------------------------
+# Inline section placements (ADR 0038): a mounted capability that maps to an
+# inline section on a supported scaffold becomes a directives.mountedSections
+# entry so the renderer injects it as a block on a route. The resolver only
+# declares WHERE a section can go; render-time owns the renderer/grounded gates.
+# ---------------------------------------------------------------------------
+
+_LSB_PI = {"scaffoldId": "local-service-business"}
+
+
+def test_inline_placement_for_hours_on_lsb() -> None:
+    """``hours`` maps to an inline hours-summary block on the LSB home route."""
+    placements = resolve_inline_section_placements(["hours"], _LSB_PI)
+    assert placements == [
+        {"capability": "hours", "sectionId": "hours-summary", "routeId": "home"}
+    ]
+
+
+def test_inline_placement_empty_on_non_inline_scaffold() -> None:
+    """A non-allowlisted scaffold gets no inline placements (honest mount-only)."""
+    assert resolve_inline_section_placements(["hours"], {"scaffoldId": "agency-studio"}) == []
+    assert resolve_inline_section_placements(["hours"], {}) == []
+
+
+def test_inline_placement_skips_capabilities_without_inline_section() -> None:
+    """A capability with no inline mapping (e.g. guarantees) yields nothing,
+    so it stays mount-only / dedicated-route-only - never double-surfaced."""
+    assert resolve_inline_section_placements(["guarantees"], _LSB_PI) == []
+    # faq/team keep their dedicated-route path and are NOT inline-placed.
+    assert resolve_inline_section_placements(["faq-section", "team-section"], _LSB_PI) == []
+
+
+def test_inline_placement_dedupes() -> None:
+    """A capability requested twice is placed at most once (order-preserving)."""
+    placements = resolve_inline_section_placements(["hours", "hours"], _LSB_PI)
+    assert [p["capability"] for p in placements] == ["hours"]
+
+
+def test_inline_placement_map_targets_registered_renderers() -> None:
+    """Every inline placement target must be a section id with a registered
+    renderer, so an injection can never SystemExit the dispatcher."""
+    # Importing renderers populates dispatcher._SECTION_RENDERERS at import time.
+    import packages.generation.build.renderers  # noqa: F401
+    from packages.generation.build.dispatcher import _SECTION_RENDERERS
+
+    for capability, placement in INLINE_SECTION_PLACEMENTS.items():
+        assert placement["sectionId"] in _SECTION_RENDERERS, (
+            f"{capability!r} inline placement targets unregistered section "
+            f"{placement['sectionId']!r}"
+        )
+
+
+def test_inline_placement_map_targets_wired_routes() -> None:
+    """Every inline placement must target a route whose renderer threads the
+    injection seam (``INLINE_SECTION_ROUTES``), so the resolver never persists a
+    directive a build cannot render (honesty contract for future routes)."""
+    for capability, placement in INLINE_SECTION_PLACEMENTS.items():
+        assert placement["routeId"] in INLINE_SECTION_ROUTES, (
+            f"{capability!r} inline placement targets unwired route "
+            f"{placement['routeId']!r}"
+        )

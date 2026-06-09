@@ -3277,22 +3277,38 @@ def run_followup_chain(
     is_section_add = decision.editKind == "section_add" or any(
         subtask.editKind == "section_add" for subtask in decision.subtasks
     )
+    # Capability -> coarse inline position from the router target ("överst"/
+    # "längst ner"), threaded into apply so ADR 0038 can place an injected
+    # section at the top or bottom of the route order instead of the default
+    # slot. Built parallel to ``section_types`` so a per-section/per-subtask
+    # target maps to the capability that section_add resolves to.
+    section_positions: dict[str, str] = {}
     if is_section_add:
         from packages.generation.followup.section_directives import (
+            SECTION_TYPE_CAPABILITY,
             resolve_section_capabilities,
         )
 
         section_types: list[str | None] = []
+        typed_targets: list[tuple[str | None, Any]] = []
         if decision.editKind == "section_add":
             section_types.append(decision.componentIntent)
-        section_types.extend(
-            subtask.componentIntent
-            for subtask in decision.subtasks
-            if subtask.editKind == "section_add"
-        )
+            typed_targets.append((decision.componentIntent, decision.target))
+        for subtask in decision.subtasks:
+            if subtask.editKind == "section_add":
+                section_types.append(subtask.componentIntent)
+                typed_targets.append((subtask.componentIntent, subtask.target))
         added_capabilities, section_unsupported = resolve_section_capabilities(
             section_types
         )
+        for section_type, target in typed_targets:
+            capability = SECTION_TYPE_CAPABILITY.get(section_type or "")
+            position = getattr(target, "position", None)
+            # The router emits top/bottom for "överst"/"längst ner"; map them to
+            # the schema's route-order positions. left/right/center are intra-
+            # section and ignored here (default slot).
+            if capability and position in ("top", "bottom"):
+                section_positions[capability] = position
 
     if not plan.patches and theme_directive is None and not added_capabilities:
         no_edit_note = (
@@ -3347,6 +3363,7 @@ def run_followup_chain(
             runs_dir=runs_root,
             theme_directive=theme_directive,
             added_capabilities=added_capabilities,
+            section_positions=section_positions,
         )
     except PatchApplyError as exc:
         return _result(
