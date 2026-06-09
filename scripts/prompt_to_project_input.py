@@ -73,6 +73,7 @@ from packages.generation.followup.text import (  # noqa: E402
     _customer_safe_planner_note,
     _normalise_followup_text,
     _string_value,
+    _text_outside_quotes,
 )
 
 # copyDirective subsystem (ADR 0034 väg A, nivå 1-3a) lives in
@@ -85,6 +86,7 @@ _apply_copy_directives = _copy_directives._apply_copy_directives
 _content_rewrite_target = _copy_directives._content_rewrite_target
 _extract_copy_directives = _copy_directives._extract_copy_directives
 _extract_copy_directives_via_llm = _copy_directives._extract_copy_directives_via_llm
+_extract_literal_replace_directives = _copy_directives._extract_literal_replace_directives
 _plan_copy_directives_via_llm = _copy_directives._plan_copy_directives_via_llm
 _is_content_rewrite_request = _copy_directives._is_content_rewrite_request
 _validate_copy_directive_candidate = _copy_directives._validate_copy_directive_candidate
@@ -1933,7 +1935,17 @@ def classify_followup_intent(
     stronger than the desire to infer every possible operator phrasing.
     """
     _ = language
-    text = _normalise_followup_text(follow_up_prompt)
+    # Classify on the instruction OUTSIDE any quotes: when the operator quotes
+    # the OLD copy they want replaced ("ändra denna text 'X' till 'Y'"), words
+    # inside X (e.g. tone scope words like "känsla" or descriptors like
+    # "modern") belong to the text being REPLACED, not to the instruction, and
+    # must not drive intent. Fall back to the full text only when the whole
+    # message was quoted (nothing left outside) so a fully-quoted instruction
+    # is not downgraded to "clarify". Fixes the 2026-06-09 lask-ab misfire
+    # where a literal hero edit was misclassified as tone-shift.
+    text = _text_outside_quotes(follow_up_prompt)
+    if len(text) < 4:
+        text = _normalise_followup_text(follow_up_prompt)
     if not text or len(text) < 4:
         return "clarify"
 
@@ -2029,7 +2041,12 @@ def _tone_words_from_prompt(
     *,
     language: str,
 ) -> list[str]:
-    text = _normalise_followup_text(follow_up_prompt)
+    # Tone words come from the instruction OUTSIDE quotes so OLD copy being
+    # replaced cannot inject tone descriptors into the semantic patch (the
+    # lask-ab misfire pulled "modern"/"känsla" out of the quoted OLD text).
+    text = _text_outside_quotes(follow_up_prompt) or _normalise_followup_text(
+        follow_up_prompt
+    )
     words: list[str] = []
     for keyword, tone_word in _tone_keyword_pairs(language):
         if _contains_word(text, keyword) and tone_word not in words:
@@ -2042,7 +2059,11 @@ def _avoid_words_from_prompt(
     *,
     language: str,
 ) -> list[str]:
-    text = _normalise_followup_text(follow_up_prompt)
+    # Avoid-words also come from outside quotes (same reason as
+    # _tone_words_from_prompt): a quoted OLD copy must not seed avoid-tone.
+    text = _text_outside_quotes(follow_up_prompt) or _normalise_followup_text(
+        follow_up_prompt
+    )
     candidates = (
         ("kall", "kall"),
         ("stel", "stel"),
@@ -2266,7 +2287,11 @@ def _copy_directive_llm_eligible(
     """
     if intent not in _COPY_DIRECTIVE_LLM_ELIGIBLE_INTENTS:
         return False
-    text = _normalise_followup_text(follow_up_prompt)
+    # The additive guard reads the instruction OUTSIDE quotes so an "add"
+    # keyword inside quoted OLD copy does not wrongly block the LLM fallback.
+    text = _text_outside_quotes(follow_up_prompt) or _normalise_followup_text(
+        follow_up_prompt
+    )
     if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
         return False
     return True
@@ -2793,6 +2818,17 @@ def merge_followup_project_input(
         follow_up_prompt,
         language=language,
     )
+    # ADR 0034 path A (literal slice): "ändra denna text 'X' till 'Y'" is a
+    # find-and-replace on the CURRENT copy fields. Detect it BEFORE the
+    # semantic patch so a (mis)classified intent cannot regenerate the tagline
+    # from stale business facts while the literal edit silently no-ops (the
+    # 2026-06-09 lask-ab regression). A matched literal replace pins intent to
+    # no-semantic-change so _apply_semantic_patch leaves copy untouched and the
+    # literal directive below is authoritative. No field matches the quoted OLD
+    # value -> empty list -> the existing rule/LLM path runs unchanged.
+    literal_directives = _extract_literal_replace_directives(follow_up_prompt, merged)
+    if literal_directives:
+        intent = "no-semantic-change"
     _apply_semantic_patch(
         merged,
         candidate,
@@ -2802,37 +2838,42 @@ def merge_followup_project_input(
     # ADR 0034 path A: explicit copy directives (rename / include-token) are
     # applied AFTER the semantic patch so an explicit "byt namnet till X" wins
     # over the conservative semantic merge. Leak-safe by construction - only a
-    # validated payload reaches a known structured field. The deterministic
-    # rules run first (no API needed, fully testable); the copyDirectiveModel
-    # extractor only fills in when (a) the caller opted in (production CLI),
-    # (b) the rules found nothing, and (c) the follow-up is a genuinely
-    # unclassified non-additive prompt - so the model can interpret fuzzier
-    # phrasings without weakening the guarantees or breaking offline tests.
-    copy_directives = _extract_copy_directives(follow_up_prompt, language=language)
-    if not copy_directives and enable_llm_fallback:
-        # nivå 3a editPlan: a rewrite/improve request without a literal value
-        # ("skriv om om oss ...") goes to the planner, which reads site-state
-        # and GENERATES new about/service copy (re-validated + grounded). All
-        # other unclassified prompts keep the extraction-only fallback so the
-        # deterministic/extraction behaviour and intents stay unchanged.
-        if rewrite_target is not None:
-            copy_directives = _plan_copy_directives_via_llm(
-                merged,
-                follow_up_prompt,
-                language=language,
-                target=rewrite_target,
-            )
-        elif _copy_directive_llm_eligible(follow_up_prompt, intent=intent):
-            copy_directives = _extract_copy_directives_via_llm(
-                follow_up_prompt,
-                company=merged.get("company", {})
-                if isinstance(merged.get("company"), dict)
-                else {},
-                services=merged.get("services")
-                if isinstance(merged.get("services"), list)
-                else [],
-                language=language,
-            )
+    # validated payload reaches a known structured field. A matched literal
+    # replace is authoritative; otherwise the deterministic rules run first (no
+    # API needed, fully testable) and the copyDirectiveModel extractor only
+    # fills in when (a) the caller opted in (production CLI), (b) the rules
+    # found nothing, and (c) the follow-up is a genuinely unclassified
+    # non-additive prompt - so the model can interpret fuzzier phrasings
+    # without weakening the guarantees or breaking offline tests.
+    if literal_directives:
+        copy_directives = literal_directives
+    else:
+        copy_directives = _extract_copy_directives(follow_up_prompt, language=language)
+        if not copy_directives and enable_llm_fallback:
+            # nivå 3a editPlan: a rewrite/improve request without a literal
+            # value ("skriv om om oss ...") goes to the planner, which reads
+            # site-state and GENERATES new about/service copy (re-validated +
+            # grounded). All other unclassified prompts keep the
+            # extraction-only fallback so the deterministic/extraction
+            # behaviour and intents stay unchanged.
+            if rewrite_target is not None:
+                copy_directives = _plan_copy_directives_via_llm(
+                    merged,
+                    follow_up_prompt,
+                    language=language,
+                    target=rewrite_target,
+                )
+            elif _copy_directive_llm_eligible(follow_up_prompt, intent=intent):
+                copy_directives = _extract_copy_directives_via_llm(
+                    follow_up_prompt,
+                    company=merged.get("company", {})
+                    if isinstance(merged.get("company"), dict)
+                    else {},
+                    services=merged.get("services")
+                    if isinstance(merged.get("services"), list)
+                    else [],
+                    language=language,
+                )
     _apply_copy_directives(merged, copy_directives)
     # editPlan no-op promise: if an about-text rewrite request produced no
     # about-text directive (planner returned [], no API key, or candidate

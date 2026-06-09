@@ -2014,3 +2014,127 @@ def test_end_to_end_hero_headline_override_visible_as_h1(
     )
     assert build_result["engineMode"] == "followup"
     assert build_result["appliedVisibleEffect"] is True
+
+
+# --- 2026-06-09 (copy-passthrough fix): rows 1-4 ----------------------------
+#
+# The lask-ab regression: "Ändra denna text '<hero>' till Jakobs tjänsteföretag
+# i Småland" became a silent paraphrase. Root causes: (4) tone words inside the
+# quoted OLD text drove a tone-shift misclassification, (1) "tjänst" matched as
+# a substring of "tjänsteföretag" and forced a services no-op, (2) no literal
+# find-and-replace path existed, and (3) the file-diff signal reported the
+# regenerated paraphrase as a successful edit.
+
+LASK_LITERAL_PROMPT = (
+    'Ändra denna text "Ett svenskt tjänsteföretag med en exklusiv och modern '
+    'känsla." till "Jakobs tjänsteföretag i Småland"'
+)
+
+
+@pytest.mark.tooling
+def test_quoted_old_copy_does_not_trigger_tone_shift() -> None:
+    """ROW 4: tone scope/descriptor words INSIDE the quoted OLD text being
+    replaced ("exklusiv och modern känsla") must not drive intent. The literal
+    hero edit must classify as no-semantic-change, not tone-shift."""
+    assert classify_followup_intent(LASK_LITERAL_PROMPT, language="sv") == (
+        "no-semantic-change"
+    )
+
+
+@pytest.mark.tooling
+def test_tone_shift_still_fires_when_scope_outside_quotes() -> None:
+    """ROW 4 guard: a genuine tone request with the scope word OUTSIDE quotes
+    still classifies as tone-shift."""
+    assert classify_followup_intent("gör tonen mer modern", language="sv") == (
+        "tone-shift"
+    )
+
+
+@pytest.mark.tooling
+def test_services_substring_does_not_misroute_to_services() -> None:
+    """ROW 1: 'tjänsteföretag' must NOT match the services keyword 'tjänst' as
+    a substring (which forced a services no-op). Word-boundary matching keeps
+    the compound noun out of the services branch."""
+    from packages.generation.followup.copy_directives import _classify_copy_target
+    from packages.generation.followup.text import _normalise_followup_text
+
+    text = _normalise_followup_text(
+        "ändra texten om vårt tjänsteföretag till något helt nytt"
+    )
+    assert _classify_copy_target(text) != "services"
+
+
+@pytest.mark.tooling
+def test_service_word_still_routes_to_services() -> None:
+    """ROW 1 guard: a real whole-word 'tjänsten' still routes to services."""
+    from packages.generation.followup.copy_directives import _classify_copy_target
+    from packages.generation.followup.text import _normalise_followup_text
+
+    text = _normalise_followup_text("ändra tjänsten till något nytt")
+    assert _classify_copy_target(text) == "services"
+
+
+@pytest.mark.tooling
+def test_literal_replace_on_tagline_field_sets_hero_headline() -> None:
+    """ROW 2: 'ändra denna text "X" till "Y"' where X is the current tagline
+    replaces it verbatim and mirrors into the hero-headline override."""
+    merged = _merge(
+        'ändra denna text "Handgjorda örhängen i Malmö" till '
+        '"Jakobs örhängen i Småland"'
+    )
+    assert merged["company"]["tagline"] == "Jakobs örhängen i Småland"
+    assert merged["company"]["heroHeadline"] == "Jakobs örhängen i Småland"
+    directives = merged["directives"]["copyDirectives"]
+    assert directives[0]["source"] == "prompt-rule"
+    assert directives[0]["target"] == "tagline"
+
+
+@pytest.mark.tooling
+def test_literal_replace_on_story_field() -> None:
+    """ROW 2: matching the current story replaces company.story (about-text)."""
+    merged = _merge(
+        'ändra denna text "En liten butik med stor passion." till '
+        '"Vi brinner för kvalitet och hantverk."'
+    )
+    # _safe_copy_payload strips a single trailing period (shared copy guard).
+    assert merged["company"]["story"] == "Vi brinner för kvalitet och hantverk"
+    assert "heroHeadline" not in merged["company"]
+
+
+@pytest.mark.tooling
+def test_literal_replace_on_service_summary() -> None:
+    """ROW 2: matching a service summary replaces that service's summary via
+    the resolved targetRef."""
+    merged = _merge(
+        'ändra denna text "Fina örhängen." till "Handgjorda smycken i silver."'
+    )
+    # _safe_copy_payload strips a single trailing period (shared copy guard).
+    assert merged["services"][0]["summary"] == "Handgjorda smycken i silver"
+    directive = merged["directives"]["copyDirectives"][0]
+    assert directive["target"] == "services"
+    assert directive["targetRef"] == "orhangen"
+
+
+@pytest.mark.tooling
+def test_literal_replace_honest_no_op_when_old_not_found() -> None:
+    """ROW 2: when the quoted OLD text matches NO current field (e.g. the
+    operator quoted the regenerated hero line), it is an HONEST no-op - no
+    fabricated copy, no copyDirective, fields untouched."""
+    merged = _merge(LASK_LITERAL_PROMPT)
+    assert merged["company"]["tagline"] == "Handgjorda örhängen i Malmö"
+    assert merged["company"]["story"] == "En liten butik med stor passion."
+    assert "copyDirectives" not in merged.get("directives", {})
+
+
+@pytest.mark.tooling
+def test_followup_requested_copy_replace_detection() -> None:
+    """ROW 3 helper: detect an explicit quoted copy-replace request (used by the
+    build's honest-effect signal) without firing on tone/section follow-ups."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+    )
+
+    assert _followup_requested_copy_replace(LASK_LITERAL_PROMPT) is True
+    assert _followup_requested_copy_replace('byt "gammalt" till "nytt"') is True
+    assert _followup_requested_copy_replace("gör tonen mörkare") is False
+    assert _followup_requested_copy_replace("lägg till en faq-sektion") is False

@@ -3746,6 +3746,28 @@ def _detect_followup_applied_visible_effect(
     if previous_snapshot is not None:
         visible_changed = _visible_snapshots_changed(previous_snapshot, current_snapshot)
         if visible_changed is True:
+            # A visible byte diff is NOT proof the operator's edit landed: a
+            # copy follow-up can no-op while an unrelated rebuild regenerates
+            # copy from stale facts, changing bytes anyway. When the operator
+            # explicitly asked to replace a specific QUOTED copy string but no
+            # copyDirective applied, report an honest no-op so a regenerated
+            # paraphrase never masquerades as a successful edit (the
+            # 2026-06-09 lask-ab trust bug). The signal answers "did your
+            # intent land?", not just "did bytes change?". ROW 3.
+            from packages.generation.followup.copy_directives import (
+                _followup_requested_copy_replace,
+            )
+
+            raw_prompt = _prompt_meta_raw_prompt(prompt_meta)
+            if (
+                raw_prompt
+                and _followup_requested_copy_replace(raw_prompt)
+                and not _has_copy_directives(dossier)
+            ):
+                return {
+                    "applied": False,
+                    "reason": "copy_directive_not_applied",
+                }
             return {
                 "applied": True,
                 "reason": "visible_files_changed",
