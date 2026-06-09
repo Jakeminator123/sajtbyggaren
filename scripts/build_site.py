@@ -272,6 +272,58 @@ def resolve_generated_dir(override: str | Path | None = None) -> Path:
     return resolved
 
 
+_ENV_QUOTED_RE = re.compile(r"""^(['"])((?:[^\\]|\\.)*?)\1\s*(?:#.*)?$""")
+
+
+def load_repo_root_env() -> list[str]:
+    """Load ``REPO_ROOT/.env`` into ``os.environ`` as a single source of truth.
+
+    Dependency-free (no python-dotenv): a minimal parser for the common dotenv
+    forms (``KEY=value``, optional ``export `` prefix, quoted values, trailing
+    `` # comment``). Mirrors the inline parser in
+    ``apps/viewser/scripts/dev.mjs`` and the Node resolver in
+    ``apps/viewser/lib/generated-dir.ts`` so the Viewser dev flow and the
+    builder read the same file the same way.
+
+    ``os.environ`` ALWAYS wins: a key already present (shell export, Cloud-
+    injected secret, or a value the Viewser spawn already passed through) is
+    never overridden. Missing file = no-op, so CI and the test suite (no
+    committed ``.env``) are unaffected. Returns the list of keys it set, for
+    tracing/tests.
+    """
+    env_path = REPO_ROOT / ".env"
+    if not env_path.is_file():
+        return []
+    try:
+        text = env_path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    applied: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export ") :].lstrip()
+        key, sep, value = line.partition("=")
+        if not sep:
+            continue
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        value = value.strip()
+        quoted = _ENV_QUOTED_RE.match(value)
+        if quoted:
+            value = quoted.group(2)
+        else:
+            comment = re.search(r"\s+#.*$", value)
+            if comment:
+                value = value[: comment.start()].rstrip()
+        os.environ[key] = value
+        applied.append(key)
+    return applied
+
+
 def _member_initials(full_name: str) -> str:
     """Return up to two initials from a person's name.
 
@@ -5345,6 +5397,11 @@ def run_followup_chain(
 
 
 def main() -> int:
+    # Single source of truth: load the repo-root .env so an operator only has to
+    # set SAJTBYGGAREN_GENERATED_DIR (and other builder settings) in ONE file.
+    # os.environ wins, so a Viewser spawn / shell export / Cloud secret still
+    # takes precedence; a missing .env is a no-op (CI/tests unaffected).
+    load_repo_root_env()
     parser = argparse.ArgumentParser(
         description=(
             "Build a generated site from a Project Input, or run a follow-up "

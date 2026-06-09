@@ -37,6 +37,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { resolveGeneratedDir } from "./generated-dir";
+
 const TTL_ENV = "VIEWSER_SANDBOX_SPIKE_TTL_MS";
 
 const PREVIEW_PORT = 3000;
@@ -211,29 +213,11 @@ export function hasVercelSandboxAuth(): boolean {
   return resolveCredentials() !== null;
 }
 
-/**
- * Resolverar var ``build_site.py`` skrivit den genererade sajten. Speglar
- * ``apps/viewser/lib/local-preview-server.ts:resolveGeneratedDir`` men
- * re-implementeras här så runnern är fristående.
- */
-function resolveGeneratedDir(): string {
-  // cwd-OBEROENDE: härled repo-roten från denna fils plats, inte
-  // process.cwd(). Filen ligger på ``<repo>/apps/viewser/lib/<fil>.ts`` →
-  // tre nivåer upp från ``lib/`` är repo-roten.
-  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-  const repoRoot = path.resolve(moduleDir, "..", "..", "..");
-  const envOverride = process.env.SAJTBYGGAREN_GENERATED_DIR;
-  if (envOverride && envOverride.trim()) {
-    const raw = envOverride.trim();
-    // En RELATIV env-väg resolvas mot REPO-ROTEN så den matchar
-    // Python-sidans ``resolve_generated_dir`` (REPO_ROOT / relative); en
-    // absolut väg används oförändrad.
-    return path.isAbsolute(raw)
-      ? path.resolve(raw)
-      : path.resolve(repoRoot, raw);
-  }
-  return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
-}
+// Var ``build_site.py`` skrivit den genererade sajten resolveras av den
+// DELADE ``resolveGeneratedDir`` i ``./generated-dir`` (en enda resolver för
+// både local-preview-servern och denna runner, med samma regler som Pythons
+// ``resolve_generated_dir``: cwd-oberoende repo-rot, repo-root-relativ
+// resolution av relativa värden, repo-rotens ``.env`` som single source).
 
 /**
  * Läs ``<siteRoot>/current.json`` och returnera den aktiva immutable

@@ -152,17 +152,41 @@ function expandEnvRefs(value, env) {
 // spreads vinner, och spreader process.env sist så shell-overrides
 // aldrig blir överskrivna. Se
 // https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order
+// Single source of truth: also read the repo-root `.env` as the LOWEST-
+// precedence base so an operator can keep every shared setting in ONE file at
+// the repo root (SAJTBYGGAREN_GENERATED_DIR, OPENAI_*, even
+// VIEWSER_PREVIEW_MODE). apps/viewser/.env* still override it (Viewser-only
+// values) and a real process.env (shell / Cloud secret) overrides everything.
+const REPO_ROOT = resolve(VIEWSER_ROOT, "..", "..");
+const fileEnvRoot = parseEnvFile(resolve(REPO_ROOT, ".env"));
 const fileEnvBase = parseEnvFile(resolve(VIEWSER_ROOT, ".env"));
 const fileEnvDev = parseEnvFile(resolve(VIEWSER_ROOT, ".env.development"));
 const fileEnvLocal = parseEnvFile(resolve(VIEWSER_ROOT, ".env.local"));
 const fileEnvDevLocal = parseEnvFile(resolve(VIEWSER_ROOT, ".env.development.local"));
 const mergedEnv = {
+  ...fileEnvRoot,
   ...fileEnvBase,
   ...fileEnvDev,
   ...fileEnvLocal,
   ...fileEnvDevLocal,
   ...process.env,
 };
+
+// Keys that an apps/viewser/.env* file owns. Next.js loads AND `$VAR`-expands
+// those itself at runtime, so we must not pre-inject them into the child's
+// process.env (that would freeze the unexpanded literal and stop Next from
+// overriding). The repo-root `.env` therefore only fills the GAPS — keys no
+// apps/viewser file sets — keeping precedence
+// process.env > apps/viewser/.env* > repo-root `.env`.
+const viewserOwnedKeys = new Set([
+  ...Object.keys(fileEnvBase),
+  ...Object.keys(fileEnvDev),
+  ...Object.keys(fileEnvLocal),
+  ...Object.keys(fileEnvDevLocal),
+]);
+const rootOnlyEnv = Object.fromEntries(
+  Object.entries(fileEnvRoot).filter(([key]) => !viewserOwnedKeys.has(key)),
+);
 
 // Expandera `$VAR` / `${VAR}`-referenser i den hämtade rå-strängen
 // (`VIEWSER_PREVIEW_MODE=$PREVIEW_DEFAULT` är giltig dotenv-form). Vi
@@ -284,6 +308,11 @@ const nextDevArgs = ["dev", ...(useHttps ? ["--experimental-https"] : []), ...pa
 // lever `next dev` vidare och håller port 3000 låst, vilket bryter nästa
 // `npm run dev` — Codex P1-fyndet på parkerade PR #85.
 const childEnv = {
+  // repo-root `.env` gap-fillers FIRST (lowest precedence) so the Next server,
+  // the local-preview/sandbox runners and the spawned build_site.py all see a
+  // single-source value; process.env then wins, and Next still loads + expands
+  // apps/viewser/.env* on top (their keys were intentionally not injected).
+  ...rootOnlyEnv,
   ...process.env,
   VIEWSER_PREVIEW_MODE: mode,
   // Speglar `useHttps` så `next.config.ts` kan verifiera att
