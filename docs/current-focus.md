@@ -49,10 +49,10 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 
 **Nästa prioriteringar:**
 
-1. **Slice 5 — render helpers → `packages/generation/build/render_helpers.py`** (sista
-   megafil-slicen på planen; prompten är skriven + verifierad och nu avblockad efter #236).
-   19 funktioner + 11 konstanter, beteendebevarande, draft-PR mot `jakob-be`. Branca av
-   **senaste** `jakob-be` (`4144ecf`), lokalisera symboler via namn (inte radnummer).
+1. **Granska + merga slice 5 (PR #238)** — render helpers → `packages/generation/build/render_helpers.py`
+   är nu körd som strikt 2-filers-PR (`render_helpers.py` ny + `build_site.py` trimmad), alla
+   checks gröna, mergeable mot `jakob-be`. Sista megafil-slicen på planen. Efter merge: överväg
+   sync `jakob-be → main`.
 2. **Evals / golden path + manuell score** — nu när loopen är grön: kör
    `scripts/run_golden_path_eval.py --mode deterministic` + `scripts/run_eval_suite.py quick`,
    sätt manuell 1–10 i Backoffice. Inkludera kontrastfärg-testet ovan.
@@ -94,9 +94,11 @@ Nya PRs sedan föregående checkpoint: #235, #237, #236, #229, #228 — alla mer
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
   (publik POST utan auth/rate-limit kan starta sandboxar) — INTE vår att merga/fixa.
 
-Slice 5-prompten (render helpers) är skriven och avblockad men **ännu inte PR:ad**; körs via
-cloud-agent (måste re-synca till `4144ecf` först — dess snapshot är ~70 commits gammal) eller
-lokalt. Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
+- **#238** (`cursor/delade-renderhj-lpare-ca61 → jakob-be`, draft): **slice 5 — render helpers**.
+  Cloud-agenten körde den korrekt mot rätt bas — exakt 2 filer, alla checks gröna, mergeable.
+  Redo att granskas/mergas (operatörsbeslut). Sista megafil-slicen.
+
+Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
 ## Vem uppdaterar denna fil
 
