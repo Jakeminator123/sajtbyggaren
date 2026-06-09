@@ -63,7 +63,7 @@ Nya PRs sedan föregående checkpoint: PR #214 (governance preview/capability-ny
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga
   säkerhet** — live-lane, INTE vår att merga/fixa.
 - **#216** (`cursor/floating-chat-split-61b7 → christopher`): FloatingChat-split i
-  Christophers lane. **Redundant** — spliten är redan inne på `jakob-be` via #217;
+  Christophers lane. Redundant nu — spliten är redan inne på `jakob-be` via #217;
   rekommendera Christopher att stänga #216 (eller rebasa bort split-commiten).
 
 Ingen öppen backend/heavy-LLM-PR mot `jakob-be`. Christophers UI-arbete sker på
