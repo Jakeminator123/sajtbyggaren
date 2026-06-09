@@ -106,10 +106,6 @@ data/starters/**/public/**/*.eot
 .cursor/tmp_*
 .vscode/*.local.json
 
-# Gitignored mirror of docs.openclaw.ai (~684 files, ~13 MB), regenerable via
-# scripts/fetch_openclaw_docs.py. Excluded from the Cursor index; kept on disk.
-openclaw-docs/
-
 # ---------------------------------------------------------------------------
 # Tmp och logs
 # ---------------------------------------------------------------------------
