@@ -20,7 +20,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type BusinessFamilyId,
@@ -29,7 +29,9 @@ import {
   functionGroupsForFamily,
   MUST_HAVE_OPTIONS,
   type MustHaveOption,
+  RECOMMENDED_EXTRA_PAGES_BY_FAMILY,
   RECOMMENDED_FUNCTIONS_BY_FAMILY,
+  RELEVANT_PAGES_BY_FAMILY,
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
 import { FieldStack } from "./step-primitives";
@@ -161,6 +163,11 @@ export function FunctionsStep({
         fns.add(choice.id);
         if (choice.pageMustHave) pages.add(choice.pageMustHave);
       }
+      // Sidor utan funktions-koppling (t.ex. Portfolio / Case) som
+      // taxonomin ändå rekommenderar för familjen.
+      for (const page of RECOMMENDED_EXTRA_PAGES_BY_FAMILY[familyKey] ?? []) {
+        pages.add(page);
+      }
       return { pages, fns };
     };
 
@@ -201,6 +208,25 @@ export function FunctionsStep({
 
   const selectedCount = answers.mustHave.length;
 
+  // Branschanpassat rutnät (2026-06-09): visa familjens relevanta sidor
+  // direkt; övriga (t.ex. "Meny / Matsedel" för en bilverkstad) bakom en
+  // "Visa fler sidor"-toggle så de inte ser ut som rekommendationer.
+  // Valda sidor visas alltid, oavsett relevanslista.
+  const [showAllPages, setShowAllPages] = useState(false);
+  const { visiblePages, hiddenPages } = useMemo(() => {
+    const relevant = new Set<MustHaveOption>(
+      family ? (RELEVANT_PAGES_BY_FAMILY[family] ?? MUST_HAVE_OPTIONS) : [],
+    );
+    const selected = new Set(answers.mustHave);
+    const visible: MustHaveOption[] = [];
+    const hidden: MustHaveOption[] = [];
+    for (const page of MUST_HAVE_OPTIONS) {
+      if (relevant.has(page) || selected.has(page)) visible.push(page);
+      else hidden.push(page);
+    }
+    return { visiblePages: visible, hiddenPages: hidden };
+  }, [family, answers.mustHave]);
+
   return (
     <FieldStack>
       {!family ? (
@@ -222,7 +248,7 @@ export function FunctionsStep({
             som passar er verksamhet.
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {MUST_HAVE_OPTIONS.map((page) => (
+            {visiblePages.map((page) => (
               <PageCard
                 key={page}
                 page={page}
@@ -230,7 +256,28 @@ export function FunctionsStep({
                 onToggle={() => togglePage(page)}
               />
             ))}
+            {showAllPages
+              ? hiddenPages.map((page) => (
+                  <PageCard
+                    key={page}
+                    page={page}
+                    selected={answers.mustHave.includes(page)}
+                    onToggle={() => togglePage(page)}
+                  />
+                ))
+              : null}
           </div>
+          {hiddenPages.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowAllPages((prev) => !prev)}
+              className="text-muted-foreground hover:text-foreground mt-2.5 inline-flex items-center gap-1 text-[11.5px] font-medium underline-offset-2 transition-colors hover:underline"
+            >
+              {showAllPages
+                ? "Visa färre sidor"
+                : `Visa fler sidor (${hiddenPages.length})`}
+            </button>
+          ) : null}
         </div>
       )}
     </FieldStack>
