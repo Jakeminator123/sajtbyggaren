@@ -151,6 +151,24 @@ export function BuilderShell({
     onPendingBuildClear();
     onBuildEnd();
   }, [onBuildEnd, onPendingBuildClear]);
+
+  // UX-glue (msg-0050 b): när ett bygge från en ANNAN yta än FloatingChat
+  // (dialog/inspector) blir klart vill vi surfa chatten så operatören kan
+  // skriva nästa följdprompt direkt. Vi bumpar en signal som FloatingChat
+  // lyssnar på (expanderar ur minimerat läge + flyttar focus till composern).
+  // FloatingChat:s egna byggen går via den råa onBuildDone och bumpar alltså
+  // inte signalen (composern har redan focus där). Misslyckade byggen surfar
+  // inte heller — då är felbubblan/feltoasten primär, inte iterera-vidare.
+  const [focusComposerSignal, setFocusComposerSignal] = useState(0);
+  const handleSurfaceBuildDone = useCallback<OnFollowupBuildDone>(
+    (runId, outcome, visibleEffect) => {
+      onBuildDone(runId, outcome, visibleEffect);
+      if (outcome !== "failed") {
+        setFocusComposerSignal((n) => n + 1);
+      }
+    },
+    [onBuildDone],
+  );
   const [openDialog, setOpenDialog] = useState<DialogId | null>(null);
 
   const openDialogFactory = useCallback(
@@ -292,6 +310,9 @@ export function BuilderShell({
         // Driver "Visa versioner" i första-gångs-hinten — samma ingång
         // som "Versioner" i Verktyg-menyn (ConsoleDrawer-historiken).
         onShowVersions={onOpenHistory}
+        // Surfa chatten (expandera + fokusera composern) när ett bygge från
+        // en dialog/inspector blir klart, så operatören kan iterera direkt.
+        focusComposerSignal={focusComposerSignal}
         tools={
           <BuilderActions
             actions={actions}
@@ -307,7 +328,7 @@ export function BuilderShell({
         siteId={siteId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
-        onBuildDone={onBuildDone}
+        onBuildDone={handleSurfaceBuildDone}
         isBuilding={isBuilding}
         baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
@@ -317,7 +338,7 @@ export function BuilderShell({
         siteId={siteId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
-        onBuildDone={onBuildDone}
+        onBuildDone={handleSurfaceBuildDone}
         isBuilding={isBuilding}
         baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
@@ -327,7 +348,7 @@ export function BuilderShell({
         siteId={siteId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
-        onBuildDone={onBuildDone}
+        onBuildDone={handleSurfaceBuildDone}
         isBuilding={isBuilding}
         baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
@@ -337,7 +358,7 @@ export function BuilderShell({
         siteId={siteId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
-        onBuildDone={onBuildDone}
+        onBuildDone={handleSurfaceBuildDone}
         isBuilding={isBuilding}
         baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
@@ -347,7 +368,7 @@ export function BuilderShell({
         siteId={siteId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
-        onBuildDone={onBuildDone}
+        onBuildDone={handleSurfaceBuildDone}
         isBuilding={isBuilding}
         baseRunId={pendingBaseRunId?.baseRunId ?? null}
       />
@@ -357,7 +378,7 @@ export function BuilderShell({
         siteId={siteId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
-        onBuildDone={onBuildDone}
+        onBuildDone={handleSurfaceBuildDone}
       />
       <AskAiDialog
         open={openDialog === "ask"}
@@ -375,7 +396,7 @@ export function BuilderShell({
         onSetPendingBaseRunId={onSetPendingBaseRunId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
-        onBuildDone={onBuildDone}
+        onBuildDone={handleSurfaceBuildDone}
       />
     </>
   );

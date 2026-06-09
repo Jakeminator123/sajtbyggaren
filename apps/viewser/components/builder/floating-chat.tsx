@@ -874,6 +874,7 @@ export function FloatingChat({
   onClearBaseRunId,
   onShowVersions,
   tools,
+  focusComposerSignal,
 }: FloatingChatProps) {
   const [position, setPosition] = useState<Position | null>(null);
   // Panel-storlek (desktop). Startar på default 360×460 = nuvarande fasta
@@ -981,6 +982,26 @@ export function FloatingChat({
       composerRef.current?.focus();
     }, 50);
   }, []);
+
+  // UX-glue (msg-0050 b): surfa chatten när ett bygge från en ANNAN yta
+  // (dialog/inspector) blir klart. BuilderShell bumpar focusComposerSignal;
+  // vi jämför mot föregående värde via en ref så själva mount inte triggar
+  // expand/focus (initialvärdet hoppas över). FloatingChat:s egna byggen går
+  // via den råa onBuildDone i BuilderShell och bumpar därför aldrig signalen.
+  const lastFocusSignalRef = useRef(focusComposerSignal ?? 0);
+  useEffect(() => {
+    const next = focusComposerSignal ?? 0;
+    if (next === lastFocusSignalRef.current) return;
+    lastFocusSignalRef.current = next;
+    if (next <= 0) return;
+    // expandAndFocus() sätter setIsMinimized(false). Vi skjuter upp anropet via
+    // setTimeout(0) så setState inte körs synkront i effekt-kroppen (React 19:s
+    // react-hooks/set-state-in-effect) — samma deferral-princip som filens
+    // övriga post-mount-effekter. expandAndFocus har sin egen setTimeout(50)
+    // för focus() efter att panelen hunnit renderas.
+    const timer = setTimeout(() => expandAndFocus(), 0);
+    return () => clearTimeout(timer);
+  }, [focusComposerSignal, expandAndFocus]);
 
   // Initiera position + minimized från localStorage efter mount.
   //
