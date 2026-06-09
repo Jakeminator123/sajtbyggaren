@@ -20,6 +20,30 @@ motor. OpenClaw är en **dirigent** på den kontrollerade motorn.
 | memory | per-sajt Project Input + run/version (ingen global minnesbank i git) |
 | plugins / daemon / multi-channel | bygg INTE nu |
 
+## Docs-MCP för agenter (uppslagsverk — INTE produkt-runtime)
+
+Externa OpenClaw-dokumentationen har en **hostad MCP-server** direkt på
+`https://docs.openclaw.ai/mcp` (verifierad med riktigt MCP-handshake:
+`serverInfo: openclaw-docs 1.0.0`). Den är konfigurerad i `.cursor/mcp.json`
+(gitignorerad — konfig per maskin) som server-id `openclaw-docs`:
+
+- **ingen lokal server**: ersätter det gamla `localhost:6280`-upplägget som
+  krävde `openclaw mcp serve` lokalt (CLI:t är inte installerat på
+  operatörsmaskinen och behöver inte vara det).
+- **Alltid färsk dokumentation** direkt från källan — används för uppslag om
+  hur externa OpenClaw fungerar/installeras när agenter jobbar i detta repo.
+- **Offline-backup**: den lokala Markdown-spegeln i `openclaw-docs/`
+  (~686 filer) i repo-roten kräver ingen server alls.
+- Om Cursor visar en röd/gammal anslutning: Cursor Settings → MCP → refresha
+  eller toggla `openclaw-docs` av/på så den ansluter mot den nya URL:en.
+
+**Avgränsning (viktig):** detta är ett uppslagsverk för agenter som arbetar i
+repot — **inte** en runtime-yta för produktens OpenClaw-dirigent. Produktens
+OpenClaw anropar aldrig denna MCP-server (eller någon annan extern tjänst);
+den kör enbart de sanktionerade in-repo-actions som `TOOLS.md` och
+`action-registry.json` definierar. Samma regel som ovan: extern OpenClaw är
+referens, inte arkitektur.
+
 ## Vad som INTE ska byggas
 - Ingen extern OpenClaw-daemon eller gateway-process.
 - Inga plugins, ingen multi-channel.

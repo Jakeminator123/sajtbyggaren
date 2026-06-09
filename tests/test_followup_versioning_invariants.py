@@ -249,6 +249,17 @@ def test_additive_followup_carries_forward_prior_selections_and_brief(
     assert set(v1_caps).issubset(set(v2_caps)), (
         "an additive follow-up must keep prior capabilities, not replace them"
     )
+    # Review hardening (2026-06-09): "mounted" must mean MOUNTED, not just
+    # requested. Deterministic codegen only mounts ``selectedDossiers.required``
+    # (build_site.py:selected_required_dossiers), and the historic bug class is
+    # exactly "capability in requestedCapabilities but no implementing dossier
+    # secured" - so this invariant asserts the dossier landed too.
+    v2_required = (v2_pi.get("selectedDossiers") or {}).get("required") or []
+    assert "mailto-contact-form" in v2_required, (
+        "contact-form's implementing dossier (mailto-contact-form) must be "
+        "secured in selectedDossiers.required - a capability that is only "
+        f"requested is NOT mounted. Got required={v2_required!r}"
+    )
 
 
 def test_unrelated_followup_does_not_reset_to_fresh_init(
