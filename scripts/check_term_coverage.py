@@ -727,6 +727,12 @@ COMMON_WORDS = {
     # rad-typ — inga canonical domänbegrepp (samma behandling som
     # ColorPickerDialog / ScrapeUrlDialog ovan).
     "AddModuleDialog", "AddModuleDialogProps", "ModuleDef",
+    # Dialog-toast-ärlighet (2026-06-09): viewser-lokala callback-/signal-
+    # typer i apps/viewser/components/builder/use-followup-build.ts som trådar
+    # follow-up-byggets visible-effect (appliedVisibleEffect/previewShouldRefresh)
+    # upp till studio-toasten. Inga canonical domänbegrepp — samma lokala
+    # allowlist som AddModuleDialog/ModuleDef ovan.
+    "FollowupVisibleEffect", "OnFollowupBuildDone",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",

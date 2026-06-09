@@ -17,15 +17,13 @@ import {
 } from "@/components/builder/dialogs";
 import { FloatingChat } from "@/components/builder/floating-chat";
 import { SiteInspectorSheet } from "@/components/builder/inspector";
+import type { OnFollowupBuildDone } from "@/components/builder/use-followup-build";
 import type {
   PendingBaseRunIdState,
   PendingBuildBegin,
   PendingBuildState,
 } from "@/components/builder/use-pending-build";
-import type {
-  PromptBuildOutcome,
-  PromptStage,
-} from "@/components/prompt-builder";
+import type { PromptStage } from "@/components/prompt-builder";
 
 /**
  * BuilderShell är compositionen som tar över hela kant-ytan när
@@ -79,7 +77,9 @@ type BuilderShellProps = {
   ) => void;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  // Bär nu den optionella visible-effect-signalen (dialog-vägen) så studio-
+  // toasten kan vara ärlig; FloatingChat anropar fortfarande 2-arg (oförändrat).
+  onBuildDone: OnFollowupBuildDone;
   /**
    * Rapporterar bygg-stage uppåt så page.tsx kan driva BuildProgressCard
    * under follow-ups. FloatingChat förfinar via trace.ndjson; alla

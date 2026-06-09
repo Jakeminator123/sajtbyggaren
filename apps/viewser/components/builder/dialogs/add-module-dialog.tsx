@@ -17,8 +17,10 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import { useFollowupBuild } from "@/components/builder/use-followup-build";
-import type { PromptBuildOutcome } from "@/components/prompt-builder";
+import {
+  useFollowupBuild,
+  type OnFollowupBuildDone,
+} from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -118,7 +120,7 @@ type AddModuleDialogProps = {
   siteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  onBuildDone: OnFollowupBuildDone;
   isBuilding?: boolean;
   baseRunId?: string | null;
 };
