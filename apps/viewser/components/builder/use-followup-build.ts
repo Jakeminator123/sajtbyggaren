@@ -28,11 +28,39 @@ import {
  * lyckat eller misslyckat bygge.
  */
 
+/**
+ * Ärlighets-signal för ett dialog-bygge — speglar den granulära
+ * visible-effect-info som FloatingChat redan konsumerar
+ * (``build-result.json:appliedVisibleEffect`` + apply-bryggans
+ * ``previewShouldRefresh``). Trådas via ``onBuildDone`` upp till
+ * studio-toasten så dialogerna aldrig säger "klart" när ingen synlig
+ * ändring landade.
+ *
+ *   - ``visible``    — en synlig ändring landade (preview ska laddas om).
+ *   - ``registered`` — en version skrevs/monterades men syns inte än
+ *     (mount-only section_add, t.ex. galleri/priser).
+ *   - ``none``       — bygget gick igenom men motorn rapporterade no-op.
+ *   - ``unknown``    — inga signaler i svaret (äldre payload/init) →
+ *     toasten faller tillbaka på det neutrala "klart"-beteendet.
+ */
+export type FollowupVisibleEffect = "visible" | "registered" | "none" | "unknown";
+
+/**
+ * Delad callback-typ för alla bygg-utlösande ytor (dialoger + BuilderShell).
+ * ``visibleEffect`` är optionellt så befintliga 2-arg-anropare (FloatingChat,
+ * init-vägen) fortsätter typchecka oförändrat.
+ */
+export type OnFollowupBuildDone = (
+  runId: string,
+  outcome: PromptBuildOutcome,
+  visibleEffect?: FollowupVisibleEffect,
+) => void;
+
 type FollowupBuildOptions = {
   siteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  onBuildDone: OnFollowupBuildDone;
   /**
    * C2 — globalt bygg-lås. Page.tsx äger ett `building`-flagga som är
    * sant så länge NÅGOT bygge pågår (FloatingChat eller en annan dialog).
@@ -62,6 +90,13 @@ type PromptApiResponse = {
   version?: number | null;
   buildStatus?: string | null;
   briefSource?: string | null;
+  // Samma granulära ärlighets-signaler som FloatingChat läser (defensivt,
+  // typas som Record så fält-drift aldrig kraschar dialog-vägen):
+  //   - buildResult.appliedVisibleEffect (B155, auktoritativ no-op-flagga)
+  //   - bridge.{applied, previewShouldRefresh} (OpenClaw apply-utfallet)
+  // Saknas båda (äldre payload/init) → readFollowupVisibleEffect → "unknown".
+  buildResult?: Record<string, unknown>;
+  bridge?: Record<string, unknown>;
   error?: string;
 };
 
@@ -71,8 +106,44 @@ export type RunFollowupResult =
       runId: string;
       version: number | null;
       outcome: PromptBuildOutcome;
+      visibleEffect: FollowupVisibleEffect;
     }
   | { ok: false; error: string };
+
+/**
+ * Härleder ``FollowupVisibleEffect`` ur /api/prompt-svaret med samma
+ * defensiva läsning som ``extractAppliedVisibleEffect`` +
+ * ``extractOpenClawBridge`` i ``floating-chat.tsx``. En positiv synlig
+ * signal (``appliedVisibleEffect===true`` ELLER ``previewShouldRefresh===true``)
+ * vinner; därefter "monterad men ej synlig" (bryggan applied men ingen
+ * refresh); därefter ärlig no-op; annars "unknown".
+ */
+function readFollowupVisibleEffect(
+  payload: PromptApiResponse,
+): FollowupVisibleEffect {
+  let bridgeApplied: boolean | null = null;
+  let bridgeRefresh: boolean | null = null;
+  const bridge = payload.bridge;
+  if (bridge && typeof bridge === "object") {
+    const obj = bridge as Record<string, unknown>;
+    if (typeof obj.applied === "boolean") bridgeApplied = obj.applied;
+    if (typeof obj.previewShouldRefresh === "boolean") {
+      bridgeRefresh = obj.previewShouldRefresh;
+    }
+  }
+
+  let appliedVisibleEffect: boolean | null = null;
+  const buildResult = payload.buildResult;
+  if (buildResult && typeof buildResult === "object") {
+    const value = (buildResult as Record<string, unknown>).appliedVisibleEffect;
+    if (typeof value === "boolean") appliedVisibleEffect = value;
+  }
+
+  if (appliedVisibleEffect === true || bridgeRefresh === true) return "visible";
+  if (bridgeApplied === true) return "registered";
+  if (appliedVisibleEffect === false) return "none";
+  return "unknown";
+}
 
 export function useFollowupBuild({
   siteId,
@@ -135,12 +206,14 @@ export function useFollowupBuild({
           return { ok: false, error: msg };
         }
         const outcome = classifyBuildStatus(payload.buildStatus);
-        onBuildDone(payload.runId, outcome);
+        const visibleEffect = readFollowupVisibleEffect(payload);
+        onBuildDone(payload.runId, outcome, visibleEffect);
         return {
           ok: true,
           runId: payload.runId,
           version: payload.version ?? null,
           outcome,
+          visibleEffect,
         };
       } catch (caught) {
         const msg = caught instanceof Error ? caught.message : "Okänt fel.";

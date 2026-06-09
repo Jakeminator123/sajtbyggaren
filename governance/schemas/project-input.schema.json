@@ -248,6 +248,46 @@
               }
             ]
           }
+        },
+        "mountedSections": {
+          "type": "array",
+          "maxItems": 16,
+          "description": "Synliga sektions-injektioner härledda ur en section_add-följdprompt (ADR 0035, GAP-followup-prompt-content-passthrough). Varje post säger att en monterad sektion ska renderas INLINE som ett block på en befintlig route (i stället för dagens mount-only / egen-route-only), vid en valfri position. Renderaren (render_home m.fl.) läser fältet direkt ur Project Input och injicerar sektionen i route-ordningen ENDAST när den har en registrerad render_section_*-renderare och grundat innehåll — annars förblir den ärligt mount-only. Listan ersätts per version (inte ackumulerad). Rå följdprompt renderas aldrig som kundcopy; sectionId/routeId är slutna referenser till befintliga sektioner och routes.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["sectionId", "routeId"],
+            "properties": {
+              "sectionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Section-id med en registrerad renderare i _SECTION_RENDERERS (packages/generation/build/dispatcher.py), t.ex. 'hours-summary'. Ett okänt id droppas tyst av render-gaten (aldrig en SystemExit, aldrig en påhittad sektion)."
+              },
+              "routeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Logiskt route-id sektionen injiceras på, t.ex. 'home'. Slice 1 stödjer 'home'; fler routes följer."
+              },
+              "capability": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Capability-slugen (capability-map.v1.json) sektionen monterades från, för spårbarhet. Renderaren använder den inte; gaten gör det inte heller."
+              },
+              "position": {
+                "type": "string",
+                "enum": ["top", "bottom", "before-contact"],
+                "description": "Var i route-ordningen sektionen ska landa. Utelämnas = default-slot (före den avslutande contact-cta). before-contact = samma som default. top = först efter hero. bottom = sist före contact-cta. Finkornig ordinal-placering tillkommer i en senare slice."
+              },
+              "ordinal": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Reserverat för finkornig index-placering (senare slice). Renderaren ignorerar fältet i slice 1."
+              }
+            }
+          }
         }
       }
     },

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 
 import type { discoveryOption } from "../discovery-options";
 import { FoundationSummary } from "../foundation-summary";
+import { IndustrySearch, type IndustryMatch } from "../industry-search";
 import { VibeSwatchRow } from "../visual-preview-card";
 import {
   BUSINESS_FAMILIES,
@@ -145,6 +146,18 @@ export function FoundationStep({
 
   const selectedFamily = answers.businessFamily;
 
+  // Branschsök (2026-06-09): exakt bransch-träff sätter både family och
+  // sub-kategori i ett klick — samma fält som scrape-inferensen skriver.
+  const handleIndustryPick = useCallback(
+    (match: IndustryMatch) => {
+      onChange({
+        businessFamily: match.family,
+        siteType: [match.category],
+      });
+    },
+    [onChange],
+  );
+
   const selectFamily = useCallback(
     (familyId: BusinessFamilyId) => {
       // Byt family → rensa sub-kategorier som inte tillhör nya familyn.
@@ -259,6 +272,13 @@ export function FoundationStep({
         <SectionHeader help="Styr vilken typ av sajt vi bygger som grund. Utseendet (färg, typografi, känsla) väljer du i steg 2 och är fritt oavsett bransch.">
           Verksamhetsfamilj *
         </SectionHeader>
+        {/* Branschsök — snabbvägen för operatörer som tänker i sin bransch
+            ("rörmokare", "advokat") snarare än i familjer. Ett val sätter
+            family + sub-kategori; korten nedan markeras och kan alltid
+            ändras manuellt. */}
+        <div className="mt-3">
+          <IndustrySearch onPick={handleIndustryPick} />
+        </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {BUSINESS_FAMILIES.map((option) => (
             <FamilyCard

@@ -281,7 +281,102 @@ def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
 
 
 @pytest.mark.tooling
-def test_viewer_panel_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
+def test_viewer_panel_does_not_eagerly_import_stackblitz_sdk() -> None:
+    """Bundle-bloat-fix (ADR 0033): ``viewer-panel.tsx`` importeras statiskt
+    av studio-sidan, så allt som ligger i dess EAGER-analyserade modulgraf
+    pre-scriptas i den serverade ``studio.html`` (verifierat empiriskt: SDK-
+    vendor-chunken låg som ``<script async>`` vid vercel-sandbox-load trots att
+    SDK:n aldrig kördes).
+
+    VIKTIGT — ett top-level ``next/dynamic(() => import("x"))`` RÄCKER INTE:
+    Next/Turbopack statiskt-analyserar modulnivå-``dynamic()`` och pre-scriptar
+    ``x``:s chunk-graf (inkl. den nästlade ``@stackblitz/sdk``-chunken). Därför
+    måste ``viewer-panel.tsx`` ladda StackblitzPreview via en RUNTIME
+    ``import()`` i en effekt som gate:as på ``useStackblitz`` — INTE via
+    top-level ``dynamic()``.
+
+    Lås:
+      1. ingen ``import("@stackblitz/sdk")`` / ``from "@stackblitz/sdk"``.
+      2. ingen top-level ``next/dynamic`` (``from "next/dynamic"`` förbjudet) —
+         det var just det som pre-scriptade SDK-chunken.
+      3. StackblitzPreview laddas via en runtime ``import(".../stackblitz-
+         preview")``.
+      4. handoff:en gate:ad på descriptorns ``canFallbackToStackblitz``
+         (``CAN_FALL_BACK_TO_STACKBLITZ``).
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+
+    # 1. Förbjud det som skapar en modulgraf-kant till SDK:n: en statisk
+    # ``from "@stackblitz/sdk"`` ELLER en dynamisk ``import("@stackblitz/sdk")``.
+    # (En ren omnämning i en kommentar skapar ingen kant och är OK.)
+    assert not re.search(r'import\(\s*["\']@stackblitz/sdk["\']', text), (
+        "viewer-panel.tsx får INTE innehålla ``import(\"@stackblitz/sdk\")``. "
+        "Hela StackBlitz-vägen ska ligga i den lazy-laddade "
+        "``stackblitz-preview.tsx``."
+    )
+    assert not re.search(r'from\s+["\']@stackblitz/sdk["\']', text), (
+        "viewer-panel.tsx får INTE statiskt importera ``@stackblitz/sdk``."
+    )
+    # 2. Inget top-level next/dynamic — det pre-scriptar SDK-chunken i
+    # studio.html (verifierat). Runtime ``import()`` används i stället.
+    # Vi förbjuder IMPORT-satsen (``import ... from "next/dynamic"``), inte
+    # prosa-omnämnanden i kommentarer (som förklarar varför vi undviker den).
+    # Förbjud IMPORT-satsen (``import ... from "next/dynamic"``), inte
+    # prosa-omnämnanden i kommentarer (som förklarar varför vi undviker den).
+    assert not re.search(r'import\s+\w+\s+from\s+["\']next/dynamic["\']', text), (
+        "viewer-panel.tsx får INTE importera ``next/dynamic`` för StackblitzPreview. "
+        "Next/Turbopack pre-scriptar en modulnivå-``dynamic()``-komponents "
+        "chunk-graf (inkl. @stackblitz/sdk) som <script async> i studio.html. "
+        "Ladda i stället via en runtime ``import()`` gate:ad på useStackblitz."
+    )
+    # 3. StackblitzPreview laddas via en runtime import() (referensen finns,
+    # men inte bakom dynamic()).
+    assert re.search(
+        r"import\(\s*[\"'][^\"']*stackblitz-preview[\"']",
+        text,
+    ), (
+        "viewer-panel.tsx måste ladda StackblitzPreview via en runtime "
+        "``import(\".../stackblitz-preview\")`` (gate:ad på useStackblitz)."
+    )
+    # 4. Handoff gate:ad på descriptorns canFallbackToStackblitz.
+    assert "CAN_FALL_BACK_TO_STACKBLITZ" in text and "canFallbackToStackblitz" in text, (
+        "viewer-panel.tsx måste gate:a StackBlitz-handoffen på descriptorns "
+        "``canFallbackToStackblitz`` (materialiserad som "
+        "``CAN_FALL_BACK_TO_STACKBLITZ``)."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_preview_owns_the_sdk_dynamic_import() -> None:
+    """Bundle-bloat-fix (ADR 0033): den lazy-laddade ``stackblitz-preview.tsx``
+    är ENDA stället i preview-canvasen som når ``@stackblitz/sdk``. Den når
+    SDK:n via ``await import`` (embed + openProject) så att även själva SDK-
+    chunken är lazy INUTI den redan lazy komponenten.
+
+    Lås:
+      1. ``stackblitz-preview.tsx`` innehåller ``await import("@stackblitz/sdk")``.
+      2. Den är en klient-komponent (``"use client"``).
+      3. Den exporterar ``StackblitzPreview`` (det namn ViewerPanel
+         dynamiskt importerar).
+    """
+    text = (VIEWSER_DIR / "components" / "stackblitz-preview.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'await import("@stackblitz/sdk")' in text, (
+        "stackblitz-preview.tsx måste nå SDK:n via ``await "
+        "import(\"@stackblitz/sdk\")`` (lazy) — både för embed och openProject."
+    )
+    assert '"use client"' in text, (
+        "stackblitz-preview.tsx måste vara en client component."
+    )
+    assert "export function StackblitzPreview" in text, (
+        "stackblitz-preview.tsx måste exportera ``StackblitzPreview`` — namnet "
+        "ViewerPanel dynamiskt importerar via next/dynamic."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_preview_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
     """B125/B145: StackBlitz-embedden behöver Permissions Policy-delegering
     av cross-origin-isolation för att ``window.crossOriginIsolated`` ska
     bli ``true`` inuti iframen — annars kan WebContainern inte boota
@@ -304,14 +399,20 @@ def test_viewer_panel_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
     Tas raden bort fallerar embedden tyst inuti StackBlitz med kryptiskt
     "Unable to run Embedded Project" och operatören har ingen ledtråd
     om att host-headers faktiskt är korrekta.
+
+    Bundle-bloat-fix (ADR 0033): embedden bor numera i den lazy-laddade
+    ``stackblitz-preview.tsx`` (inte ``viewer-panel.tsx``) så
+    ``@stackblitz/sdk`` inte prefetchas i ViewerPanel:s eager-chunk.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "stackblitz-preview.tsx").read_text(
+        encoding="utf-8"
+    )
     pattern = re.compile(
         r"crossOriginIsolated\s*:\s*true",
         re.MULTILINE,
     )
     assert pattern.search(text), (
-        "viewer-panel.tsx: ``crossOriginIsolated: true`` saknas i "
+        "stackblitz-preview.tsx: ``crossOriginIsolated: true`` saknas i "
         "``sdk.embedProject``-options. Krävs för Permissions Policy-"
         "delegering till stackblitz.com — utan den boota:r WebContainern "
         "inte och visar 'Unable to run Embedded Project'. Se "
@@ -321,11 +422,17 @@ def test_viewer_panel_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
 
 
 @pytest.mark.tooling
-def test_viewer_panel_surfaces_stackblitz_sdk_error_details() -> None:
-    """StackBlitz SDK failures must show actionable details, not "unknown"."""
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+def test_stackblitz_preview_surfaces_stackblitz_sdk_error_details() -> None:
+    """StackBlitz SDK failures must show actionable details, not "unknown".
+
+    Bundle-bloat-fix (ADR 0033): fel-formateringen + error-pre:t bor numera i
+    ``stackblitz-preview.tsx`` (lazy via next/dynamic), inte ``viewer-panel.tsx``.
+    """
+    text = (VIEWSER_DIR / "components" / "stackblitz-preview.tsx").read_text(
+        encoding="utf-8"
+    )
     assert "formatViewerError" in text, (
-        "viewer-panel.tsx måste formatera SDK-fel centralt så catch-grenen "
+        "stackblitz-preview.tsx måste formatera SDK-fel centralt så catch-grenen "
         "inte faller tillbaka till ett opakt 'Okänt viewer-fel'."
     )
     for expected in ("name:", "message:", "stack:", "slice(0, 20)"):

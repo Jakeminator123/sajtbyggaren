@@ -28,6 +28,7 @@ from packages.generation.followup.text import (
     _customer_safe_planner_note,
     _normalise_followup_text,
     _string_value,
+    _text_outside_quotes,
 )
 
 _COPY_DIRECTIVE_TAGLINE_KEYWORDS: tuple[str, ...] = (
@@ -347,6 +348,16 @@ _REPLACE_MARKERS: tuple[str, ...] = (
     "istallet for",
     "i stallet for",
     "instead of",
+)
+
+# Section-add intent: a "ny ... sektion"/"new ... section" phrasing (the
+# section_builder's additive ask). Matched on the instruction skeleton (quoted
+# OLD/NEW copy removed) so a quoted value that merely mentions "ny sektion"
+# (e.g. ``ändra rubriken till "Ny sektion om oss"``) is NOT mistaken for a
+# section add. ``[^.!?]*`` keeps the match inside one sentence; ``avsnitt`` is
+# the common Swedish synonym for "section".
+_SECTION_ADD_INTENT_RE = re.compile(
+    r"\bny(?:tt|a)?\b[^.!?]*\b(?:sektion|sektionen|sektioner|avsnitt|section|sections)\b"
 )
 
 
@@ -822,23 +833,59 @@ def _extract_literal_replace_directives(
     return []
 
 
+def _followup_is_additive_request(skeleton_text: str) -> bool:
+    """True when the instruction skeleton is an ADDITIVE (add/include) request.
+
+    ``skeleton_text`` is the normalised follow-up with the quoted OLD/NEW copy
+    removed (``_text_outside_quotes``), so a quoted value that happens to read
+    additively never drives this. Additive = an include keyword (``lägg
+    till``/``inkludera``/...) OR a section-add phrasing (``ny ... sektion``).
+    An additive follow-up is never a copy-REPLACE even when it quotes the NEW
+    content (the quoted span is the new copy, not an OLD string to swap).
+    """
+    if _contains_any_word(skeleton_text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS):
+        return True
+    return bool(_SECTION_ADD_INTENT_RE.search(skeleton_text))
+
+
 def _followup_requested_copy_replace(follow_up_prompt: str) -> bool:
-    """True when the follow-up asked to replace a specific quoted copy string.
+    """True when the follow-up asked to REPLACE a specific quoted copy string.
 
     Used by the build's honest-effect signal (ROW 3): when the operator clearly
-    asked to swap visible text (a replace verb or a ``denna text``/``texten``
-    anchor PLUS a quoted OLD span) but no copyDirective actually applied, an
-    unrelated byte diff must NOT be reported as a successful edit.
+    asked to SWAP visible text (a genuine replace verb / replace marker PLUS a
+    quoted OLD span) but no copyDirective actually applied, an unrelated byte
+    diff must NOT be reported as a successful edit. The signal answers "did the
+    operator's REPLACE intent land?".
+
+    Tightened (#224 P2): an ADDITIVE follow-up that merely quotes the NEW copy -
+    e.g. ``lägg till en FAQ-sektion med texten "Vanliga frågor"`` - is NOT a
+    copy-replace. Such a prompt may well have added a visible section, so it
+    must report the honest visible change, never a phantom
+    ``copy_directive_not_applied`` no-op. Two guards make this honest:
+
+    1. additive phrasing (include keyword / ``ny ... sektion``) -> not a replace;
+    2. a genuine REPLACE signal is required - a replace verb or replace marker,
+       NOT a bare ``texten`` anchor (which is exactly what mis-fired on the
+       additive ``... med texten "..."`` phrasing).
+
+    Both run on the instruction skeleton (quoted spans removed) so a verb or
+    section noun inside the quoted OLD/NEW copy never drives the signal. The
+    legitimate literal copy-replace honesty case (a quoted OLD span + replace
+    verb that truly no-ops) still returns ``True``.
     """
     text = _normalise_followup_text(follow_up_prompt)
     if not text:
         return False
-    has_replace = _contains_any_word(
-        text, _COPY_DIRECTIVE_REPLACE_KEYWORDS
-    ) or _contains_any(text, _REPLACE_MARKERS)
-    has_text_anchor = _contains_any(text, _LITERAL_TEXT_ANCHOR_KEYWORDS)
-    has_quoted = bool(_QUOTED_SPAN_RE.search(follow_up_prompt))
-    return (has_replace or has_text_anchor) and has_quoted
+    if not _QUOTED_SPAN_RE.search(follow_up_prompt):
+        return False
+    # Match the operator's instruction skeleton, not the quoted OLD/NEW copy.
+    # Fall back to the full text only when the entire message was quoted.
+    skeleton = _text_outside_quotes(follow_up_prompt) or text
+    if _followup_is_additive_request(skeleton):
+        return False
+    return _contains_any_word(
+        skeleton, _COPY_DIRECTIVE_REPLACE_KEYWORDS
+    ) or _contains_any(skeleton, _REPLACE_MARKERS)
 
 
 def _extract_copy_directives(

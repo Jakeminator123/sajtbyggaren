@@ -125,6 +125,7 @@ def apply_patch_plan(
     trace_run_dir: Path | str | None = None,
     theme_directive: ThemeDirective | None = None,
     added_capabilities: list[str] | None = None,
+    section_positions: dict[str, str] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
 
@@ -347,6 +348,79 @@ def apply_patch_plan(
     )
     _ensure_required_dossiers(merged, mounted_dossiers)
 
+    # 5b2. section_add INLINE render (ADR 0038): a mounted section capability that
+    #      maps to an inline section on a supported scaffold is recorded as a
+    #      ``directives.mountedSections`` entry on the NEW version's Project Input
+    #      so the renderer injects the section as a block on its route (instead of
+    #      staying mount-only / dedicated-route-only). The list is replaced per
+    #      version (never accumulated): re-run from the same base does not stack
+    #      duplicates, and a section that is no longer requested drops out. Render
+    #      time owns honesty - the renderer skips an id with no registered
+    #      renderer, one already in the route order, or one whose section renders
+    #      empty - so writing the entry here never forces a visible effect.
+    from packages.generation.followup.section_directives import (
+        resolve_inline_section_placements,
+    )
+
+    # Reconcile ``mountedSections`` against the MERGED version's full
+    # ``requestedCapabilities`` - not just this apply call's section_capabilities.
+    # ``merge_followup_project_input`` deep-copies the previous version (carrying
+    # any earlier inline directives + the union of requestedCapabilities forward),
+    # so the authoritative inline set is "every inline-eligible capability still
+    # requested on this version". Computing it from the merged caps makes the
+    # directive COMPOSE across versions: a section mounted in v2 stays inline in a
+    # v3 copy/theme follow-up (it is still requested) instead of being silently
+    # dropped, and a capability that is genuinely no longer requested falls out.
+    # The list is still per-version (rebuilt from the current merged state, never
+    # appended to), so it can never drift from what the build can render.
+    merged_caps = [
+        cap
+        for cap in (merged.get("requestedCapabilities") or [])
+        if isinstance(cap, str) and cap.strip()
+    ]
+    inline_placements = resolve_inline_section_placements(merged_caps, merged)
+    directives = merged.get("directives")
+    if inline_placements:
+        if not isinstance(directives, dict):
+            directives = {}
+            merged["directives"] = directives
+        # Position precedence: an EXPLICIT position from THIS call's router target
+        # wins; otherwise carry forward the position a prior version already
+        # recorded for the same section (so a v2 "överst" survives a v3 follow-up
+        # that does not re-mention the section); otherwise the default slot.
+        new_positions = section_positions or {}
+        prior_positions: dict[str, str] = {}
+        prior = directives.get("mountedSections")
+        if isinstance(prior, list):
+            for prev in prior:
+                if isinstance(prev, dict):
+                    cap = prev.get("capability")
+                    pos = prev.get("position")
+                    if isinstance(cap, str) and pos in ("top", "bottom", "before-contact"):
+                        prior_positions[cap] = pos
+        entries: list[dict[str, str]] = []
+        for placement in inline_placements:
+            entry = {
+                "sectionId": placement["sectionId"],
+                "routeId": placement["routeId"],
+                "capability": placement["capability"],
+            }
+            # Coarse placement from the router target ("överst"/"längst ner").
+            # Only the schema-valid positions are honoured; anything else (incl.
+            # left/right/center, which are intra-section, not route-order) drops
+            # to the default before-contact slot.
+            position = new_positions.get(placement["capability"]) or prior_positions.get(
+                placement["capability"]
+            )
+            if position in ("top", "bottom", "before-contact"):
+                entry["position"] = position
+            entries.append(entry)
+        directives["mountedSections"] = entries
+    elif isinstance(directives, dict):
+        # No inline-eligible capability remains requested -> the directive must
+        # not linger (honest: nothing inline to render this version).
+        directives.pop("mountedSections", None)
+
     # visual_style restyle: set the named brand/tone fields from the directive's
     # EXPLICIT values (patch-driven; the prompt is never re-parsed here). These
     # are schema-declared Project Input fields rendered by patch_globals_css, so
@@ -378,11 +452,20 @@ def apply_patch_plan(
     surfaced_routes: list[str] = []
     surfaced_wizard_pages: list[str] = []
     section_mount_only: list[dict[str, str]] = []
-    section_capabilities_applied = [
-        entry.capability
-        for entry in capabilities
-        if entry.patchField.startswith("sectionAdd:")
-    ]
+    # Visible surfacing considers the pre-resolved section_add capabilities
+    # DIRECTLY (deduped, order-preserving), not the merged ``capabilities`` list
+    # filtered by ``sectionAdd:`` patchField. When the SAME capability ALSO
+    # arrives via a component patch, the dedupe above keeps only the patch entry
+    # (whose patchField is not ``sectionAdd:``), which would otherwise drop the
+    # section_add surfacing intent and leave the dedicated route invisible even
+    # on a wizard-route scaffold (#221 P2). The section_add intent is preserved
+    # separately from capability-dedupe, independent of how the capability was
+    # mounted. Each entry is already verified to have an implementing Dossier by
+    # the caller, so it is genuinely mounted.
+    section_capabilities_applied: list[str] = []
+    for capability in section_capabilities:
+        if capability not in section_capabilities_applied:
+            section_capabilities_applied.append(capability)
     if section_capabilities_applied:
         from packages.generation.followup.section_directives import (
             resolve_visible_section_pages,

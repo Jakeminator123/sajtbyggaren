@@ -37,16 +37,13 @@ LLM status (as of Sprint 2B):
 from __future__ import annotations
 
 import argparse
-import copy
 import importlib
-import io
 import json
 import os
 import re
 import shutil
 import sys
 import time
-import urllib.parse
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -127,6 +124,166 @@ _section_renderer_kwargs = _dispatcher_exports._section_renderer_kwargs
 _treatment_for_section = _dispatcher_exports._treatment_for_section
 render_route_generic = _dispatcher_exports.render_route_generic
 
+# Color/token system (slice 1, behavior-preserving extraction per
+# docs/refactor/megafiles-plan.md Del 2): the color scale + typography + motion
+# helpers and ``variant_css`` now live in
+# ``packages.generation.build.tokens``. They are re-exported here via attribute
+# binds (same pattern as the renderer re-exports above) so every existing
+# spelling keeps resolving: the local ``patch_globals_css``/
+# ``patch_package_json`` below call them as bare names, tests do
+# ``from scripts.build_site import variant_css``, and the renderers/
+# static-assets lazy shim resolves ``getattr(build_site, "_normalise_hex_color")``
+# / ``"_normalize_tone_key"``. ``patch_globals_css``/``patch_package_json`` stay
+# defined locally (they use write/load_json, which move in the io-helpers slice).
+_tokens_exports = importlib.import_module("packages.generation.build.tokens")
+_HEX_COLOR_RE = _tokens_exports._HEX_COLOR_RE
+_TONE_COLOR_TOKENS = _tokens_exports._TONE_COLOR_TOKENS
+_BRAND_SCALE_LIGHTNESS = _tokens_exports._BRAND_SCALE_LIGHTNESS
+_BRAND_SCALE_MAX_SATURATION = _tokens_exports._BRAND_SCALE_MAX_SATURATION
+_VARIANT_TYPOGRAPHY = _tokens_exports._VARIANT_TYPOGRAPHY
+_TYPOGRAPHY_FALLBACK = _tokens_exports._TYPOGRAPHY_FALLBACK
+_TONE_KEY_ALIASES = _tokens_exports._TONE_KEY_ALIASES
+_TONE_TYPOGRAPHY = _tokens_exports._TONE_TYPOGRAPHY
+_normalise_hex_color = _tokens_exports._normalise_hex_color
+_foreground_for_background = _tokens_exports._foreground_for_background
+_hex_to_hsl = _tokens_exports._hex_to_hsl
+_hsl_to_hex = _tokens_exports._hsl_to_hex
+_build_color_scale = _tokens_exports._build_color_scale
+_token_overrides_from_project_input = _tokens_exports._token_overrides_from_project_input
+_typography_for_variant = _tokens_exports._typography_for_variant
+_normalize_tone_key = _tokens_exports._normalize_tone_key
+_typography_overlay_for_tone = _tokens_exports._typography_overlay_for_tone
+_motion_css_block = _tokens_exports._motion_css_block
+variant_css = _tokens_exports.variant_css
+
+# Asset/media pipeline (slice 2, behavior-preserving extraction per
+# docs/refactor/megafiles-plan.md Del 2): the PURE asset logic (AssetRef
+# validation + iteration, favicon/og conversion, extension/stem derivation,
+# SVG detection) now lives in ``packages.generation.build.assets``. It is
+# re-exported here via attribute binds (same pattern as the renderer/token
+# re-exports above) so every existing spelling keeps resolving: the local
+# io-writing copy helpers below call these as bare names, tests do
+# ``from scripts.build_site import iter_asset_refs`` / ``_is_allowed_asset_source_url``,
+# and the renderer lazy shim resolves ``getattr(build_site, "resolve_media_asset")``.
+# The io-writing functions that read the test-monkeypatched module globals
+# ``UPLOADS_ROOT_DIR`` / ``_REMOTE_ASSET_MAX_BYTES``
+# (``_fetch_asset_bytes_from_url``, ``_operator_asset_candidate_dirs``,
+# ``_resolve_operator_asset_source``, ``_copy_product_images``,
+# ``copy_operator_uploads``, ``copy_mood_assets``) stay defined locally below:
+# moving them would need a package->scripts shim (forbidden) or test edits
+# (forbidden), so they keep the cleanest zero-coupling seam.
+_assets_exports = importlib.import_module("packages.generation.build.assets")
+_ALLOWED_ASSET_FETCH_HOSTS = _assets_exports._ALLOWED_ASSET_FETCH_HOSTS
+_FAVICON_ICO_SIZES = _assets_exports._FAVICON_ICO_SIZES
+_OG_IMAGE_SIZE = _assets_exports._OG_IMAGE_SIZE
+_is_valid_asset_ref = _assets_exports._is_valid_asset_ref
+resolve_media_asset = _assets_exports.resolve_media_asset
+iter_asset_refs = _assets_exports.iter_asset_refs
+_iter_public_upload_refs = _assets_exports._iter_public_upload_refs
+_iter_mood_refs = _assets_exports._iter_mood_refs
+_is_allowed_asset_source_url = _assets_exports._is_allowed_asset_source_url
+_asset_requires_derived_public_output = _assets_exports._asset_requires_derived_public_output
+_is_svg_favicon = _assets_exports._is_svg_favicon
+_convert_favicon_to_ico = _assets_exports._convert_favicon_to_ico
+_convert_og_image_to_1200x630_png = _assets_exports._convert_og_image_to_1200x630_png
+_write_derived_media_asset = _assets_exports._write_derived_media_asset
+_operator_asset_variant_candidates = _assets_exports._operator_asset_variant_candidates
+_private_mood_asset_extension = _assets_exports._private_mood_asset_extension
+_private_mood_asset_stem = _assets_exports._private_mood_asset_stem
+_public_product_asset_extension = _assets_exports._public_product_asset_extension
+_public_product_asset_stem = _assets_exports._public_product_asset_stem
+
+# Prompt-input-meta readers (slice 3, behavior-preserving extraction per
+# docs/refactor/megafiles-plan.md Del 2): the prompt-meta reader family + the
+# prompt-input filename patterns and the placeholder-contact field set now live
+# in ``packages.generation.build.prompt_meta``. They are re-exported here via
+# eager attribute binds (same pattern as the tokens block above) so every
+# existing spelling keeps resolving: build(), build_targeted_version(),
+# build_plan_artefakts(), write_phase1/2 and _detect_followup_applied_visible_effect
+# call them as bare names, and tests do ``from scripts.build_site import
+# load_prompt_input_meta``. The readers that need io-helpers (``load_json``/
+# ``_to_repo_relative``, which move in a later io-helpers slice) do a lazy
+# ``from scripts.build_site import ...`` inside their bodies, so this eager import
+# stays cycle-free. ``_prompt_meta_unapplied_followup_intents`` stays defined
+# locally below (separate region near write_build_result).
+_prompt_meta_exports = importlib.import_module("packages.generation.build.prompt_meta")
+_VERSIONED_PROMPT_INPUT_RE = _prompt_meta_exports._VERSIONED_PROMPT_INPUT_RE
+_CURRENT_PROMPT_INPUT_RE = _prompt_meta_exports._CURRENT_PROMPT_INPUT_RE
+_PLACEHOLDER_CONTACT_VALID_FIELDS = _prompt_meta_exports._PLACEHOLDER_CONTACT_VALID_FIELDS
+_prompt_meta_path_for_dossier = _prompt_meta_exports._prompt_meta_path_for_dossier
+load_prompt_input_meta = _prompt_meta_exports.load_prompt_input_meta
+_prompt_meta_mode = _prompt_meta_exports._prompt_meta_mode
+_prompt_meta_project_id = _prompt_meta_exports._prompt_meta_project_id
+_prompt_meta_version = _prompt_meta_exports._prompt_meta_version
+_prompt_meta_previous_version = _prompt_meta_exports._prompt_meta_previous_version
+_prompt_meta_raw_prompt = _prompt_meta_exports._prompt_meta_raw_prompt
+_persist_init_project_input_sidecar = _prompt_meta_exports._persist_init_project_input_sidecar
+_prompt_meta_placeholder_contact_fields = (
+    _prompt_meta_exports._prompt_meta_placeholder_contact_fields
+)
+_prompt_meta_followup_intent_id = _prompt_meta_exports._prompt_meta_followup_intent_id
+_has_copy_directives = _prompt_meta_exports._has_copy_directives
+_placeholder_contact_warning_message = _prompt_meta_exports._placeholder_contact_warning_message
+_prompt_meta_wizard_must_have = _prompt_meta_exports._prompt_meta_wizard_must_have
+
+# Brief generation (slice 4, behavior-preserving extraction per
+# docs/refactor/megafiles-plan.md Del 2): the Phase-1 brief builders now live in
+# ``packages.generation.brief.site_brief`` (beside extract.py/models.py). They
+# are re-exported here via eager attribute binds (same pattern as the tokens/
+# assets/prompt-meta blocks above) so every existing spelling keeps resolving:
+# ``build()`` calls ``build_site_brief`` as a bare name, and tests do
+# ``from scripts.build_site import build_site_brief_mock`` /
+# ``project_input_to_brief_prompt`` / ``resolve_brief_model``. ``utc_now`` stays
+# in this module (the io-helpers slice has not landed yet) and is bridged via a
+# lazy ``from scripts.build_site import utc_now`` inside
+# ``build_site_brief_mock``'s body. The new module is imported directly as a
+# submodule (NOT via brief/__init__) to keep the import graph cycle-free.
+_brief_site_exports = importlib.import_module("packages.generation.brief.site_brief")
+build_site_brief = _brief_site_exports.build_site_brief
+build_site_brief_mock = _brief_site_exports.build_site_brief_mock
+resolve_brief_model = _brief_site_exports.resolve_brief_model
+project_input_to_brief_prompt = _brief_site_exports.project_input_to_brief_prompt
+
+# Shared render helpers (slice 5, behavior-preserving extraction per
+# docs/refactor/megafiles-plan.md Del 1 slice 5 + Del 2 slice 5): the shared
+# nav/cta/business-type helpers now live in
+# ``packages.generation.build.render_helpers`` (one home in the package instead
+# of pendling between this file and renderers.py). They are re-exported here via
+# eager attribute binds (same pattern as the tokens/assets/prompt-meta/brief
+# blocks above) so every existing spelling keeps resolving: the renderers reach
+# them BACK via their lazy shim (``_call_build_site("<name>", …)`` ->
+# ``getattr(scripts.build_site, "<name>")``), and tests do
+# ``from scripts.build_site import _nav_items_from_scaffold`` /
+# ``_pick_contact_route`` / ``_hero_cta_label`` etc. Dropping a re-export here
+# would break that getattr seam, so the binds must stay. ``_LISTING_COPY_BY_ROUTE_ID``
+# and ``_RUNTIME_TOKEN_LISTENER_JS`` stay defined locally below (reached by the
+# renderers via ``_lazy_attr`` but used by no moved helper). These helpers are
+# zero-coupling (no io-helpers), so the module is imported eagerly with no cycle.
+_render_helpers_exports = importlib.import_module("packages.generation.build.render_helpers")
+_icon_for_service = _render_helpers_exports._icon_for_service
+_phone_href = _render_helpers_exports._phone_href
+_normalize_business_type = _render_helpers_exports._normalize_business_type
+_hero_cta_variant = _render_helpers_exports._hero_cta_variant
+_hero_cta_label = _render_helpers_exports._hero_cta_label
+_commerce_bottom_cta_label = _render_helpers_exports._commerce_bottom_cta_label
+_hero_cta_target_path = _render_helpers_exports._hero_cta_target_path
+_location_is_country_only = _render_helpers_exports._location_is_country_only
+_nav_label_for_route = _render_helpers_exports._nav_label_for_route
+_nav_items_from_scaffold = _render_helpers_exports._nav_items_from_scaffold
+_pick_contact_route = _render_helpers_exports._pick_contact_route
+_pick_listing_route = _render_helpers_exports._pick_listing_route
+_collect_icons_for_pages = _render_helpers_exports._collect_icons_for_pages
+# constants (parity with the tokens block; safe if anything reaches them)
+SERVICE_ICONS = _render_helpers_exports.SERVICE_ICONS
+DEFAULT_SERVICE_ICON = _render_helpers_exports.DEFAULT_SERVICE_ICON
+_NAV_LABEL_BY_ROUTE_ID = _render_helpers_exports._NAV_LABEL_BY_ROUTE_ID
+_HERO_CTA_VARIANT_LABELS = _render_helpers_exports._HERO_CTA_VARIANT_LABELS
+_COMMERCE_BOTTOM_CTA_LABELS = _render_helpers_exports._COMMERCE_BOTTOM_CTA_LABELS
+_SHOP_CONVERSION_GOALS = _render_helpers_exports._SHOP_CONVERSION_GOALS
+_BOOKING_CONVERSION_GOALS = _render_helpers_exports._BOOKING_CONVERSION_GOALS
+_SHOP_BUSINESS_TYPES = _render_helpers_exports._SHOP_BUSINESS_TYPES
+_BOOKING_BUSINESS_TYPES = _render_helpers_exports._BOOKING_BUSINESS_TYPES
+
 
 def __getattr__(name: str) -> Any:
     """Lazy re-export from the build subpackage modules.
@@ -160,24 +317,6 @@ PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"
 # `.env.example` is allowed (canonical placeholder).
 _FORBIDDEN_ENV_PATTERN = re.compile(r"^\.env(\..+)?$", flags=re.IGNORECASE)
 _ALLOWED_ENV_NAMES = {".env.example"}
-_VERSIONED_PROMPT_INPUT_RE = re.compile(
-    r"^(?P<site_id>[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)"
-    r"\.v(?P<version>[1-9][0-9]*)\.project-input\.json$"
-)
-_CURRENT_PROMPT_INPUT_RE = re.compile(
-    r"^(?P<site_id>[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)"
-    r"\.project-input\.json$"
-)
-_HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
-_TONE_COLOR_TOKENS: dict[str, dict[str, str]] = {
-    "grön": {"primary": "#166534", "accent": "#dcfce7"},
-    "green": {"primary": "#166534", "accent": "#dcfce7"},
-    "blå": {"primary": "#1d4ed8", "accent": "#dbeafe"},
-    "blue": {"primary": "#1d4ed8", "accent": "#dbeafe"},
-    "varm": {"primary": "#9a3412", "accent": "#fed7aa"},
-    "warm": {"primary": "#9a3412", "accent": "#fed7aa"},
-    "premium": {"primary": "#312e81", "accent": "#ddd6fe"},
-}
 
 
 # ---------------------------------------------------------------------------
@@ -422,358 +561,6 @@ def write_json(path: Path, data: Any) -> None:
     write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
-def _prompt_meta_path_for_dossier(dossier_path: Path) -> Path | None:
-    """Return the adjacent prompt-input meta path for a Project Input file."""
-    filename = dossier_path.name
-    versioned = _VERSIONED_PROMPT_INPUT_RE.match(filename)
-    if versioned:
-        return dossier_path.with_name(
-            f"{versioned.group('site_id')}.v{versioned.group('version')}.meta.json"
-        )
-
-    current = _CURRENT_PROMPT_INPUT_RE.match(filename)
-    if current:
-        return dossier_path.with_name(f"{current.group('site_id')}.meta.json")
-    return None
-
-
-def load_prompt_input_meta(
-    dossier_path: Path,
-    dossier: dict[str, Any],
-) -> dict[str, Any]:
-    """Load optional prompt metadata adjacent to data/prompt-inputs files.
-
-    Curated examples do not have sidecar metadata and therefore keep the
-    historical init-mode behaviour. Prompt-generated Project Inputs carry
-    a sidecar with stable projectId/version so each Engine Run can record
-    immutable version metadata instead of making Viewser read the mutable
-    "latest" sidecar for every old run.
-    """
-    meta_path = _prompt_meta_path_for_dossier(dossier_path)
-    if meta_path is None:
-        # Dossier filename does not match either prompt-input pattern
-        # (no `<siteId>.project-input.json` and no `<siteId>.vN.*`).
-        # Nothing in the prompt-input contract applies; keep init-mode.
-        return {"mode": "init"}
-    if not meta_path.exists():
-        # B60 fynd 4: a missing sidecar can mean either
-        #   (a) corrupt prompt-input state (interrupted run, partial copy,
-        #       manual delete on a `data/prompt-inputs/` snapshot or on a
-        #       versioned `<siteId>.vN.project-input.json` file) - must
-        #       fail loudly so the operator restores the meta instead of
-        #       silently emitting a follow-up build labelled as init with
-        #       no projectId/version, OR
-        #   (b) a curated example under `examples/` whose filename happens
-        #       to match `_CURRENT_PROMPT_INPUT_RE` but never had a
-        #       sidecar by design.
-        # A versioned filename (`.vN.project-input.json`) is unambiguously
-        # written by `prompt_to_project_input.py` and therefore must have
-        # a sidecar; the current-pointer pattern only carries the same
-        # contract when the file lives under `data/prompt-inputs/`.
-        is_versioned = (
-            _VERSIONED_PROMPT_INPUT_RE.match(dossier_path.name) is not None
-        )
-        is_under_prompt_inputs = dossier_path.parent.name == "prompt-inputs"
-        if is_versioned or is_under_prompt_inputs:
-            raise SystemExit(
-                f"Builder failed: prompt meta sidecar missing at {meta_path}. "
-                "Restore the meta or remove the orphaned project-input file."
-            )
-        return {"mode": "init"}
-
-    meta = load_json(meta_path)
-    site_id = meta.get("siteId")
-    if site_id != dossier.get("siteId"):
-        raise SystemExit(
-            "Builder failed: prompt meta siteId mismatch "
-            f"({meta_path} has {site_id!r}, Project Input has "
-            f"{dossier.get('siteId')!r})."
-        )
-
-    version = meta.get("version")
-    if version is not None and (not isinstance(version, int) or version < 1):
-        raise SystemExit(
-            f"Builder failed: prompt meta has invalid version at {meta_path}."
-        )
-
-    mode = meta.get("mode")
-    if mode not in {"init", "followup"}:
-        mode = "followup" if isinstance(version, int) and version > 1 else "init"
-
-    project_id = meta.get("projectId")
-    if project_id is not None and (
-        not isinstance(project_id, str) or not project_id.strip()
-    ):
-        raise SystemExit(
-            f"Builder failed: prompt meta has invalid projectId at {meta_path}."
-        )
-    if mode == "followup" and not project_id:
-        raise SystemExit(
-            f"Builder failed: follow-up prompt meta requires projectId at {meta_path}."
-        )
-
-    normalized = dict(meta)
-    normalized["mode"] = mode
-    normalized["metaPath"] = _to_repo_relative(meta_path)
-    return normalized
-
-
-def _prompt_meta_mode(prompt_meta: dict[str, Any] | None) -> str:
-    if not prompt_meta:
-        return "init"
-    mode = prompt_meta.get("mode")
-    return mode if mode in {"init", "followup"} else "init"
-
-
-def _prompt_meta_project_id(prompt_meta: dict[str, Any] | None) -> str | None:
-    if not prompt_meta:
-        return None
-    project_id = prompt_meta.get("projectId")
-    return project_id if isinstance(project_id, str) and project_id else None
-
-
-def _prompt_meta_version(prompt_meta: dict[str, Any] | None) -> int | None:
-    if not prompt_meta:
-        return None
-    version = prompt_meta.get("version")
-    return version if isinstance(version, int) and version >= 1 else None
-
-
-def _prompt_meta_previous_version(prompt_meta: dict[str, Any] | None) -> int | None:
-    """Return the previous Project Input version for follow-up builds.
-
-    The prompt helper writes ``previousVersion`` on follow-up sidecars.
-    If an older sidecar lacks that field, derive it from ``version - 1``
-    so historical prompt-inputs still get best-effort snapshot lookup.
-    """
-    if not prompt_meta:
-        return None
-    previous_version = prompt_meta.get("previousVersion")
-    if isinstance(previous_version, int) and previous_version >= 1:
-        return previous_version
-    version = _prompt_meta_version(prompt_meta)
-    if version is not None and version > 1:
-        return version - 1
-    return None
-
-
-def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
-    if not prompt_meta:
-        return None
-    mode = _prompt_meta_mode(prompt_meta)
-    key = "followUpPrompt" if mode == "followup" else "originalPrompt"
-    value = prompt_meta.get(key)
-    return value if isinstance(value, str) else None
-
-
-def _persist_init_project_input_sidecar(
-    dossier: dict[str, Any],
-    prompt_meta: dict[str, Any] | None,
-    prompt_inputs_dir: Path,
-) -> dict[str, Any] | None:
-    """Glue 1 (core loop): persist a discoverable Project Input sidecar for a
-    fresh init build, so the next follow-up prompt can find it on disk.
-
-    A follow-up resolves the Project Input from
-    ``data/prompt-inputs/<siteId>.{project-input,meta}.json`` (``read_existing_meta``
-    / ``read_base_run_snapshot`` in ``scripts/prompt_to_project_input.py``). A build
-    driven straight from a curated example or any ad-hoc dossier path - the builder
-    MVP path (``build_site.py --dossier examples/<slug>.project-input.json``) - never
-    went through ``prompt_to_project_input.generate``, so no sidecar exists and the
-    very next follow-up dies with "Follow-up meta sidecar saknas": the core loop
-    (create -> preview -> follow-up) breaks on a freshly built site. The Viewser
-    prompt path already writes the sidecar via ``generate`` before ``build`` runs, so
-    that path is unaffected.
-
-    This writes the v1 sidecar (immutable ``<siteId>.v1.*`` snapshots + the current
-    pointers) the first time such a site is built, reusing the SAME
-    ``write_project_input`` spine ``generate`` uses - no new format. Strictly additive
-    and idempotent:
-
-    - A build already backed by a sidecar (the prompt path / every follow-up
-      version) carries ``projectId`` on ``prompt_meta`` and is left untouched.
-    - A site whose sidecar already exists on disk is left untouched (never clobbers
-      existing version truth).
-
-    Returns the enriched init ``prompt_meta`` (``projectId`` + ``version=1``) so the
-    run's ``input.json`` / ``build-result.json`` record the same identity the sidecar
-    pins - exactly like a prompt-driven init build - keeping the run consistent with
-    the persisted v1 snapshot for ``read_base_run_snapshot``. Returns ``None`` when
-    nothing was persisted (the caller keeps the original ``prompt_meta``).
-
-    Honest degrade: any failure (e.g. a dossier that does not validate against
-    project-input.schema.json) is logged and skipped, never crashing a build that
-    succeeds today.
-    """
-    # Already backed by a prompt-inputs sidecar (prompt path / follow-up version).
-    if _prompt_meta_project_id(prompt_meta) is not None:
-        return None
-    site_id = dossier.get("siteId")
-    if not isinstance(site_id, str) or not site_id:
-        return None
-    try:
-        from scripts.prompt_to_project_input import (
-            _build_project_dna_snapshot,
-            _current_meta_path,
-            _validate_against_schema,
-            write_project_input,
-        )
-
-        # Never clobber an existing version pointer (idempotent re-build).
-        if _current_meta_path(prompt_inputs_dir, site_id).exists():
-            return None
-
-        project_input = copy.deepcopy(dossier)
-        _validate_against_schema(project_input)
-        now = datetime.now(UTC).isoformat(timespec="seconds")
-        meta: dict[str, Any] = {
-            "projectId": uuid.uuid4().hex,
-            "version": 1,
-            "mode": "init",
-            "siteId": site_id,
-            "scaffoldId": project_input["scaffoldId"],
-            "variantId": project_input["variantId"],
-            "createdAt": now,
-        }
-        meta["projectDna"] = _build_project_dna_snapshot(
-            project_input,
-            previous_project_input=None,
-            previous_project_dna=None,
-            version=1,
-            mode="init",
-            follow_up_prompt=None,
-        )
-        _project_input_path, meta_path = write_project_input(
-            project_input, meta, output_dir=prompt_inputs_dir
-        )
-    except Exception as exc:  # noqa: BLE001
-        print(
-            "Glue 1: kunde inte persistera Project Input-sidecar för "
-            f"{dossier.get('siteId')!r}: {type(exc).__name__}: {exc}",
-            file=sys.stderr,
-        )
-        return None
-
-    return {
-        "mode": "init",
-        "projectId": meta["projectId"],
-        "version": 1,
-        "scaffoldId": meta["scaffoldId"],
-        "variantId": meta["variantId"],
-        "metaPath": _to_repo_relative(meta_path),
-    }
-
-
-_PLACEHOLDER_CONTACT_VALID_FIELDS = (
-    "phone",
-    "email",
-    "addressLines",
-    # B133 Codex P2 follow-up: ``openingHours`` is also written from the
-    # B88 fallback ("Mån-Fre 09:00-17:00" / "Mon-Fri 09:00-17:00") when
-    # neither wizard nor scrape supplied a schedule, so it must be in
-    # the operator-warning set too.
-    "openingHours",
-)
-
-
-def _prompt_meta_placeholder_contact_fields(
-    prompt_meta: dict[str, Any] | None,
-) -> list[str]:
-    """Return validated B133 placeholderContactFields from prompt meta.
-
-    Filters to the known contact-block keys so a malformed sidecar
-    cannot smuggle arbitrary strings into build-result.json — Viewser
-    reads the list verbatim to render an operator warning.
-    """
-    if not prompt_meta:
-        return []
-    raw = prompt_meta.get("placeholderContactFields")
-    if not isinstance(raw, list):
-        return []
-    fields: list[str] = []
-    for value in raw:
-        if (
-            isinstance(value, str)
-            and value in _PLACEHOLDER_CONTACT_VALID_FIELDS
-            and value not in fields
-        ):
-            fields.append(value)
-    return fields
-
-
-def _prompt_meta_followup_intent_id(prompt_meta: dict[str, Any] | None) -> str | None:
-    """Return ``projectDna.followUpIntent.id`` from the prompt sidecar."""
-    if not prompt_meta:
-        return None
-    project_dna = prompt_meta.get("projectDna")
-    if not isinstance(project_dna, dict):
-        return None
-    followup_intent = project_dna.get("followUpIntent")
-    if not isinstance(followup_intent, dict):
-        return None
-    intent_id = followup_intent.get("id")
-    return intent_id if isinstance(intent_id, str) and intent_id else None
-
-
-def _has_copy_directives(payload: Any) -> bool:
-    """Detect a future ``copyDirectives[]`` contract without implementing it."""
-    if not isinstance(payload, dict):
-        return False
-    copy_directives = payload.get("copyDirectives")
-    if isinstance(copy_directives, list) and bool(copy_directives):
-        return True
-    directives = payload.get("directives")
-    if not isinstance(directives, dict):
-        return False
-    nested_copy_directives = directives.get("copyDirectives")
-    return isinstance(nested_copy_directives, list) and bool(nested_copy_directives)
-
-
-def _placeholder_contact_warning_message(fields: list[str]) -> str:
-    """Human-readable warning string for build-result.json.
-
-    Composes the canonical operator-facing line that Run Details mirrors
-    via ``placeholderContactMessage`` so the warning text is consistent
-    whether the operator reads the JSON artefakt or the Viewser badge.
-    """
-    joined = ", ".join(fields)
-    return (
-        f"Contact fields {joined} are placeholder values - operator "
-        "must fill these before publishing."
-    )
-
-
-def _prompt_meta_wizard_must_have(
-    prompt_meta: dict[str, Any] | None,
-) -> list[str]:
-    """Return validated B132 wizardMustHave list from prompt meta.
-
-    Scout-orchestrator merge 2026-05-19: B132 (page intent warnings) and
-    B133 (placeholder contact warnings) both add new helpers in this
-    section. The two sets of helpers are orthogonal — one reads
-    ``placeholderContactFields`` from the sidecar, the other reads
-    ``wizardMustHave``. Kept side by side so build_result downstream can
-    surface both warnings.
-    """
-    if not prompt_meta:
-        return []
-    raw_must_have = prompt_meta.get("wizardMustHave")
-    if not isinstance(raw_must_have, list):
-        return []
-
-    labels: list[str] = []
-    seen: set[str] = set()
-    for item in raw_must_have:
-        if not isinstance(item, str):
-            continue
-        label = item.strip()
-        if not label or label in seen:
-            continue
-        labels.append(label)
-        seen.add(label)
-    return labels
-
-
 # ---------------------------------------------------------------------------
 # Trace (append-only Engine Events)
 # ---------------------------------------------------------------------------
@@ -970,143 +757,6 @@ def cleanup_flat_layout(site_dir: Path, *, keep: set[str]) -> list[str]:
 UPLOADS_ROOT_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
 
 
-def _is_valid_asset_ref(value: Any) -> bool:
-    """True if ``value`` har de minst fält builder:n behöver för att
-    rendera + kopiera asset:n.
-
-    Bug-fix: tidigare checkade vi bara ``bool(value.get(...))`` vilket
-    accepterade fel typer (``filename: 123`` passerade) och sedan
-    kraschade nedströms när vi gjorde ``"/uploads/" + str(...)``.
-    Vi kräver nu explicit ``str``-typ + non-empty efter strip på
-    båda kritiska fälten.
-    """
-    if not isinstance(value, dict):
-        return False
-    asset_id = value.get("assetId")
-    filename = value.get("filename")
-    if not isinstance(asset_id, str) or not asset_id.strip():
-        return False
-    if not isinstance(filename, str) or not filename.strip():
-        return False
-    return True
-
-
-def resolve_media_asset(project_input: dict, role: str) -> dict | None:
-    """Hitta en `media.<role>` AssetRef i Project Input.
-
-    Kanonisk källa: `project_input["media"][role]`. Resolvern i
-    `packages/generation/discovery/resolve.py::_apply_directives_fields`
-    persisterar dit deterministiskt från wizardens v2-payload
-    (`directives.media`) sedan commit 502b5c0.
-
-    En sista fallback mot `project_input["directives"]["media"]` behålls
-    för callers som anropar `build_site.py` direkt med en rå wizard-
-    payload utan att gå genom discovery-resolvern (t.ex. test-fixtures
-    eller framtida JIT-rendering). Detta fält strippas normalt av
-    `_apply_directives_fields` så fallback:en är defensiv, inte
-    primär. Den dagen alla callers garanterat går genom resolvern kan
-    fallback:en tas bort utan att förlora funktionalitet.
-    """
-    media = project_input.get("media")
-    if isinstance(media, dict):
-        candidate = media.get(role)
-        if _is_valid_asset_ref(candidate):
-            return candidate
-    directives = project_input.get("directives")
-    if isinstance(directives, dict):
-        directives_media = directives.get("media")
-        if isinstance(directives_media, dict):
-            candidate = directives_media.get(role)
-            if _is_valid_asset_ref(candidate):
-                return candidate
-    return None
-
-
-def iter_asset_refs(project_input: dict) -> list[dict]:
-    """Returnera publika AssetRef-objekt som finns i Project Input
-    (`brand.logo`, `brand.heroImage`, varje item i `gallery`, samt
-    `products[].productImage`, `media.favicon` / `media.ogImage` /
-    `media.backgroundVideo`). Tar bara med refs där alla fält schemat
-    kräver finns; trasiga refs hoppas över så build:en inte kraschar
-    på en korrupt manifest.json.
-
-    `moodImages` ingår inte här: de är interna inspirationsbilder och ska
-    isoleras via `copy_mood_assets`, inte publiceras till sajten.
-    """
-    refs: list[dict] = []
-    brand = project_input.get("brand") or {}
-    if isinstance(brand, dict):
-        for key in ("logo", "heroImage"):
-            ref = brand.get(key)
-            if _is_valid_asset_ref(ref):
-                refs.append(ref)
-    gallery = project_input.get("gallery") or []
-    if isinstance(gallery, list):
-        for item in gallery:
-            if _is_valid_asset_ref(item):
-                refs.append(item)
-    products = project_input.get("products") or []
-    if isinstance(products, list):
-        for product in products:
-            if not isinstance(product, dict):
-                continue
-            ref = product.get("productImage")
-            if _is_valid_asset_ref(ref):
-                refs.append(ref)
-    for role in ("favicon", "ogImage", "backgroundVideo"):
-        ref = resolve_media_asset(project_input, role)
-        if ref is not None:
-            refs.append(ref)
-    return refs
-
-
-def _iter_public_upload_refs(project_input: dict) -> list[dict]:
-    """Return asset refs that should be published under public/uploads/.
-
-    Product images are deliberately excluded here. They are public assets,
-    but their stable generated URL is ``/products/<productId>.<ext>`` and
-    `_copy_product_images` owns both that copy and the imageUrl mutation.
-    """
-    refs: list[dict] = []
-    brand = project_input.get("brand") or {}
-    if isinstance(brand, dict):
-        for key in ("logo", "heroImage"):
-            ref = brand.get(key)
-            if _is_valid_asset_ref(ref):
-                refs.append(ref)
-    gallery = project_input.get("gallery") or []
-    if isinstance(gallery, list):
-        for item in gallery:
-            if _is_valid_asset_ref(item):
-                refs.append(item)
-    for role in ("favicon", "ogImage", "backgroundVideo"):
-        ref = resolve_media_asset(project_input, role)
-        if ref is not None:
-            refs.append(ref)
-    return refs
-
-
-def _iter_mood_refs(project_input: dict) -> list[dict]:
-    """Return mood-reference asset refs that must stay outside public/uploads."""
-    mood_images = project_input.get("moodImages") or []
-    if not isinstance(mood_images, list):
-        return []
-    refs: list[dict] = []
-    for item in mood_images:
-        if _is_valid_asset_ref(item):
-            refs.append(item)
-    return refs
-
-
-# Hosts allowed when fetching bytes from ``ref.sourceUrl``. The builder
-# must not turn arbitrary Project Input data into an SSRF primitive; only
-# the public Vercel Blob host shape emitted by VercelBlobAssetStore is
-# valid here. If another remote AssetStore driver is added, add its public
-# read host explicitly instead of widening this check.
-_ALLOWED_ASSET_FETCH_HOSTS: tuple[str, ...] = (
-    "public.blob.vercel-storage.com",
-)
-
 # Remote sourceUrl bytes cap. 8 MB is well above the optimized.webp
 # budget, but prevents a build from reading an accidentally huge asset.
 _REMOTE_ASSET_MAX_BYTES = 8 * 1024 * 1024
@@ -1115,26 +765,6 @@ _REMOTE_ASSET_MAX_BYTES = 8 * 1024 * 1024
 # the whole build.
 _REMOTE_ASSET_TIMEOUT_SEC = 15
 _REMOTE_ASSET_CHUNK_BYTES = 64 * 1024
-
-
-def _is_allowed_asset_source_url(url: str) -> bool:
-    """Return True only for HTTPS URLs on an explicitly allowed asset host."""
-    try:
-        parsed = urllib.parse.urlparse(url)
-    except ValueError:
-        return False
-    if parsed.scheme != "https":
-        return False
-    host = parsed.hostname or ""
-    if not host:
-        return False
-    try:
-        port = parsed.port
-    except ValueError:
-        return False
-    if port not in (None, 443):
-        return False
-    return any(host == allowed or host.endswith(f".{allowed}") for allowed in _ALLOWED_ASSET_FETCH_HOSTS)
 
 
 def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
@@ -1218,146 +848,8 @@ def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
         response.close()
 
 
-_FAVICON_ICO_SIZES: tuple[tuple[int, int], ...] = (
-    (16, 16),
-    (32, 32),
-    (48, 48),
-    (64, 64),
-)
-_OG_IMAGE_SIZE = (1200, 630)
-
-
-def _asset_requires_derived_public_output(ref: dict) -> bool:
-    return ref.get("role") in {"favicon", "ogImage"}
-
-
-def _is_svg_favicon(ref: dict, image_bytes: bytes, source_file: Path | None = None) -> bool:
-    mime_type = ref.get("mimeType")
-    if isinstance(mime_type, str) and mime_type.strip().lower() == "image/svg+xml":
-        return True
-    filename = ref.get("filename")
-    if isinstance(filename, str) and filename.strip().lower().endswith(".svg"):
-        return True
-    if source_file is not None and source_file.suffix.lower() == ".svg":
-        return True
-    prefix = image_bytes.lstrip()[:512].lower()
-    return b"<svg" in prefix
-
-
-def _convert_favicon_to_ico(image_bytes: bytes, output_path: Path) -> bool:
-    """Write a deterministic multi-size favicon.ico from uploaded image bytes."""
-    try:
-        from PIL import Image
-    except ImportError as exc:
-        print(
-            "Warning: Pillow is not installed; skipping favicon.ico conversion "
-            f"({exc}). Original upload will still be copied.",
-            file=sys.stderr,
-        )
-        return False
-
-    try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with Image.open(io.BytesIO(image_bytes)) as image:
-            converted = image.convert("RGBA")
-            converted.save(output_path, format="ICO", sizes=list(_FAVICON_ICO_SIZES))
-        return True
-    except Exception as exc:
-        print(
-            "Warning: failed to convert favicon to public/favicon.ico "
-            f"({type(exc).__name__}: {exc}). Original upload will still be copied.",
-            file=sys.stderr,
-        )
-        return False
-
-
-def _convert_og_image_to_1200x630_png(image_bytes: bytes, output_path: Path) -> bool:
-    """Write a center-cropped 1200×630 PNG from uploaded Open Graph bytes."""
-    try:
-        from PIL import Image
-    except ImportError as exc:
-        print(
-            "Warning: Pillow is not installed; skipping og-image.png conversion "
-            f"({exc}). Original upload will still be copied.",
-            file=sys.stderr,
-        )
-        return False
-
-    try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with Image.open(io.BytesIO(image_bytes)) as image:
-            image.load()
-            source = image.convert("RGBA" if image.mode in {"LA", "P", "RGBA"} else "RGB")
-            width, height = source.size
-            target_width, target_height = _OG_IMAGE_SIZE
-            target_ratio = target_width / target_height
-            source_ratio = width / height
-
-            if source_ratio > target_ratio:
-                crop_width = int(height * target_ratio)
-                left = (width - crop_width) // 2
-                crop_box = (left, 0, left + crop_width, height)
-            else:
-                crop_height = int(width / target_ratio)
-                top = (height - crop_height) // 2
-                crop_box = (0, top, width, top + crop_height)
-
-            resampling = getattr(Image, "Resampling", Image).LANCZOS
-            cropped = source.crop(crop_box)
-            resized = cropped.resize(_OG_IMAGE_SIZE, resampling)
-            resized.save(output_path, format="PNG", optimize=True)
-        return True
-    except Exception as exc:
-        print(
-            "Warning: failed to convert Open Graph image to public/og-image.png "
-            f"({type(exc).__name__}: {exc}). Original upload will still be copied.",
-            file=sys.stderr,
-        )
-        return False
-
-
-def _write_derived_media_asset(
-    ref: dict,
-    image_bytes: bytes,
-    target: Path,
-    *,
-    source_file: Path | None = None,
-) -> None:
-    """Write derived public root assets for favicon/OG uploads without aborting builds."""
-    public_dir = target / "public"
-    role = ref.get("role")
-    if role == "favicon":
-        if _is_svg_favicon(ref, image_bytes, source_file):
-            print(
-                "favicon är SVG, hoppar över .ico-konvertering — "
-                "Next.js Metadata API rendrar SVG direkt",
-                file=sys.stderr,
-            )
-            favicon_svg = public_dir / "favicon.svg"
-            favicon_svg.parent.mkdir(parents=True, exist_ok=True)
-            favicon_svg.write_bytes(image_bytes)
-            return
-        _convert_favicon_to_ico(image_bytes, public_dir / "favicon.ico")
-        return
-    if role == "ogImage":
-        _convert_og_image_to_1200x630_png(image_bytes, public_dir / "og-image.png")
-
-
 def _operator_asset_candidate_dirs(site_id: str) -> list[Path]:
     return [UPLOADS_ROOT_DIR / site_id, UPLOADS_ROOT_DIR / "__draft"]
-
-
-def _operator_asset_variant_candidates(source_dir: Path) -> list[Path]:
-    return [
-        source_dir / "optimized.webp",
-        source_dir / "original.svg",
-        source_dir / "original.png",
-        source_dir / "original.jpg",
-        source_dir / "original.jpeg",
-        source_dir / "original.webp",
-        source_dir / "original.mp4",
-        source_dir / "original.webm",
-    ]
 
 
 def _resolve_operator_asset_source(
@@ -1413,57 +905,6 @@ def _resolve_operator_asset_source(
         f"(letade i {candidate_dirs}) och saknar sourceUrl. Hoppar över.",
     )
     return None
-
-
-def _private_mood_asset_extension(ref: dict, source_file: Path | None) -> str:
-    if source_file is not None and source_file.suffix:
-        return source_file.suffix.lower().lstrip(".")
-    filename = ref.get("filename")
-    if isinstance(filename, str):
-        suffix = Path(filename).suffix.lower().lstrip(".")
-        if suffix:
-            return suffix
-    mime_type = str(ref.get("mimeType") or "").strip().lower()
-    return {
-        "image/png": "png",
-        "image/jpeg": "jpg",
-        "image/webp": "webp",
-        "image/svg+xml": "svg",
-        "video/mp4": "mp4",
-        "video/webm": "webm",
-    }.get(mime_type, "bin")
-
-
-def _private_mood_asset_stem(asset_id: str) -> str:
-    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", asset_id).strip(".-")
-    return stem or "asset"
-
-
-def _public_product_asset_extension(ref: dict, source_file: Path | None) -> str:
-    if source_file is not None and source_file.suffix:
-        return source_file.suffix.lower().lstrip(".")
-    filename = ref.get("filename")
-    if isinstance(filename, str):
-        suffix = Path(filename).suffix.lower().lstrip(".")
-        if suffix:
-            return suffix
-    mime_type = str(ref.get("mimeType") or "").strip().lower()
-    return {
-        "image/png": "png",
-        "image/jpeg": "jpg",
-        "image/webp": "webp",
-        "image/svg+xml": "svg",
-    }.get(mime_type, "webp")
-
-
-def _public_product_asset_stem(product: dict, index: int) -> str:
-    for key in ("id", "slug"):
-        raw = product.get(key)
-        if isinstance(raw, str) and raw.strip():
-            stem = re.sub(r"[^A-Za-z0-9._-]+", "-", raw.strip().lower()).strip(".-")
-            if stem:
-                return stem
-    return f"product-{index + 1}"
 
 
 def _copy_product_images(site_id: str, target: Path, project_input: dict) -> int:
@@ -1582,823 +1023,6 @@ def copy_mood_assets(site_id: str, project_input: dict) -> int:
     return copied
 
 
-def _normalise_hex_color(value: Any) -> str | None:
-    if not isinstance(value, str):
-        return None
-    cleaned = value.strip()
-    if not _HEX_COLOR_RE.fullmatch(cleaned):
-        return None
-    return cleaned.lower()
-
-
-def _foreground_for_background(hex_color: str) -> str:
-    """Return a high-contrast foreground token for a validated #RRGGBB color."""
-    red = int(hex_color[1:3], 16) / 255
-    green = int(hex_color[3:5], 16) / 255
-    blue = int(hex_color[5:7], 16) / 255
-
-    def linearise(channel: float) -> float:
-        if channel <= 0.03928:
-            return channel / 12.92
-        return ((channel + 0.055) / 1.055) ** 2.4
-
-    luminance = (
-        0.2126 * linearise(red)
-        + 0.7152 * linearise(green)
-        + 0.0722 * linearise(blue)
-    )
-    dark_contrast = (luminance + 0.05) / 0.05
-    light_contrast = 1.05 / (luminance + 0.05)
-    return "#1c1c1a" if dark_contrast >= light_contrast else "#fafaf9"
-
-
-def _hex_to_hsl(hex_color: str) -> tuple[float, float, float]:
-    """Konvertera ``#RRGGBB`` till HSL.
-
-    Returnerar ``(h, s, l)`` där ``h ∈ [0, 360]`` och ``s, l ∈ [0, 100]``.
-    Anropare ska redan ha validerat ``hex_color`` mot ``_HEX_COLOR_RE``.
-
-    Implementationen följer standard HSL-formeln (samma som CSS
-    ``hsl()``-funktionen och Tailwinds palette-generator). Vi använder
-    den för att bygga skalor (``_build_color_scale``) där vi bevarar
-    hue + saturation och justerar lightness.
-    """
-    red = int(hex_color[1:3], 16) / 255
-    green = int(hex_color[3:5], 16) / 255
-    blue = int(hex_color[5:7], 16) / 255
-
-    cmax = max(red, green, blue)
-    cmin = min(red, green, blue)
-    delta = cmax - cmin
-    lightness = (cmax + cmin) / 2
-
-    if delta == 0:
-        hue = 0.0
-        saturation = 0.0
-    else:
-        if lightness in (0.0, 1.0):
-            saturation = 0.0
-        else:
-            saturation = delta / (1 - abs(2 * lightness - 1))
-        if cmax == red:
-            hue = ((green - blue) / delta) % 6
-        elif cmax == green:
-            hue = (blue - red) / delta + 2
-        else:
-            hue = (red - green) / delta + 4
-        hue *= 60
-
-    return (hue, saturation * 100, lightness * 100)
-
-
-def _hsl_to_hex(hue: float, saturation: float, lightness: float) -> str:
-    """Konvertera ``(h, s, l)`` till ``#rrggbb``-sträng.
-
-    ``hue ∈ [0, 360]``, ``saturation, lightness ∈ [0, 100]``. Inverterar
-    ``_hex_to_hsl`` med tolerans för flyttalsavrundning (alla tre
-    värden klampas innan multiplikation till 0-255).
-    """
-    s = max(0.0, min(100.0, saturation)) / 100
-    lum = max(0.0, min(100.0, lightness)) / 100
-    h = hue % 360
-
-    c = (1 - abs(2 * lum - 1)) * s
-    x = c * (1 - abs((h / 60) % 2 - 1))
-    m = lum - c / 2
-
-    if h < 60:
-        r, g, b = c, x, 0.0
-    elif h < 120:
-        r, g, b = x, c, 0.0
-    elif h < 180:
-        r, g, b = 0.0, c, x
-    elif h < 240:
-        r, g, b = 0.0, x, c
-    elif h < 300:
-        r, g, b = x, 0.0, c
-    else:
-        r, g, b = c, 0.0, x
-
-    red = max(0, min(255, round((r + m) * 255)))
-    green = max(0, min(255, round((g + m) * 255)))
-    blue = max(0, min(255, round((b + m) * 255)))
-    return f"#{red:02x}{green:02x}{blue:02x}"
-
-
-# Tailwind-liknande lightness-skala. Värdena valda så att 500-bandet
-# ligger nära Tailwind v3:s default-palette (där t.ex. blue-500 har
-# L≈53%, slate-500 har L≈48%). 50/100 är extremt ljusa (subtila
-# bakgrundstinter), 800/900 är mörka nog för text på ljus bakgrund.
-# Saturation-cap används så att hög-mättade input (#ff0000) inte
-# producerar neon-aktig 500-band i CTAs — vi vill ha "brand-aware"
-# palettes, inte "screaming"-palettes.
-_BRAND_SCALE_LIGHTNESS: tuple[tuple[str, float], ...] = (
-    ("50", 97.0),
-    ("100", 94.0),
-    ("200", 86.0),
-    ("300", 76.0),
-    ("400", 66.0),
-    ("500", 56.0),
-    ("600", 48.0),
-    ("700", 38.0),
-    ("800", 28.0),
-    ("900", 18.0),
-)
-_BRAND_SCALE_MAX_SATURATION = 85.0
-
-
-def _build_color_scale(hex_color: str) -> dict[str, str]:
-    """Bygg en 10-stegs Tailwind-liknande palett från en bas-färg.
-
-    Bevarar ``hue`` och ``saturation`` (cap:ad vid 85% för att undvika
-    neon-känsla på fullt mättade input som ``#ff0000``), ersätter
-    lightness med ``_BRAND_SCALE_LIGHTNESS``. Returnerar en dict
-    ``{ "50": "#...", "100": "#...", ..., "900": "#..." }`` som
-    ``variant_css`` emitterar som ``--primary-50`` .. ``--primary-900``
-    CSS-tokens. Generated render-funktioner kan sedan referera dem
-    för subtila bakgrunder (50/100), borders (200/300), accenter
-    (500/600) och text på ljus bg (800/900) — utan att hårdkoda hex
-    i varje sektion.
-
-    Anropare måste ha validerat ``hex_color`` mot ``_HEX_COLOR_RE``.
-    """
-    hue, saturation, _lightness = _hex_to_hsl(hex_color)
-    capped_saturation = min(saturation, _BRAND_SCALE_MAX_SATURATION)
-    return {
-        step: _hsl_to_hex(hue, capped_saturation, lightness)
-        for step, lightness in _BRAND_SCALE_LIGHTNESS
-    }
-
-
-def _token_overrides_from_project_input(
-    project_input: dict[str, Any] | None,
-) -> tuple[dict[str, str], list[str]]:
-    """Return safe CSS token overrides derived from explicit brand/tone fields."""
-    if not isinstance(project_input, dict):
-        return {}, []
-
-    overrides: dict[str, str] = {}
-    warnings: list[str] = []
-    brand = project_input.get("brand") if isinstance(project_input.get("brand"), dict) else {}
-    primary_hex_provided = bool(brand.get("primaryColorHex"))
-    accent_hex_provided = bool(brand.get("accentColorHex"))
-    primary_hex = _normalise_hex_color(brand.get("primaryColorHex"))
-    accent_hex = _normalise_hex_color(brand.get("accentColorHex"))
-    if primary_hex_provided and primary_hex is None:
-        warnings.append("brand.primaryColorHex invalid; variant primary token kept")
-    if accent_hex_provided and accent_hex is None:
-        warnings.append("brand.accentColorHex invalid; variant accent token kept")
-
-    if primary_hex:
-        overrides["primary"] = primary_hex
-        overrides["primaryForeground"] = _foreground_for_background(primary_hex)
-    if accent_hex:
-        overrides["accent"] = accent_hex
-        overrides["accentForeground"] = _foreground_for_background(accent_hex)
-
-    if "primary" not in overrides and not primary_hex_provided:
-        tone = project_input.get("tone") if isinstance(project_input.get("tone"), dict) else {}
-        tone_tokens: dict[str, str] | None = None
-        tone_primary = tone.get("primary")
-        if isinstance(tone_primary, str):
-            tone_tokens = _TONE_COLOR_TOKENS.get(tone_primary.strip().lower())
-        # B139 fallback: när tone.primary saknar color-signal (t.ex.
-        # generiska wizard-tags som "professionell" / "lugn och
-        # förtroendeingivande") får tone.secondary fungera som
-        # color-token-källa. Annars läcker en färgsignal som operatören
-        # angett i sekundär-position tyst på vägen till variant_css.
-        # Primary vinner alltid när den har en signal — secondary
-        # fungerar bara som fallback, aldrig som override.
-        if tone_tokens is None:
-            secondary = tone.get("secondary")
-            if isinstance(secondary, list):
-                for entry in secondary:
-                    if not isinstance(entry, str):
-                        continue
-                    candidate = _TONE_COLOR_TOKENS.get(entry.strip().lower())
-                    if candidate is not None:
-                        tone_tokens = candidate
-                        break
-        if tone_tokens is not None:
-            overrides["primary"] = tone_tokens["primary"]
-            overrides["primaryForeground"] = _foreground_for_background(
-                tone_tokens["primary"]
-            )
-            if "accent" not in overrides and not accent_hex_provided:
-                overrides["accent"] = tone_tokens["accent"]
-                overrides["accentForeground"] = _foreground_for_background(
-                    tone_tokens["accent"]
-                )
-
-    return overrides, warnings
-
-
-"""Typography palette per variant.
-
-Maps ``variant.id`` to a (display-font, body-font, google-fonts-query)
-tuple. Each variant gets a distinct visual character beyond color alone:
-warm serif for craft, tight editorial for noir, geometric sans for fit,
-classic Georgia-style for trust, etc.
-
-Fallback: when variant.id is not in the table, both fonts fall back to
-``Inter`` which matches the starter's pre-typography baseline (Geist
-replacement) without breaking the cascade.
-
-`google_query` is the path part after ``css2?`` in the Google Fonts URL
-(`family=Fraunces:wght@400;600;700&display=swap`). We assemble the full
-URL at emit time so the value remains URL-safe and reviewable in
-governance diffs.
-"""
-_VARIANT_TYPOGRAPHY: dict[str, dict[str, str]] = {
-    # local-service-business variants
-    "nordic-trust": {
-        "display": "'Inter', system-ui, -apple-system, sans-serif",
-        "body": "'Inter', system-ui, -apple-system, sans-serif",
-        "google_query": "family=Inter:wght@400;500;600;700&display=swap",
-        "display_tracking": "-0.02em",
-    },
-    "warm-craft": {
-        "display": "'Fraunces', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.015em",
-    },
-    "clinical-calm": {
-        "display": "'Source Sans 3', system-ui, sans-serif",
-        "body": "'Source Sans 3', system-ui, sans-serif",
-        "google_query": (
-            "family=Source+Sans+3:wght@400;500;600;700&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    "midnight-counsel": {
-        "display": "'Playfair Display', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Playfair+Display:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.025em",
-    },
-    "pulse-fit": {
-        "display": "'Manrope', system-ui, sans-serif",
-        "body": "'Manrope', system-ui, sans-serif",
-        "google_query": "family=Manrope:wght@400;500;700;800&display=swap",
-        "display_tracking": "-0.03em",
-    },
-    # ecommerce-lite variants
-    "clean-store": {
-        "display": "'Inter', system-ui, sans-serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": "family=Inter:wght@400;500;600;700&display=swap",
-        "display_tracking": "-0.02em",
-    },
-    "earth-wellness": {
-        "display": "'Cormorant Garamond', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Cormorant+Garamond:wght@400;500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    "mono-tech": {
-        "display": "'JetBrains Mono', ui-monospace, monospace",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=JetBrains+Mono:wght@500;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.04em",
-    },
-    "noir-editorial": {
-        "display": "'Bodoni Moda', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.025em",
-    },
-    "street-vivid": {
-        "display": "'Space Grotesk', system-ui, sans-serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Space+Grotesk:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.035em",
-    },
-}
-
-_TYPOGRAPHY_FALLBACK: dict[str, str] = {
-    "display": "'Inter', system-ui, sans-serif",
-    "body": "'Inter', system-ui, sans-serif",
-    "google_query": "family=Inter:wght@400;500;600;700&display=swap",
-    "display_tracking": "-0.02em",
-}
-
-
-# Fas 4 — tone-driven typography overlay.
-#
-# Mappar ``tone.primary`` (en fri sträng från Site Brief / project-input)
-# till en typografi-palett som överrider variantens default. Detta är
-# additivt och OPT-IN: när ``tone.primary`` saknas eller inte matchar
-# någon nyckel här används variantens egen typografi exakt som idag.
-#
-# Designprincip — vi mappar bara på TONE-NYCKLAR som är tydligt
-# kopplade till en visuell karaktär. Generiska ord som "professional"
-# eller "trustworthy" lämnar vi orörda — de skulle göra mappningen
-# luddig (snart sagt varje sajt kallar sig professional) och variant-
-# defaultsen är redan tunade för "trustworthy" som baseline.
-#
-# Nyckeln matchas case-insensitive efter ``.strip().lower()``. Svenska
-# och engelska former listas separat så vi inte hash-collision:ar med
-# fel mapping.
-# Wizard-strängar (``TONE_OPTIONS`` i
-# ``apps/viewser/components/discovery-wizard/wizard-constants.ts``) är
-# på svenska och kan vara multi-word ("Lugn och förtroendeingivande").
-# ``_TONE_TYPOGRAPHY`` använder semantiska engelska single-word-keys
-# ("calm", "playful"). Utan översättning matchar wizard-tags aldrig
-# → Sprint A.2:s typografi-overlay triggas inte för svenska operatörer.
-#
-# Den här tabellen är översättningslagret. Keys är ``.strip().lower()``-
-# normaliserade wizard-strängar; values är semantiska keys i
-# ``_TONE_TYPOGRAPHY``. Att hålla dessa separata (istället för att
-# duplicera font-paletten 7 gånger) gör att framtida paletter-tweaks
-# bara behöver göras på ett ställe.
-#
-# Synkronisera den här tabellen med ``TONE_OPTIONS`` i wizard-
-# constants när nya ton-alternativ läggs till. ``tests/test_builder_smoke``
-# har en täckningskoll som garanterar att varje wizard-tag mappar till
-# en känd ``_TONE_TYPOGRAPHY``-key.
-_TONE_KEY_ALIASES: dict[str, str] = {
-    # Wizard ``TONE_OPTIONS`` (svenska multi-word) → semantiska keys.
-    "professionell": "modern",
-    "varm och personlig": "warm",
-    "lekfull": "playful",
-    "exklusiv / lyxig": "luxury",
-    "rak och enkel": "modern",
-    "modern och teknisk": "tech",
-    "lugn och förtroendeingivande": "calm",
-    # Vanliga briefModel-output på engelska som tydligt mappar mot en
-    # specifik palett. ``professional`` och ``trustworthy`` lämnas
-    # MEDVETET bort — de är generiska och får bättre resultat med
-    # variant-defaulten (befintlig kontrakt-test i test_builder_smoke).
-    "calm and trustworthy": "calm",
-    "warm and personal": "warm",
-    "playful and energetic": "playful",
-    "exclusive": "luxury",
-    "luxurious": "luxury",
-    "clean and simple": "modern",
-    "modern and technical": "tech",
-}
-
-
-_TONE_TYPOGRAPHY: dict[str, dict[str, str]] = {
-    # CALM / WELLNESS — elegant serif för rubriker, neutral sans för
-    # body. Passar hudvård, spa, terapi, yoga, mindfulness.
-    "calm": {
-        "display": "'Cormorant Garamond', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Cormorant+Garamond:wght@400;500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    "lugn": {
-        "display": "'Cormorant Garamond', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Cormorant+Garamond:wght@400;500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    "wellness": {
-        "display": "'Cormorant Garamond', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Cormorant+Garamond:wght@400;500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    # BOLD / TECH — geometrisk sans med tight tracking. Passar SaaS,
-    # konsult, byggteknik, modern e-handel.
-    "bold": {
-        "display": "'Space Grotesk', system-ui, sans-serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Space+Grotesk:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.035em",
-    },
-    "modern": {
-        "display": "'Space Grotesk', system-ui, sans-serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Space+Grotesk:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.035em",
-    },
-    "tech": {
-        "display": "'Space Grotesk', system-ui, sans-serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Space+Grotesk:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.035em",
-    },
-    # PLAYFUL / WARM — rundad sans + mjukare body. Passar barn-
-    # verksamhet, café, kreativa småföretag.
-    "playful": {
-        "display": "'Quicksand', system-ui, sans-serif",
-        "body": "'Nunito', system-ui, sans-serif",
-        "google_query": (
-            "family=Quicksand:wght@500;600;700"
-            "&family=Nunito:wght@400;500;600&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    "warm": {
-        "display": "'Quicksand', system-ui, sans-serif",
-        "body": "'Nunito', system-ui, sans-serif",
-        "google_query": (
-            "family=Quicksand:wght@500;600;700"
-            "&family=Nunito:wght@400;500;600&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    "friendly": {
-        "display": "'Quicksand', system-ui, sans-serif",
-        "body": "'Nunito', system-ui, sans-serif",
-        "google_query": (
-            "family=Quicksand:wght@500;600;700"
-            "&family=Nunito:wght@400;500;600&display=swap"
-        ),
-        "display_tracking": "-0.01em",
-    },
-    # PREMIUM / EDITORIAL — high-contrast display serif. Passar lyx,
-    # arkitektur, gallerier, fine dining.
-    "premium": {
-        "display": "'Playfair Display', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Playfair+Display:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.025em",
-    },
-    "editorial": {
-        "display": "'Playfair Display', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Playfair+Display:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.025em",
-    },
-    "luxury": {
-        "display": "'Playfair Display', Georgia, serif",
-        "body": "'Inter', system-ui, sans-serif",
-        "google_query": (
-            "family=Playfair+Display:wght@500;600;700"
-            "&family=Inter:wght@400;500&display=swap"
-        ),
-        "display_tracking": "-0.025em",
-    },
-}
-
-
-def _typography_for_variant(variant: dict) -> dict[str, str]:
-    """Return the typography palette for a variant, with a safe fallback.
-
-    Unknown variant IDs degrade gracefully to Inter so an experimental
-    variant added without a typography entry still renders, just without
-    the bespoke font pairing.
-    """
-    return _VARIANT_TYPOGRAPHY.get(variant.get("id", ""), _TYPOGRAPHY_FALLBACK)
-
-
-def _normalize_tone_key(raw: str) -> str:
-    """Normalisera en tone-sträng till en semantisk ``_TONE_TYPOGRAPHY``-key.
-
-    Pipelinen är:
-      1. ``.strip().lower()`` så case/whitespace inte spelar roll
-      2. Slå upp i ``_TONE_KEY_ALIASES`` (wizard-strängar → semantiska
-         keys, t.ex. ``"lekfull"`` → ``"playful"``)
-      3. Returnera resultatet — om ingen alias matchar returneras den
-         normaliserade strängen oförändrad (så engelska keys som redan
-         är semantiska, t.ex. ``"calm"``, fortsatt fungerar direkt)
-
-    Den här funktionen är single source of truth för "är denna tone-
-    sträng matchbar?" — använd den i alla nya konsumenter (Sprint B/3
-    hero-routing m.fl.) istället för att duplicera alias-tabellen.
-    """
-    key = raw.strip().lower()
-    return _TONE_KEY_ALIASES.get(key, key)
-
-
-def _typography_overlay_for_tone(
-    project_input: dict[str, Any] | None,
-) -> dict[str, str] | None:
-    """Returnera en typografi-palett baserad på ``tone.primary`` om den
-    matchar en känd nyckel i ``_TONE_TYPOGRAPHY``, annars ``None``.
-
-    När ``None`` returneras använder ``variant_css`` variant-defaulten
-    från ``_VARIANT_TYPOGRAPHY`` — så vi lägger ALDRIG på en font-
-    override när vi inte har en stark anledning. Detta gör Sprint A.2
-    opt-in: existerande projekt utan tone.primary får exakt samma
-    output som idag.
-
-    Wizard-strängar (svenska multi-word, t.ex. "Lugn och
-    förtroendeingivande") normaliseras via ``_TONE_KEY_ALIASES`` så
-    Sprint A.2:s overlay triggas även när operatören väljer ton via
-    chips istället för att skriva engelska keys manuellt.
-    """
-    if not isinstance(project_input, dict):
-        return None
-    tone = project_input.get("tone")
-    if not isinstance(tone, dict):
-        return None
-    primary = tone.get("primary")
-    if not isinstance(primary, str):
-        return None
-    key = _normalize_tone_key(primary)
-    return _TONE_TYPOGRAPHY.get(key)
-
-
-def _motion_css_block(level: str) -> str:
-    """Return a CSS block that applies subtle entry animations on the
-    first paint of every ``<section>``. The block is empty for
-    ``level == "none"``.
-
-    All animations are gated behind ``prefers-reduced-motion: no-preference``
-    so operators on reduced-motion settings see a static page. The
-    stagger uses ``nth-of-type`` so the sequence reads top-to-bottom
-    without any JavaScript or scroll-observer.
-
-    Levels:
-
-    - ``none``     : no animations emitted
-    - ``subtle``   : 600ms fade-in only, 80ms stagger across the first
-                     six sections. Reads as "polished but quiet" — fits
-                     trust, clinical, calm vibes.
-    - ``expressive``: 700ms fade-up + 12px translate, 120ms stagger.
-                     Suits warm-craft, pulse-fit, noir, street vibes
-                     where a hint of motion reinforces the brand.
-    """
-    if level == "none":
-        return ""
-
-    if level == "expressive":
-        duration_ms = 700
-        translate_y = "12px"
-        stagger_ms = 120
-    else:
-        # default to subtle for unknown values (e.g. "normal" from older
-        # variants) so we never crash on unexpected enum values.
-        duration_ms = 600
-        translate_y = "0"
-        stagger_ms = 80
-
-    stagger_rules = "\n".join(
-        f"  main > section:nth-of-type({i}) {{ animation-delay: {stagger_ms * (i - 1)}ms; }}"
-        for i in range(1, 7)
-    )
-
-    # Fas 2.2 — utöka motion-blocket med scroll-driven animations. När
-    # browser:n stödjer ``animation-timeline: view()`` (Chrome/Edge 115+,
-    # Opera 101+) får varje sektion utöver de första sex en mjuk fade-in
-    # vid scroll, utan JavaScript. Safari + Firefox ignorerar @supports-
-    # block och visar sektionerna direkt — degraderar snyggt.
-    #
-    # ``view()``-axeln binder animationen till element-positionen i
-    # viewporten: 0% = ovan viewport, 100% = nedanför. Vi spelar bara
-    # animationen i första 30%-fönstret (entering bottom) så sektionen
-    # är fullt synlig innan animationen är klar.
-    scroll_translate = translate_y if translate_y != "0" else "8px"
-    scroll_block = (
-        "  @supports (animation-timeline: view()) {\n"
-        "    @keyframes sajtbyggaren-section-scroll-enter {\n"
-        f"      from {{ opacity: 0; transform: translateY({scroll_translate}); }}\n"
-        "      to { opacity: 1; transform: translateY(0); }\n"
-        "    }\n"
-        "    main > section:nth-of-type(n+7) {\n"
-        "      animation: sajtbyggaren-section-scroll-enter linear both;\n"
-        "      animation-timeline: view();\n"
-        "      animation-range: entry 0% entry 30%;\n"
-        "    }\n"
-        "  }\n"
-    )
-
-    return (
-        "@media (prefers-reduced-motion: no-preference) {\n"
-        "  @keyframes sajtbyggaren-section-enter {\n"
-        f"    from {{ opacity: 0; transform: translateY({translate_y}); }}\n"
-        "    to { opacity: 1; transform: translateY(0); }\n"
-        "  }\n"
-        "  main > section {\n"
-        f"    animation: sajtbyggaren-section-enter {duration_ms}ms cubic-bezier(0.16, 1, 0.3, 1) both;\n"
-        "  }\n"
-        f"{stagger_rules}\n"
-        f"{scroll_block}"
-        "}\n"
-    )
-
-
-def variant_css(
-    variant: dict,
-    token_overrides: dict[str, str] | None = None,
-    *,
-    typography_overlay: dict[str, str] | None = None,
-) -> str:
-    tokens = variant["tokens"]
-    color = dict(tokens["color"])
-    if token_overrides:
-        for token_name in (
-            "primary",
-            "primaryForeground",
-            "accent",
-            "accentForeground",
-        ):
-            override = token_overrides.get(token_name)
-            if override:
-                color[token_name] = override
-    radius = tokens["radius"]
-    spacing = tokens["spacing"]
-    # Fas 4 — tone-driven typography overlay. När anroparen har
-    # extraherat en känd ``tone.primary`` via ``_typography_overlay_
-    # for_tone`` ersätter vi variantens default-typografi med den.
-    # Annars (vanligaste fallet, inkl. alla befintliga tester) faller
-    # vi tillbaka till ``_typography_for_variant`` och CSS-outputen
-    # blir byte-identisk med innan denna kwarg infördes.
-    typography = typography_overlay if typography_overlay else _typography_for_variant(variant)
-    # Google Fonts import — placed in @import at the top of the variant
-    # block. `&display=swap` ensures the page renders with fallback fonts
-    # while the webfont loads, avoiding FOIT. We use Google's HTTPS CDN
-    # which is reliable enough for the MVP; a future iteration may swap
-    # to `next/font/google` for self-hosting + zero FOUC.
-    font_import = (
-        f"@import url('https://fonts.googleapis.com/css2?{typography['google_query']}');\n"
-    )
-    motion_level = (
-        tokens.get("motion", {}).get("level", "subtle")
-        if isinstance(tokens.get("motion"), dict)
-        else "subtle"
-    )
-    motion_block = _motion_css_block(motion_level)
-    # Fas 4 — brand color scales (Tailwind-liknande 10-stegs palettes
-    # genererade från primary/accent). Vi emitterar dem som CSS-tokens
-    # så render_*-funktionerna kan referera ``var(--primary-50)`` för
-    # subtila sektion-bakgrunder, ``var(--primary-100)`` för card-
-    # hovers, ``var(--primary-600)`` för CTAs och ``var(--primary-900)``
-    # för text — istället för att hårdkoda en enda mid-tone "primary"
-    # överallt och få "alla sajter ser ut likadana"-effekten oavsett
-    # brand. Skalan tar hue + (cap:ad) saturation från base-färgen och
-    # varierar bara lightness deterministiskt. Generated css-output är
-    # additiv: existerande ``--primary`` / ``--accent`` ligger kvar
-    # exakt som idag så render-funktioner som inte uppgraderats än
-    # fortsätter rendera identiskt.
-    primary_scale = _build_color_scale(color["primary"]) if _HEX_COLOR_RE.fullmatch(color["primary"]) else None
-    accent_scale = _build_color_scale(color["accent"]) if _HEX_COLOR_RE.fullmatch(color["accent"]) else None
-    scale_block = ""
-    if primary_scale:
-        scale_block += "".join(
-            f"  --primary-{step}: {value};\n" for step, value in primary_scale.items()
-        )
-    if accent_scale:
-        scale_block += "".join(
-            f"  --accent-{step}: {value};\n" for step, value in accent_scale.items()
-        )
-
-    return (
-        font_import
-        + ":root {\n"
-        f"  --background: {color['background']};\n"
-        f"  --foreground: {color['foreground']};\n"
-        f"  --muted: {color['muted']};\n"
-        f"  --border: {color['border']};\n"
-        f"  --primary: {color['primary']};\n"
-        f"  --primary-foreground: {color['primaryForeground']};\n"
-        f"  --accent: {color['accent']};\n"
-        f"  --accent-foreground: {color['accentForeground']};\n"
-        + scale_block
-        + f"  --radius-sm: {radius['sm']};\n"
-        f"  --radius-md: {radius['md']};\n"
-        f"  --radius-lg: {radius['lg']};\n"
-        f"  --section-spacing: {spacing['section']};\n"
-        f"  --container-width: {spacing['container']};\n"
-        f"  --font-display: {typography['display']};\n"
-        f"  --font-body: {typography['body']};\n"
-        f"  --display-tracking: {typography['display_tracking']};\n"
-        "}\n"
-        # Apply font families at the element level so existing render_*
-        # functions don't need a className change — body inherits the
-        # body font; headings inherit the display font with bespoke
-        # letter-spacing per variant.
-        #
-        # Fas 3.1 — typografiska OpenType-features per kontext:
-        #   * body  : ``ss01`` (stylistic set 1 — Inter:s grotesque-alts),
-        #             ``cv02`` ``cv03`` ``cv11`` (open digit + bättre kolon),
-        #             ``cv05`` ``cv10`` (alternativa l/L),
-        #             ``ss03`` (curl-alternativ), ``calt`` (contextual
-        #             alternates för auto-ligature i webfonts).
-        #   * h1-h4 : ``ss02`` (display-orienterad stylistic-set när
-        #             tillgänglig), ``cv11``. Headlines håller
-        #             tab-alignment med rubrik-siffror så "2026" och
-        #             "1 999 kr" radas snyggt.
-        #   * pris/data: ``.font-tabular`` utility-class (tabular-nums +
-        #             lining-nums) som render_*-helpers kan applicera
-        #             på pristext, statistik, datum.
-        #
-        # Browsers som inte stödjer en feature ignorerar den tyst.
-        # Google Fonts levererar alla features ovan för Inter, DM Sans,
-        # Manrope och Plus Jakarta Sans (våra defaults).
-        "body {\n"
-        "  font-family: var(--font-body);\n"
-        "  font-feature-settings: \"ss01\", \"ss03\", \"cv02\", \"cv03\", \"cv05\", \"cv10\", \"cv11\", \"calt\";\n"
-        "  font-variant-ligatures: common-ligatures contextual;\n"
-        "}\n"
-        "h1, h2, h3, h4 {\n"
-        "  font-family: var(--font-display);\n"
-        "  letter-spacing: var(--display-tracking);\n"
-        "  font-feature-settings: \"ss02\", \"cv11\";\n"
-        "  font-variant-numeric: lining-nums;\n"
-        "}\n"
-        ".font-tabular {\n"
-        "  font-variant-numeric: tabular-nums lining-nums;\n"
-        "  font-feature-settings: \"tnum\", \"lnum\";\n"
-        "}\n"
-        # Fas 3.3 — CSS-only parallax. Bilden zoomas 1.0 → 1.08 över
-        # hero-exit-fönstret när browser:n stödjer animation-timeline.
-        # ``contain``-fönstret startar när bilden börjar lämna viewporten
-        # (cover 50%) och slutar när den lämnar helt (cover 100%).
-        # Detta gör att zoomen sker när användaren scrollar förbi hero
-        # — exakt som Apple och Stripe-sajter, men utan JavaScript.
-        # Safari + Firefox ignorerar @supports och visar statisk bild.
-        "@supports (animation-timeline: view()) {\n"
-        "  @media (prefers-reduced-motion: no-preference) {\n"
-        "    @keyframes sajtbyggaren-hero-parallax {\n"
-        "      from { transform: scale(1.0); }\n"
-        "      to { transform: scale(1.08); }\n"
-        "    }\n"
-        "    .parallax-hero {\n"
-        "      animation: sajtbyggaren-hero-parallax linear both;\n"
-        "      animation-timeline: view();\n"
-        "      animation-range: cover 0% cover 100%;\n"
-        "      will-change: transform;\n"
-        "    }\n"
-        "  }\n"
-        "}\n"
-        # Sprint 1.4 — print-styles. Småföretagssajter skrivs ofta ut
-        # (offert-sidor, om-oss, kontakt). Default Tailwind print:n är
-        # plain-white men släpper igenom flera hög-impact-element som
-        # förstör utskriften:
-        #
-        #   * sticky header + footer dyker upp på varje sida-sida
-        #   * background-gradienter slukar svart-bläck
-        #   * scroll-animations triggas inte i print men reserverar
-        #     ändå space (de börjar med opacity:0)
-        #   * hover-shadows ger spöktryck längs kortets kanter
-        #
-        # Vi nollar dessa explicit. Ingen branch-specifik logik —
-        # samma regler funkar för alla sajter eftersom de matchar
-        # generiska klasser (sticky, scroll-anim, bg-gradient).
-        "@media print {\n"
-        "  *, *::before, *::after {\n"
-        "    background: transparent !important;\n"
-        "    color: black !important;\n"
-        "    box-shadow: none !important;\n"
-        "    text-shadow: none !important;\n"
-        "  }\n"
-        "  header, footer, nav { display: none !important; }\n"
-        "  a, a:visited { text-decoration: underline; color: black !important; }\n"
-        "  a[href]::after { content: \" (\" attr(href) \")\"; font-size: 80%; }\n"
-        "  a[href^=\"#\"]::after, a[href^=\"javascript:\"]::after { content: \"\"; }\n"
-        "  img { max-width: 100% !important; page-break-inside: avoid; }\n"
-        "  .scroll-anim, .scroll-anim-stagger > * {\n"
-        "    opacity: 1 !important;\n"
-        "    transform: none !important;\n"
-        "    animation: none !important;\n"
-        "  }\n"
-        "  .parallax-hero { animation: none !important; transform: none !important; }\n"
-        "  h2, h3 { page-break-after: avoid; }\n"
-        "  p, blockquote { orphans: 3; widows: 3; }\n"
-        "  blockquote, pre { page-break-inside: avoid; }\n"
-        "}\n"
-        + motion_block
-    )
-
-
 def patch_globals_css(
     target: Path,
     variant: dict,
@@ -2413,16 +1037,51 @@ def patch_globals_css(
         token_overrides,
         typography_overlay=typography_overlay,
     )
+    font_marker = "/* sajtbyggaren-font-import:start */"
+    font_end = "/* sajtbyggaren-font-import:end */"
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
-    if marker in original:
-        before, _, rest = original.partition(marker)
+
+    # Strip any previously emitted regions so re-patching (follow-up
+    # rebuilds) stays idempotent: the hoisted font @import block at the
+    # top AND the variant-tokens block further down.
+    base_contents = original
+    if font_marker in base_contents:
+        before, _, rest = base_contents.partition(font_marker)
+        _, _, after = rest.partition(font_end)
+        base_contents = f"{before}{after}"
+    if marker in base_contents:
+        before, _, rest = base_contents.partition(marker)
         _, _, after = rest.partition(end)
-        base_contents = f"{before}{after}".rstrip()
-    else:
-        base_contents = original.rstrip()
-    # Append last so starter defaults earlier in globals.css cannot win the cascade.
-    new_contents = f"{base_contents}\n\n{marker}\n{block}{end}\n"
+        base_contents = f"{before}{after}"
+    base_contents = base_contents.strip()
+
+    # Hoist the Google Fonts @import line(s) out of the variant block to
+    # the absolute top of the file. CSS requires every @import rule to
+    # precede all other rules; appending the variant block verbatim put
+    # the font @import after the starter's :root/@layer rules, which
+    # triggers the build/browser warning "@import rules must precede all
+    # rules" on every build. (Longer-term fix: load the webfont via
+    # next/font/google or a <link> in the Next layout instead of a CSS
+    # @import — the layout already preconnects to fonts.googleapis.com.)
+    import_lines: list[str] = []
+    body_lines: list[str] = []
+    for line in block.splitlines():
+        if line.lstrip().startswith("@import"):
+            import_lines.append(line)
+        else:
+            body_lines.append(line)
+    block_body = "\n".join(body_lines)
+
+    font_region = ""
+    if import_lines:
+        font_region = f"{font_marker}\n" + "\n".join(import_lines) + f"\n{font_end}\n\n"
+
+    # Variant tokens appended last so starter defaults earlier in
+    # globals.css cannot win the cascade.
+    new_contents = (
+        f"{font_region}{base_contents}\n\n{marker}\n{block_body}\n{end}\n"
+    )
     write(css, new_contents)
     return warnings
 
@@ -2440,69 +1099,6 @@ def patch_package_json(target: Path, dossier: dict) -> None:
 # generic so the same builder works for very different Project Inputs (a
 # small painter firm and a video game arcade should both look polished).
 # ---------------------------------------------------------------------------
-
-
-SERVICE_ICONS: dict[str, str] = {
-    "interior-painting": "Paintbrush",
-    "exterior-painting": "House",
-    "color-consultation": "Palette",
-    "renovation-painting": "Hammer",
-    "arcade-games": "Gamepad2",
-    "retro-consoles": "Joystick",
-    "tournaments": "Trophy",
-    "tournaments-monthly": "Trophy",
-    "birthday-parties": "Cake",
-    "private-events": "PartyPopper",
-    "food-drinks": "Coffee",
-    "merch-shop": "ShoppingBag",
-}
-DEFAULT_SERVICE_ICON = "Sparkles"
-
-
-def _icon_for_service(service_id: str) -> str:
-    return SERVICE_ICONS.get(service_id, DEFAULT_SERVICE_ICON)
-
-
-def _phone_href(phone: str) -> str:
-    return phone.replace(" ", "").replace("(", "").replace(")", "")
-
-
-# Default Swedish nav labels per scaffold route id. Unknown ids fall back
-# to a slug-to-Title-Case form via _nav_label_for_route. Centralised so
-# different scaffolds share the same vocabulary (e.g. "contact" -> "Kontakt"
-# everywhere) without duplicating literals in each renderer.
-_NAV_LABEL_BY_ROUTE_ID: dict[str, str] = {
-    "home": "Hem",
-    "services": "Tjänster",
-    "products": "Produkter",
-    "about": "Om oss",
-    "contact": "Kontakt",
-    # B132 follow-up sprint 2026-05-21: wizardMustHave-driven extras
-    # land as real routes for local-service-business via the new
-    # _wizard_extra_routes helper in packages/generation/planning/plan.py.
-    # Labels here keep the nav copy operator-facing in Swedish without
-    # forcing each renderer to repeat the same string.
-    "faq": "Vanliga frågor",
-    "gallery": "Galleri",
-    "map": "Hitta hit",
-    "team": "Team",
-    "pricing": "Priser",
-    "portfolio": "Portfolio",
-    # restaurant-hospitality scaffold routes — Issue #90. The scaffold's
-    # routes.json declares Swedish slugs ``/meny`` and ``/bokning``; the
-    # nav must use restaurant-flavoured labels rather than fall through
-    # to ``_nav_label_for_route``'s slug-to-title-case fallback. We also
-    # override the "contact" label for restaurants by relying on the
-    # generic "Kontakt" entry above — the scaffold uses route id
-    # ``contact`` so it picks up the same label as LSB/commerce.
-    "menu": "Meny",
-    "booking": "Boka bord",
-    # Runtime-active Path B scaffolds (clinic-healthcare,
-    # professional-services, agency-studio) use these route ids.
-    "treatments": "Behandlingar",
-    "expertise": "Expertis",
-    "work": "Arbeten",
-}
 
 
 # Copy fragments per "listing" route id (services vs products). render_home
@@ -2535,361 +1131,6 @@ _LISTING_COPY_BY_ROUTE_ID: dict[str, dict[str, str]] = {
         "cta": "Se våra arbeten",
     },
 }
-
-
-# Demo-baseline-fix 1C (B96): hero CTA copy keyed on scaffold + conversion
-# goals. ``ecommerce-lite`` (or any project whose conversionGoals signal
-# purchase intent) gets a shopping verb; bokningsdrivna verksamheter
-# (``booking_request`` i conversionGoals) får boka-verbet; resten faller
-# tillbaka på "Begär offert" som var hardcoded före re-Verifierings-Scout
-# 2026-05-15.
-_HERO_CTA_VARIANT_LABELS: dict[str, dict[str, str]] = {
-    "shop": {"sv": "Shoppa nu", "en": "Shop now"},
-    "booking": {"sv": "Boka tid", "en": "Book a time"},
-    "quote": {"sv": "Begär offert", "en": "Request a quote"},
-}
-
-_SHOP_CONVERSION_GOALS: frozenset[str] = frozenset(
-    {"product_purchase", "shop_visit", "purchase"}
-)
-_BOOKING_CONVERSION_GOALS: frozenset[str] = frozenset(
-    {"booking_request", "book_appointment"}
-)
-_SHOP_BUSINESS_TYPES: frozenset[str] = frozenset(
-    {
-        "e-commerce",
-        "ecommerce",
-        "ecommerce-shop",
-        "ecommerce-store",
-        "online-shop",
-        "shop",
-        "webshop",
-        "webbshop",
-    }
-)
-_BOOKING_BUSINESS_TYPES: frozenset[str] = frozenset(
-    {
-        "hair-salon",
-        "hairdresser",
-        "frisör",
-        "barber",
-        "barber-shop",
-        "naprapat-clinic",
-        "naprapath-clinic",
-        "naprapat",
-        "naprapath",
-        "naprapatklinik",
-        "chiropractor",
-        "chiropractic-clinic",
-        "massage",
-        "massage-therapist",
-        "physiotherapist",
-        "physiotherapy-clinic",
-        "dentist",
-        "dental-clinic",
-        "personal-training",
-        "personal-trainer",
-    }
-)
-
-
-def _normalize_business_type(value: object) -> str:
-    """Normalize briefModel business type variants for CTA fallback lookup.
-
-    B150: briefModel sometimes emits multi-word business types
-    ("massage studio", "yoga studio", "personal trainer studio"). The
-    compact slug ("massage-studio") does not appear in
-    ``_BOOKING_BUSINESS_TYPES`` or ``_SHOP_BUSINESS_TYPES``, which made
-    ``_hero_cta_variant`` fall through to the generic "Begär offert" CTA
-    instead of firing "Boka tid" / "Handla nu" for these branscher. We
-    therefore try progressively shorter dash-prefixes and return the
-    longest prefix that is itself a registered slug. The function never
-    invents new slugs — it can only return strings that the CTA-resolver
-    already knows about, or the unchanged compact form.
-    """
-    raw = str(value or "").strip().lower()
-    if not raw:
-        return ""
-    compact = raw.replace("_", "-").replace(" ", "-")
-    if compact.startswith("naprapat") or compact.startswith("naprapath"):
-        return "naprapat-clinic"
-    if compact in {"frisor", "frisör", "hairdresser"}:
-        return "hair-salon"
-    if compact in {"webshop", "webbshop", "online-shop"}:
-        return "e-commerce"
-    if compact in _BOOKING_BUSINESS_TYPES or compact in _SHOP_BUSINESS_TYPES:
-        return compact
-    if "-" in compact:
-        parts = compact.split("-")
-        for n in range(len(parts) - 1, 0, -1):
-            prefix = "-".join(parts[:n])
-            if prefix in _BOOKING_BUSINESS_TYPES or prefix in _SHOP_BUSINESS_TYPES:
-                return prefix
-    return compact
-
-
-def _hero_cta_variant(dossier: dict) -> str:
-    """Return the hero CTA variant key for this Project Input.
-
-    Explicit conversion goals win first. Business type is then used as
-    the B100 fallback for short prompts where briefModel leaves
-    ``conversionGoals=[]``. The scaffold id remains the final defensive
-    fallback because operators sometimes pin ``ecommerce-lite`` without
-    filling conversionGoals.
-    """
-    scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
-    company = dossier.get("company") or {}
-    business_type = _normalize_business_type(company.get("businessType"))
-    goals = {
-        str(goal).strip().lower()
-        for goal in (dossier.get("conversionGoals") or [])
-        if isinstance(goal, str)
-    }
-    if goals & _SHOP_CONVERSION_GOALS:
-        return "shop"
-    if goals & _BOOKING_CONVERSION_GOALS:
-        return "booking"
-    if business_type in _SHOP_BUSINESS_TYPES:
-        return "shop"
-    if business_type in _BOOKING_BUSINESS_TYPES:
-        return "booking"
-    if scaffold_id == "ecommerce-lite":
-        return "shop"
-    return "quote"
-
-
-def _hero_cta_label(dossier: dict) -> str:
-    """Return the hero CTA label string for this Project Input.
-
-    Reads ``dossier["language"]`` (defaults to ``sv``) and routes
-    through ``_hero_cta_variant`` so render_home and render_services
-    share the same wording. Values are drawn from the whitelist in
-    ``_HERO_CTA_VARIANT_LABELS`` so the returned string is safe to
-    interpolate into TSX without JSX-escaping (it never contains
-    angle brackets, quotes or curlies).
-    """
-    language = (dossier.get("language") or "sv").strip().lower()
-    if language not in ("sv", "en"):
-        language = "sv"
-    variant = _hero_cta_variant(dossier)
-    return _HERO_CTA_VARIANT_LABELS[variant][language]
-
-
-# B102 (re-Verifierings-Scout 3 2026-05-18): commerce-CTA på /produkter
-# var hardcoded till "Fråga om en beställning" / "ShoppingBag"-glyfen, vilket
-# läste som en offerttjänst snarare än shop-flöde. Vi behåller länken mot
-# kontakt-routen (ingen checkout finns ännu i builder MVP) men byter
-# verbet så tonen följer hero-CTA "Shoppa nu". Whitelist-baserade
-# strängar håller TSX-interpolationen säker utan JSX-escape.
-_COMMERCE_BOTTOM_CTA_LABELS: dict[str, str] = {
-    "sv": "Hör av dig för att beställa",
-    "en": "Get in touch to order",
-}
-
-
-def _commerce_bottom_cta_label(dossier: dict) -> str:
-    """Return the /produkter bottom-CTA label string.
-
-    B102: "Fråga om en beställning" lät som en offert/förfrågan-tjänst
-    på e-handel-cases där hero redan stod "Shoppa nu". Den nya copyn
-    håller fortfarande den verbala dörren öppen mot kontakt-routen (ingen
-    checkout finns i builder MVP) men landar i shop-tonalitet via verbet
-    "beställa" / "order". Returvärdet är hämtat från en whitelist så
-    interpolationen i TSX är säker utan JSX-escape.
-    """
-    language = (dossier.get("language") or "sv").strip().lower()
-    if language not in _COMMERCE_BOTTOM_CTA_LABELS:
-        language = "sv"
-    return _COMMERCE_BOTTOM_CTA_LABELS[language]
-
-
-def _hero_cta_target_path(
-    dossier: dict,
-    listing_route: dict | None,
-    contact_path: str,
-) -> str:
-    """Return the route the hero CTA should link to.
-
-    B101 (re-Verifierings-Scout 3 2026-05-18): a hero CTA labelled
-    "Shoppa nu" / "Shop now" used to point at the scaffold contact
-    route even when the build emitted a real ``/produkter`` listing,
-    so the operator-visible button promised one thing and the click
-    landed somewhere else. The new rule: when the CTA variant is
-    ``shop`` and the scaffold actually emits a products listing, the
-    hero CTA jumps to that listing route. Booking and quote variants
-    keep contact as the primary target because there is no equivalent
-    "list of bookable slots" surface in the current scaffolds. Shop
-    variants fall back to contact when the scaffold has no products
-    route - the label still reads "Shoppa nu" but at least the click
-    lands on a real page instead of inventing ``/produkter`` for
-    scaffolds that never declared it.
-    """
-    variant = _hero_cta_variant(dossier)
-    if (
-        variant == "shop"
-        and listing_route is not None
-        and listing_route.get("id") == "products"
-        and listing_route.get("path")
-    ):
-        return listing_route["path"]
-    return contact_path
-
-
-def _location_is_country_only(location: dict) -> bool:
-    """Return True when ``location.city`` equals ``location.country``.
-
-    Demo-baseline-fix 1C (B95): when the brief returns a country name
-    as ``locationHint`` (or omits it entirely), ``_placeholder_location``
-    falls back to ``city == country`` as a marker. ``render_home`` uses
-    this helper to suppress the hero ortstag rather than rendering the
-    country name as if it were a city.
-    """
-    city = (location.get("city") or "").strip().lower()
-    country = (location.get("country") or "").strip().lower()
-    return bool(city) and city == country
-
-
-def _nav_label_for_route(route_id: str) -> str:
-    """Return the Swedish nav label for a scaffold route id.
-
-    Known ids use the centralised lookup. Unknown ids fall back to a
-    human-readable form so an early-preview scaffold can still produce
-    a sensible nav without first registering its labels here.
-    """
-    if route_id in _NAV_LABEL_BY_ROUTE_ID:
-        return _NAV_LABEL_BY_ROUTE_ID[route_id]
-    return route_id.replace("-", " ").replace("_", " ").title()
-
-
-def _nav_items_from_scaffold(
-    scaffold_default_routes: list[dict],
-    dossier_routes: list[str],
-    extra_routes: list[dict] | None = None,
-) -> list[tuple[str, str]]:
-    """Build the (href, label) nav items for header + footer.
-
-    Driven by the scaffold's ``defaultRoutes`` (so different scaffolds
-    can emit different nav structures) plus any Dossier-contributed
-    routes that should appear in the nav. Currently the only such
-    Dossier-route is ``/spel`` (interactive-game-loop); when more
-    Dossiers add navigable pages this branch widens.
-
-    Dossier-routes are deduped against the scaffold paths so a future
-    scaffold that adopts ``/spel`` in ``defaultRoutes`` does not get
-    the entry rendered twice (B52). Scaffold order is preserved; the
-    Dossier-injected route lands at the end, after the scaffold's own
-    nav structure.
-
-    ``extra_routes`` carries wizard-driven routes (B132 follow-up
-    sprint 2026-05-21): they land after scaffold defaults but before
-    the contact CTA in the nav order. Same dedupe rule as for
-    dossier routes — a path already declared by the scaffold or by a
-    dossier wins, so emitting a wizard extra cannot duplicate the
-    visible nav item.
-    """
-    items: list[tuple[str, str]] = [
-        (route["path"], _nav_label_for_route(route["id"])) for route in scaffold_default_routes
-    ]
-    existing_paths = {href for href, _ in items}
-    if extra_routes:
-        # B148: look up the contact route's actual path from the scaffold
-        # rather than hardcoding "/kontakt". restaurant-hospitality uses
-        # "/hitta-hit" and future scaffolds may pick other ids — the
-        # insert-before-contact heuristic must follow the scaffold, not
-        # the most common path. Mirrors the lookup pattern in
-        # ``_pick_contact_route`` (no SystemExit here — nav-building must
-        # stay defensive even if a scaffold lacks a contact route, in
-        # which case wizard-extras simply append to the end).
-        contact_path = next(
-            (
-                route.get("path")
-                for route in scaffold_default_routes
-                if route.get("id") == "contact"
-            ),
-            None,
-        )
-        contact_idx: int | None = None
-        if isinstance(contact_path, str) and contact_path:
-            contact_idx = next(
-                (i for i, (href, _label) in enumerate(items) if href == contact_path),
-                None,
-            )
-        for route in extra_routes:
-            if not isinstance(route, dict):
-                continue
-            path = route.get("path")
-            route_id = route.get("id") or ""
-            if not isinstance(path, str) or not path or path in existing_paths:
-                continue
-            entry = (path, _nav_label_for_route(route_id))
-            if contact_idx is not None:
-                items.insert(contact_idx, entry)
-                contact_idx += 1
-            else:
-                items.append(entry)
-            existing_paths.add(path)
-    if "/spel" in dossier_routes and "/spel" not in existing_paths:
-        items.append(("/spel", "Spel"))
-        existing_paths.add("/spel")
-    return items
-
-
-def _pick_contact_route(
-    scaffold_default_routes: list[dict],
-) -> dict:
-    """Return the scaffold's contact route.
-
-    Renderers that link operators to the contact page route hrefs
-    through this helper so a scaffold that ever moves the contact id
-    to ``/kontakta-oss`` keeps its CTAs aligned with the nav. Missing
-    contact routes fail fast: otherwise the builder could silently emit
-    CTA links to ``/kontakt`` without writing the matching page.
-    """
-    for route in scaffold_default_routes:
-        if route.get("id") == "contact":
-            return route
-    route_ids = [str(route.get("id", "<missing>")) for route in scaffold_default_routes]
-    raise SystemExit(
-        "Builder failed: scaffold routes.json defaultRoutes must include "
-        "a route with id='contact' because generated navigation and CTAs "
-        f"link to the contact page. Found route ids: {route_ids!r}."
-    )
-
-
-def _pick_listing_route(
-    scaffold_default_routes: list[dict],
-) -> dict | None:
-    """Return the scaffold's primary listing route (services or products).
-
-    Used by ``render_home`` to point the secondary CTA at the right
-    place: ``/tjanster`` for local-service-business, ``/produkter``
-    for ecommerce-lite. Returns ``None`` for scaffolds that declare
-    neither (the home page then omits the listing cross-link entirely
-    instead of inventing a path that has no matching route).
-    """
-    by_id = {r["id"]: r for r in scaffold_default_routes}
-    for candidate in ("services", "products", "treatments", "expertise", "work"):
-        if candidate in by_id:
-            return by_id[candidate]
-    return None
-
-
-def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) -> list[str]:
-    used: set[str] = {
-        DEFAULT_SERVICE_ICON,
-        "Phone",
-        "Mail",
-        "MapPin",
-        "Clock",
-        "ShieldCheck",
-        "ArrowRight",
-        "Quote",
-    }
-    for svc in services:
-        used.add(_icon_for_service(svc["id"]))
-    if "/spel" in dossier_routes:
-        used.add("Gamepad2")
-    return sorted(used)
 
 
 # Sprint 5 — postMessage-lyssnare som Sajtbyggarens Site Inspector
@@ -3119,249 +1360,6 @@ def assert_routes_present(target: Path, routes: list[str]) -> None:
 # ---------------------------------------------------------------------------
 # Mock artefacts (no LLM yet)
 # ---------------------------------------------------------------------------
-
-
-_OPERATOR_DIRECTIVE_NOTE_PREFIX = "Operator: "
-_MOOD_VISUAL_NOTE_PREFIX = "Visual mood: "
-
-
-def _mood_visual_note_blocks(dossier: dict) -> list[str]:
-    """Return planner notes from existing mood-image Vision metadata."""
-    blocks: list[str] = []
-    for ref in _iter_mood_refs(dossier):
-        subject = ref.get("visionSubject")
-        confidence = ref.get("visionConfidence")
-        has_subject = isinstance(subject, str) and bool(subject.strip())
-        has_confidence = isinstance(confidence, str) and bool(confidence.strip())
-        if not has_subject and not has_confidence:
-            continue
-
-        parts: list[str] = []
-        alt = ref.get("alt")
-        if isinstance(alt, str) and alt.strip():
-            parts.append(alt.strip())
-        if has_subject:
-            parts.append(f"subject: {subject.strip()}")
-        if has_confidence:
-            parts.append(f"confidence: {confidence.strip()}")
-        if parts:
-            blocks.append(f"{_MOOD_VISUAL_NOTE_PREFIX}{'; '.join(parts)}")
-    return blocks
-
-
-def _apply_operator_directive_note(brief: dict, dossier: dict) -> None:
-    """Prepend deterministic operator and mood context to Site Brief notes.
-
-    Gap 5 adds ``directives.notesForPlanner`` with prefix ``"Operator: "``.
-    Gap 9 adds existing Vision metadata from ``moodImages`` with prefix
-    ``"Visual mood: "`` when those fields are already present on the
-    AssetRef. Missing/empty inputs leave the brief untouched.
-    """
-    blocks: list[str] = []
-    directives = dossier.get("directives")
-    if isinstance(directives, dict):
-        raw_note = directives.get("notesForPlanner")
-        if isinstance(raw_note, str):
-            note = raw_note.strip()
-            if note:
-                blocks.append(f"{_OPERATOR_DIRECTIVE_NOTE_PREFIX}{note}")
-
-    blocks.extend(_mood_visual_note_blocks(dossier))
-    if not blocks:
-        return
-
-    existing = brief.get("notesForPlanner")
-    if isinstance(existing, str) and existing.strip():
-        blocks.append(existing.strip())
-    brief["notesForPlanner"] = "\n\n".join(blocks)
-
-
-def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
-    """Mock Site Brief derived from the dossier (no LLM).
-
-    Returns the canonical Site Brief artefakt shape locked in
-    ``governance/schemas/site-brief.schema.json`` (ADR 0013). Project Input
-    fields are projected into the canonical fields rather than written
-    alongside; the per-Project-Input data still lives in the source file
-    under ``examples/`` for downstream phases that need the raw company /
-    trust-signal payload.
-
-    ``requestedCapabilities`` honours an explicit value from the Project
-    Input, including an explicit empty list. Only when the field is absent
-    does the builder fall back to the service-id stub.
-    """
-    requested = dossier.get("requestedCapabilities")
-    if requested is None:
-        requested = [svc["id"] for svc in dossier["services"]]
-    company = dossier["company"]
-    location = dossier.get("location") or {}
-    tone_block = dossier.get("tone") or {}
-    if isinstance(tone_block, dict):
-        tone_words = [tone_block.get("primary")] + list(tone_block.get("secondary") or [])
-        tone = [t for t in tone_words if t]
-    else:
-        tone = list(tone_block)
-    location_parts = [
-        location.get("city"),
-        location.get("region"),
-        location.get("country"),
-    ]
-    location_hint = ", ".join(p for p in location_parts if p) or None
-    brief = {
-        "runId": run_id,
-        "language": dossier["language"],
-        "rawPrompt": project_input_to_brief_prompt(dossier),
-        "businessTypeGuess": company.get("businessType"),
-        "pageCount": None,
-        "tone": tone,
-        "targetAudience": [],
-        "requestedCapabilities": list(requested),
-        "locationHint": location_hint,
-        "conversionGoals": list(dossier.get("conversionGoals") or []),
-        "servicesMentioned": [svc["id"] for svc in dossier.get("services", [])],
-        "contentDepth": None,
-        "notesForPlanner": (
-            f"Mock brief for Project Input '{dossier.get('siteId')}' - planningModel "
-            "wires in Sprint 2B."
-        ),
-        "sourceModelRole": "briefModel",
-        "modelUsed": "mock",
-        "briefSource": "mock-no-key",
-        "briefError": None,
-        "createdAt": utc_now().isoformat(timespec="seconds"),
-        "scaffoldHint": scaffold["id"],
-    }
-    _apply_operator_directive_note(brief, dossier)
-    return brief
-
-
-def resolve_brief_model() -> str:
-    """Resolve briefModel via the canonical helper in packages.generation.brief.
-
-    Thin local wrapper kept only so the rest of this module can call it
-    without importing through `packages.generation.brief.resolve_brief_model`
-    everywhere.
-    """
-    from packages.generation.brief import resolve_brief_model as _resolve
-
-    return _resolve()
-
-
-def _join_values(values: list[Any]) -> str:
-    return ", ".join(str(value) for value in values if value)
-
-
-def project_input_to_brief_prompt(dossier: dict) -> str:
-    """Create deterministic briefModel input from a Project Input.
-
-    Builder examples already contain structured Project Input data, while
-    briefModel expects a raw prompt. This adapter only restates existing facts
-    so Phase 1 can run without inventing additional planning behavior.
-    """
-    company = dossier["company"]
-    location = dossier["location"]
-    tone = dossier.get("tone", {})
-    selected = dossier.get("selectedDossiers", {})
-
-    services = "\n".join(
-        f"- {service['id']}: {service['label']} — {service['summary']}"
-        for service in dossier.get("services", [])
-    )
-    trust = "\n".join(f"- {item}" for item in dossier.get("trustSignals", []))
-
-    return (
-        "Build a business website from this Project Input.\n\n"
-        f"Company: {company.get('name')}\n"
-        f"Business type: {company.get('businessType')}\n"
-        f"Tagline: {company.get('tagline')}\n"
-        f"Story: {company.get('story')}\n"
-        f"Location: {location.get('city')}, {location.get('region')}, {location.get('country')}\n"
-        f"Service areas: {_join_values(location.get('serviceAreas', []))}\n"
-        f"Language: {dossier.get('language')}\n"
-        f"Tone primary: {tone.get('primary')}\n"
-        f"Tone secondary: {_join_values(tone.get('secondary', []))}\n"
-        f"Tone avoid: {_join_values(tone.get('avoid', []))}\n"
-        f"Conversion goals: {_join_values(dossier.get('conversionGoals', []))}\n"
-        f"Requested capabilities: {_join_values(dossier.get('requestedCapabilities', []))}\n"
-        f"Required dossiers: {_join_values(selected.get('required', []))}\n\n"
-        "Services:\n"
-        f"{services}\n\n"
-        "Trust signals:\n"
-        f"{trust}\n"
-    )
-
-
-def _mock_brief_after_llm_failure(
-    run_id: str,
-    dossier: dict,
-    scaffold: dict,
-    *,
-    error: str,
-    attempted_model: str | None,
-) -> dict:
-    brief = build_site_brief_mock(run_id, dossier, scaffold)
-    brief.update(
-        {
-            "briefSource": "mock-llm-error",
-            "briefError": error,
-            "attemptedModel": attempted_model,
-        }
-    )
-    return brief
-
-
-def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
-    """Build Site Brief with briefModel when available, otherwise mock fallback."""
-    from packages.generation.brief import has_openai_api_key
-
-    if not has_openai_api_key():
-        print("No OPENAI_API_KEY - using mock Site Brief")
-        return build_site_brief_mock(run_id, dossier, scaffold)
-
-    model: str | None = None
-    try:
-        model = resolve_brief_model()
-        prompt = project_input_to_brief_prompt(dossier)
-
-        from packages.generation.brief import extract_site_brief, site_brief_to_artifact
-
-        print(f"Calling briefModel ({model}) for Site Brief")
-        result = extract_site_brief(
-            prompt,
-            model=model,
-            language_hint=dossier.get("language"),
-        )
-        if result.source != "real":
-            error = result.error or f"briefModel returned fallback source {result.source}"
-            print(
-                f"Warning: briefModel failed - using mock Site Brief fallback ({error})",
-                file=sys.stderr,
-            )
-            return _mock_brief_after_llm_failure(
-                run_id,
-                dossier,
-                scaffold,
-                error=error,
-                attempted_model=model,
-            )
-
-        brief = site_brief_to_artifact(result, run_id=run_id, model=model)
-        brief["scaffoldHint"] = scaffold["id"]
-        _apply_operator_directive_note(brief, dossier)
-        return brief
-    except Exception as exc:  # noqa: BLE001
-        error = f"{type(exc).__name__}: {exc}"
-        print(
-            f"Warning: briefModel path failed - using mock Site Brief fallback ({error})",
-            file=sys.stderr,
-        )
-        return _mock_brief_after_llm_failure(
-            run_id,
-            dossier,
-            scaffold,
-            error=error,
-            attempted_model=model,
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -4176,11 +2174,20 @@ def build(
     ``runs_dir`` defaults to ``RUNS_DIR`` (``data/runs``); pass an isolated
     path (``tmp_path`` in tests) to keep the canonical history clean.
     ``generated_dir`` overrides where the dev-preview site is emitted.
-    ``auto_prune`` runs the opt-in retention sweep from
+    ``auto_prune`` runs the retention sweep from
     ``packages.generation.maintenance.auto_prune_all`` before Phase 0 so
     ``data/runs/``, ``data/prompt-inputs/`` and ``.generated/`` stay under
     the caps configured in ``.env``. Disabled automatically when ``runs_dir``
-    is overridden (tests with ``tmp_path``).
+    is overridden (tests with ``tmp_path``). The ``build_site.py`` CLI now
+    leaves this OFF unless ``--allow-prune`` is passed, so a manual or smoke
+    ``--dossier`` build can NEVER silently delete existing prompt-input
+    sidecars / runs / previews just because ``SAJTBYGGAREN_MAX_*`` caps are
+    set (the data-loss trap a smoke build would otherwise hit when there are
+    more sites on disk than the cap). The Viewser product flow opts in
+    explicitly via ``--allow-prune`` (apps/viewser/lib/build-runner.ts), and
+    the prompt-driven create path keeps its own sweep in
+    ``scripts/prompt_to_project_input.py``, so retention behaviour there is
+    unchanged.
 
     ``prompt_inputs_dir`` (Glue 1): where to persist a discoverable Project
     Input sidecar for a fresh init build that did not come through
@@ -4947,13 +2954,25 @@ def build_targeted_version(
                 + mismatch
             )
 
-    # Affected routes: prefer the apply_result, then an explicit list, then the
-    # meta provenance's patch fields, then the root route as a documented default.
+    # Affected routes: UNION the patch-derived routes (from the apply) with the
+    # surfaced section routes (passed explicitly via ``affected_routes``), then
+    # fall back to the meta provenance's patch fields and finally the root route.
+    # When a follow-up combines a normal patch (e.g. "home") with a visible
+    # section_add (e.g. ["faq"]), letting the patch route override the surfaced
+    # route dropped "faq" - so it reported only "home" though /faq changed and
+    # warned about an unexpected route (#221 P2). Order-preserving + deduped:
+    # patch route(s) first, then surfaced section route(s); neither overrides the
+    # other.
     affected: list[str] = []
-    if apply_result is not None:
-        affected = affected_routes_from_apply(apply_result)
-    if not affected and affected_routes:
-        affected = [route for route in affected_routes if isinstance(route, str)]
+    patch_routes = (
+        affected_routes_from_apply(apply_result) if apply_result is not None else []
+    )
+    explicit_routes = [
+        route for route in (affected_routes or []) if isinstance(route, str)
+    ]
+    for route_id in (*patch_routes, *explicit_routes):
+        if route_id and route_id not in affected:
+            affected.append(route_id)
     if not affected and isinstance(provenance, dict):
         for entry in provenance.get("appliedCapabilities") or []:
             field = entry.get("patchField") if isinstance(entry, dict) else None
@@ -5258,22 +3277,38 @@ def run_followup_chain(
     is_section_add = decision.editKind == "section_add" or any(
         subtask.editKind == "section_add" for subtask in decision.subtasks
     )
+    # Capability -> coarse inline position from the router target ("överst"/
+    # "längst ner"), threaded into apply so ADR 0038 can place an injected
+    # section at the top or bottom of the route order instead of the default
+    # slot. Built parallel to ``section_types`` so a per-section/per-subtask
+    # target maps to the capability that section_add resolves to.
+    section_positions: dict[str, str] = {}
     if is_section_add:
         from packages.generation.followup.section_directives import (
+            SECTION_TYPE_CAPABILITY,
             resolve_section_capabilities,
         )
 
         section_types: list[str | None] = []
+        typed_targets: list[tuple[str | None, Any]] = []
         if decision.editKind == "section_add":
             section_types.append(decision.componentIntent)
-        section_types.extend(
-            subtask.componentIntent
-            for subtask in decision.subtasks
-            if subtask.editKind == "section_add"
-        )
+            typed_targets.append((decision.componentIntent, decision.target))
+        for subtask in decision.subtasks:
+            if subtask.editKind == "section_add":
+                section_types.append(subtask.componentIntent)
+                typed_targets.append((subtask.componentIntent, subtask.target))
         added_capabilities, section_unsupported = resolve_section_capabilities(
             section_types
         )
+        for section_type, target in typed_targets:
+            capability = SECTION_TYPE_CAPABILITY.get(section_type or "")
+            position = getattr(target, "position", None)
+            # The router emits top/bottom for "överst"/"längst ner"; map them to
+            # the schema's route-order positions. left/right/center are intra-
+            # section and ignored here (default slot).
+            if capability and position in ("top", "bottom"):
+                section_positions[capability] = position
 
     if not plan.patches and theme_directive is None and not added_capabilities:
         no_edit_note = (
@@ -5328,6 +3363,7 @@ def run_followup_chain(
             runs_dir=runs_root,
             theme_directive=theme_directive,
             added_capabilities=added_capabilities,
+            section_positions=section_positions,
         )
     except PatchApplyError as exc:
         return _result(
@@ -5455,6 +3491,17 @@ def main() -> int:
             "the sibling folder ../sajtbyggaren-output/.generated."
         ),
     )
+    parser.add_argument(
+        "--allow-prune",
+        action="store_true",
+        help=(
+            "Opt in to the retention sweep (auto_prune_all) before building. "
+            "OFF by default so a manual or smoke `--dossier` build NEVER deletes "
+            "existing data/prompt-inputs/ sidecars, data/runs/ or .generated/ "
+            "previews when SAJTBYGGAREN_MAX_* caps are set in .env. The Viewser "
+            "product flow passes this explicitly to keep its retention behaviour."
+        ),
+    )
     args = parser.parse_args()
 
     runs_dir = Path(args.runs_dir).resolve() if args.runs_dir else None
@@ -5489,6 +3536,7 @@ def main() -> int:
         do_build=not args.skip_build,
         runs_dir=runs_dir,
         generated_dir=args.generated_dir,
+        auto_prune=args.allow_prune,
     )
     return 0
 

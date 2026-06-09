@@ -26,6 +26,7 @@ import { useFocusTrap } from "@/lib/use-focus-trap";
 
 import { DEMO_PROFILES } from "./demo-answers";
 import { MoreInfoDialog, type MoreInfoTabId } from "./more-info-dialog";
+import { ReviewSummary } from "./review-summary";
 import { AssetsStep } from "./steps/assets-step";
 import { FoundationStep, type ScrapeState } from "./steps/foundation-step";
 import { FunctionsStep } from "./steps/functions-step";
@@ -614,6 +615,16 @@ export function DiscoveryWizard({
                       eller komplettera här.
                     </p>
                   </div>
+
+                  {/* Lätt review-summary precis innan "Skapa sajt": en
+                      hopfällbar rad som ärligt sammanfattar inmatade svar och
+                      lyfter luckor (kontakt/om-text/bild). "Ändra" hoppar till
+                      rätt tab eller öppnar Mer information-popupen. */}
+                  <ReviewSummary
+                    answers={answers}
+                    onJumpToStep={goToStep}
+                    onOpenMoreInfo={openMoreInfo}
+                  />
                 </>
               ) : null}
             </div>

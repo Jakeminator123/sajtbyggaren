@@ -203,6 +203,49 @@ def test_apply_creates_next_version_with_capability(
     ) + "\n"
 
 
+def test_section_add_surfacing_survives_duplicate_capability_from_patch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """#221 P2: when the SAME capability arrives BOTH via a component patch and a
+    section_add, the capability-dedupe must NOT suppress the section_add visible
+    surfacing. faq-section is mounted exactly once, but /faq is still surfaced.
+
+    Before the fix, ``section_capabilities_applied`` was derived from the merged
+    ``capabilities`` filtered by ``sectionAdd:`` patchField; the dedupe kept only
+    the component-patch entry (no ``sectionAdd:`` prefix), so the surfacing never
+    ran and /faq stayed invisible even on local-service-business.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    v1_pi, _v1_meta, _v1_path, _ = _init_site(tmp_path)
+    # The generated electrician site is the wizard-route scaffold faq surfaces on.
+    assert v1_pi["scaffoldId"] == "local-service-business"
+
+    # The component patch already classifies to faq-section (the dedupe target),
+    # AND the section_add resolves the SAME capability (the duplicate).
+    result = apply_patch_plan(
+        _capability_patch(capability="faq-section"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        added_capabilities=["faq-section"],
+    )
+
+    assert result.applied is True
+    # The section_add surfacing still ran despite the duplicate capability.
+    assert result.sectionRoutesSurfaced == ["faq"]
+
+    v2_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    # faq-section mounted exactly once (no double-add to requestedCapabilities).
+    assert v2_pi["requestedCapabilities"].count("faq-section") == 1
+
+    v2_meta = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.meta.json").read_text(encoding="utf-8")
+    )
+    assert v2_meta["appliedPatchPlan"]["sectionRoutesSurfaced"] == ["faq"]
+    assert "FAQ" in (v2_meta.get("wizardMustHave") or [])
+
+
 def test_apply_unions_capabilities_without_dropping_existing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

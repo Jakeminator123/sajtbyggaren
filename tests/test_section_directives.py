@@ -24,8 +24,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from packages.generation.followup.section_directives import (  # noqa: E402
+    INLINE_SECTION_PLACEMENTS,
+    INLINE_SECTION_ROUTES,
     SECTION_TYPE_CAPABILITY,
     VISIBLE_SECTION_ROUTES,
+    resolve_inline_section_placements,
     resolve_section_capabilities,
     resolve_visible_section_pages,
 )
@@ -112,6 +115,9 @@ def test_resolution_dedupes_repeated_and_mixed_types() -> None:
 # ---------------------------------------------------------------------------
 
 _GROUNDED_PI = {
+    # local-service-business is the only scaffold that emits the faq/team wizard
+    # routes today, so the visible-route assertions below run on it (#221 P2).
+    "scaffoldId": "local-service-business",
     "company": {"team": [{"name": "Anna Ek", "role": "Grundare"}]},
 }
 
@@ -132,8 +138,11 @@ def test_visible_routes_map_to_known_wizard_labels() -> None:
 
 def test_faq_section_surfaces_a_visible_route() -> None:
     """faq-section is grounded by construction (render_faq answers generic
-    questions with the dossier's own areas/hours), so it surfaces /faq."""
-    visible, mount_only = resolve_visible_section_pages(["faq-section"], {})
+    questions with the dossier's own areas/hours), so it surfaces /faq on a
+    wizard-route scaffold (local-service-business)."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["faq-section"], {"scaffoldId": "local-service-business"}
+    )
     assert visible == [
         {"capability": "faq-section", "wizardLabel": "FAQ", "routeId": "faq"}
     ]
@@ -151,7 +160,8 @@ def test_team_section_visible_only_with_grounded_team() -> None:
     assert mount_only == []
 
     visible_empty, mount_only_empty = resolve_visible_section_pages(
-        ["team-section"], {"company": {"team": []}}
+        ["team-section"],
+        {"scaffoldId": "local-service-business", "company": {"team": []}},
     )
     assert visible_empty == []
     assert len(mount_only_empty) == 1
@@ -179,3 +189,131 @@ def test_visible_pages_dedupe_and_split_mixed_input() -> None:
     )
     assert [page["routeId"] for page in visible] == ["faq", "team"]
     assert [entry["capability"] for entry in mount_only] == ["guarantees"]
+
+
+# ---------------------------------------------------------------------------
+# Scaffold gate (#221 P2): a route-capable capability only surfaces a visible
+# route on a scaffold that actually emits the wizard routes. On any other
+# scaffold (agency-studio, ...) it must be an HONEST mount-only no-op, never a
+# phantom visible route the build cannot render.
+# ---------------------------------------------------------------------------
+
+_AGENCY_GROUNDED_PI = {
+    "scaffoldId": "agency-studio",
+    "company": {"team": [{"name": "Hanna Björk", "role": "Creative Director"}]},
+}
+
+
+def test_faq_section_mount_only_on_non_wizard_scaffold() -> None:
+    """faq-section is grounded by construction, but on a non-wizard scaffold
+    (agency-studio) no /faq renders, so it must stay mount-only - never a
+    phantom visible route (the honesty contract)."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["faq-section"], {"scaffoldId": "agency-studio"}
+    )
+    assert visible == []
+    assert len(mount_only) == 1
+    assert mount_only[0]["capability"] == "faq-section"
+    assert mount_only[0]["reason"]
+
+
+def test_team_section_mount_only_on_non_wizard_scaffold_even_when_grounded() -> None:
+    """Even WITH a grounded team, team-section stays mount-only on a non-wizard
+    scaffold: the scaffold gate is the honest reason no visible route surfaces."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["team-section"], _AGENCY_GROUNDED_PI
+    )
+    assert visible == []
+    assert [entry["capability"] for entry in mount_only] == ["team-section"]
+
+
+def test_missing_scaffold_id_is_mount_only() -> None:
+    """A project_input with no scaffoldId cannot prove the route renders, so a
+    route-capable capability stays mount-only (honest default)."""
+    visible, mount_only = resolve_visible_section_pages(["faq-section"], {})
+    assert visible == []
+    assert len(mount_only) == 1
+    assert mount_only[0]["capability"] == "faq-section"
+
+
+def test_scaffold_gate_matches_canonical_wizard_scaffold_set() -> None:
+    """The gate must use the SAME scaffold set planning uses to emit wizard
+    routes, so surfacing never drifts from what the build actually renders."""
+    from packages.generation.planning.plan import get_wizard_route_scaffolds
+
+    wizard_scaffolds = get_wizard_route_scaffolds()
+    assert "local-service-business" in wizard_scaffolds
+    # Every wizard-route scaffold surfaces faq; a scaffold outside the set does
+    # not. (If a new scaffold opts in upstream, this stays in lock-step.)
+    for scaffold_id in wizard_scaffolds:
+        visible, _ = resolve_visible_section_pages(
+            ["faq-section"], {"scaffoldId": scaffold_id}
+        )
+        assert [page["routeId"] for page in visible] == ["faq"]
+    visible_off, _ = resolve_visible_section_pages(
+        ["faq-section"], {"scaffoldId": "definitely-not-a-wizard-scaffold"}
+    )
+    assert visible_off == []
+
+
+# ---------------------------------------------------------------------------
+# Inline section placements (ADR 0038): a mounted capability that maps to an
+# inline section on a supported scaffold becomes a directives.mountedSections
+# entry so the renderer injects it as a block on a route. The resolver only
+# declares WHERE a section can go; render-time owns the renderer/grounded gates.
+# ---------------------------------------------------------------------------
+
+_LSB_PI = {"scaffoldId": "local-service-business"}
+
+
+def test_inline_placement_for_hours_on_lsb() -> None:
+    """``hours`` maps to an inline hours-summary block on the LSB home route."""
+    placements = resolve_inline_section_placements(["hours"], _LSB_PI)
+    assert placements == [
+        {"capability": "hours", "sectionId": "hours-summary", "routeId": "home"}
+    ]
+
+
+def test_inline_placement_empty_on_non_inline_scaffold() -> None:
+    """A non-allowlisted scaffold gets no inline placements (honest mount-only)."""
+    assert resolve_inline_section_placements(["hours"], {"scaffoldId": "agency-studio"}) == []
+    assert resolve_inline_section_placements(["hours"], {}) == []
+
+
+def test_inline_placement_skips_capabilities_without_inline_section() -> None:
+    """A capability with no inline mapping (e.g. guarantees) yields nothing,
+    so it stays mount-only / dedicated-route-only - never double-surfaced."""
+    assert resolve_inline_section_placements(["guarantees"], _LSB_PI) == []
+    # faq/team keep their dedicated-route path and are NOT inline-placed.
+    assert resolve_inline_section_placements(["faq-section", "team-section"], _LSB_PI) == []
+
+
+def test_inline_placement_dedupes() -> None:
+    """A capability requested twice is placed at most once (order-preserving)."""
+    placements = resolve_inline_section_placements(["hours", "hours"], _LSB_PI)
+    assert [p["capability"] for p in placements] == ["hours"]
+
+
+def test_inline_placement_map_targets_registered_renderers() -> None:
+    """Every inline placement target must be a section id with a registered
+    renderer, so an injection can never SystemExit the dispatcher."""
+    # Importing renderers populates dispatcher._SECTION_RENDERERS at import time.
+    import packages.generation.build.renderers  # noqa: F401
+    from packages.generation.build.dispatcher import _SECTION_RENDERERS
+
+    for capability, placement in INLINE_SECTION_PLACEMENTS.items():
+        assert placement["sectionId"] in _SECTION_RENDERERS, (
+            f"{capability!r} inline placement targets unregistered section "
+            f"{placement['sectionId']!r}"
+        )
+
+
+def test_inline_placement_map_targets_wired_routes() -> None:
+    """Every inline placement must target a route whose renderer threads the
+    injection seam (``INLINE_SECTION_ROUTES``), so the resolver never persists a
+    directive a build cannot render (honesty contract for future routes)."""
+    for capability, placement in INLINE_SECTION_PLACEMENTS.items():
+        assert placement["routeId"] in INLINE_SECTION_ROUTES, (
+            f"{capability!r} inline placement targets unwired route "
+            f"{placement['routeId']!r}"
+        )

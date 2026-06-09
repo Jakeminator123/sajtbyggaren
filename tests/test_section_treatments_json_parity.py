@@ -11,7 +11,8 @@ This module proves the migration is behaviour-preserving:
 
 1. The JSON-backed variant→treatment table reconstructs the exact
    pre-migration ``_SECTION_TREATMENTS_BY_VARIANT`` literal, frozen here
-   as the golden truth.
+   as the snapshot baseline (the frozen-reference test idiom, not the
+   product's Golden Path - see ``docs/glossary.md``).
 2. The JSON-backed planning catalogue reconstructs the exact
    pre-migration ``_SECTION_TREATMENTS_CATALOGUE`` literal.
 3. The dispatcher and the planning module read the SAME JSON files (one

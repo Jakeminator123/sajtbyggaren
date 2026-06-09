@@ -53,6 +53,10 @@ def test_viewser_expected_files_exist() -> None:
         "app/api/prompt/route.ts",
         "app/api/discovery-options/route.ts",
         "components/viewer-panel.tsx",
+        # Bundle-bloat-fix (ADR 0033): den LEGACY/PAUSADE StackBlitz-embed-
+        # vägen lever i en egen lazy-laddad komponent så ``@stackblitz/sdk``
+        # inte prefetchas i ViewerPanel:s eager-chunk vid normal studio-load.
+        "components/stackblitz-preview.tsx",
         "components/token-meter.tsx",
         "components/project-input-picker.tsx",
         "components/run-history.tsx",

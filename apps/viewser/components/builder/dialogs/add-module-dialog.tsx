@@ -17,8 +17,10 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import { useFollowupBuild } from "@/components/builder/use-followup-build";
-import type { PromptBuildOutcome } from "@/components/prompt-builder";
+import {
+  useFollowupBuild,
+  type OnFollowupBuildDone,
+} from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,19 +42,31 @@ import { cn } from "@/lib/utils";
  * MEDVETET INGEN frontend-magi: vi muterar inte previewen direkt
  * (previewen är en cross-origin iframe vi inte kan nå DOM:en i).
  * Vi skickar en strukturerad instruktion genom /api/prompt och låter
- * OpenClaw-apply-bryggan utföra den. Tills backend wirar `section_add`
- * genom apply-bryggan rapporterar bygget ärligt i chatten att
- * sektionstypen inte kunde läggas till än (samma honesty-grind som
- * resten av follow-up-kedjan). När backend-slicen landar börjar denna
- * yta fungera utan ny UI-deploy. Kontraktet till Jakob ligger i
- * docs/agent-inbox.jsonl (topic: module-dragdrop-prep).
+ * OpenClaw-apply-bryggan utföra den.
+ *
+ * Synlighets-ärlighet (ADR 0038, synlig section_add skiva 1): tre
+ * utfall beroende på modultyp, märkta per kort via `effect`:
+ *   - "inline"     → kan renderas som block på startsidan (öppettider;
+ *                    gated på grundat innehåll i backend).
+ *   - "route"      → blir en egen sida (/faq, /team) på LSB-scaffolden.
+ *   - "registered" → monteras men syns inte i previewen än.
+ * Positionsvalen är begränsade till de två routern faktiskt parsar
+ * ("överst" → top = direkt efter hero, "längst ner" → bottom = före
+ * kontakt-CTA:n). Det gamla "Efter hero"-valet saknade parsbart
+ * nyckelord och föll tyst till default — borttaget som falsk
+ * affordance. Kontraktshistorik i docs/agent-inbox.jsonl
+ * (topics: module-dragdrop-prep, wizard-page-suggestions).
  */
+
+type ModuleEffect = "inline" | "route" | "registered";
 
 type ModuleDef = {
   id: string;
   label: string;
   description: string;
   Icon: LucideIcon;
+  /** Vad operatören ärligt kan förvänta sig att se efter bygget. */
+  effect: ModuleEffect;
 };
 
 // Modul-paletten. Etiketterna är operatörsvänlig svenska; id:t är den
@@ -64,16 +78,37 @@ type ModuleDef = {
 // section_add-mål (hero/services är sidsektioner, cta-banner saknar dossier),
 // så de gav en falsk affordance (Vercel-agent-fynd 2026-06-08) och är borttagna.
 const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
-  { id: "gallery", label: "Galleri", description: "Bildrutnät", Icon: Images },
-  { id: "contact-form", label: "Kontaktformulär", description: "Namn, e-post, meddelande", Icon: Mail },
-  { id: "faq", label: "Vanliga frågor", description: "Hopfällbara frågor och svar", Icon: HelpCircle },
-  { id: "testimonials", label: "Omdömen", description: "Kundcitat", Icon: Star },
-  { id: "pricing", label: "Priser", description: "Pris-/paketlista", Icon: Tag },
-  { id: "map", label: "Karta", description: "Plats med adress", Icon: MapPin },
-  { id: "opening-hours", label: "Öppettider", description: "Veckoschema", Icon: Clock },
-  { id: "team", label: "Team", description: "Personalkort", Icon: Users },
-  { id: "trust-badges", label: "Förtroende", description: "Certifikat och logotyper", Icon: ShieldCheck },
+  { id: "gallery", label: "Galleri", description: "Bildrutnät", Icon: Images, effect: "registered" },
+  { id: "contact-form", label: "Kontaktformulär", description: "Namn, e-post, meddelande", Icon: Mail, effect: "registered" },
+  { id: "faq", label: "Vanliga frågor", description: "Hopfällbara frågor och svar", Icon: HelpCircle, effect: "route" },
+  { id: "testimonials", label: "Omdömen", description: "Kundcitat", Icon: Star, effect: "registered" },
+  { id: "pricing", label: "Priser", description: "Pris-/paketlista", Icon: Tag, effect: "registered" },
+  { id: "map", label: "Karta", description: "Plats med adress", Icon: MapPin, effect: "registered" },
+  { id: "opening-hours", label: "Öppettider", description: "Veckoschema", Icon: Clock, effect: "inline" },
+  { id: "team", label: "Team", description: "Personalkort", Icon: Users, effect: "route" },
+  { id: "trust-badges", label: "Förtroende", description: "Certifikat och logotyper", Icon: ShieldCheck, effect: "registered" },
 ];
+
+/** Operatörsvänlig, ärlig etikett per synlighets-utfall. */
+const EFFECT_BADGES: Record<ModuleEffect, { label: string; title: string }> = {
+  inline: {
+    label: "syns på startsidan",
+    // Scaffold-nyansen per msg-0057: inline-rendern gäller i skiva 1 bara
+    // local-service-business-sajter; på andra sajttyper blir den ärligt
+    // mount-only (toasten säger då "registrerad men syns inte").
+    title:
+      "Renderas som ett block på startsidan — förutsatt att sajten har riktigt innehåll för sektionen (inga påhittade uppgifter). Gäller i nuläget sajter byggda på företags-/tjänstemallen; på andra sajttyper registreras den utan att synas än.",
+  },
+  route: {
+    label: "egen sida",
+    title: "Läggs till som en egen sida med länk i menyn (t.ex. /faq).",
+  },
+  registered: {
+    label: "syns inte än",
+    title:
+      "Monteras och registreras i sajtens data men renderas inte i previewen än. Bygget rapporterar ärligt vad som landade.",
+  },
+};
 
 // Sid-mål. Speglar de vanligaste rutterna i en genererad företagssajt.
 const PAGE_TARGETS: ReadonlyArray<{ id: string; label: string }> = [
@@ -83,11 +118,15 @@ const PAGE_TARGETS: ReadonlyArray<{ id: string; label: string }> = [
   { id: "contact", label: "Kontakt" },
 ];
 
-// Positions-slot inom en sida. `clause` blir en del av följdprompten.
+// Positions-slot inom en sida. `clause` blir en del av följdprompten och
+// MÅSTE innehålla ett nyckelord routern parsar (_POSITION_PHRASES i
+// packages/generation/orchestration/router/classify.py): "överst" → top
+// (= direkt efter hero), "längst ner" → bottom (= före kontakt-CTA:n).
+// Endast dessa två honoreras av render-seamen (ADR 0038 skiva 1) — fler
+// val här vore falsk affordance.
 const POSITIONS: ReadonlyArray<{ id: string; label: string; clause: string }> = [
-  { id: "top", label: "Överst", clause: "överst på sidan" },
-  { id: "after-hero", label: "Efter hero", clause: "direkt efter hero-sektionen" },
-  { id: "before-footer", label: "Innan sidfot", clause: "längst ner, precis innan sidfoten" },
+  { id: "top", label: "Överst (efter hero)", clause: "överst på sidan" },
+  { id: "bottom", label: "Längst ner", clause: "längst ner på sidan" },
 ];
 
 type Placement = {
@@ -118,7 +157,7 @@ type AddModuleDialogProps = {
   siteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  onBuildDone: OnFollowupBuildDone;
   isBuilding?: boolean;
   baseRunId?: string | null;
 };
@@ -151,8 +190,9 @@ export function AddModuleDialog({
         key: `${moduleId}-${pageId}-${Date.now()}-${current.length}`,
         moduleId,
         pageId,
-        // Default-position: efter hero på startsidan, annars överst.
-        positionId: pageId === "home" ? "after-hero" : "top",
+        // Default: längst ner (backendens default-slot, före kontakt-CTA:n)
+        // så vi inte överlovar topp-placering operatören inte bett om.
+        positionId: "bottom",
       },
     ]);
   }, []);
@@ -199,9 +239,11 @@ export function AddModuleDialog({
           <DialogTitle>Lägg till modul</DialogTitle>
           <DialogDescription>
             Dra (eller klicka) en modul till en sida. Vi skickar en strukturerad
-            instruktion och bygger om sajten. Obs: exakt sida och position är ett
-            önskemål — backend monterar sektionen men styr inte var den hamnar
-            ännu, och vissa typer monteras utan att synas i previewen direkt.
+            instruktion och bygger om sajten. Märkningen på varje kort visar
+            ärligt vad som syns efter bygget: vissa moduler renderas på
+            startsidan eller blir egna sidor, andra registreras utan att synas
+            än. Exakt position är något vi bara styr på startsidan (överst /
+            längst ner) — finare placering och fler sidor kommer senare.
           </DialogDescription>
         </DialogHeader>
 
@@ -214,6 +256,7 @@ export function AddModuleDialog({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {MODULE_CATALOG.map((mod) => {
                 const Icon = mod.Icon;
+                const badge = EFFECT_BADGES[mod.effect];
                 return (
                   <button
                     key={mod.id}
@@ -224,19 +267,29 @@ export function AddModuleDialog({
                       event.dataTransfer.effectAllowed = "copy";
                     }}
                     onClick={() => addPlacement(mod.id, "home")}
-                    title={`${mod.label} — ${mod.description}`}
-                    aria-label={`Lägg till ${mod.label} (dra till en sida eller klicka för startsidan)`}
+                    title={`${mod.label} — ${mod.description}. ${badge.title}`}
+                    aria-label={`Lägg till ${mod.label} (dra till en sida eller klicka för startsidan) — ${badge.label}`}
                     className={cn(
                       "border-border/60 hover:border-border bg-card/60 flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition active:scale-[0.98] active:cursor-grabbing",
                     )}
                   >
                     <Icon className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="text-foreground block truncate text-[12px] font-medium">
                         {mod.label}
                       </span>
                       <span className="text-muted-foreground block truncate text-[10px]">
                         {mod.description}
+                      </span>
+                      <span
+                        className={cn(
+                          "mt-0.5 block truncate text-[9.5px] font-medium",
+                          mod.effect === "registered"
+                            ? "text-muted-foreground/70"
+                            : "text-emerald-600 dark:text-emerald-400",
+                        )}
+                      >
+                        {badge.label}
                       </span>
                     </span>
                   </button>
@@ -317,10 +370,12 @@ export function AddModuleDialog({
             </div>
           ) : (
             <p className="text-muted-foreground border-border/60 rounded-md border border-dashed px-3 py-2 text-[11px] leading-snug">
-              Modulerna ovan kan backend montera (section_add). Sida och position
-              är ännu ett önskemål — exakt placering kommer senare — och vissa
-              typer monteras utan att synas i previewen direkt. Bygget rapporterar
-              ärligt i chatten vad som faktiskt landade.
+              Modulerna ovan kan backend montera (section_add). Märkningen per
+              kort visar vad som syns: &quot;syns på startsidan&quot; renderas
+              som block (om sajten har riktigt innehåll för sektionen),
+              &quot;egen sida&quot; får en route i menyn, &quot;syns inte än&quot;
+              registreras utan synlig ändring. Bygget rapporterar ärligt i
+              chatten och toasten vad som faktiskt landade.
             </p>
           )}
         </div>

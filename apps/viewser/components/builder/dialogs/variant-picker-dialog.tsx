@@ -3,8 +3,10 @@
 import { Loader2, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { useFollowupBuild } from "@/components/builder/use-followup-build";
-import type { PromptBuildOutcome } from "@/components/prompt-builder";
+import {
+  useFollowupBuild,
+  type OnFollowupBuildDone,
+} from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -50,7 +52,7 @@ type VariantPickerDialogProps = {
   siteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  onBuildDone: OnFollowupBuildDone;
   /** C2 globalt bygg-lås + C1 "Iterera från denna"-pin (från BuilderShell). */
   isBuilding?: boolean;
   baseRunId?: string | null;

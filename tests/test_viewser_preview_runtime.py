@@ -147,74 +147,64 @@ def test_dev_dispatcher_exports_https_signal_to_child() -> None:
 
 
 @pytest.mark.tooling
-def test_viewer_panel_keeps_containerref_mounted_across_unavailable_transitions() -> None:
-    """Stuck-state guard: when a 404-driven setUnavailable(true) used to
-    replace ``<div ref={containerRef}>`` with the pedagogic tips block
-    via an ``unavailable ? tips : <div ref>`` ternary, containerRef.current
-    fell to null. The effect's first-line check
-    ``if (!runId || !containerRef.current) { ... return; }`` then
-    short-circuited on the NEXT runId change, leaving the UI stale
-    because useEffect only depends on ``[runId]`` - the dependency
-    array does not re-trigger on ``unavailable``-transitions, so the
-    fetch never runs for the new runId.
+def test_stackblitz_preview_keeps_containerref_mounted_across_status_transitions() -> None:
+    """Stuck-state guard (flyttad till stackblitz-preview.tsx, ADR 0033):
+    StackBlitz-embedden mountar in i en ``<div ref={containerRef}>``. Görs
+    den divden conditional (t.ex. avmonteras vid loading/fallback/error)
+    faller ``containerRef.current`` till null och effekten kan inte
+    re-embeda vid nästa runId-byte (effekten har bara ``[runId]`` som dep).
 
-    Fix: render containerRef-div ALWAYS and toggle visibility via the
-    Tailwind ``hidden`` class. That keeps containerRef.current bound
-    across transitions so subsequent fetches can run normally.
+    Tidigare bodde detta i ``viewer-panel.tsx`` och toggla:de mot
+    ``unavailable``. Efter bundle-bloat-spliten äger ``StackblitzPreview``
+    sin egen ``status``-state-maskin, så ref-divden måste vara
+    ALWAYS-MOUNTED och bara döljas via Tailwind utifrån ``status``.
 
-    Source-lock both the negative pattern (no ternary swap) and the
-    positive pattern (containerRef-div has ``unavailable``-conditional
-    ``hidden`` in className) so a future refactor cannot regress.
+    Source-lock både negativa mönstret (ingen ternary-swap som avmonterar
+    ref:en) och positiva mönstret (ref-divden styrs av ``status`` via ett
+    observerbart JSX-attribut) så en framtida refactor inte regredierar.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "stackblitz-preview.tsx").read_text(
+        encoding="utf-8"
+    )
 
-    # Negative: containerRef-div must NOT sit as the else-branch of an
-    # `unavailable ? tips : <div ref={containerRef}>` ternary. That
-    # pattern unmounts the ref whenever unavailable flips to true.
+    # Negative: containerRef-div must NOT sit as the else-branch of a
+    # `status... ? (...) : (<div ref={containerRef}>)` ternary. That
+    # pattern unmounts the ref whenever status flips.
     forbidden = re.compile(
-        r"unavailable\s*\?\s*\([\s\S]{0,400}?\)\s*:\s*\(\s*<div\s+ref=\{containerRef\}",
+        r"status[\s\S]{0,40}?\?\s*\([\s\S]{0,400}?\)\s*:\s*\(\s*<div\s+ref=\{containerRef\}",
         re.MULTILINE,
     )
     assert not forbidden.search(text), (
-        "viewer-panel.tsx: containerRef-div får inte sitta i else-grenen "
-        "av en `unavailable ? tips : <div ref>` ternary - det avmonterar "
-        "ref när unavailable=true och låser UI:t i stuck state vid nästa "
-        "runId-byte (effekten har bara `[runId]` som dep)."
+        "stackblitz-preview.tsx: containerRef-div får inte sitta i else-grenen "
+        "av en `status ? ... : <div ref>` ternary - det avmonterar ref:en och "
+        "låser embedden i stuck state vid nästa runId-byte (effekten har bara "
+        "`[runId]` som dep)."
     )
 
-    # Positive (beteende, inte exakt syntax): containerRef måste
-    # vara always-mounted via en `<div ... ref={containerRef} ... />`
-    # som finns OAVSETT `unavailable`-state. Hitta `ref={containerRef}`
-    # och kontrollera att JSX-elementet i samma element-block referar
-    # till `unavailable` på något sätt (className-toggle, data-attr,
-    # cn(...)-helper, eller annan visibility-mekanism) - alla
-    # acceptabla refactorer som behåller beteendet.
-    #
-    # B43 (post-review-2): den tidigare regex låste exakt
-    # `className="...unavailable...hidden"`-ordning + literal `"hidden"`
-    # vilket gjorde att en harmlös `cn(...)` / template-literal-refactor
-    # bröt testet. Nu testar vi bara att unavailable-flaggan påverkar
-    # ref-divden via något observerbart JSX-attribut.
+    # Positive (beteende, inte exakt syntax): containerRef måste vara
+    # always-mounted via en `<div ... ref={containerRef} ... />` som finns
+    # OAVSETT `status`-state, och visibility måste styras av `status` via
+    # något observerbart JSX-attribut (className-toggle, cn(...), etc.).
     ref_element = re.search(
         r"<div\b[^>]*\bref=\{containerRef\}[^>]*/?>",
         text,
     )
     assert ref_element, (
-        "viewer-panel.tsx: ingen `<div ... ref={containerRef} ... />` "
+        "stackblitz-preview.tsx: ingen `<div ... ref={containerRef} ... />` "
         "hittades. Always-mounted pattern kräver en self-closing eller "
         "kort JSX-tag med ref={containerRef}."
     )
-    assert "unavailable" in ref_element.group(0), (
-        "viewer-panel.tsx: ref-div måste referera till `unavailable` i "
-        "ett JSX-attribut (t.ex. className-toggle, data-attr, cn(...)). "
-        "Det signalerar att unavailable-flaggan styr visibility utan att "
-        "avmontera ref:en. Hittad ref-div:\n"
+    assert "status" in ref_element.group(0), (
+        "stackblitz-preview.tsx: ref-div måste referera till `status` i "
+        "ett JSX-attribut (t.ex. className-toggle som döljer den tills "
+        "`status.kind === 'embedded'`). Det signalerar att status styr "
+        "visibility utan att avmontera ref:en. Hittad ref-div:\n"
         f"{ref_element.group(0)!r}"
     )
 
 
 @pytest.mark.tooling
-def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
+def test_stackblitz_preview_guards_cancelled_after_dynamic_import_and_embed() -> None:
     """B43 (post-review-2): the StackBlitz embed path has TWO awaits
     after the initial cancelled-guard: ``await import("@stackblitz/sdk")``
     and ``await sdk.embedProject(...)``. If the operator switches runId
@@ -228,53 +218,54 @@ def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
     node so the next runId starts from a clean slate.
 
     Source-lock the guard density: at least two cancelled-checks must
-    appear between the StackBlitz import and the final setStatus call.
-    """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    appear between the StackBlitz import and the success terminator.
 
-    # Status-pillen ("Förhandsvisning aktiv för {runId}") togs medvetet
-    # bort i christopher-ui refactor:n (krockade visuellt med
-    # SiteHeader-logon). Det ursprungliga B43-testet använde
-    # ``setStatus(\`Förhandsvisning aktiv``-strängen som slutpunkt för
-    # success-blocket; den finns inte längre. Vi ankrar nu på
-    # ``setLoading(false)`` direkt efter iframe-höjd/bredd-setningen,
-    # vilket är den nya success-path-terminatorn.
+    Bundle-bloat-fix (ADR 0033): embedden bor numera i
+    ``stackblitz-preview.tsx`` (lazy via next/dynamic). Success-path-
+    terminatorn är ``setStatus({ kind: "embedded" })`` (StackblitzPreview:s
+    egen state-maskin) i stället för ViewerPanel:s gamla ``setLoading(false)``.
+    """
+    text = (VIEWSER_DIR / "components" / "stackblitz-preview.tsx").read_text(
+        encoding="utf-8"
+    )
+
     block = re.search(
-        r"const sdk = \(await import\(\"@stackblitz/sdk\"\)\)[\s\S]*?setLoading\(false\);\s*\n\s*\}\s*catch",
+        r'const sdk = \(await import\("@stackblitz/sdk"\)\)[\s\S]*?'
+        r'setStatus\(\{\s*kind:\s*"embedded"\s*\}\);\s*\n\s*\}\s*catch',
         text,
     )
     assert block, (
-        "viewer-panel.tsx: kunde inte hitta success-path-blocket från "
-        "StackBlitz-import till setLoading(false)-terminatorn före catch. "
-        "Refactor utan ekvivalent kommunikation av runId-success bryter "
-        "detta test."
+        "stackblitz-preview.tsx: kunde inte hitta success-path-blocket från "
+        "StackBlitz-import till setStatus({ kind: 'embedded' })-terminatorn "
+        "före catch. Refactor utan ekvivalent kommunikation av runId-success "
+        "bryter detta test."
     )
     cancelled_checks = re.findall(r"\bcancelled\b", block.group(0))
     assert len(cancelled_checks) >= 2, (
-        "viewer-panel.tsx success-path saknar tillräcklig cancelled-guard-"
-        "täthet mellan StackBlitz-import och setLoading(false). Förväntat "
-        "minst 2 cancelled-referenser (en efter import, en efter "
-        f"embedProject) - hittade {len(cancelled_checks)}. B43-fyndet: "
-        "stale embed kan mountas i ref-divden om operatör byter runId "
-        "mid-flight."
+        "stackblitz-preview.tsx success-path saknar tillräcklig cancelled-"
+        "guard-täthet mellan StackBlitz-import och setStatus({ kind: "
+        "'embedded' }). Förväntat minst 2 cancelled-referenser (en efter "
+        f"import, en efter embedProject) - hittade {len(cancelled_checks)}. "
+        "B43-fyndet: stale embed kan mountas i ref-divden om operatör byter "
+        "runId mid-flight."
     )
 
     # Verify the node-cleanup on stale embed exists (otherwise we'd
     # just NOT setStatus but the iframe still sits in the DOM). The
-    # cleanup now uses replaceChildren() instead of innerHTML so the
-    # React-owned shell keeps a cleaner DOM mutation pattern.
+    # cleanup uses replaceChildren() so the React-owned shell keeps a
+    # cleaner DOM mutation pattern.
     assert re.search(
         r"if\s*\(\s*cancelled\s*\)\s*\{[\s\S]{0,300}?replaceChildren\(\)",
         text,
     ), (
-        "viewer-panel.tsx: post-embed cancelled-grenen måste rensa "
+        "stackblitz-preview.tsx: post-embed cancelled-grenen måste rensa "
         "containerRef.current så stale embed inte sitter kvar i "
         "den always-mounted ref-divden."
     )
 
 
 @pytest.mark.tooling
-def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
+def test_stackblitz_preview_404_branch_guards_cancelled_before_setstate() -> None:
     """Race-condition guard: when /api/runs/<runId>/files returns 404,
     the in-flight async effect must not write setState for a runId
     that has already been replaced by a newer one. Without the
@@ -285,32 +276,30 @@ def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
     Source-lock the cancelled-check inside the 404 branch so a future
     refactor cannot drop it. The other branches (success, catch) are
     already guarded; this brings the 404 path in line with them.
+
+    Bundle-bloat-fix (ADR 0033): files-fetchen + 404-grenen bor numera i
+    ``stackblitz-preview.tsx`` (lazy via next/dynamic) och skriver
+    ``setStatus({ kind: "unavailable", ... })`` i stället för ViewerPanel:s
+    gamla ``setUnavailable``.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "stackblitz-preview.tsx").read_text(
+        encoding="utf-8"
+    )
 
     # Find the 404 branch and verify a `cancelled` guard sits between
-    # the `response.status === 404` check and the call to setUnavailable.
-    # Multi-line regex is more robust than substring tricks here.
-    #
-    # Argument-shape till setUnavailable är medvetet permissivt
-    # (``setUnavailable\([\s\S]+?\)``) så testet förblir grönt över både
-    # den ursprungliga ``setUnavailable(true)``-formen och den utvidgade
-    # ``setUnavailable({title, message, hint})``-formen som
-    # fix-fallback-headers introducerade. ``[\s\S]+?`` (med ``+``, INTE
-    # ``*``) kräver minst ett tecken inuti parenteserna så ett tomt
-    # ``setUnavailable()``-anrop INTE matchar — det vore en regression
-    # som skulle dölja 404-fallet i UI:t. Race-condition-låsen är
-    # ``if (cancelled) return;`` MELLAN 404-checken och setUnavailable;
-    # argumentets exakta form är inte poängen.
+    # the `response.status === 404` check and the call to setStatus.
+    # ``setStatus\([\s\S]+?\)`` är medvetet permissivt (kräver minst ett
+    # tecken inuti parenteserna så ett tomt anrop inte matchar). Race-
+    # condition-låset är ``if (cancelled) return;`` MELLAN 404-checken
+    # och setStatus; argumentets exakta form är inte poängen.
     pattern = re.compile(
-        r"response\.status\s*===\s*404[\s\S]{0,400}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,400}?setUnavailable\([\s\S]+?\)",
+        r"response\.status\s*===\s*404[\s\S]{0,400}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,400}?setStatus\([\s\S]+?\)",
         re.MULTILINE,
     )
     assert pattern.search(text), (
-        "viewer-panel.tsx 404-branch saknar cancelled-guard innan "
-        "setUnavailable / setStatus. Det skapar race-condition mellan "
-        "snabba runId-byten där en stale 404 skriver över state för en "
-        "nyladdad run."
+        "stackblitz-preview.tsx 404-branch saknar cancelled-guard innan "
+        "setStatus. Det skapar race-condition mellan snabba runId-byten där "
+        "en stale 404 skriver över state för en nyladdad run."
     )
 
 

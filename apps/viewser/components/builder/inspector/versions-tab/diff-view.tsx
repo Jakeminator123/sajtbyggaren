@@ -280,6 +280,21 @@ export function CompareEmptyHint({
   );
 }
 
+// Kort, ärligt fel när VersionsTab:s lazy runtime-``import()`` av
+// jämförelsemodalen failar (nät-glapp/utgången deploy). Bor här (inte inline i
+// versions-tab) så huvudfilen hålls under sin radgräns; samma alert-stil som
+// VersionsTab:s ``loadError``.
+export function ComparePreviewLoadError({ message }: { message: string }) {
+  return (
+    <p
+      role="alert"
+      className="text-destructive bg-destructive/10 border-destructive/40 rounded-md border px-3 py-2 text-[12px]"
+    >
+      {message}
+    </p>
+  );
+}
+
 export function VersionsEmptyState({
   title,
   body,

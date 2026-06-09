@@ -615,3 +615,29 @@ def test_non_copy_followup_visible_change_unaffected(
         tmp_path / "runs", run_dir, prompt_meta, dossier
     )
     assert effect == {"applied": True, "reason": "visible_files_changed"}
+
+
+@pytest.mark.tooling
+def test_additive_section_add_with_quote_reports_visible_change(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """#224 P2: an additive 'lägg till en FAQ-sektion med texten "..."' that
+    added a visible section (bytes changed) must report applied=True, NOT a
+    phantom copy_directive_not_applied no-op. The quoted text is the NEW
+    section's copy, not an OLD string the operator asked to swap - so a
+    successful visible add is never reported as a failed copy no-op."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {
+        "mode": "followup",
+        "followUpPrompt": 'lägg till en FAQ-sektion med texten "Vanliga frågor"',
+    }
+    # A section_add records no copyDirectives - exactly the state that used to
+    # trip the copy_directive_not_applied branch.
+    dossier = {"company": {"name": "X"}}
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, dossier
+    )
+    assert effect == {"applied": True, "reason": "visible_files_changed"}
