@@ -93,8 +93,11 @@ const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
 const EFFECT_BADGES: Record<ModuleEffect, { label: string; title: string }> = {
   inline: {
     label: "syns på startsidan",
+    // Scaffold-nyansen per msg-0057: inline-rendern gäller i skiva 1 bara
+    // local-service-business-sajter; på andra sajttyper blir den ärligt
+    // mount-only (toasten säger då "registrerad men syns inte").
     title:
-      "Renderas som ett block på startsidan — förutsatt att sajten har riktigt innehåll för sektionen (inga påhittade uppgifter).",
+      "Renderas som ett block på startsidan — förutsatt att sajten har riktigt innehåll för sektionen (inga påhittade uppgifter). Gäller i nuläget sajter byggda på företags-/tjänstemallen; på andra sajttyper registreras den utan att synas än.",
   },
   route: {
     label: "egen sida",

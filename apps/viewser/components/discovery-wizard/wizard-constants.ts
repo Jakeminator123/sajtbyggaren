@@ -944,14 +944,18 @@ export const FUNCTION_GROUPS: FunctionGroup[] = [
     description: "Vad besökaren ska kunna läsa om er.",
     iconKey: "info",
     choices: [
-      { id: "fn-team", label: "Visa team", capability: "team-display", pageMustHave: "Vårt team" },
+      // Canonical capability-sluggar per msg-0057 (capability-map.v1.json):
+      // menu/team-section/reviews/gallery. De gamla UI-aliasen
+      // (menu-display/team-display/reviews-display/image-gallery) läggs som
+      // skyddsnät i resolverns alias-tabell i Jakobs punkt 1-slice.
+      { id: "fn-team", label: "Visa team", capability: "team-section", pageMustHave: "Vårt team" },
       { id: "fn-pricing", label: "Pris-lista", capability: "pricing-display", pageMustHave: "Priser och paket" },
-      { id: "fn-gallery", label: "Bildgalleri", capability: "image-gallery", pageMustHave: "Bildgalleri" },
+      { id: "fn-gallery", label: "Bildgalleri", capability: "gallery", pageMustHave: "Bildgalleri" },
       { id: "fn-map", label: "Karta & vägbeskrivning", capability: "map-embed", pageMustHave: "Karta / Hitta hit" },
       { id: "fn-hours", label: "Öppettider", capability: "opening-hours" },
       { id: "fn-faq", label: "FAQ", capability: "faq-section", pageMustHave: "FAQ" },
       { id: "fn-blog", label: "Blogg / nyheter", capability: "blog", pageMustHave: "Blogg / Nyheter" },
-      { id: "fn-reviews", label: "Kundrecensioner", capability: "reviews-display", pageMustHave: "Kundrecensioner" },
+      { id: "fn-reviews", label: "Kundrecensioner", capability: "reviews", pageMustHave: "Kundrecensioner" },
       { id: "fn-about", label: "Om oss / Om mig", capability: "about-page", pageMustHave: "Om oss / Om mig" },
     ],
   },
@@ -989,7 +993,7 @@ export const FUNCTION_GROUPS: FunctionGroup[] = [
     iconKey: "food",
     visibleForFamilies: ["restaurant"],
     choices: [
-      { id: "fn-menu", label: "Meny / matsedel", capability: "menu-display", pageMustHave: "Meny / Matsedel" },
+      { id: "fn-menu", label: "Meny / matsedel", capability: "menu", pageMustHave: "Meny / Matsedel" },
       { id: "fn-orderonline", label: "Online-beställning", capability: "online-ordering" },
       { id: "fn-tableresv", label: "Bordsbokning", capability: "table-reservation", pageMustHave: "Bokning online" },
     ],
