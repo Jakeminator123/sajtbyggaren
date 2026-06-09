@@ -1,4 +1,4 @@
-# ADR 0038 — Golden Path som canonical term
+# ADR 0039 — Golden Path som canonical term
 
 **Status:** Accepted
 **Datum:** 2026-06-09
@@ -70,7 +70,7 @@ testdata via `tests/`-fixturer, och de befintliga scorecard-betydelserna
 `data/evals/.../manual-scorecards/`) dokumenteras som de är i `docs/glossary.md`
 utan ett nytt ord.
 
-## Vad ADR 0038 INTE beslutar
+## Vad ADR 0039 INTE beslutar
 
 - Ingen ändring av Golden Path-evalens beteende, output-kontrakt eller
   gate-trösklar (ADR 0026 äger embeddings-gaten).
@@ -87,6 +87,7 @@ utan ett nytt ord.
   registrerad och flaggas inte längre som okänd kandidat).
 - `python -m pytest tests/test_cross_policy_consistency.py
   tests/test_decisions_and_docs.py -q` — ownerPackage `scripts` finns i
-  repo-boundaries; ADR 0038 är unikt numrerad efter 0037.
+  repo-boundaries; ADR 0039 är unikt numrerad (0038 ägs av PR #240,
+  visible-section-add-inline-render).
 - `python -m pytest tests/test_no_legacy_terms.py -q` — inga globallyForbidden
   termer återinförda.

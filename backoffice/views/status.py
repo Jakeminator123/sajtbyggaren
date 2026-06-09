@@ -30,7 +30,7 @@ def latest_golden_path_summary(
     readable summary. Broken JSON files are skipped so one corrupt report
     never hides a valid newer/older one.
 
-    See ADR 0038 (Golden Path canonical) and ``docs/llm-golden-path-runbook.md``.
+    See ADR 0039 (Golden Path canonical) and ``docs/llm-golden-path-runbook.md``.
     """
     candidates: list[Path] = []
     for root in (summaries_dir, legacy_dir):
@@ -135,7 +135,7 @@ def view_overview() -> None:
 def view_golden_path_status() -> None:
     st.title("Golden Path")
     st.caption(
-        "Read-only status för produktens kanoniska huvudflöde (ADR 0038). "
+        "Read-only status för produktens kanoniska huvudflöde (ADR 0039). "
         "Speglar senaste `scripts/run_golden_path_eval.py`-summary under "
         "`data/evals/summaries/golden-path/`. Den här vyn kör inget — den läser "
         "bara. Flöde + entrypoint-yta i `docs/llm-golden-path-runbook.md`, "

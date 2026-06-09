@@ -11,7 +11,7 @@ Detta är den smala vertikala skivan av Sajtbyggarens kärnflöde. Hela
 kedjan är wired i repo:t; runbooken finns för att nästa agent inte ska
 återuppfinna eller bygga en parallell initieringsväg.
 
-`Golden Path` är ett canonical begrepp (ADR 0038, `naming-dictionary.v1.json`).
+`Golden Path` är ett canonical begrepp (ADR 0039, `naming-dictionary.v1.json`).
 Det betyder huvudflödet OCH den smala motor-skiva som bevisar att det lever -
 inte alla tester eller all eval. För att inte fler `golden_*`-ytor ska driva
 isär: detta är den enda kanoniska entrypoint-ytan.

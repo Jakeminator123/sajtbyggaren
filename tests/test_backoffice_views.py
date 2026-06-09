@@ -129,7 +129,7 @@ def test_paths_module_exposes_runs_and_data():
 
 @pytest.mark.tooling
 def test_status_views_include_golden_path():
-    """ADR 0038: a read-only Golden Path status view lives in the Status block."""
+    """ADR 0039: a read-only Golden Path status view lives in the Status block."""
     from backoffice.views import status
 
     assert "Golden Path" in status.VIEWS
