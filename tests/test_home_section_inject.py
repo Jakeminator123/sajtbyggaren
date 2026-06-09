@@ -179,6 +179,45 @@ def test_home_mounted_section_default_position_before_contact():
 
 
 @pytest.mark.tooling
+def test_home_non_allowlisted_section_is_no_op():
+    """Codex review fix (defense in depth): a hand-edited/stale Project Input
+    must not be able to inject an arbitrary REGISTERED section onto home.
+    ``service-list`` has a renderer and grounded content (painter-palma has
+    services) and is not in the default home order - without the render-time
+    allowlist it WOULD inject. The allowlist must drop it."""
+    dossier = _painter_dossier()
+    baseline = render_home(
+        {**dossier, "directives": {}}, _HOME_ROUTES, variant_id=dossier["variantId"]
+    )
+    dossier["directives"] = {
+        "mountedSections": [{"sectionId": "service-list", "routeId": "home"}]
+    }
+    injected = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    assert injected == baseline, (
+        "a non-allowlisted section must never be injected, even when its "
+        "renderer exists and would produce content."
+    )
+
+
+@pytest.mark.tooling
+def test_home_inline_injection_gated_on_scaffold():
+    """The render-time allowlist is keyed on (scaffoldId, routeId): the same
+    grounded hours-summary directive must be a no-op on a scaffold the ADR
+    has not sanctioned for inline injection."""
+    dossier = _painter_dossier()
+    dossier["scaffoldId"] = "agency-studio"
+    baseline = render_home(
+        {**dossier, "directives": {}}, _HOME_ROUTES, variant_id=dossier["variantId"]
+    )
+    dossier["directives"] = {
+        "mountedSections": [{"sectionId": "hours-summary", "routeId": "home"}]
+    }
+    injected = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    assert injected == baseline
+    assert "Öppettider" not in injected
+
+
+@pytest.mark.tooling
 def test_home_already_present_section_not_duplicated():
     """A directive for a section already in the home order does not duplicate it.
 

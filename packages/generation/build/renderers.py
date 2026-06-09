@@ -1387,6 +1387,23 @@ def _collect_home_icons(dossier: dict, dossier_routes: list[str]) -> list[str]:
     return icons_used
 
 
+# Render-time allowlist for inline section injection (ADR 0038, defense in
+# depth): ``(scaffoldId, routeId) -> allowed section ids``. The schema permits
+# any string in ``directives.mountedSections[].sectionId``, and apply enforces
+# the canonical allowlist when IT writes the directive - but a hand-edited or
+# stale Project Input must not be able to inject an arbitrary registered
+# section (e.g. ``service-list``) onto a page the ADR never sanctioned. This
+# table MIRRORS ``INLINE_SECTION_PLACEMENTS`` + ``INLINE_SECTION_SCAFFOLDS`` +
+# ``INLINE_SECTION_ROUTES`` in ``packages/generation/followup/
+# section_directives.py``; it is duplicated here (same pattern as
+# ``_FORBIDDEN_ENV_PATTERN`` in quality_gate/checks.py) because the build layer
+# must not import the followup layer. Parity is locked by
+# ``tests/test_section_directives.py`` so the two cannot silently drift.
+_INLINE_SECTION_ALLOWLIST: dict[tuple[str, str], frozenset[str]] = {
+    ("local-service-business", "home"): frozenset({"hours-summary"}),
+}
+
+
 def _mounted_section_ids_for_route(
     dossier: dict,
     route_id: str,
@@ -1406,6 +1423,9 @@ def _mounted_section_ids_for_route(
     hold, so a mounted section can never appear as an empty or phantom block:
 
     - the entry targets THIS ``route_id``;
+    - ``(scaffoldId, routeId, sectionId)`` is in ``_INLINE_SECTION_ALLOWLIST``
+      (the ADR 0038 canonical set - a hand-edited/stale Project Input cannot
+      inject an arbitrary registered section);
     - ``sectionId`` has a registered renderer in ``_SECTION_RENDERERS``
       (``render_route_generic`` would SystemExit on an unknown id);
     - the section is not already in ``existing_section_ids`` (no duplicate);
@@ -1421,6 +1441,14 @@ def _mounted_section_ids_for_route(
     entries = directives.get("mountedSections")
     if not isinstance(entries, list):
         return [], []
+    scaffold_id = dossier.get("scaffoldId")
+    allowed = (
+        _INLINE_SECTION_ALLOWLIST.get((scaffold_id, route_id))
+        if isinstance(scaffold_id, str)
+        else None
+    )
+    if not allowed:
+        return [], []
     existing = set(existing_section_ids)
     top_ids: list[str] = []
     bottom_ids: list[str] = []
@@ -1432,6 +1460,8 @@ def _mounted_section_ids_for_route(
             continue
         section_id = entry.get("sectionId")
         if not isinstance(section_id, str) or not section_id:
+            continue
+        if section_id not in allowed:
             continue
         if section_id in existing or section_id in seen:
             continue

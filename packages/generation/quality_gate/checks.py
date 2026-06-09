@@ -318,8 +318,14 @@ _PLACEHOLDER_PATTERNS = [
     ),
     (
         "bracketed company placeholder",
+        # Requires a TWO-word placeholder phrase ("company name", "your
+        # company", "your company name") inside the brackets. A bare
+        # ``{company}`` / ``{ company }`` is deliberately NOT matched: in TSX
+        # source that is a legitimate JSX expression interpolating a variable
+        # named ``company`` (Codex review fix), not leaked placeholder copy.
         re.compile(
-            r"[\[{]\s*(?:your\s+)?company(?:\s+name)?\s*[\]}]", re.IGNORECASE
+            r"[\[{]\s*(?:your\s+company(?:\s+name)?|company\s+name)\s*[\]}]",
+            re.IGNORECASE,
         ),
     ),
     # Imperative "Insert <det> ..." scaffolding (e.g. "Insert your text

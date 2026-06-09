@@ -113,6 +113,14 @@ NEGATIVE_CASES = [
     "Your company has served the region for over twenty years.",
     "Our company name has meant quality since 1999.",
     "Tell us your company name and we will get started.",
+    # Bare JSX variable interpolation must NOT be flagged (Codex review fix):
+    # ``{company}`` in TSX source is a legitimate expression referencing a
+    # variable named company, not leaked placeholder copy. Only TWO-word
+    # placeholder phrases inside brackets are placeholders.
+    "<p>{company}</p>",
+    "<span>{ company }</span>",
+    "<h2>{company.name}</h2>",
+    "const items = [company];",
     # Substring look-alikes that the word boundaries must NOT catch.
     "notbd is a single token, not a marker.",
     "replace_meeting room booking är ett vanligt ord.",

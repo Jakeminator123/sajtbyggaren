@@ -317,3 +317,33 @@ def test_inline_placement_map_targets_wired_routes() -> None:
             f"{capability!r} inline placement targets unwired route "
             f"{placement['routeId']!r}"
         )
+
+
+def test_render_time_allowlist_mirrors_resolver_allowlists() -> None:
+    """Parity lock (Codex review fix): the render-time defense-in-depth
+    allowlist in ``renderers.py`` is a DUPLICATE of the resolver's canonical
+    allowlists (build must not import followup), so the two must be derivable
+    from each other exactly - a new inline placement added on one side without
+    the other fails here."""
+    import packages.generation.build.renderers as renderers
+    from packages.generation.followup.section_directives import (
+        INLINE_SECTION_SCAFFOLDS,
+    )
+
+    expected: dict[tuple[str, str], set[str]] = {}
+    for placement in INLINE_SECTION_PLACEMENTS.values():
+        route_id = placement["routeId"]
+        if route_id not in INLINE_SECTION_ROUTES:
+            continue
+        for scaffold_id in INLINE_SECTION_SCAFFOLDS:
+            expected.setdefault((scaffold_id, route_id), set()).add(
+                placement["sectionId"]
+            )
+    actual = {
+        key: set(value)
+        for key, value in renderers._INLINE_SECTION_ALLOWLIST.items()
+    }
+    assert actual == expected, (
+        "renderers._INLINE_SECTION_ALLOWLIST has drifted from the resolver's "
+        f"INLINE_SECTION_* allowlists: actual={actual!r} expected={expected!r}"
+    )

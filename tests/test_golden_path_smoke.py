@@ -264,16 +264,19 @@ def test_golden_path_branch_smoke(
         "check (route-scan / policy-compliance) failed - exactly the "
         "route-generation regression this smoke must catch."
     )
-    # Belt-and-suspenders: the route-scan check itself must be ok|skipped, so a
-    # future warning-only reshuffle can never let a real route failure hide.
+    # Belt-and-suspenders: the route-scan check itself must be EXACTLY ok. This
+    # smoke relies on route-scan for the export-default verification, and
+    # run_route_scan_check has no skip branch (it returns ok or failed), so
+    # accepting "skipped" would only ever mask a future regression that
+    # accidentally stopped running the check (Codex review fix).
     checks_by_name = {
         c.get("name"): c.get("status")
         for c in (quality_result.get("checks") or [])
         if isinstance(c, dict)
     }
-    assert checks_by_name.get("route-scan") in {"ok", "skipped"}, (
+    assert checks_by_name.get("route-scan") == "ok", (
         f"{branch.site_id}: route-scan check was "
-        f"{checks_by_name.get('route-scan')!r}; expected ok/skipped."
+        f"{checks_by_name.get('route-scan')!r}; expected exactly 'ok'."
     )
 
     # 5. Deterministic mock truth-fields.
