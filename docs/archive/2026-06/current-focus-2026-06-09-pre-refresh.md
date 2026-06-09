@@ -1,18 +1,29 @@
+---
+status: historical
+owner: governance
+truth_level: historical-reference
+last_verified_commit: 2ffce4a
+---
+
+> **Arkiv = historik, inte sanningskälla.** Detta är `docs/current-focus.md`
+> precis före steward-refresh 2026-06-09 (bumpning till `0c89942`). För nuläget:
+> `docs/current-focus.md` + `docs/handoff.md` toppblock. Se [`../README.md`](../README.md).
+
 # Aktuellt fokus
 
 Detta är projektets enda aktuella köplan. Varje agent läser denna fil **först**.
-Den hålls kort med flit (`governance/rules/07-docs-focus-handoff.md`): bara
+Den hålls kort med flit (`governance/rules/current-focus-hygiene.md`): bara
 aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
 ## Status nu (2026-06-09)
 
-**Git:** `main = 16278c1` (PR #212 officiell). `jakob-be = 0c89942`, rent träd,
-**32 commits före main** — sedan föregående checkpoint (`2ffce4a`) har landat på
-`jakob-be`: Lane A docs-honesty-cleanup (merge `76b5ae4`), Cursor-regel-
-konsolidering 29→12 via #218 (`4139285` + merge `11b4f19`) och OpenClaw
-F1-readiness-plan (plan-only, gated; `6e08ce9` + merge `0c89942`). Sync
+**Git:** `main = 16278c1` (PR #212 officiell). `jakob-be = 2ffce4a`, rent träd,
+**14 commits före main** — inne sedan #212: OpenClaw-docs-mirror-script
+(`942f41b`), #214 (governance preview/capability-nyanser), #213 (AGENTS
+`VIEWSER_PREVIEW_MODE`-not), #215 (megafil-refaktorplan, docs-only), Bite
+C-formuleringsfix (`36e8cdb`), #217 (FloatingChat-split på jakob-be). Sync
 `jakob-be → main` väntar **operatörsbeslut** — pusha aldrig main per slice.
 
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
@@ -34,8 +45,7 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
    preview. Största produkthävstången nu. Förutsätter prio 1 grön.
 3. **OpenClaw F1 — registry-runtime:** gör `docs/openclaw-workspace/action-registry.json`
    körbar (kod läser registret och väljer roll), inte bara dokumentation.
-   Readiness-planen finns nu i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
-   (plan-only). *Gås igenom med operatören innan kod skrivs.*
+   *Lokalt nästa stordåd — gås igenom med operatören innan kod skrivs.*
 
 **Öppna blockers:**
 
@@ -48,17 +58,16 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 
 | Lane | Vad | Status |
 | --- | --- | --- |
-| A — docs-honesty-cleanup | architecture/glossary-honesty + arkivflytt + frontmatter + checker | **inne** på `jakob-be` via merge `76b5ae4` |
+| A — docs-honesty-cleanup | architecture/glossary-honesty + arkivflytt + frontmatter + checker | klar på `cursor/lane-a-docs-cleanup`, väntar PR/review mot `jakob-be` |
 | B — FloatingChat-split | split `floating-chat.tsx` → syskonmoduler (behavior-preserving) | **inne** på `jakob-be` via #217 (`2ffce4a`); #216 mot `christopher` redundant |
 | C — backend-refaktorplan | megafil-refaktorplan (docs-only) | **inne** via #215 (`2dadf09`) — ingen refaktor körd, gated |
-| Regel-konsolidering | Cursor-regler 29→12 (docs/governance) | **inne** via #218 (`11b4f19`); hygien-regeln bor nu i `governance/rules/07-docs-focus-handoff.md` |
 
-**OpenClaw F1-readiness (separat lokal lane):** readiness-/install-planen har
-landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
-(`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
+**OpenClaw F1-readiness (separat lokal lane):** plan/scout-only worktree-prompt
+klar att köra i Agent-läge → producerar `docs/heavy-llm-flow/openclaw-f1-readiness.md`
+(ingen runtime-kod; gated på synlig section_add + Lane A + refaktor-beslut).
 
-Last verified state: `0c89942` (2026-06-09 UTC, `jakob-be` HEAD — efter Lane A-merge (`76b5ae4`), regel-konsolidering 29→12 via #218 (`11b4f19`) och OpenClaw F1-readiness-plan (`0c89942`); `main` = `16278c1` via PR #212, sync till main väntar operatörsbeslut).
-Nya PRs sedan föregående checkpoint: PR #218 (Cursor-regler 29→12, docs/governance). Lane A docs-honesty-cleanup och OpenClaw F1-readiness-plan landade via merge-commits (`76b5ae4` / `0c89942`), inte numrerade PR mot `jakob-be`. Alla på `jakob-be`, ej `main`.
+Last verified state: `2ffce4a` (2026-06-09 UTC, `jakob-be` HEAD — efter #214/#213/#215/#217 + OpenClaw-mirror + Bite C-formuleringsfix; `main` = `16278c1` via PR #212, sync till main väntar operatörsbeslut).
+Nya PRs sedan föregående checkpoint: PR #214 (governance preview/capability-nyanser); PR #213 (AGENTS VIEWSER_PREVIEW_MODE-not); PR #215 (megafil-refaktorplan, docs-only); PR #217 (FloatingChat-split på jakob-be). Alla mergade till `jakob-be`, ej till `main`.
 
 ## Öppna PR att känna till
 
@@ -114,6 +123,6 @@ För commit-historik: `git log --oneline origin/main` eller
 ## Föregående checkpoint
 
 Tidigare "Last verified state"-block och äldre "Current objective"-block är
-flyttade till arkivet ovan (per `governance/rules/07-docs-focus-handoff.md`).
+flyttade till arkivet ovan (per `governance/rules/current-focus-hygiene.md`).
 Auto-bump-verktyget lägger nya korta checkpoint-block här vid main-sync; håll
 högst ett kvar och flytta resten till arkivet.

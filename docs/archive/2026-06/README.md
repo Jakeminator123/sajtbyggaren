@@ -29,6 +29,13 @@ versionshistoriken inklusive innan flytten.
 - `codeowners-proposal.md` — förslag utan aktivt arbete (ingen `.github/CODEOWNERS`).
   Flyttad från `docs/`.
 
+## Steward-pass 2026-06-09 (docs-steward-cleanup)
+
+- `current-focus-2026-06-09-pre-refresh.md` — full snapshot av `docs/current-focus.md`
+  precis före steward-refresh till `0c89942` (stale `Last verified state: 2ffce4a` +
+  "14 commits före main" bumpades till verklig HEAD/`32`). Superseded av
+  `docs/current-focus.md`.
+
 ## Markerade historical *på plats* (ej flyttade)
 
 Vissa historiska docs behölls på sin ursprungssökväg och fick bara
