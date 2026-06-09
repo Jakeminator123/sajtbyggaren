@@ -981,6 +981,7 @@ COMMON_WORDS = {
     "ErrorBoundaryState",
     "ErrorInfo",  # React-typ från `import type { ErrorInfo } from "react"`
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
+    "HostedNoticeBanner",  # lokal info-banner i apps/viewser/app/(console)/studio/page.tsx (hostad Vercel-notis)
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
     "ComparePreviewLoadError",  # lokal felkomponent i versions-tab/diff-view.tsx (modal-import-fallback)

@@ -15,6 +15,12 @@ fas i taget, läs av resultatet, gå vidare.
 - `02-korschema.md` — de sekvenserade agent-prompterna (huvudleveransen).
 - `03-risker-kostnad-oppna-fragor.md` — risker, kostnad och öppna frågor.
 
+## Hostad deploy idag
+
+Hur den hostade Viewser-deployen ser ut just nu — vad som fungerar och vad som är
+ärligt gatat — beskrivs i [`docs/hosted-viewser-deploy.md`](../hosted-viewser-deploy.md).
+Det är en auth-gatad skiva av P1 (deploy-skalet) nedan.
+
 ## Snabbsvar på två frågor
 
 Funkar allt på Vercel nu? Nej. Idag funkar loopen bara lokalt: `/api/prompt` och
