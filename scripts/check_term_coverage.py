@@ -611,6 +611,11 @@ COMMON_WORDS = {
     "EmptyState",
     # GAP-viewser-wizard-first-impression — rikare foundation+visual UI:
     "FamilyCard", "FoundationSummary", "SummaryRow",
+    # Lätt review-summary (2026-06-09): hopfällbar "granska dina svar"-rad sist
+    # på Bilder-steget (apps/viewser/components/discovery-wizard/review-summary.tsx).
+    # Lokal UI-komponent, inte ett canonical domänbegrepp — samma allowlist-
+    # logik som FoundationSummary/SummaryRow ovan.
+    "ReviewSummary",
     "PayloadAlignmentPopover", "ContextChips", "ContextChip",
     "VibeMicroPreview", "VibeSwatchRow",
     # Lucide-icon-namn använda i samma komponenter:
