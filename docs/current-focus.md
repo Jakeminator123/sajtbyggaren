@@ -132,7 +132,7 @@ Uppdatera inte för ren mikrostatus som inte ändrar nästa agents arbete.
 - PR från arbets-branch → `main` när "en ny officiell version ska in" (beslut
   per leveransfönster, ingen cadence). Efter merge synkas arbets-branchen mot
   `origin/main`.
-- Detaljer: [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md).
+- Detaljer: [`governance/rules/04-branch-and-team.md`](../governance/rules/04-branch-and-team.md).
 
 ## Loopen vi följer
 
@@ -143,7 +143,7 @@ vid behov → arbete på arbets-branch → guards gröna → push → vid behov 
 
 Operatörspreferens: svenska, kort och koncist, gärna matris/tabell. Förklara
 dev-uttryck med korta parenteser första gången per konversation. Mönstret i
-[`governance/rules/reply-style.md`](../governance/rules/reply-style.md).
+[`governance/rules/01-language-and-reply.md`](../governance/rules/01-language-and-reply.md).
 
 ## Arkiv
 

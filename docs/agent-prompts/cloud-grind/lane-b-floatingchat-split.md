@@ -26,7 +26,7 @@ den. **STRIKT behavior-preserving** (refaktor som inte ändrar beteende, bara
 struktur).
 
 Läs först: `AGENTS.md`, `docs/current-focus.md`, `docs/handoff.md` (topp-blocket),
-`docs/ownership-map.md`, `governance/rules/branch-discipline.md`,
+`docs/ownership-map.md`, `governance/rules/04-branch-and-team.md`,
 `apps/viewser/components/builder/floating-chat.tsx` (hela filen).
 
 ## Uppgift

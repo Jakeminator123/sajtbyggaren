@@ -26,7 +26,7 @@ inför inte en fjärde fast agentroll.
 ## Gemensam modell
 
 > Aktuell branchmodell styrs av [`docs/current-focus.md`](current-focus.md) +
-> [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md).
+> [`governance/rules/04-branch-and-team.md`](../governance/rules/04-branch-and-team.md).
 > I nuläget gäller `jakob-be` (Jakob) / `christopher-ui` (Christopher) med PR mot
 > `main` per leveransfönster. Den generiska "main + backup-N"-baseline nedan är
 > historisk och gäller bara där current-focus uttryckligen säger det.
@@ -236,7 +236,7 @@ Commit:
 
 - En commit per logiskt steg.
 - Commit-titlar på engelska.
-- Använd PowerShell-säkert commitflöde enligt governance/rules/branch-discipline.md vid flerradsmeddelanden.
+- Använd PowerShell-säkert commitflöde enligt governance/rules/04-branch-and-team.md vid flerradsmeddelanden.
 
 Slutrapport:
 

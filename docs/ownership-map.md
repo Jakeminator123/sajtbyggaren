@@ -36,7 +36,7 @@ backend-shape, eller när en ny ägare faktiskt tar över ett område.
 
 ## Branch-konventioner
 
-`branch-discipline.md` beskriver standardflödet "jobba direkt på `main`". När
+`04-branch-and-team.md` beskriver standardflödet "jobba direkt på `main`". När
 operatören uttryckligen begär parallellt team-arbete (PR-flöde) gäller följande
 namn- och livscykel-konventioner.
 
@@ -65,7 +65,7 @@ synkar. PR:ar från arbets-branchen till `main` när "sanningen" ska uppdateras.
 > **(b) riktat per-ändrings-OK** för större/icke-bugg-feature-/UX-ändringar
 > (kärnloop + explicit operatörs-OK + liten rapporterad diff + Christopher
 > informerad). Lane-ägandet består (Christopher = default-ägare). Full
-> formulering: `governance/rules/branch-discipline.md` (sektionen "Jakob-agent
+> formulering: `governance/rules/04-branch-and-team.md` (sektionen "Jakob-agent
 > och Christopher-agent").
 
 ### Livscykel för arbets-branchen

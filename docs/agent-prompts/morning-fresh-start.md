@@ -82,7 +82,7 @@ Det du får göra utan att fråga:
   preview.
 - Skriva docs-uppdateringar (docs/current-focus.md, docs/handoff.md,
   docs/workboard.json statusuppdateringar) som steward-arbete och pusha
-  direkt till jakob-be per branch-discipline.md "Mainline-steward"-sektion.
+  direkt till jakob-be per 04-branch-and-team.md "Mainline-steward"-sektion.
 - Cleanup av mergade tillfälliga branches på origin (cursor/* som har
   PR-status MERGED) efter operator-bekräftelse.
 

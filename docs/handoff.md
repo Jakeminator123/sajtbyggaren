@@ -1,78 +1,109 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-08 UTC, steward-auto efter PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening + governance/cleanup batch. Verifierad `main` är `16278c1` (PR #212-squash `b49d1f7` + steward-auto-bump `16278c1` = nuvarande main-HEAD).
+**Datum:** 2026-06-10 strax efter midnatt (UTC+2). Verifierad `jakob-be` är `68bbde3`
+(docs-bump ovanpå merge-HEAD `79bedef`); `main` är oförändrad `16278c1`.
 
-Nya PRs sedan föregående checkpoint: PR #195 — feat: gap 1 trust-proof USP seeding +
-skiva 1c kor-5 rerender wiring; PR #196 — feat(openclaw): action-bridge --apply (skiva
-1b action half); PR #198 — feat(builder): flat-layout-städning + POSIX-tree-kill (B157
-nivå 4, kvarvarande städning); PR #199 — feat(viewser): skiva 1b UI half (OpenClaw
-decision) + router/copy-honesty + build-orkestrering + scout/a11y; PR #202 —
-feat(followup): visual_style restyle (colour + font) + nicer unnamed-business label; PR
-#204 — docs(governance): site-mutation-layers rule + theme_directives reconciliation; PR
-#200 — feat(planning): drop offer/tagline phrase from offer service cards (gap 3a); PR
-#207 — feat(openclaw): materialise visual_style restyle through the apply chain; PR #210
-— feat(viewser): wire OpenClaw --apply into /api/prompt follow-ups (skiva 1b action
-half); PR #211 — feat(viewser): resizable FloatingChat + module drag-and-drop prep
-dialog; PR #212 — sync(jakob-be->main): hero-fix + Bite C + section_add broadening +
-governance/cleanup batch.
+Nya PRs sedan föregående checkpoint (ALLA mergade till `jakob-be`, ej `main`):
+#238, #239, #240, #241, #242, #243, #244, #245, #246, #247, #248, #249, #250,
+#251 samt #225 — femton stycken, ett i taget med alla guards + CI gröna per PR.
 
-## CLOSING-ROUND HANDOFF 2026-06-08 (natt) — ÖVERLÄMNING TILL NY ORCHESTRATOR
+## CLOSING-ROUND HANDOFF 2026-06-10 (natt) — ÖVERLÄMNING TILL NÄSTA AGENT
 
-> **Detta är det ENDA auktoritativa blocket. ALLT nedanför `---` är historik —
-> verifiera alltid mot git/koden, aldrig mot äldre block (deras SHA är pre-sync
-> och stale).**
+> **Detta är det ENDA auktoritativa blocket. Allt äldre ligger i arkivet —
+> verifiera alltid mot git/koden, aldrig mot äldre block.**
 >
-> **Git-läge (POST-SYNC):** `origin/main = 16278c1` (PR #212 squash `b49d1f7` +
-> steward-auto — hela förra batchen är officiell). `origin/jakob-be` ligger
-> några commits FÖRE main med en andra-rundas batch (se nedan); rent arbetsträd.
-> **Operatören synkar `jakob-be → main` medvetet — pusha aldrig main per slice.**
-> Guards gröna (governance 19, rules_sync, term_coverage); full `pytest -q` grön
-> (bara väntade skips — `test_api_prompt_smoke`-flaken är åtgärdad, `6c33798`).
->
-> **Operatörsgrant (viktigt för dig som ny orchestrator):** jakob-be har stående
-> tillstånd att FIXA BUGGAR det ser i Christophers UI-lane (`apps/viewser/**`) —
-> committat på jakob-be, `[scope-leak]`-taggat, rapporterat i inboxen. Större
-> icke-bugg-feature-/UX-ändringar kräver fortfarande per-ändrings-OK. Källa:
-> `governance/rules/branch-discipline.md`.
+> **Git-läge:** `origin/jakob-be = 68bbde3`, rent träd, lokal = origin.
+> `origin/main = 16278c1`. **Deltat jakob-be→main är MYCKET STORT (15 PRs) —
+> main-sync är nästa naturliga leveransfönster, men det är operatörens beslut.
+> Pusha aldrig main per slice.** Post-merge-sanity efter hela tåget: governance
+> 19/19, rules_sync OK, ruff 0, term-coverage --strict OK, riktade sviter gröna.
+> Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
 
-### Runda 1 (i main via #212): hero-fix + Bite C + section_add + governance/cleanup
-- **Hero-rotorsaksfix (`fb9692d`):** "ändra hero-texten" syntes inte — hero-H1
-  renderas från blueprint (`positioning.oneLiner`, regenereras varje bygge), inte
-  `company.tagline`. Ny `company.heroHeadline`-override (renderaren föredrar den,
-  överlever ombygge). Fältkontrakt LÅST i copy-change-skill.
-- **Bite C KLAR (`7984fc1`):** `viewer-panel.tsx` driver preview-flaggorna via
-  `resolvePreviewRuntimeDescriptor` (`auto`≠`local-next` bevarat). Helt stängd.
-- **section_add breddat (`4c6ba67`), MOUNT-ONLY:** nio typer (team/faq/trust/
-  reviews + gallery/pricing/hours/map/contact-form). Monterar capability+dossier
-  men renderar inte synligt än (`appliedVisibleEffect=false`).
-- **preview-runtime descriptor + README, DEP0190 `next`-fix, env-matris, gpt-4o
-  default, stale-doc-markeringar, backoffice-cleanup, .cursorignore-unlock.**
+### Vad som landade i natt (per tema)
 
-### Runda 2 (på jakob-be, ovanför main — väntar nästa sync): buggranskning + docs
-- **FloatingChat honesty (`a98a46e`):** `summarizeOpenClawBridge` grindar synlig
-  success på `previewShouldRefresh` — en mount-only-montering säger inte längre
-  falskt "Jag genomförde ändringen".
-- **dev.mjs DEP0190-rest (`35baddb`):** `vercel env pull` shell-fritt. Dispatchern
-  helt ren.
-- **Smal→stående buggfix-grant (`cccda391`):** se grant-rutan ovan.
-- **AddModuleDialog falsk affordance (`dabd503`):** tog bort hero/services/
-  cta-banner (omountbara) + ärlig copy om placering/mount-only.
-- **Docs/governance-städning (denna commit):** section-add-skill + action-registry
-  + current-focus-topp + openclaw-2.0-conductor + glossary alignade till
-  mount-only + 9 typer + post-sync-git; Project Input runtime-path klargjord.
+**Synlig section_add (ADR 0038) — kärnloops-grinden STÄNGD:**
+- **#240**: `directives.mountedSections` på Project Input + render-seam i
+  `render_home`. Skiva 1: `hours` → `hours-summary` renderas INLINE på
+  local-service-business-home, position top/bottom från routerns
+  "överst"/"längst ner". faq/team behåller egen-route-vägen.
+- **#248** (Codex-granskning): intent-gate (bara section_add SKAPAR
+  inline-placering; component_add kan högst BEVARA via explicit carry-forward) +
+  render-time-allowlist `_INLINE_SECTION_ALLOWLIST` (paritetslåst mot resolverns
+  `INLINE_SECTION_*`) + `{company}`-false-positive borta ur placeholder-scan.
+- **#245+#249** (UI-halvan + granskningsrunda 2): AddModuleDialog med ärliga
+  synlighets-badges ("kan synas på startsidan"/"kan bli egen sida"), EMPIRISKT
+  verifierat promptformat (en modul per bygge; "Lägg till <promptNoun>
+  <överst|längst ner>." — alla 9 moduler × 2 positioner klassas korrekt som
+  section_add; sid-omnämnande i prompten tippar pris/team/garantier till
+  route_add och undviks), inaktiva sidzoner utom Startsida ("stöds inte än").
+- Honesty-grindar hela vägen: registrerad renderare + grundat innehåll + ej
+  dubblett + allowlist; `appliedVisibleEffect` = ärlig fil-diff.
+
+**Refaktor/städ:** #238 (render_helpers — SISTA megafil-slicen på build_site),
+#225 (test_viewser_files splittad i 7 temafiler + storleksvakt; test-namn-
+paritet 186=186), #246 (`Golden Path` canonical, ADR 0039, naming-dict v28;
+begreppskarta; backoffice Golden Path-statusvy).
+
+**Skyddsnät:** #241 (contact-CTA-routes), #242 (followup-versionering, inkl.
+"mounted = dossier i selectedDossiers.required"), #243 (golden-path-smoke med
+RIKTIGA svenska prompts + exakta statusar build=skipped/quality=ok/route-scan=ok),
+#244 (placeholder-scan härdad, multiline-empty-heading, smala engelska
+template-mönster), #250 (**auto_prune default OFF i hela API-kedjan** —
+#237-granskningens dataförlust-fälla stängd: build()/build_targeted_version/
+run_followup_chain defaultar False; --followup trådar args.allow_prune).
+
+**Christopher-lane (inbox helt ikapp):** #239 (branschanpassat sidrutnät),
+#247 (canonical capability-sluggar + scaffold-nyans), #251 (`recommendedPages`
+exponeras i `/api/discovery-options` — msg-0056 punkt 1 LEVERERAD, se
+msg-0058; `recommendedCapabilities` finns INTE i taxonomin → eget
+governance-fält om önskat, hör ihop med punkt 2 businessFamily-ankaret).
+Resolver-alias för wizardens legacy-sluggar + kontraktstest
+(`tests/test_wizard_capability_slugs.py`, `KNOWN_UNMAPPED` medvetet —
+`user-auth` hålls ogated per ADR 0035).
+
+**Docs-MCP (agent-uppslagsverk):** hostad MCP på `https://docs.openclaw.ai/mcp`
+konfigurerad i `.cursor/mcp.json` (gitignorerad), dokumenterad i
+`docs/openclaw-workspace/README.md` — UPPSLAGSVERK för repo-agenter,
+**INTE** runtime-yta för produktens OpenClaw-dirigent.
 
 ### Lösa trådar (för dig, prioriterat)
-1. **Sync `jakob-be → main`** (runda-2-batchen) — operatörsbeslut.
-2. **Synlig render av monterade section_add-sektioner + page/position-targeting**
-   — den största produkthävstången nu (gör mount-only → faktiskt synligt). Hör
-   till render-path/Sprint-3B-spåret.
-3. **#4 dialog/toast-honesty:** `useFollowupBuild`→`onBuildDone`→studio-toast bär
-   inte `appliedVisibleEffect` (FloatingChat gör nu). Signaturändring över 5
-   dialoger + page — Christophers UX-slice. (inbox msg-0052)
-4. **Remap-signalen** (requestedTarget/remapped) — väntar Christophers `--real-llm`-repro.
-5. **#5 production COEP-split** + **#7 bridge-null-diagnostik** — små, noterade (msg-0052).
-6. OpenClaw-conductor-slicen (roll-registry runtime, "F1") — scoped, ej startad.
-7. **#156 hosted `/live`** — parkerad (säkerhet), rör inte.
+
+1. **OpenClaw 2.0 / agentroller i llm-flödet — AVBLOCKAT.** F1-readiness var
+   gated på synlig section_add (nu inne). Plan:
+   `docs/heavy-llm-flow/openclaw-2.0-conductor.md` + `openclaw-f1-readiness.md`.
+2. **Operatörens manuella klick-checkar** (täcks inte av tester):
+   /studio "lägg till en öppettider-sektion överst" på LSB-sajt med riktiga
+   öppettider → block efter hero; #228:s Ändra-knapp → steg-hopp;
+   kontrastfärg "gör sajten mörkblå"; modul-dialogen (#245/#249) visuellt.
+3. **Main-sync-beslut** (operatören) — 15 PR:ar verifierade, bra fönster.
+4. **Punkt 2 till Christopher:** businessFamily-ankare (ADR + family-fält i
+   discovery-taxonomy) + ev. recommendedCapabilities-fält i samma veva.
+5. **section_add skiva 2+:** fler inline-typer/routes/scaffolds (seam +
+   allowlists redo; varje ny route trår injektions-seamen själv).
+6. **Två färdiga cloud-agent-prompter** (chatlogg 2026-06-09 sen kväll):
+   backoffice-grind (governance-register + Idag-vy + playground) och
+   Vercel-hosted sandbox-preview (med ärlig 501-gating av python-vägar).
+7. **#156 hosted `/live`** — parkerad (säkerhet), arkitektur-referens; görs om
+   på färsk bas med auth/rate-limit när runtime-spåret väljs aktivt.
+8. **Branch-rester för operatörsbeslut:** `cursor/gap-3a-offer-service-guard`,
+   `cursor/dossier-intake-v11-review-895d`, `feat/kor-5-repair-pass` (ingen
+   PR, ej bevisat mergade), `cursor/preview-runtime-adapters` (avsiktlig
+   snapshot), Christophers stängda `feat/viewser-ui-overhaul`/
+   `feat/viewser-router-decision-readiness`.
+
+### Kända småsaker (inte buggar)
+
+- `C:\Users\jakem\Desktop\sb-wt-hygiene` — tom kvarlåst worktree-katalog
+  (fil-lås av process); git-registret är prunat. Försvinner vid omstart eller
+  manuell radering. Ofarlig.
+- Döda regel-länkar efter regelkonsolideringen 29→12 (#218) är fixade i alla
+  AKTIVA docs 2026-06-10 (`branch-discipline.md` → `04-branch-and-team.md`,
+  `reply-style.md` → `01-language-and-reply.md`). Arkiv + ADR:er behåller
+  medvetet sina historiska stavningar — markdown-varningar därifrån kan
+  ignoreras.
+- Två gamla filer med blandade radslut (CRLF+LF): `docs/archive/current-focus-
+  history-2026-05-26.md`, `governance/policies/scaffold-contract.v1.json` —
+  harmlöst, medvetet orört.
 
 ## Historik
 

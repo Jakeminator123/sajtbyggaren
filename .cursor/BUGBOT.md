@@ -66,5 +66,5 @@ Applies to anything under `data/starters/`:
 - `docs/current-focus.md` - current queue. PR must align.
 - `docs/agent-handbook.md` - standard loop, reviewer checklist, parallel-
   agent rules.
-- `governance/rules/branch-discipline.md` - branch and push rules.
+- `governance/rules/04-branch-and-team.md` - branch and push rules.
 - `docs/known-issues.md` - active B-IDs and blockers.

@@ -1,6 +1,6 @@
 # Cloud-grind-promptar — avslutad backend-gap-batch
 
-Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM på en **tillfällig `cursor/<syfte>`-branch** (sanktionerad för cloud-/grind-arbete i `branch-discipline.md`), pushar den och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten. Den egna branchen per lane gör att alla tre kan köra **parallellt** utan push-race på `jakob-be`. **Operatören mergar** sedan in branchen i bas-branchen (`jakob-be` för A/C, `christopher` för B) — direkt eller via PR om hen vill ha Bugbot/Codex-review. PR är alltså en valfri review-bonus, **inte** standard; standardflödet är fortfarande arbete direkt på `jakob-be`, och PR mot `main` sker bara vid release (se `branch-discipline.md`).
+Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM på en **tillfällig `cursor/<syfte>`-branch** (sanktionerad för cloud-/grind-arbete i `04-branch-and-team.md`), pushar den och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten. Den egna branchen per lane gör att alla tre kan köra **parallellt** utan push-race på `jakob-be`. **Operatören mergar** sedan in branchen i bas-branchen (`jakob-be` för A/C, `christopher` för B) — direkt eller via PR om hen vill ha Bugbot/Codex-review. PR är alltså en valfri review-bonus, **inte** standard; standardflödet är fortfarande arbete direkt på `jakob-be`, och PR mot `main` sker bara vid release (se `04-branch-and-team.md`).
 
 Operatören öppnar ett nytt cloud-agent-fönster, klistrar in en av prompterna som första meddelande, och låter agenten köra till push.
 
@@ -39,7 +39,7 @@ branch, så ingen push-race uppstår. Operatören mergar sedan in i bas-branchen
 
 A och C mergas båda in i `jakob-be` men rör disjunkta filer → konfliktfri merge
 (i valfri ordning). Hade de pushat rakt på `jakob-be` i stället hade den andra
-fått en push-race (`branch-discipline.md §Push-fel` = stoppa och fråga) — därav
+fått en push-race (`04-branch-and-team.md §Push-fel` = stoppa och fråga) — därav
 de tillfälliga brancherna. Det lokala backend-arbetet (`packages/generation/**`)
 är off-limits för alla tre.
 
