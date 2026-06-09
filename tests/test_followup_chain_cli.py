@@ -435,6 +435,162 @@ def test_followup_chain_section_add_guarantees_stays_mount_only(
     assert _newest_build_app_pages(generated_dir, site_id) == base_pages
 
 
+def test_followup_chain_section_add_hours_renders_inline_on_home(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ADR 0038 inline-render proof: a "lägg till en öppettider-sektion"
+    follow-up on the local-service-business scaffold injects the opening-hours
+    section INLINE as a block on the home page (no new page), so the honest
+    file-diff reports appliedVisibleEffect=true with affectedRoutes=["home"].
+
+    Uses painter-palma because it is LSB and carries REAL grounded
+    contact.openingHours ("Mån–Fre 08:00–17:00"), so the grounded-content gate
+    passes and the section is not a placeholder."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_init_build(
+        tmp_path, "painter-palma.project-input.json", site_id
+    )
+    base_pages = _newest_build_app_pages(generated_dir, site_id)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en öppettider-sektion",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "section_add"
+    assert "hours" in [c["capability"] for c in result["appliedCapabilities"]]
+    # Inline render: visible effect on home, no new dedicated page.
+    assert result["appliedVisibleEffect"] is True, result
+    assert result["affectedRoutes"] == ["home"]
+    assert _newest_build_app_pages(generated_dir, site_id) == base_pages, (
+        "hours renders inline on home, so the page LIST must be unchanged "
+        "(no /oppettider page created)."
+    )
+
+    # The directive landed on v2's Project Input and the home body shows the
+    # grounded opening-hours card.
+    v2_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    mounted = (v2_pi.get("directives") or {}).get("mountedSections") or []
+    assert any(
+        m.get("sectionId") == "hours-summary" and m.get("routeId") == "home"
+        for m in mounted
+    ), mounted
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    home_markup = (builds[-1] / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "Öppettider" in home_markup
+    assert "Mån–Fre 08:00–17:00" in home_markup
+
+
+def test_followup_chain_inline_section_survives_later_unrelated_followup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ADR 0038 compose-across-versions: an inline section mounted in v2 must
+    STILL render in a v3 that does an unrelated follow-up (e.g. a restyle).
+
+    Regression guard for the apply reconciliation bug: ``mountedSections`` is
+    rebuilt from the MERGED version's full ``requestedCapabilities`` (the hours
+    capability is still requested in v3), so the hours block is not silently
+    dropped just because the v3 apply call resolved no NEW section capability."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_init_build(
+        tmp_path, "painter-palma.project-input.json", site_id
+    )
+
+    # v2: add the hours section inline.
+    v2 = run_followup_chain(
+        site_id,
+        "lägg till en öppettider-sektion",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert v2["appliedVisibleEffect"] is True, v2
+
+    # v3: an unrelated restyle that resolves NO new section capability.
+    v3 = run_followup_chain(
+        site_id,
+        "gör färgen mörkblå",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert v3["stage"] == "built", v3
+    assert v3["version"] == 3
+
+    v3_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v3.project-input.json").read_text(encoding="utf-8")
+    )
+    mounted = (v3_pi.get("directives") or {}).get("mountedSections") or []
+    assert any(
+        m.get("sectionId") == "hours-summary" for m in mounted
+    ), f"hours-summary must persist into v3, got {mounted}"
+
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    home_markup = (builds[-1] / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "Öppettider" in home_markup, (
+        "the inline hours section must still render on v3's home page (it was "
+        "not silently dropped by the unrelated restyle follow-up)."
+    )
+
+
+def test_followup_chain_section_add_hours_position_top(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ADR 0038 slice 2: "lägg till en öppettider-sektion överst" places the
+    injected hours block at the TOP of the home order (right after the hero),
+    not the default before-contact slot. Proven by the hours card rendering
+    before the services-summary block in app/page.tsx."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_init_build(
+        tmp_path, "painter-palma.project-input.json", site_id
+    )
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en öppettider-sektion överst",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert result["stage"] == "built", result
+    assert result["appliedVisibleEffect"] is True, result
+
+    v2_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    mounted = (v2_pi.get("directives") or {}).get("mountedSections") or []
+    assert mounted and mounted[0].get("position") == "top", mounted
+
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    home_markup = (builds[-1] / "app" / "page.tsx").read_text(encoding="utf-8")
+    hours_idx = home_markup.find("Öppettider")
+    # service-summary renders the services grid; the hours block must precede it.
+    services_idx = home_markup.find("Inomhusmålning")
+    assert 0 < hours_idx < services_idx, (
+        "position=top must place the hours block right after the hero, before "
+        "the services summary."
+    )
+
+
 def test_followup_chain_section_add_unsupported_type_is_honest_no_op(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
