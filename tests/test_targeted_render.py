@@ -262,7 +262,7 @@ def _seed_applied_v2(monkeypatch: pytest.MonkeyPatch, prompt_inputs: Path) -> Pa
 def _make_fake_build(*, status: str, applied_visible_effect: bool):
     """Return a build_fn stand-in that writes a run + build-result.json."""
 
-    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None):
+    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None, auto_prune=False):
         run_dir = Path(runs_dir) / f"run-fake-{status}"
         snapshot = run_dir / "generated-files" / "app"
         snapshot.mkdir(parents=True, exist_ok=True)
@@ -769,7 +769,7 @@ def test_orchestrator_diffs_active_build_with_route_map(
     (site_dir / "builds" / "20260601T000000Z").mkdir(parents=True)
     write_active_pointer(site_dir, "20260601T000000Z", "builds/20260601T000000Z")
 
-    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None):
+    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None, auto_prune=False):
         run_dir = Path(runs_dir) / "run-new"
         app = run_dir / "generated-files" / "app"
         (app / "kontakt").mkdir(parents=True)
@@ -902,7 +902,7 @@ def test_orchestrator_union_avoids_false_out_of_scope_warning(
     (site_dir / "builds" / "20260601T000000Z").mkdir(parents=True)
     write_active_pointer(site_dir, "20260601T000000Z", "builds/20260601T000000Z")
 
-    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None):
+    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None, auto_prune=False):
         run_dir = Path(runs_dir) / "run-new"
         app = run_dir / "generated-files" / "app"
         app.mkdir(parents=True)
@@ -965,7 +965,7 @@ def test_orchestrator_union_avoids_false_out_of_scope_warning(
 def _make_failing_build():
     """A build_fn that writes a failed run + build-result then raises (like build())."""
 
-    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None):
+    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None, auto_prune=False):
         run_dir = Path(runs_dir) / "run-fake-failed"
         run_dir.mkdir(parents=True, exist_ok=True)
         (run_dir / "trace.ndjson").write_text("", encoding="utf-8")

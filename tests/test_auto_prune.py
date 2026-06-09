@@ -315,6 +315,47 @@ def test_build_site_skips_auto_prune_when_runs_dir_overridden() -> None:
     assert "from packages.generation.maintenance import auto_prune_all" in source
 
 
+def test_build_api_auto_prune_default_is_off() -> None:
+    """External review follow-up to PR #237: the CLI flip alone left the Python
+    API (``build(dossier_path)`` direct calls) and the ``--followup``/OpenClaw
+    chain inheriting ``auto_prune=True`` against canonical dirs - the same
+    data-loss trap with caps set in ``.env``. Lock that pruning is OPT-IN at
+    every seam: the function defaults, the targeted/followup threading, and the
+    --followup CLI wiring.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    assert (
+        inspect.signature(build_site.build).parameters["auto_prune"].default
+        is False
+    ), "build() must default auto_prune to False (opt-in retention)"
+    assert (
+        inspect.signature(build_site.build_targeted_version)
+        .parameters["auto_prune"]
+        .default
+        is False
+    ), "build_targeted_version() must default auto_prune to False"
+    assert (
+        inspect.signature(build_site.run_followup_chain)
+        .parameters["auto_prune"]
+        .default
+        is False
+    ), "run_followup_chain() must default auto_prune to False"
+
+    # The --followup CLI path must thread the SAME opt-in flag as --dossier.
+    source = (
+        Path(__file__).resolve().parents[1] / "scripts" / "build_site.py"
+    ).read_text(encoding="utf-8")
+    followup_call = source.index("result = run_followup_chain(")
+    followup_block = source[followup_call : source.index(")", followup_call) + 1]
+    assert "auto_prune=args.allow_prune" in followup_block, (
+        "--followup must wire auto_prune=args.allow_prune (opt-in), "
+        "mirroring the --dossier path"
+    )
+
+
 def test_prompt_to_project_input_calls_auto_prune_on_main() -> None:
     """Source-lock that ``main()`` invokes auto-prune before disk writes."""
     source = (
