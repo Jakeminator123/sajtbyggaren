@@ -82,6 +82,15 @@ interface PreviewErrorBody {
   hint?: string;
 }
 
+// Hostad preview-start kör ``npm install`` + ``next build`` + ``next start`` i en
+// Vercel Sandbox och blockar POST:en tills den publika URL:en svarar (~28 s+
+// kallstart). En default-serverless-funktion (10 s) hinner inte. Vi höjer taket
+// till 300 s (Pro-plan; Hobby är hårt kapat till 60 s — se
+// docs/hosted-viewser-deploy.md för den ärliga begränsningen). Påverkar inte
+// lokal drift där samma route bara spawnar en lokal ``next start``.
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
 interface PreviewStartOk {
   siteId: string;
   /** Iframe:bar URL — lokal http eller publik vercel.run https. */
