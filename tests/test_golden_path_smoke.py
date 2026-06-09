@@ -43,11 +43,16 @@ _EXPECTED_BRIEF_SOURCE = "mock-no-key"
 _EXPECTED_PLAN_SOURCE = "pinned"
 
 # A build with ``do_build=False`` keeps the blocking typecheck / build-status
-# checks skipped, so the aggregate quality status must stay non-failing
-# (``ok``/``degraded``) while the run-level build status is the honest
-# ``skipped`` (npm never ran) - ``ok``/``degraded`` only appear with do_build=True.
-_ACCEPTED_QUALITY_STATUSES = frozenset({"ok", "degraded"})
-_ACCEPTED_BUILD_STATUSES = frozenset({"ok", "degraded", "skipped"})
+# checks skipped, so for a clean deterministic baseline the aggregate quality
+# status is exactly ``ok`` (route-scan + policy-compliance pass; the two warning
+# checks never lower it), and the run-level build status is the honest
+# ``skipped`` (npm never ran). We assert the EXACT values rather than a tolerant
+# set so this smoke actually protects route-generation: a future regression that
+# made route-scan fail (-> quality ``degraded``) or that accidentally ran the
+# build path (-> build ``ok``/``failed`` under do_build=False) must trip here
+# instead of silently passing a loose membership check.
+_EXPECTED_QUALITY_STATUS = "ok"
+_EXPECTED_BUILD_STATUS = "skipped"
 
 
 class _Branch:
@@ -71,12 +76,17 @@ class _Branch:
         self.routes = routes
 
 
-# ASCII prompt spellings (no diacritics) routed identically to the diacritic
-# baseline in scripts/run_golden_path_eval.py when verified offline.
+# The prompts are the EXACT diacritic Swedish strings from the deterministic
+# ``BASELINE_CASES`` in scripts/run_golden_path_eval.py ("för", "Malmö",
+# "Göteborg", "frisörsalong", "säljer"). Mirroring them verbatim is the point of
+# a golden-path smoke: business-type detection keys on the real prompt text, so
+# an ASCII-folded prompt could mask a routing/language regression that only
+# triggers on diacritics. This file is UTF-8 Python source, so the characters
+# are safe here regardless of any shell encoding.
 _BRANCHES: tuple[_Branch, ...] = (
     _Branch(
         site_id="electrician-malmo",
-        prompt="Skapa en hemsida for en elektriker i Malmo.",
+        prompt="Skapa en hemsida för en elektriker i Malmö.",
         scaffold_id="local-service-business",
         variant_id="nordic-trust",
         starter_id="marketing-base",
@@ -84,7 +94,7 @@ _BRANCHES: tuple[_Branch, ...] = (
     ),
     _Branch(
         site_id="salon-goteborg",
-        prompt="Skapa en hemsida for en frisorsalong i Goteborg.",
+        prompt="Skapa en hemsida för en frisörsalong i Göteborg.",
         scaffold_id="local-service-business",
         variant_id="nordic-trust",
         starter_id="marketing-base",
@@ -92,7 +102,7 @@ _BRANCHES: tuple[_Branch, ...] = (
     ),
     _Branch(
         site_id="naprapat-stockholm",
-        prompt="Skapa en hemsida for en naprapatklinik i Stockholm.",
+        prompt="Skapa en hemsida för en naprapatklinik i Stockholm.",
         scaffold_id="clinic-healthcare",
         variant_id="clinic-calm",
         starter_id="marketing-base",
@@ -100,7 +110,7 @@ _BRANCHES: tuple[_Branch, ...] = (
     ),
     _Branch(
         site_id="ceramics-shop",
-        prompt="Skapa en hemsida for en liten e-handel som saljer keramik.",
+        prompt="Skapa en hemsida för en liten e-handel som säljer keramik.",
         scaffold_id="ecommerce-lite",
         variant_id="clean-store",
         starter_id="commerce-base",
@@ -176,9 +186,9 @@ def test_golden_path_branch_smoke(
        scaffold/variant (no drift between plan and what was rendered).
     3. ``app/page.tsx`` plus the branch's expected route pages exist on disk,
        and the rendered route set equals the expected set exactly.
-    4. ``quality-result.json`` lands a non-failing status (``ok``/``degraded``)
-       and ``build-result.json`` lands the honest ``skipped`` build status
-       (or ``ok``/``degraded``) under ``do_build=False``.
+    4. ``quality-result.json`` status is exactly ``ok`` (route-scan +
+       policy-compliance pass) and ``build-result.json`` status is exactly the
+       honest ``skipped`` under ``do_build=False``; route-scan check is ok/skipped.
     5. ``briefSource = mock-no-key`` (brief) and ``planSource = pinned`` (plan)
        — the deterministic mock truth-fields.
     """
@@ -240,16 +250,30 @@ def test_golden_path_branch_smoke(
         "ship extra routes, so this is a subset check, not exact equality.)"
     )
 
-    # 4. Honest build status + non-failing quality status under do_build=False.
-    assert build_result.get("status") in _ACCEPTED_BUILD_STATUSES, (
+    # 4. Honest, EXACT build + quality status under do_build=False.
+    assert build_result.get("status") == _EXPECTED_BUILD_STATUS, (
         f"{branch.site_id}: build-result.json status was "
-        f"{build_result.get('status')!r}; expected one of "
-        f"{sorted(_ACCEPTED_BUILD_STATUSES)}."
+        f"{build_result.get('status')!r}; expected exactly "
+        f"{_EXPECTED_BUILD_STATUS!r} under do_build=False (npm never ran). A "
+        "different value means the build path ran or the status was mis-stamped."
     )
-    assert quality_result.get("status") in _ACCEPTED_QUALITY_STATUSES, (
+    assert quality_result.get("status") == _EXPECTED_QUALITY_STATUS, (
         f"{branch.site_id}: quality-result.json status was "
-        f"{quality_result.get('status')!r}; expected one of "
-        f"{sorted(_ACCEPTED_QUALITY_STATUSES)}."
+        f"{quality_result.get('status')!r}; expected exactly "
+        f"{_EXPECTED_QUALITY_STATUS!r}. A ``degraded`` here means a blocking "
+        "check (route-scan / policy-compliance) failed - exactly the "
+        "route-generation regression this smoke must catch."
+    )
+    # Belt-and-suspenders: the route-scan check itself must be ok|skipped, so a
+    # future warning-only reshuffle can never let a real route failure hide.
+    checks_by_name = {
+        c.get("name"): c.get("status")
+        for c in (quality_result.get("checks") or [])
+        if isinstance(c, dict)
+    }
+    assert checks_by_name.get("route-scan") in {"ok", "skipped"}, (
+        f"{branch.site_id}: route-scan check was "
+        f"{checks_by_name.get('route-scan')!r}; expected ok/skipped."
     )
 
     # 5. Deterministic mock truth-fields.
