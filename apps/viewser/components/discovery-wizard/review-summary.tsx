@@ -35,14 +35,15 @@ export function ReviewSummary({
   const items = useMemo(() => {
     const company = answers.companyName.trim();
     const offerSnippet = answers.offer.trim().slice(0, 40);
-    const hasContact =
-      !!answers.contact.phone.trim() || !!answers.contact.email.trim();
     const contactValue = [
       answers.contact.phone.trim() ? "telefon" : null,
       answers.contact.email.trim() ? "e-post" : null,
+      answers.contact.address.trim() ? "adress" : null,
+      answers.contact.openingHours.trim() ? "öppettider" : null,
     ]
       .filter(Boolean)
       .join(" + ");
+    const hasContact = contactValue.length > 0;
     const hasAbout = !!answers.aboutText.trim();
     const imageCount =
       (answers.assets.logo ? 1 : 0) +
