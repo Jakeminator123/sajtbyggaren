@@ -5,13 +5,16 @@ test that freezes the color/token output (scale + css block) for a
 representative project input *before* the system is extracted from
 ``scripts/build_site.py`` into ``packages/generation/build/tokens.py``. With
 this lock in place the extraction can be proven behavior-preserving: the test
-passes against the pre-move code (it generated the golden) and must keep
-passing against the post-move re-export.
+passes against the pre-move code (it generated the snapshot baseline) and must
+keep passing against the post-move re-export.
 
-The golden CSS in ``tests/fixtures/tokens/painter-palma.nordic-trust.variant.css``
+(Naming note: "snapshot baseline" is the frozen-reference test idiom, not the
+product's Golden Path - see the concept map in ``docs/glossary.md``.)
+
+The baseline CSS in ``tests/fixtures/tokens/painter-palma.nordic-trust.variant.css``
 was generated from the unmodified builder. ``variant_css`` output is pure ASCII
-(hex colors, font names, plain CSS), so a committed golden file gives a clean
-diff without escaping concerns.
+(hex colors, font names, plain CSS), so a committed snapshot baseline file gives
+a clean diff without escaping concerns.
 
 All symbols are imported via ``scripts.build_site`` on purpose: that spelling
 must keep resolving through the re-export façade after the move, so the test

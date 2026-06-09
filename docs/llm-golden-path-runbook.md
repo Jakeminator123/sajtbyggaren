@@ -11,6 +11,23 @@ Detta är den smala vertikala skivan av Sajtbyggarens kärnflöde. Hela
 kedjan är wired i repo:t; runbooken finns för att nästa agent inte ska
 återuppfinna eller bygga en parallell initieringsväg.
 
+`Golden Path` är ett canonical begrepp (ADR 0038, `naming-dictionary.v1.json`).
+Det betyder huvudflödet OCH den smala motor-skiva som bevisar att det lever -
+inte alla tester eller all eval. För att inte fler `golden_*`-ytor ska driva
+isär: detta är den enda kanoniska entrypoint-ytan.
+
+| Yta | Var | Roll |
+| --- | --- | --- |
+| Flöde/runbook | `docs/llm-golden-path-runbook.md` (denna fil) | Sanningskälla för flödet |
+| Mätning (kommando) | `scripts/run_golden_path_eval.py` | Deterministisk scorecard, default offline |
+| Tester som låser | `tests/test_golden_path_eval.py`, `tests/test_llm_golden_path_smoke.py` | Pinnar routing + artefaktkontrakt |
+| Eval-output | `data/evals/summaries/golden-path/`, `data/evals/artifacts/golden-path/` | Summary + isolerad arbetsmapp |
+| Backoffice | "Evals och telemetri" + Översikt (read-only golden-status) | Operatörens iakttagelse |
+
+Ordet "golden" i snapshot-/golden-master-tester (t.ex.
+`tests/test_section_treatments_json_parity.py`) är **inte** Golden Path - det är
+"snapshot baseline". Se begreppskartan i [`docs/glossary.md`](glossary.md).
+
 Kärnflödet är:
 
 ```text
