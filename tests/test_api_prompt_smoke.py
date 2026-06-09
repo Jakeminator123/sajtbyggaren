@@ -243,6 +243,7 @@ def _post_prompt(port: int) -> tuple[int, dict[str, object]]:
 
 
 @pytest.mark.slow
+@pytest.mark.requires_node
 def test_api_prompt_route_spawns_python_end_to_end(tmp_path: Path) -> None:
     _require_tools()
     _ensure_viewser_install()

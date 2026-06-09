@@ -497,6 +497,7 @@ def test_site_brief_to_artifact_omits_blueprint_when_absent():
 
 # E2E test gated on SAJTBYGGAREN_E2E=1 to avoid spending money in CI.
 @pytest.mark.tooling
+@pytest.mark.e2e
 @pytest.mark.skipif(
     os.environ.get("SAJTBYGGAREN_E2E") != "1" or not os.environ.get("OPENAI_API_KEY"),
     reason="SAJTBYGGAREN_E2E=1 and OPENAI_API_KEY required for real LLM call",
