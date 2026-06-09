@@ -13,9 +13,15 @@ import {
   RotateCcw,
   Sparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ComponentType,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-import { ComparePreviewModal } from "@/components/builder/inspector/compare-preview-modal";
 import {
   computeRunDiff,
   type RunArtefactBundleLike,
@@ -34,6 +40,37 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SECONDARY_INTERACTIONS } from "@/lib/ui-tokens";
 import { cn } from "@/lib/utils";
+
+/**
+ * Props-shape för den lazy-laddade jämförelsemodalen. Inlinad här så ingen
+ * ``import``-rad (varken runtime eller typ) binder VersionsTab-modulen till
+ * ``compare-preview-modal`` (och dess StackBlitz-graf).
+ */
+type ComparePreviewModalComponentProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  runIdA: string;
+  runIdB: string;
+  versionA: number | null | undefined;
+  versionB: number | null | undefined;
+};
+
+/**
+ * ``ComparePreviewModal`` laddas LAZY via en RUNTIME ``import()`` i en
+ * EVENT-HANDLER (``openComparePreview`` nedan) — MEDVETET INTE via top-level
+ * ``next/dynamic``.
+ *
+ * Modalen drar in StackBlitz-modulgrafen (``compare-preview-modal`` använder
+ * ``await import("@stackblitz/sdk")`` i sina paneler). En top-level
+ * ``dynamic(() => import("compare-preview-modal"))`` får Next/Turbopack att
+ * STATISKT pre-scripta den grafens chunks (inkl. SDK-vendor-chunken) som
+ * ``<script async>`` i studio.html — exakt den eager bundle-bloat vi vill bli
+ * av med. Genom att i stället anropa ``import()`` först när operatören klickar
+ * "Visuell jämförelse" ligger referensen utanför den eager-analyserade grafen
+ * och SDK-chunken hämtas först när modalen faktiskt öppnas.
+ */
+const COMPARE_PREVIEW_MODAL_IMPORT = () =>
+  import("@/components/builder/inspector/compare-preview-modal");
 
 /**
  * VersionsTab — site-scoped versionshistorik + jämförelse mellan två runs.
@@ -179,6 +216,14 @@ export function VersionsTab({
   // Modal-state lever lokalt här eftersom det är en peer-yta till diff-
   // panelen — inte en globalt delad state. (GAP-viewser-side-by-side-preview.)
   const [comparePreviewOpen, setComparePreviewOpen] = useState(false);
+  // Den lazy-laddade jämförelsemodalen. Laddas via en RUNTIME ``import()`` i
+  // ``openComparePreview`` (event-handler) först när operatören öppnar den —
+  // aldrig via top-level ``dynamic()`` (som skulle pre-scripta SDK-chunken i
+  // studio.html). När komponenten väl är satt stannar den monterad så
+  // öppna/stäng-animationen beter sig EXAKT som förr (Base UI behåller popup:en
+  // i DOM under exit-transition så länge den ligger kvar med A+B valda).
+  const [ComparePreviewModalComp, setComparePreviewModalComp] =
+    useState<ComponentType<ComparePreviewModalComponentProps> | null>(null);
 
   // Fetch /api/runs vid mount + manuell refresh. Cancel-flagga skyddar
   // mot setState efter unmount (samma mönster som use-run-artefacts).
@@ -417,6 +462,18 @@ export function VersionsTab({
     setComparePreviewOpen(false);
   }, []);
 
+  // Öppna jämförelsemodalen. Laddar dess komponent via en RUNTIME ``import()``
+  // FÖRSTA gången (event-handler, inte top-level dynamic()) så StackBlitz-
+  // grafen hålls utanför studio-sidans eager ``<script>``-graf. ``setState`` i
+  // ``.then``-callbacken (asynkront) → inget react-hooks/set-state-in-effect.
+  const openComparePreview = useCallback(() => {
+    setComparePreviewOpen(true);
+    if (ComparePreviewModalComp) return;
+    void COMPARE_PREVIEW_MODAL_IMPORT().then((mod) => {
+      setComparePreviewModalComp(() => mod.ComparePreviewModal);
+    });
+  }, [ComparePreviewModalComp]);
+
   // Quick-action: Jämför de två senaste runs för aktuell sajt.
   // siteRuns kommer från /api/runs som returnerar dem sorterat på
   // createdAt desc → index 0 är senaste, index 1 är näst-senaste.
@@ -529,7 +586,7 @@ export function VersionsTab({
         onCompareLatestTwo={handleCompareLatestTwo}
         canCompareLatestTwo={canCompareLatestTwo}
         canOpenComparePreview={canOpenComparePreview}
-        onOpenComparePreview={() => setComparePreviewOpen(true)}
+        onOpenComparePreview={openComparePreview}
       />
 
       <RunList
@@ -559,8 +616,8 @@ export function VersionsTab({
         <CompareEmptyHint hasA={compareA !== null} hasB={compareB !== null} />
       )}
 
-      {canOpenComparePreview && compareA && compareB ? (
-        <ComparePreviewModal
+      {ComparePreviewModalComp && canOpenComparePreview && compareA && compareB ? (
+        <ComparePreviewModalComp
           open={comparePreviewOpen}
           onOpenChange={setComparePreviewOpen}
           runIdA={compareA}

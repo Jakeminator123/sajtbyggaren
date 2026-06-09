@@ -1,6 +1,6 @@
 """Source-lock for the cross-origin isolation headers in apps/viewser.
 
-`apps/viewser/components/viewer-panel.tsx` embeds StackBlitz via
+`apps/viewser/components/stackblitz-preview.tsx` embeds StackBlitz via
 `sdk.embedProject(..., { template: "node" })`, which boots a WebContainer
 inside the iframe. WebContainers require `SharedArrayBuffer`, which only
 works on a cross-origin-isolated document. The host (this Next.js app)
@@ -27,7 +27,14 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NEXT_CONFIG = REPO_ROOT / "apps" / "viewser" / "next.config.ts"
-VIEWER_PANEL = REPO_ROOT / "apps" / "viewser" / "components" / "viewer-panel.tsx"
+# Bundle-bloat-fix (ADR 0033): hela StackBlitz-embed-vägen (inkl. den
+# credentialless-iframe-patch dessa lås skyddar) flyttades ur
+# ``viewer-panel.tsx`` till den lazy-laddade ``stackblitz-preview.tsx`` så
+# ``@stackblitz/sdk`` inte längre prefetchas i ViewerPanel:s eager-chunk vid en
+# normal vercel-sandbox/local-next-studioladdning. Källåsen följer med dit.
+STACKBLITZ_PREVIEW = (
+    REPO_ROOT / "apps" / "viewser" / "components" / "stackblitz-preview.tsx"
+)
 
 
 def _load_config_source() -> str:
@@ -37,11 +44,13 @@ def _load_config_source() -> str:
     return NEXT_CONFIG.read_text(encoding="utf-8")
 
 
-def _load_viewer_panel_source() -> str:
-    assert VIEWER_PANEL.exists(), (
-        f"Expected {VIEWER_PANEL} to exist; if it was renamed, update this test."
+def _load_stackblitz_preview_source() -> str:
+    assert STACKBLITZ_PREVIEW.exists(), (
+        f"Expected {STACKBLITZ_PREVIEW} to exist; if it was renamed, update "
+        "this test. The StackBlitz embed path (and its credentialless-iframe "
+        "patch) lives here after the bundle-bloat split (ADR 0033)."
     )
-    return VIEWER_PANEL.read_text(encoding="utf-8")
+    return STACKBLITZ_PREVIEW.read_text(encoding="utf-8")
 
 
 def test_next_config_sets_cross_origin_embedder_policy() -> None:
@@ -136,46 +145,47 @@ def test_next_config_branches_headers_on_preview_mode() -> None:
 # the embed and shows "Specify a Cross-Origin Embedder Policy to prevent
 # this frame from being blocked" in DevTools.
 #
-# ViewerPanel patches document.createElement around sdk.embedProject so
+# StackblitzPreview patches document.createElement around sdk.embedProject so
 # the iframe StackBlitz creates internally is tagged before insertion.
-# These tests lock that mechanism in place.
+# These tests lock that mechanism in place. (Lives in stackblitz-preview.tsx
+# after the bundle-bloat split — ADR 0033.)
 # --------------------------------------------------------------------------
 
 
-def test_viewer_panel_patches_create_element_for_credentialless_iframe() -> None:
-    """ViewerPanel must intercept iframe creation and tag it credentialless."""
-    source = _load_viewer_panel_source()
+def test_stackblitz_preview_patches_create_element_for_credentialless_iframe() -> None:
+    """StackblitzPreview must intercept iframe creation and tag it credentialless."""
+    source = _load_stackblitz_preview_source()
     assert "document.createElement" in source, (
-        "viewer-panel.tsx must reference document.createElement somewhere — "
-        "either to create the mount target or to patch the SDK's iframe "
+        "stackblitz-preview.tsx must reference document.createElement somewhere "
+        "— either to create the mount target or to patch the SDK's iframe "
         "creation. Removing all references is a regression."
     )
     assert 'setAttribute("credentialless"' in source, (
-        "viewer-panel.tsx must call setAttribute('credentialless', ...) on "
-        "the StackBlitz iframe. Without it Chrome blocks the embed under our "
+        "stackblitz-preview.tsx must call setAttribute('credentialless', ...) "
+        "on the StackBlitz iframe. Without it Chrome blocks the embed under our "
         "host's Cross-Origin-Embedder-Policy: credentialless. See "
         "https://developer.chrome.com/blog/iframe-credentialless"
     )
 
 
-def test_viewer_panel_restores_create_element_in_finally() -> None:
+def test_stackblitz_preview_restores_create_element_in_finally() -> None:
     """The createElement patch must be reverted so we never leak the override."""
-    source = _load_viewer_panel_source()
+    source = _load_stackblitz_preview_source()
     assert "originalCreateElement" in source, (
-        "viewer-panel.tsx must hold a reference to the original "
+        "stackblitz-preview.tsx must hold a reference to the original "
         "document.createElement so it can be restored after embedProject."
     )
     assert "} finally {" in source and "document.createElement = originalCreateElement" in source, (
-        "viewer-panel.tsx must restore document.createElement in a finally "
+        "stackblitz-preview.tsx must restore document.createElement in a finally "
         "block — leaving the patch in place would mean every future iframe "
         "created elsewhere on the page also gets the credentialless "
         "attribute, which has surprising security implications."
     )
 
 
-def test_viewer_panel_only_tags_iframe_elements() -> None:
+def test_stackblitz_preview_only_tags_iframe_elements() -> None:
     """The patch must scope to <iframe> only, not every createElement call."""
-    source = _load_viewer_panel_source()
+    source = _load_stackblitz_preview_source()
     assert 'tagName.toLowerCase() === "iframe"' in source, (
         "The createElement patch must guard on tagName.toLowerCase() === "
         "'iframe' so only the StackBlitz iframe gets the credentialless "

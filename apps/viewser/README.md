@@ -24,7 +24,13 @@ canonical runtime; den är ett dev-verktyg före Sprint 4.
 ## Stack
 
 - Next.js 16 + Tailwind 4 + shadcn/ui (samma som `marketing-base`)
-- Server-side adapters: `openai`, `zod`, `@stackblitz/sdk`
+- Server-side libs: `openai`, `zod`
+- `@stackblitz/sdk` är ett **klient-side** beroende som laddas lazy via
+  dynamisk import (`next/dynamic` + `await import("@stackblitz/sdk")`) i
+  StackBlitz-preview-vägen — det är ingen server-side adapter. Vägen är
+  pausad bakom `vercel-sandbox`/`local-next` (ADR 0033) och dess modulgraf
+  hämtas först när preview-läget är `stackblitz`/`auto` (eller jämförelse-
+  modalen öppnas), aldrig vid en normal studio-load.
 - API route handlers under `app/api/` (inga Server Actions)
 
 ## Setup

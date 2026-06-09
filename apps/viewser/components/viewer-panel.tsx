@@ -1,8 +1,8 @@
 "use client";
 
-import { ExternalLink, Check, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import {
-  useCallback,
+  type ComponentType,
   useEffect,
   useMemo,
   useRef,
@@ -13,6 +13,37 @@ import {
 import { resolvePreviewRuntimeDescriptor } from "@preview-runtime";
 
 import { Button } from "@/components/ui/button";
+
+/**
+ * Props-shape för den lazy-laddade StackBlitz-preview-komponenten. Inlinad
+ * HÄR (i st.f. ``import type`` från modulen) som extra försäkran om att inget
+ * — varken runtime- eller typ-led — binder ihop ViewerPanel:s eager-graf med
+ * ``stackblitz-preview``-modulen.
+ */
+type StackblitzPreviewComponentProps = {
+  runId: string;
+  isBuilding?: boolean;
+};
+
+/**
+ * StackBlitz-preview (LEGACY/PAUSAD WebContainer-väg, ADR 0033) laddas via en
+ * RUNTIME ``import()`` — MEDVETET INTE via top-level ``next/dynamic``.
+ *
+ * Varför inte ``dynamic()`` på modulnivå? Next/Turbopack STATISKT-analyserar
+ * en modulnivå-``dynamic(() => import("x"))`` och pre-scriptar ``x``:s
+ * chunk-graf (inkl. den nästlade ``@stackblitz/sdk``-chunken) som
+ * ``<script async>`` i den serverade ``studio.html``. Resultatet var att SDK-
+ * vendor-chunken eager-laddades vid varje ``vercel-sandbox``/``local-next``-
+ * studioladdning trots att SDK:n aldrig kördes (verifierat i serverad HTML).
+ *
+ * Genom att i stället anropa ``import("@/components/stackblitz-preview")``
+ * inuti en effekt som BARA körs när StackBlitz-vägen är aktiv
+ * (``CAN_FALL_BACK_TO_STACKBLITZ`` + ``useStackblitz``) ligger referensen inte
+ * i den eager-analyserade modulgrafen — chunken hämtas först när en
+ * ``stackblitz``/``auto``-preview faktiskt behövs.
+ */
+const STACKBLITZ_PREVIEW_IMPORT = () =>
+  import("@/components/stackblitz-preview");
 import type { PromptStage } from "@/components/prompt-builder";
 import {
   DEVICE_PRESET_WIDTHS,
@@ -48,30 +79,6 @@ type ViewerPanelProps = {
   buildStage?: PromptStage;
 };
 
-type FilesPayload = {
-  runId: string;
-  files: Record<string, string>;
-  error?: string;
-};
-
-type BrowserKind = "chromium" | "safari" | "firefox" | "unknown";
-
-/**
- * Heuristik för "kan denna webbläsare köra en embeddad WebContainer-
- * iframe?". StackBlitz embed kräver `COEP: credentialless` på host-
- * dokumentet plus stöd för credentialless-iframes i browsern. Per
- * StackBlitz egen browser-support-tabell:
- *   - Chromium-baserade (Chrome, Edge, Brave, Opera, Vivaldi): JA
- *   - Safari (desktop + iOS, inkl. CriOS/FxiOS som är WebKit under huven):
- *     NEJ — Safari saknar credentialless och kan därför inte ladda embeds
- *   - Firefox: NEJ — beta-stöd för WebContainers men inte för embeds
- *
- * Detta dokumenteras i `docs/integrations/webcontainers-notes.md` och
- * `docs/integrations/stackblitz-research.md`. När browsern inte stödjer
- * embed visar ViewerPanel ett fallback-kort med en "Öppna i nytt fönster"-
- * knapp som anropar `sdk.openProject()` (top-level navigation till
- * stackblitz.com, fungerar i alla browsers eftersom det inte är embeddat).
- */
 // prefers-reduced-motion-prenumeration för studio-hero-videorna. Speglar
 // marketing-sajtens `hero-video.tsx`: via useSyncExternalStore (Reacts
 // kanoniska väg att läsa en extern store) i st.f. useEffect+setState — ger
@@ -92,26 +99,6 @@ function getReducedMotionSnapshot() {
 
 function getReducedMotionServerSnapshot() {
   return false;
-}
-
-function getBrowserKind(): BrowserKind {
-  if (typeof navigator === "undefined") return "chromium";
-  const ua = navigator.userAgent;
-  if (/Firefox\/\d+/.test(ua)) return "firefox";
-  // iOS-browsers är alla WebKit oavsett etikett (CriOS = Chrome iOS,
-  // FxiOS = Firefox iOS, EdgiOS = Edge iOS) — räkna som Safari.
-  if (/iPhone|iPad|iPod|CriOS|FxiOS|EdgiOS/.test(ua)) return "safari";
-  // Desktop Safari: "Safari/" finns men "Chrome/"/"Chromium/" saknas.
-  if (/Safari\/\d+/.test(ua) && !/Chrom(e|ium)\/\d+/.test(ua)) return "safari";
-  if (/Chrom(e|ium)\/\d+/.test(ua)) return "chromium";
-  return "unknown";
-}
-
-function supportsStackBlitzEmbed(kind: BrowserKind): boolean {
-  // SSR och okänd browser: vi optimistiskt försöker embeda. Worst case
-  // får operatören error-pre + kan klicka "Öppna i nytt fönster".
-  if (kind === "unknown") return true;
-  return kind === "chromium";
 }
 
 /**
@@ -297,6 +284,19 @@ const IS_STACKBLITZ_MODE = PREVIEW_RUNTIME.kind === "stackblitz";
 // local-next är bara cold-starten (~28 s medan sandboxen kör npm install +
 // next build innan URL:en svarar), som loading-UI:t nedan tål.
 const IS_VERCEL_SANDBOX_MODE = PREVIEW_RUNTIME.kind === "vercel-sandbox";
+// AUKTORITATIV gate för att överhuvudtaget nå den LEGACY/PAUSADE StackBlitz-
+// vägen (ADR 0033). Descriptorn sätter ``canFallbackToStackblitz === true``
+// ENBART för ``stackblitz`` + ``auto`` (de enda lägena som kör COEP-on, där en
+// WebContainer-embed faktiskt kan boota). För alla andra lägen —
+// ``local-next``, ``vercel-sandbox`` OCH de COEP-av-aliasen ``local``/``fly``
+// plus tomt/okänt env-värde — är en StackBlitz-embed ogiltig (browsern
+// blockar den utan COEP), så ``ViewerPanel`` får ALDRIG falla till
+// StackBlitz där. De tre per-gren-checkarna nedan
+// (``IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE``) returnerar redan med
+// pedagogiskt fel för de två primära lägena; denna konstant är den hårda
+// backstop som dessutom täcker ``local``/``fly``/tomt/okänt (annars läckte de
+// igenom till StackBlitz — den verkliga, om än latenta, gating-buggen).
+const CAN_FALL_BACK_TO_STACKBLITZ = PREVIEW_RUNTIME.canFallbackToStackblitz;
 
 // Mode-aware UI-copy för BuildProgressCard-preview-steget. Tidigare
 // hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode
@@ -312,36 +312,13 @@ const PREVIEW_PREP_HINT = IS_LOCAL_NEXT_MODE
     ? "Vi startar en säker molnförhandsvisning – det tar en stund första gången."
     : "Laddar förhandsvisningen i webbläsaren.";
 
-function formatViewerError(caught: unknown): string {
-  if (caught instanceof Error) {
-    const details = [
-      `name: ${caught.name || "Error"}`,
-      `message: ${caught.message || "(empty message)"}`,
-    ];
-    if (caught.stack) {
-      details.push(
-        `stack:\n${caught.stack.split("\n").slice(0, 20).join("\n")}`,
-      );
-    }
-    return details.join("\n");
-  }
-
-  try {
-    return `non-Error rejection:\n${JSON.stringify(caught, null, 2)}`;
-  } catch {
-    return `non-Error rejection:\n${String(caught)}`;
-  }
-}
-
 export function ViewerPanel({
   runId,
   siteId,
   isBuilding = false,
   buildStage = "idle",
 }: ViewerPanelProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [error, setError] = useState<string | null>(null);
   // Tidigare en ren boolean. Utvidgad till strukturerad info-shape så
   // banner-rendraren kan visa specifik copy per failure-läge (sajten
   // inte byggd, port-pool full, mock-run utan files, ...) istället för
@@ -362,19 +339,19 @@ export function ViewerPanel({
   // laddningsindikator i stället för en blank vit canvas. Återställs till
   // false varje gång URL:en ändras.
   const [iframeLoaded, setIframeLoaded] = useState(false);
-  // När browsern inte stödjer embed sparar vi hämtade filer + den
-  // detekterade browser-kinden i ett gemensamt state-objekt.
-  // Knappen anropar `sdk.openProject()` med samma payload (utan att
-  // fetcha igen) och fallback-kortets text personifieras via
-  // `fallback.kind`. Browser-detekteringen sker synkront inuti
-  // run-id-effekten (navigator är tillgänglig där eftersom effekten
-  // kör efter mount) — ingen separat detect-effect behövs, och
-  // useEffect-deps-arrayen förblir konstant så HMR inte klagar.
-  const [fallback, setFallback] = useState<{
-    files: Record<string, string>;
-    kind: BrowserKind;
-  } | null>(null);
-  const [openingExternal, setOpeningExternal] = useState(false);
+  // Sätts true bara när Steg 1 (lokal/sandbox) inte gäller/misslyckas OCH
+  // läget tillåter en StackBlitz-fallback (``CAN_FALL_BACK_TO_STACKBLITZ``,
+  // dvs ``stackblitz``/``auto``). Styr renderingen av den lazy-laddade
+  // ``<StackblitzPreview/>`` — så hela ``@stackblitz/sdk``-modulgrafen
+  // laddas FÖRST här (via next/dynamic), aldrig vid en vanlig
+  // ``vercel-sandbox``/``local-next``-studioladdning.
+  const [useStackblitz, setUseStackblitz] = useState(false);
+  // Den lazy-laddade StackBlitz-preview-komponenten. Hålls i state och laddas
+  // via en RUNTIME ``import()`` (se loader-effekten nedan) först när
+  // ``useStackblitz`` blir true — aldrig via top-level ``dynamic()`` (som
+  // skulle pre-scripta SDK-chunken i studio.html).
+  const [StackblitzPreviewComp, setStackblitzPreviewComp] =
+    useState<ComponentType<StackblitzPreviewComponentProps> | null>(null);
   // Bumpas av "Försök igen"-knappen i otillgänglig-bannern. Ingår i preview-
   // effektens deps så ett klick kör om hela hämtningen (samma reset-väg som
   // ett runId-byte) utan att operatören måste välja om runen.
@@ -398,11 +375,11 @@ export function ViewerPanel({
   );
 
   /**
-   * Iframe-wrapper-stil. När devicePreset != "full" får wrappern en
-   * max-width-constraint som centreras med mx-auto. iframen själv
-   * fyller wrappern (h-full w-full) så den krympker när wrappern krymper.
-   * useMemo så stilobjektet inte recreate:as per render — undviker
-   * onödiga reflows i StackBlitz-iframen.
+   * Preview-wrapper-stil. När devicePreset != "full" får wrappern en
+   * max-width-constraint som centreras med mx-auto. Preview-innehållet
+   * (iframe eller StackblitzPreview) fyller wrappern (h-full w-full) så det
+   * krymper när wrappern krymper. useMemo så stilobjektet inte recreate:as
+   * per render — undviker onödiga reflows i preview-iframen.
    */
   const previewWrapperStyle = useMemo(() => {
     const width = DEVICE_PRESET_WIDTHS[devicePreset];
@@ -410,59 +387,34 @@ export function ViewerPanel({
     return { maxWidth: `${width}px` };
   }, [devicePreset]);
 
-  // Öppna sajten i en ny flik på stackblitz.com (top-level navigation,
-  // ingen embed = ingen credentialless-iframe = funkar i Safari/Firefox).
-  // Använder samma SDK + samma files-payload som embed-vägen.
-  const handleOpenExternal = useCallback(async () => {
-    if (!fallback || !runId || openingExternal) return;
-    setOpeningExternal(true);
-    setError(null);
-    try {
-      const sdk = (await import("@stackblitz/sdk")).default;
-      sdk.openProject(
-        {
-          title: `Sajtbyggaren preview ${runId}`,
-          description: "Generated site snapshot",
-          template: "node",
-          files: fallback.files,
-        },
-        {
-          openFile: "app/page.tsx",
-          newWindow: true,
-        },
-      );
-    } catch (caught) {
-      setError(formatViewerError(caught));
-    } finally {
-      setOpeningExternal(false);
-    }
-  }, [fallback, openingExternal, runId]);
-
   useEffect(() => {
-    // containerRef-div is now mounted unconditionally (see render
-    // below) so containerRef.current is bound on every runId change,
-    // including transitions out of unavailable=true. The remaining
-    // null-check covers the very first render before React has
-    // attached the ref (effect runs after commit, but we still keep
-    // the guard for defense in depth).
-    if (!runId || !containerRef.current) {
-      setUnavailable(null);
-      setLoading(false);
-      setFallback(null);
-      return;
-    }
-
-    const node = containerRef.current;
+    // Preview-resolvern (Steg 1: lokal/sandbox; sedan ev. handoff till den
+    // lazy StackBlitz-vägen). Återställs helt vid varje runId/siteId-byte
+    // och vid "Försök igen" (retryNonce).
     let cancelled = false;
-    setError(null);
-    setUnavailable(null);
-    setFallback(null);
-    setLocalPreviewUrl(null);
-    setIframeLoaded(false);
-    setLoading(true);
-    node.replaceChildren();
 
     void (async () => {
+      // Skjut upp de initiala state-skrivningarna ett microtask så React
+      // 19:s ``react-hooks/set-state-in-effect`` inte flaggar synkrona
+      // setState i effect-kroppen. Samma mönster som versions-tab /
+      // use-run-artefacts använder för sina reset-effekter. ``cancelled``-
+      // guarden efteråt skyddar mot ett runId/siteId-byte under microtasken.
+      await Promise.resolve();
+      if (cancelled) return;
+
+      if (!runId) {
+        setUnavailable(null);
+        setLoading(false);
+        setUseStackblitz(false);
+        return;
+      }
+
+      setUnavailable(null);
+      setUseStackblitz(false);
+      setLocalPreviewUrl(null);
+      setIframeLoaded(false);
+      setLoading(true);
+
       // Steg 1: försök starta en lokal preview-server. Mycket snabbare
       // än StackBlitz (~1s vs ~60s första gången), funkar i alla
       // browsers, och same-machine-iframen tar emot postMessage från
@@ -564,259 +516,102 @@ export function ViewerPanel({
         return;
       }
 
-      // Steg 2: gammal StackBlitz-väg som fallback (endast i
-      // stackblitz/auto-mode — local-next-grenen ovan returnerar
-      // tidigare med strukturerat fel).
-      try {
-        const response = await fetch(`/api/runs/${runId}/files`);
-        const payload = (await response.json()) as FilesPayload;
-        if (!response.ok || payload.error) {
-          // 404 = run-dir saknar generated-files / .generated/<siteId>/.
-          // Det är förväntat för dev_generate-mock-runs (placeholder-pipeline).
-          // Visa pedagogisk fallback istället för stack trace.
-          if (response.status === 404) {
-            // Cancelled-guard: a stale 404 from a previous runId must
-            // not overwrite UI state for the run that is currently
-            // selected (race condition when runId changes faster than
-            // the in-flight fetch resolves). Mirrors the guard on the
-            // success / catch paths below.
-            if (cancelled) return;
-            setUnavailable({
-              title: "Mock-run utan generated-files",
-              message:
-                "Förhandsvisning saknas för denna run. Mock-runs skriver inte en faktisk Next.js-app.",
-              hint: "Skicka en prompt i chat-rutan för att köra en riktig builder-run.",
-            });
-            setLoading(false);
-            return;
-          }
-          throw new Error(payload.error ?? "Kunde inte hämta filer för run.");
-        }
-
-        if (cancelled || !containerRef.current) return;
-
-        // Browser-kind-check: Safari, Firefox och iOS-browsers kan
-        // inte rendera embeddade WebContainer-iframes (saknar stöd
-        // för credentialless cross-origin isolation). Visa
-        // fallback-kort med "Öppna i nytt fönster" istället för
-        // StackBlitz' kryptiska "Unable to run Embedded Project"-
-        // fel som annars dyker upp inuti iframen. Vi detekterar
-        // synkront här eftersom navigator är tillgänglig efter mount
-        // — separat detect-effect behövs inte.
-        const kind = getBrowserKind();
-        if (!supportsStackBlitzEmbed(kind)) {
-          setFallback({ files: payload.files, kind });
-          setLoading(false);
-          return;
-        }
-
-        // B43 (post-review-2): the dynamic import + embedProject have
-        // their own awaits. If the operator switches runId between
-        // them, cleanup sets cancelled=true but the in-flight
-        // embedProject still mounts the stale preview into the
-        // always-mounted ref-div. Re-check cancelled after BOTH
-        // awaits and explicitly clear the node if we mounted into
-        // a stale tree.
-        const sdk = (await import("@stackblitz/sdk")).default;
-        if (cancelled || !containerRef.current) return;
-
-        // StackBlitz SDK replaces the target element with an iframe
-        // (`target.replaceWith(frame)`). Never pass it the React-owned
-        // shell div itself; create an unmanaged child and let the SDK
-        // replace that child. React then keeps owning a stable shell,
-        // avoiding DOM placement crashes when sibling status/error UI
-        // re-renders while StackBlitz mutates the preview DOM.
-        const mountTarget = document.createElement("div");
-        mountTarget.className = "h-full w-full";
-        containerRef.current.replaceChildren(mountTarget);
-
-        // Patch document.createElement so the <iframe> StackBlitz SDK
-        // creates inside embedProject is tagged with the
-        // `credentialless` HTML attribute BEFORE the browser starts
-        // loading its src. Our host page sends
-        // `Cross-Origin-Embedder-Policy: credentialless` (see
-        // apps/viewser/next.config.ts), which is required for the
-        // WebContainer inside the iframe to access SharedArrayBuffer.
-        // But Chrome additionally requires that EACH embedded iframe
-        // either responds with its own COEP header or carries the
-        // credentialless attribute on the <iframe> element — and
-        // StackBlitz's embed response does not send a COEP header.
-        // Without the attribute Chrome shows "Specify a Cross-Origin
-        // Embedder Policy to prevent this frame from being blocked"
-        // in DevTools and refuses to load the embed. The attribute
-        // must be set before insertion because the browser begins
-        // fetching the iframe's document as soon as it enters the DOM
-        // with src already populated. See
-        // https://developer.chrome.com/blog/iframe-credentialless for
-        // the credentialless-iframe model and why parent COEP alone
-        // is insufficient.
-        //
-        // CRITICAL — credentialless ALONE is INTE tillräckligt. För
-        // att `window.crossOriginIsolated` ska bli `true` inuti
-        // iframen (och därmed `SharedArrayBuffer` exponeras till
-        // WebContainern) krävs OCKSÅ att iframen taggas med
-        // `allow="cross-origin-isolated"` (Permissions Policy-
-        // delegering från parent). Annars visar StackBlitz "Unable
-        // to run Embedded Project — Looks like this project is being
-        // embedded without proper isolation headers" trots att vår
-        // COEP/COOP-headers är korrekt levererade.
-        //
-        // Den delen sköts via SDK:ns `crossOriginIsolated: true`-flagga
-        // i embedProject-options nedan — den lägger till
-        // `cross-origin-isolated` i iframens `allow`-lista via
-        // `setFrameAllowList` (se sdk.m.js:132-140). Dokumenterad i
-        // EmbedOptions-typen och refererad i
-        // https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/
-        // som den officiella vägen för cross-origin-isolated embed.
-        //
-        // Båda behövs: `credentialless`-attributet löser COEP-kravet,
-        // `allow="cross-origin-isolated"` löser Permissions Policy-
-        // delegeringen. Saknar man någondera fallerar embedden.
-        //
-        // The patch is scoped via try/finally so we never leave the
-        // global API mutated past the SDK's internal iframe creation.
-        const originalCreateElement = document.createElement.bind(document);
-        const patchedCreateElement = ((
-          tagName: string,
-          options?: ElementCreationOptions,
-        ) => {
-          const elem = originalCreateElement(tagName, options);
-          if (
-            typeof tagName === "string" &&
-            tagName.toLowerCase() === "iframe"
-          ) {
-            elem.setAttribute("credentialless", "");
-          }
-          return elem;
-        }) as typeof document.createElement;
-        document.createElement = patchedCreateElement;
-
-        try {
-          await sdk.embedProject(
-            mountTarget,
-            {
-              title: `Sajtbyggaren preview ${runId}`,
-              description: "Generated site snapshot",
-              template: "node",
-              files: payload.files,
-              settings: {
-                compile: {
-                  // Auto-rebuild when files ändras (StackBlitz default = on,
-                  // men vi sätter explicit så det aldrig avbryts av framtida
-                  // SDK-versionsändringar).
-                  trigger: "auto",
-                },
-              },
-            },
-            {
-              openFile: "app/page.tsx",
-              view: "preview",
-              // Ljust tema för att matcha Sajtbyggarens egen UI istället för
-              // StackBlitz default-mörkblå. Möjliga värden: "default" (mörk),
-              // "light", "dark". `terminalHeight: 0` döljer den lilla
-              // terminal-panelen som annars syns nere i preview-läget och
-              // gör helhetsintrycket mörkare.
-              theme: "light",
-              terminalHeight: 0,
-              // Göm sidebar med fil-listan eftersom vi visar bara preview
-              // (operatören inspekterar koden via Run History-drawern i
-              // Sajtbyggaren-UI:t, inte via StackBlitz-sidebaren).
-              hideExplorer: true,
-              hideNavigation: true,
-              hideDevTools: true,
-              clickToLoad: false,
-              height: 1200,
-              // Säg åt SDK:n att lägga till `cross-origin-isolated` i
-              // iframens `allow`-lista. Krävs för att Permissions Policy
-              // ska delegera cross-origin-isolation till stackblitz.com-
-              // origin:en — utan det blir `window.crossOriginIsolated`
-              // alltid `false` inuti iframen oavsett vad host:en
-              // skickar för COEP/COOP-headers, och WebContainern
-              // bootar inte (visar "Unable to run Embedded Project").
-              // Tillsammans med `credentialless`-attributet ovan
-              // (createElement-patchen) ger detta full cross-origin
-              // isolation åt embedden. Se EmbedOptions i
-              // @stackblitz/sdk/types/interfaces.d.ts och
-              // https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/.
-              crossOriginIsolated: true,
-            },
-          );
-        } finally {
-          document.createElement = originalCreateElement;
-        }
-
-        if (cancelled) {
-          // Stale embed mounted while we were unmounting. Tear it
-          // down so the next runId starts from an empty node.
-          if (containerRef.current) {
-            containerRef.current.replaceChildren();
-          }
-          return;
-        }
-
-        // Fullscreen preview canvas: StackBlitz SDK sets a fixed
-        // height attribute on the iframe (from the `height` option
-        // above). Override it via inline style so the iframe expands
-        // to fill the canvas container. The container itself owns
-        // sizing via flex/CSS — the iframe should always be 100%
-        // height/width inside it.
-        const iframe = containerRef.current?.querySelector("iframe");
-        if (iframe) {
-          iframe.style.height = "100%";
-          iframe.style.width = "100%";
-          iframe.style.border = "0";
-        }
-
+      // Hård gate FÖRE den legacy/pausade StackBlitz-vägen (ADR 0033).
+      // Detta är ENDA punkten där ViewerPanel kan lämna över till
+      // ``<StackblitzPreview/>`` (och därmed ``@stackblitz/sdk``). Den får
+      // bara nås när descriptorn säger att en StackBlitz-embed är en giltig
+      // fallback — ``CAN_FALL_BACK_TO_STACKBLITZ === true``, vilket ENBART
+      // gäller ``stackblitz`` + ``auto`` (COEP on). De två primära lägena
+      // (``local-next``/``vercel-sandbox``) har redan returnerat ovan med
+      // pedagogiskt fel, så för dem är denna gate defense-in-depth. Dess
+      // verkliga uppgift är att göra StackBlitz OMÖJLIG att nå för alla
+      // andra lägen (``local``/``fly``/tomt/okänt env-värde) — den latenta
+      // gating-bugg där de annars föll igenom till en embed som browsern
+      // ändå skulle blocka utan COEP.
+      if (!CAN_FALL_BACK_TO_STACKBLITZ) {
+        if (cancelled) return;
+        setUnavailable({
+          title: "Förhandsvisningen kunde inte startas",
+          message:
+            "Den här förhandsvisningen kunde inte laddas och det aktuella preview-läget tillåter ingen StackBlitz-reserv.",
+          hint: "Kör en ny prompt för att bygga sajten, eller kontrollera VIEWSER_PREVIEW_MODE.",
+        });
         setLoading(false);
-      } catch (caught) {
-        if (!cancelled) {
-          setError(formatViewerError(caught));
-          setLoading(false);
-        }
+        return;
       }
+
+      // Steg 2: lämna över till den LEGACY/PAUSADE StackBlitz-vägen. Hela
+      // ``@stackblitz/sdk``-grafen lever i ``<StackblitzPreview/>`` som
+      // laddas via ``next/dynamic`` — så filhämtningen (``/api/runs/<runId>/
+      // files``), browser-kind-checken och embedden sker FÖRST när den
+      // komponenten faktiskt renderas (dvs här, i stackblitz/auto-läge),
+      // aldrig vid en normal vercel-sandbox/local-next-studioladdning.
+      if (cancelled) return;
+      setUseStackblitz(true);
+      setLoading(false);
     })();
 
     return () => {
       cancelled = true;
-      if (node) node.replaceChildren();
     };
     // retryNonce: bumpas av "Försök igen" i otillgänglig-bannern → kör om
     // effekten med full state-reset (samma väg som ett runId-byte).
   }, [runId, siteId, retryNonce]);
 
+  // Lazy-loader för StackBlitz-preview-komponenten. Körs BARA när
+  // ``useStackblitz`` blivit true (dvs i ``stackblitz``/``auto`` efter att
+  // Steg 1 inte gällt/misslyckats). ``import()`` ligger här — i en effekt som
+  // gate:as på runtime — i st.f. i en top-level ``dynamic()``, så Turbopack
+  // INTE pre-scriptar ``@stackblitz/sdk``-chunken i studio.html vid en vanlig
+  // vercel-sandbox/local-next-load. ``setState`` sker i ``.then``-callbacken
+  // (asynkront), inte synkront i effekt-kroppen → inget
+  // react-hooks/set-state-in-effect.
+  useEffect(() => {
+    if (!useStackblitz || StackblitzPreviewComp) return;
+    let cancelled = false;
+    void STACKBLITZ_PREVIEW_IMPORT().then((mod) => {
+      if (!cancelled) {
+        setStackblitzPreviewComp(() => mod.StackblitzPreview);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [useStackblitz, StackblitzPreviewComp]);
+
   const showEmpty = !runId;
   const showUnavailable = unavailable && !!runId;
-  const showFallback = !!fallback && !!runId && !isBuilding;
+  // Den legacy/pausade StackBlitz-vägen är aktiv: render:as via den lazy-
+  // laddade ``<StackblitzPreview/>``. Bara möjlig i stackblitz/auto
+  // (``CAN_FALL_BACK_TO_STACKBLITZ``); effekten sätter ``useStackblitz``
+  // först efter att Steg 1 inte gällt/misslyckats.
+  const showStackblitz =
+    useStackblitz &&
+    CAN_FALL_BACK_TO_STACKBLITZ &&
+    !!runId &&
+    !unavailable &&
+    !showEmpty;
   // "Finalize"-fasen efter build_site.py är klart: backend har skrivit
   // build-result.json (status=ok), frontend har satt stage="success" och
-  // building=false, men ViewerPanel hämtar nu manifest från
-  // /api/runs/X/files och bootar StackBlitz-SDK:n. Utan denna flagga
-  // försvann BuildProgressCard direkt vid success — operatören tappade
-  // den visuella kontinuiteten från "Bygger sajt" → "Startar preview".
+  // building=false, men ViewerPanel väntar fortfarande på att Steg 1
+  // (lokal/sandbox) ska svara. Utan denna flagga försvann
+  // BuildProgressCard direkt vid success — operatören tappade den
+  // visuella kontinuiteten från "Bygger sajt" → "Startar preview".
   const isFinalizing =
     buildStage === "success" && loading && !!runId && !unavailable;
-  // Visa hero-videon så länge ingen riktig iframe har mountats. Det
-  // täcker: ingen run vald (empty), 404 på files (unavailable),
-  // pågående fetch (loading), SDK-error, pågående bygge OCH
-  // browser-fallback (Safari/Firefox). `loading` räcker —
-  // `isFinalizing` är en delmängd av `loading`.
+  // Visa hero-videon så länge ingen riktig preview har tagit över canvasen.
+  // Det täcker: ingen run vald (empty), unavailable-banner, pågående fetch
+  // (loading) och pågående bygge. `loading` räcker — `isFinalizing` är en
+  // delmängd av `loading`. När StackblitzPreview är aktiv är `loading`
+  // false så hero släcks och den lazy-komponenten äger ytan.
   const showHero =
-    showEmpty ||
-    showUnavailable ||
-    showFallback ||
-    loading ||
-    !!error ||
-    isBuilding;
+    showEmpty || showUnavailable || loading || isBuilding;
   // BuildProgressCard tar över mittenytan när vi aktivt bygger ELLER
-  // när bygget precis blivit klart men preview-iframen fortfarande
-  // bootas. Hero-texten ska INTE visas i någondera fas — det skulle
-  // vara dubbel information med två konkurrerande UI:n. Inte heller
-  // när vi visar browser-fallback-kortet (det äger mittenytan).
+  // när bygget precis blivit klart men preview fortfarande bootas.
+  // Hero-texten ska INTE visas i någondera fas — det skulle vara dubbel
+  // information med två konkurrerande UI:n.
   const showHeroText =
-    (showEmpty || showUnavailable || !!error) &&
-    !isBuilding &&
-    !isFinalizing &&
-    !showFallback;
+    (showEmpty || showUnavailable) && !isBuilding && !isFinalizing;
   const showBuildCard = isBuilding || isFinalizing;
 
   // showDeviceToggle-flaggan tas bort härifrån: toggle-UI:t lever
@@ -1020,83 +815,13 @@ export function ViewerPanel({
         </div>
       ) : null}
 
-      {/* Browser-fallback för Safari/Firefox/iOS. Sajten är byggd men
-          inbäddad preview funkar inte (browsern stödjer inte
-          credentialless cross-origin isolation). Knappen öppnar samma
-          projekt i nytt fönster på stackblitz.com via sdk.openProject
-          — top-level navigation som funkar i alla browsers. */}
-      {showFallback ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center px-6">
-          <div className="border-border/60 bg-background/95 pointer-events-auto w-full max-w-[460px] rounded-3xl border p-7 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-            <h2 className="text-foreground mb-4 text-[17px] font-semibold tracking-tight">
-              Sajten är klar
-            </h2>
-
-            <p className="text-foreground/85 mb-3 text-[13px] leading-relaxed">
-              {fallback?.kind === "firefox"
-                ? "Firefox stödjer inte ännu inbäddad preview från WebContainers."
-                : "Safari stödjer inte inbäddad preview från WebContainers."}{" "}
-              Sajten är byggd och redo — öppna den i ett nytt fönster på
-              stackblitz.com där den fungerar direkt.
-            </p>
-
-            <Button
-              type="button"
-              onClick={handleOpenExternal}
-              disabled={openingExternal}
-              className="w-full justify-center gap-2"
-            >
-              {openingExternal ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Öppnar…
-                </>
-              ) : (
-                <>
-                  <ExternalLink className="h-4 w-4" />
-                  Öppna preview i nytt fönster
-                </>
-              )}
-            </Button>
-
-            {/* Två tips, prioriterade efter ROI för operatören:
-                1. Bygg lokalt → LocalRuntime-iframen (port 4100-4199) är
-                   en plain http-iframe utan credentialless-krav och funkar
-                   i alla browsers inklusive Safari/Firefox/iOS. Det är
-                   den DEFAULT-rekommenderade vägen för operator-bygda
-                   sajter (se VIEWSER_PREVIEW_MODE=local-next i .env.example).
-                2. Byt browser → endast om operatören är fast i StackBlitz-
-                   mode och inte kan bygga lokalt. Mindre prioriterat. */}
-            <p className="text-muted-foreground mt-3 text-[11.5px] leading-relaxed">
-              Tips: kör{" "}
-              <code className="font-mono">python scripts/build_site.py</code>{" "}
-              och sätt{" "}
-              <code className="font-mono">VIEWSER_PREVIEW_MODE=local-next</code>{" "}
-              för en inbäddad preview som fungerar i alla browsers — eller öppna
-              Sajtbyggaren i Chrome/Edge/Brave om du vill stanna i
-              StackBlitz-läget.
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      {/* StackBlitz SDK error pre — kept as readable diagnostic. */}
-      {error ? (
-        <pre className="border-destructive/40 bg-destructive/10 text-destructive absolute bottom-24 left-1/2 z-20 max-h-48 w-[min(90vw,640px)] -translate-x-1/2 overflow-auto rounded-lg border px-3 py-2 text-[11px] whitespace-pre-wrap shadow-lg">
-          {error}
-        </pre>
-      ) : null}
-
       {/*
-        containerRef-div hålls mounted oavsett `unavailable` så
-        containerRef.current är bunden över transitions. Tidigare
-        satt den i else-grenen av en `unavailable ? tips : <div ref>`
-        ternary, vilket avmonterade ref när 404 satte
-        unavailable=true - det låste UI:t i stuck state när nästa
-        runId valdes (effekten har bara `[runId]` som dep och kör
-        inte om vid unavailable-flip). Hidden via Tailwind när
-        empty/unavailable äger ytan.
+        Browser-fallback (Safari/Firefox/iOS) + StackBlitz SDK error-pre
+        bor numera INUTI ``<StackblitzPreview/>`` (se render längst ned).
+        Hela den vägen flyttades dit så ``@stackblitz/sdk`` aldrig dras in
+        i ViewerPanel:s eager-chunk (bundle-bloat-fixen, ADR 0033).
       */}
+
       {/*
         Preview-iframe. Renderas bara när /api/preview/<siteId>
         returnerat en URL. Den URL:en är antingen en lokal
@@ -1178,30 +903,30 @@ export function ViewerPanel({
         </div>
       ) : null}
 
-      {/*
-        containerRef-div hålls mounted oavsett `unavailable` så
-        containerRef.current är bunden över transitions. Tidigare
-        satt den i else-grenen av en `unavailable ? tips : <div ref>`
-        ternary, vilket avmonterade ref när 404 satte
-        unavailable=true - det låste UI:t i stuck state när nästa
-        runId valdes (effekten har bara `[runId]` som dep och kör
-        inte om vid unavailable-flip). Hidden via Tailwind när
-        empty/unavailable äger ytan ELLER när lokal preview tagit
-        över canvasen.
-      */}
-      {/* StackBlitz-container — bär device-preset-constraint på samma
-          sätt som lokal preview-iframen ovan. mx-auto centrerar wrappern
-          när max-width är satt; transition håller resize-rörelsen smooth
-          så iframen inte hoppar abrupt mellan storlekar. */}
-      <div
-        className="mx-auto h-full w-full transition-[max-width] duration-300 ease-out"
-        style={previewWrapperStyle}
-      >
+      {/* StackBlitz-preview (LEGACY/PAUSED, ADR 0033) — bär device-preset-
+          constraint på samma sätt som lokal preview-iframen ovan. mx-auto
+          centrerar wrappern när max-width är satt; transition håller
+          resize-rörelsen smooth.
+
+          ``<StackblitzPreview/>`` laddas via ``next/dynamic`` och RENDERAS
+          bara här, när ``showStackblitz`` är true (stackblitz/auto efter att
+          Steg 1 inte gällt/misslyckats). Det är så ``@stackblitz/sdk`` hålls
+          UTANFÖR ViewerPanel:s eager-chunk — en normal vercel-sandbox/
+          local-next-studioladdning monterar aldrig denna komponent och
+          hämtar därför aldrig stackblitz-chunken. Komponenten äger sin egen
+          containerRef, browser-fallback och error-pre.
+
+          ``StackblitzPreviewComp`` är null tills den lazy runtime-``import()``
+          (loader-effekten ovan) resolvat — det sker bara när
+          ``showStackblitz`` är true. */}
+      {showStackblitz && runId && StackblitzPreviewComp ? (
         <div
-          ref={containerRef}
-          className={`h-full w-full ${unavailable || showEmpty || isBuilding || isFinalizing || showFallback || localPreviewUrl ? "invisible" : ""}`}
-        />
-      </div>
+          className="mx-auto h-full w-full transition-[max-width] duration-300 ease-out"
+          style={previewWrapperStyle}
+        >
+          <StackblitzPreviewComp runId={runId} isBuilding={isBuilding} />
+        </div>
+      ) : null}
     </div>
   );
 }
