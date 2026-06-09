@@ -2138,3 +2138,66 @@ def test_followup_requested_copy_replace_detection() -> None:
     assert _followup_requested_copy_replace('byt "gammalt" till "nytt"') is True
     assert _followup_requested_copy_replace("gör tonen mörkare") is False
     assert _followup_requested_copy_replace("lägg till en faq-sektion") is False
+
+
+# --- 2026-06-09 (#224 P2): additive section_add that quotes its new copy is NOT
+#     a copy-REPLACE. Before the fix, the "texten" anchor + a quoted span made
+#     _followup_requested_copy_replace return True, so a visible section_add was
+#     mis-reported as a failed copy no-op (copy_directive_not_applied).
+
+
+@pytest.mark.tooling
+def test_additive_section_add_with_quoted_text_is_not_copy_replace() -> None:
+    """An additive 'lägg till en FAQ-sektion med texten "..."' quotes the NEW
+    section copy, not an OLD string to swap, so it must NOT be detected as a
+    copy-replace request (#224 P2)."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+    )
+
+    # The exact #224 symptom: additive add + a quoted span, no replace verb.
+    assert (
+        _followup_requested_copy_replace(
+            'lägg till en FAQ-sektion med texten "Vanliga frågor"'
+        )
+        is False
+    )
+    # 'inkludera' + a quoted token is additive (include keyword), not a replace.
+    assert (
+        _followup_requested_copy_replace('inkludera "TEST-JAKOB" i en ny sektion')
+        is False
+    )
+    # A 'ny ... sektion' add intent + quoted new copy is additive, not a replace.
+    assert (
+        _followup_requested_copy_replace('skapa en ny sektion med rubriken "Om oss"')
+        is False
+    )
+    # A compound that ALSO adds a section is additive -> the visible add wins,
+    # so the copy-replace honesty signal must not fire even with a replace verb.
+    assert (
+        _followup_requested_copy_replace(
+            'lägg till en FAQ-sektion och byt rubriken till "Ny rubrik"'
+        )
+        is False
+    )
+
+
+@pytest.mark.tooling
+def test_genuine_copy_replace_still_detected_after_additive_tightening() -> None:
+    """Guard for the #224 tightening: a genuine quoted copy-replace still fires,
+    and a quoted value that merely MENTIONS 'ny sektion' is still a replace
+    (the additive check runs on the instruction skeleton, not the quoted copy)."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+    )
+
+    # A quoted NEW value that happens to read 'Ny sektion om oss' is still a
+    # replace - the add intent must come from the instruction, not the payload.
+    assert (
+        _followup_requested_copy_replace('ändra rubriken till "Ny sektion om oss"')
+        is True
+    )
+    # The 'instead of'/'istället för' replace marker still counts as a replace.
+    assert (
+        _followup_requested_copy_replace('gör herotexten "X" istället för "Y"') is True
+    )

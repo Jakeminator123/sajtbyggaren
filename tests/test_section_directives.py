@@ -112,6 +112,9 @@ def test_resolution_dedupes_repeated_and_mixed_types() -> None:
 # ---------------------------------------------------------------------------
 
 _GROUNDED_PI = {
+    # local-service-business is the only scaffold that emits the faq/team wizard
+    # routes today, so the visible-route assertions below run on it (#221 P2).
+    "scaffoldId": "local-service-business",
     "company": {"team": [{"name": "Anna Ek", "role": "Grundare"}]},
 }
 
@@ -132,8 +135,11 @@ def test_visible_routes_map_to_known_wizard_labels() -> None:
 
 def test_faq_section_surfaces_a_visible_route() -> None:
     """faq-section is grounded by construction (render_faq answers generic
-    questions with the dossier's own areas/hours), so it surfaces /faq."""
-    visible, mount_only = resolve_visible_section_pages(["faq-section"], {})
+    questions with the dossier's own areas/hours), so it surfaces /faq on a
+    wizard-route scaffold (local-service-business)."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["faq-section"], {"scaffoldId": "local-service-business"}
+    )
     assert visible == [
         {"capability": "faq-section", "wizardLabel": "FAQ", "routeId": "faq"}
     ]
@@ -151,7 +157,8 @@ def test_team_section_visible_only_with_grounded_team() -> None:
     assert mount_only == []
 
     visible_empty, mount_only_empty = resolve_visible_section_pages(
-        ["team-section"], {"company": {"team": []}}
+        ["team-section"],
+        {"scaffoldId": "local-service-business", "company": {"team": []}},
     )
     assert visible_empty == []
     assert len(mount_only_empty) == 1
@@ -179,3 +186,68 @@ def test_visible_pages_dedupe_and_split_mixed_input() -> None:
     )
     assert [page["routeId"] for page in visible] == ["faq", "team"]
     assert [entry["capability"] for entry in mount_only] == ["guarantees"]
+
+
+# ---------------------------------------------------------------------------
+# Scaffold gate (#221 P2): a route-capable capability only surfaces a visible
+# route on a scaffold that actually emits the wizard routes. On any other
+# scaffold (agency-studio, ...) it must be an HONEST mount-only no-op, never a
+# phantom visible route the build cannot render.
+# ---------------------------------------------------------------------------
+
+_AGENCY_GROUNDED_PI = {
+    "scaffoldId": "agency-studio",
+    "company": {"team": [{"name": "Hanna Björk", "role": "Creative Director"}]},
+}
+
+
+def test_faq_section_mount_only_on_non_wizard_scaffold() -> None:
+    """faq-section is grounded by construction, but on a non-wizard scaffold
+    (agency-studio) no /faq renders, so it must stay mount-only - never a
+    phantom visible route (the honesty contract)."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["faq-section"], {"scaffoldId": "agency-studio"}
+    )
+    assert visible == []
+    assert len(mount_only) == 1
+    assert mount_only[0]["capability"] == "faq-section"
+    assert mount_only[0]["reason"]
+
+
+def test_team_section_mount_only_on_non_wizard_scaffold_even_when_grounded() -> None:
+    """Even WITH a grounded team, team-section stays mount-only on a non-wizard
+    scaffold: the scaffold gate is the honest reason no visible route surfaces."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["team-section"], _AGENCY_GROUNDED_PI
+    )
+    assert visible == []
+    assert [entry["capability"] for entry in mount_only] == ["team-section"]
+
+
+def test_missing_scaffold_id_is_mount_only() -> None:
+    """A project_input with no scaffoldId cannot prove the route renders, so a
+    route-capable capability stays mount-only (honest default)."""
+    visible, mount_only = resolve_visible_section_pages(["faq-section"], {})
+    assert visible == []
+    assert len(mount_only) == 1
+    assert mount_only[0]["capability"] == "faq-section"
+
+
+def test_scaffold_gate_matches_canonical_wizard_scaffold_set() -> None:
+    """The gate must use the SAME scaffold set planning uses to emit wizard
+    routes, so surfacing never drifts from what the build actually renders."""
+    from packages.generation.planning.plan import get_wizard_route_scaffolds
+
+    wizard_scaffolds = get_wizard_route_scaffolds()
+    assert "local-service-business" in wizard_scaffolds
+    # Every wizard-route scaffold surfaces faq; a scaffold outside the set does
+    # not. (If a new scaffold opts in upstream, this stays in lock-step.)
+    for scaffold_id in wizard_scaffolds:
+        visible, _ = resolve_visible_section_pages(
+            ["faq-section"], {"scaffoldId": scaffold_id}
+        )
+        assert [page["routeId"] for page in visible] == ["faq"]
+    visible_off, _ = resolve_visible_section_pages(
+        ["faq-section"], {"scaffoldId": "definitely-not-a-wizard-scaffold"}
+    )
+    assert visible_off == []

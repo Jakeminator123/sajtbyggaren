@@ -123,6 +123,25 @@ def _capability_has_grounded_content(capability: str, project_input: dict) -> bo
     return False
 
 
+def _scaffold_emits_wizard_routes(project_input: dict) -> bool:
+    """True when this version's scaffold actually emits the wizard routes.
+
+    A visible section route is only honest when the scaffold's renderer set
+    will emit it. ``produce_site_plan`` emits the wizard ``mustHave`` routes
+    only for the scaffolds in ``planning.get_wizard_route_scaffolds()`` (today
+    just ``local-service-business``); on any other scaffold (e.g.
+    ``agency-studio``) the same ``mustHave`` label stays warning-shape and no
+    ``/faq`` or ``/team`` page renders. Surfacing a visible route there would
+    write a phantom ``sectionRoutesSurfaced``/``affectedRoutes`` the build never
+    materialises - breaking the honesty contract (#221 P2). Gate on the SAME
+    canonical scaffold set planning uses, so the two never drift.
+    """
+    from packages.generation.planning.plan import get_wizard_route_scaffolds
+
+    scaffold_id = project_input.get("scaffoldId") if isinstance(project_input, dict) else None
+    return isinstance(scaffold_id, str) and scaffold_id in get_wizard_route_scaffolds()
+
+
 def resolve_visible_section_pages(
     capabilities: list[str],
     project_input: dict,
@@ -132,23 +151,25 @@ def resolve_visible_section_pages(
     Returns ``(visible, mount_only)`` where:
 
     - ``visible`` is ``[{"capability", "wizardLabel", "routeId"}]`` for the
-      de-duplicated capabilities that BOTH have a dedicated visible route
-      (``VISIBLE_SECTION_ROUTES``) AND carry grounded content. Surfacing one
-      makes the targeted render emit a NEW page -> honest
-      ``appliedVisibleEffect=true``.
+      de-duplicated capabilities that ALL of: have a dedicated visible route
+      (``VISIBLE_SECTION_ROUTES``), run on a scaffold that actually emits the
+      wizard route (``_scaffold_emits_wizard_routes``) AND carry grounded
+      content. Surfacing one makes the targeted render emit a NEW page ->
+      honest ``appliedVisibleEffect=true``.
     - ``mount_only`` is ``[{"capability", "reason"}]`` for every mounted
-      capability kept mount-only - either because it has no dedicated visible
-      route yet, or because the operator supplied no grounded content for it
-      (the honest mounted-but-no-content signal).
+      capability kept mount-only - because it has no dedicated visible route
+      yet, the scaffold does not emit wizard routes, or the operator supplied
+      no grounded content for it (the honest mounted-but-no-content signal).
 
     Deterministic, offline, no LLM. ``project_input`` is the merged next-version
-    Project Input the apply step is about to write (so the grounded-content gate
-    reflects exactly what the build will render).
+    Project Input the apply step is about to write (so the scaffold + grounded-
+    content gates reflect exactly what the build will render).
     """
     visible: list[dict[str, str]] = []
     mount_only: list[dict[str, str]] = []
     seen: set[str] = set()
     surfaced_routes: set[str] = set()
+    scaffold_emits_routes = _scaffold_emits_wizard_routes(project_input)
     for capability in capabilities:
         if not isinstance(capability, str) or not capability.strip():
             continue
@@ -163,6 +184,23 @@ def resolve_visible_section_pages(
                     "reason": (
                         f"Capability {capability!r} har ingen dedikerad synlig "
                         "render-väg ännu; sektionen monteras men syns inte (följd)."
+                    ),
+                }
+            )
+            continue
+        if not scaffold_emits_routes:
+            scaffold_id = (
+                project_input.get("scaffoldId")
+                if isinstance(project_input, dict)
+                else None
+            )
+            mount_only.append(
+                {
+                    "capability": capability,
+                    "reason": (
+                        f"Scaffold {scaffold_id!r} avger inte dedikerade wizard-"
+                        "routes; sektionen monteras men ingen synlig route surfas "
+                        "(endast local-service-business surfar faq/team idag)."
                     ),
                 }
             )
