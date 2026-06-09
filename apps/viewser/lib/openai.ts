@@ -1,5 +1,17 @@
 import OpenAI from "openai";
 
+import { readRepoEnvVar } from "./generated-dir";
+
+// Single source of truth: fall back to the repo-root `.env` for shared OpenAI
+// settings, so the API key only has to live in ONE file. process.env still
+// wins (shell / Cloud / dev.mjs pass-through / apps/viewser/.env.local), so
+// this only kicks in when the key/model is absent from the Viewser env.
+function openaiEnv(name: string): string | undefined {
+  const fromProcess = process.env[name]?.trim();
+  if (fromProcess) return fromProcess;
+  return readRepoEnvVar(name)?.trim() || undefined;
+}
+
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
@@ -14,7 +26,7 @@ export type UsageSummary = {
   model: string;
 };
 
-const DEFAULT_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o";
+const DEFAULT_MODEL = openaiEnv("OPENAI_MODEL") ?? "gpt-4o";
 const INPUT_USD_PER_1K = Number(process.env.OPENAI_INPUT_USD_PER_1K ?? "0");
 const OUTPUT_USD_PER_1K = Number(process.env.OPENAI_OUTPUT_USD_PER_1K ?? "0");
 const DEFAULT_MAX_OUTPUT_TOKENS = 1500;
@@ -24,13 +36,15 @@ const MAX_MESSAGES_PER_REQUEST = 40;
 let openaiClient: OpenAI | null = null;
 
 function getClient(): OpenAI {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = openaiEnv("OPENAI_API_KEY");
+  if (!apiKey) {
     throw new Error(
-      "OPENAI_API_KEY saknas. Lägg till den i apps/viewser/.env.local.",
+      "OPENAI_API_KEY saknas. Lägg till den i repo-rotens .env (single " +
+        "source) eller i apps/viewser/.env.local.",
     );
   }
   if (!openaiClient) {
-    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    openaiClient = new OpenAI({ apiKey });
   }
   return openaiClient;
 }
