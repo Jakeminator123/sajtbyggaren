@@ -6,30 +6,36 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-09, kväll)
+## Status nu (2026-06-09, sen kväll — efter kvällens stora merge-tåg)
 
-**Git:** `main = 16278c1` (PR #212, oförändrad). `jakob-be = 4144ecf`, rent träd,
-**87 commits före main**. Idag landade på `jakob-be` (merge-tåg, ett i taget, alla guards gröna):
+**Git:** `main = 16278c1` (PR #212, oförändrad). `jakob-be = 16e3ae6`, rent träd.
+I kväll landade ELVA PR:ar på `jakob-be` (merge-tåg, ett i taget, alla guards + CI gröna):
 
-- **#235** `fix(builder)`: hissa Google Fonts `@import` överst i genererad `globals.css`.
-- **#237** `fix(builder)`: gör `build_site.py` auto-prune **opt-in** (`--allow-prune`). En
-  manuell/smoke `--dossier`-build raderar inte längre `data/prompt-inputs/`-sidecars,
-  `data/runs/` eller `.generated/` när `SAJTBYGGAREN_MAX_*`-caps är satta i `.env`. Viewser
-  opt:ar in explicit (`build-runner.ts`), så produktflödets retention är oförändrad.
-- **#236** `refactor(builder)`: brief-generering → `packages/generation/brief/site_brief.py`
-  (megafil-slice 4; `build_site_brief` inte längre inline; painter-palma-paritet höll).
-- **#229** `docs`: Cloud Agent preview-mode-not (retargetad `main → jakob-be`, docs-only).
-- **#228** `feat(viewser)`: lätt review-summary på sista wizard-steget + UI-honesty-slices.
+- **#238** `refactor(builder)`: render helpers → `packages/generation/build/render_helpers.py`
+  (sista megafil-slicen, byte-paritet verifierad).
+- **#239** `feat(wizard)`: branschanpassat sidrutnät (bilverkstad får inte meny-förslag).
+- **#240** `feat(builder)`: **SYNLIG `section_add`** (ADR 0038, naming v27 Mounted Section):
+  `directives.mountedSections` på Project Input + render-seam i `render_home`. Skiva 1:
+  `hours` renderas inline på LSB-home med position top/bottom ("överst"/"längst ner");
+  faq/team behåller egen-route-vägen. Honesty-gates: registrerad renderare + grundat
+  innehåll + ej dubblett + allowlist.
+- **#241-#244** test/QG-paket: contact-CTA-routes, followup-versionering, golden-path-smoke
+  (riktiga svenska prompts + exakta statusar), placeholder-scan-härdning. #243/#244
+  review-fixades FÖRE merge efter extern buggranskning.
+- **#245** `feat(builder)`: AddModuleDialog ärliga synlighets-badges (UI-halvan av #240).
+- **#246** docs/governance: `Golden Path` registrerad som canonical term (ADR 0039, naming
+  v28) + begreppskarta + backoffice-statusvy; rebasad + versionsfixad (v27-kollision med
+  #240) före merge.
+- **#247** `fix(wizard)`: canonical capability-sluggar (menu/team-section/reviews/gallery) +
+  scaffold-nyans i öppettider-badgen (Christophers svar på inbox msg-0057).
+- **#248** `fix(builder)`: Codex-review-fixar — (1) intent-gate: bara section_add SKAPAR
+  inline-placering, component_add kan högst BEVARA; (2) render-time-allowlist
+  (`_INLINE_SECTION_ALLOWLIST`, paritetslåst mot resolverns); (3) `{company}`-false-positive
+  borta ur placeholder-scan; (4) golden-path-smoke kräver route-scan exakt `ok`.
 
-Sync `jakob-be → main` väntar **operatörsbeslut** — pusha aldrig main per slice.
-
-**Integrations-lås (checkpoint `a5db2dd`):** post-train-hälsokoll grön (3138 passed / 0 failed
-i ren env; ruff/governance/openclaw/baseline OK). Remote CI grön på alla merge-PRs **utom**
-#229:s `builder-smoke` (15-min timeout-flake, superseded av #228:s gröna `builder-smoke` på
-supersetet + lokal grön painter-palma-build — ingen riktig regression). #228 review-summary
-verifierad live i /studio: render + expand/collapse + gap-bricka ("Inget telefonnummer angivet")
-+ 5 Ändra-knappar — 4.5/5; enda kvar är att operatören klickar en Ändra-knapp och bekräftar
-steg-hoppet. Sedan dess: docs-refresh (`61c8963`) + pwsh-regel (`a5db2dd`).
+Plus inbox-trafik: msg-0057 (svar till Christopher: punkt 1 tas först, canonical sluggar,
+section_add synlig) + hans ack/uppföljning (#247). Sync `jakob-be → main` väntar
+**operatörsbeslut** — pusha aldrig main per slice.
 
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
 befintliga in-repo-motorn — inte en ny parallell motor, inte extern Docker/
@@ -49,27 +55,34 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 
 **Nästa prioriteringar:**
 
-1. **Granska + merga slice 5 (PR #238)** — render helpers → `packages/generation/build/render_helpers.py`
-   är nu körd som strikt 2-filers-PR (`render_helpers.py` ny + `build_site.py` trimmad), alla
-   checks gröna, mergeable mot `jakob-be`. Sista megafil-slicen på planen. Efter merge: överväg
-   sync `jakob-be → main`.
-2. **Evals / golden path + manuell score** — nu när loopen är grön: kör
+1. **Punkt 1-slicen till Christopher (lovad i msg-0057):** utöka `/api/discovery-options`
+   med `recommendedPages` + `recommendedCapabilities` per kategori (routen läser redan
+   `discovery-taxonomy.v1.json`) + komplettera resolverns `_CAPABILITY_ALIASES` med UI-aliasen
+   (menu-display/team-display/reviews-display/image-gallery, ev. pricing-display/map-embed/
+   opening-hours). Därefter punkt 2: businessFamily-ankare i governance (ADR + taxonomi-fält).
+2. **Evals / golden path + manuell score + manuella /studio-checkar:** kör
    `scripts/run_golden_path_eval.py --mode deterministic` + `scripts/run_eval_suite.py quick`,
-   sätt manuell 1–10 i Backoffice. Inkludera kontrastfärg-testet ovan.
-3. **Synlig render av `section_add`** + sida/position — fortfarande mount-only
-   (`applied=true`, `appliedVisibleEffect=false`). Störst produkthävstång efter slicen.
-   (Följdprompt copy literal-replace + OpenClaw F1 registry-runtime står kvar därefter.)
+   sätt manuell 1–10 i Backoffice. Inkludera kontrastfärg-testet ("gör sajten mörkblå") OCH
+   den manuella section_add-checken: "lägg till en öppettider-sektion överst" på LSB-sajt med
+   riktiga öppettider → block efter hero + ärlig toast (deterministiskt bevisat; klicket kvar).
+3. **#237-resten (extern granskning, äkta risk):** `build()`-API:t har kvar `auto_prune=True`
+   som default ( `--followup`-CLI + OpenClaw `--apply` ärver den mot canonical dirs, caps satta
+   i `.env`). Liten PR: flippa default till `False` + tråda genom `build_targeted_version`/
+   `run_followup_chain` + explicit opt-in där retention önskas. Därefter: fler inline-typer/
+   routes/scaffolds för section_add (skiva 2+), följdprompt copy literal-replace, OpenClaw F1.
 
 **Öppna blockers / att-göra:**
 
-- **#225** (`cursor/test-suite-hygiene-foundation-3737 → jakob-be`, draft): testsvit-hygien.
-  i konflikt mot nya `jakob-be` efter #236 — behöver **rebase av författaren** mot
-  `4144ecf` (konflikt i `test_viewser_files`/storleksvakt). Inte mergad, inte vår att tvinga.
-- **Manuell review-summary wizard-check (#228):** klick-checken på Bilder-steget (hoppa steg,
-  kontakt/about-popup) täcks INTE av automatiska tester — separat manuell 5/5-verifiering kvar.
-- `section_add` mount-only för alla nio typer; synlig render + placering återstår.
+- **#225** (testsvit-hygien, draft): rebase PÅGÅR via agent i isolerad worktree (porta
+  c5343c5-låsen till split-strukturen + test-namn-paritet). Mergas efter grönt + granskning.
+- **Manuella klick-checkar kvar:** #228 review-summary (Ändra→steg-hopp) + #240 öppettider-
+  inline i /studio + #245 badge-utseende. Täcks inte av automatiska tester.
 - Följdprompt copy: "ändra X till Y" parafraserar i stället för literal replace; ärlig
   no-op-feedback saknas (UI). Rotorsak i docs/gaps/GAP-followup-prompt-content-passthrough.md.
+- Branch-städning gjord (21 mergade/täckta remote-brancher raderade). Kvar för operatörsbeslut:
+  `feat/viewser-ui-overhaul`/`feat/viewser-router-decision-readiness` (Christophers stängda,
+  ej mergade), `cursor/gap-3a-offer-service-guard`, `cursor/dossier-intake-v11-review-895d`,
+  `feat/kor-5-repair-pass` (ingen PR), `cursor/preview-runtime-adapters` (avsiktlig snapshot).
 
 **Cloud-lanes (status):**
 
@@ -84,28 +97,21 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `340e2cd` (2026-06-09 UTC, `jakob-be` HEAD — dagens merge-tåg #235 (`b584638`), #237 (`13bf768`), #236 (`3aefa0d`), #229 (`a74ad24`), #228 (`4144ecf`) + docs/regel-housekeeping (`61c8963`/`a5db2dd`/`340e2cd`); `main` = `16278c1`, sync till main väntar operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #235, #237, #236, #229, #228 — alla mergade på `jakob-be`, ej `main`. Live-loop-beviset kördes grönt (se ovan).
+Last verified state: `16e3ae6` (2026-06-09 sen kväll UTC, `jakob-be` HEAD — kvällens merge-tåg
+#238 (`d7b87a4`), #239 (`924f1d3`), #241 (`8faeb90`), #242 (`b5d6ec2`), #243 (`e63d46d`),
+#244 (`a645699`), #240 (`72f5563`), #245 (`4b85469`), #246 (`647eb9e`), #247 (`c67a7af`),
+#248 (`16e3ae6`) + inbox-svar (`2c59d1a`); `main` = `16278c1`, sync till main väntar
+operatörsbeslut — kvällens delta är STORT, en main-sync bör övervägas snart).
+Post-merge-sanity efter tåget: governance 19/19, rules_sync OK, ruff 0, riktade sviter gröna.
 
 ## Öppna PR att känna till
 
 - **#225** (`cursor/test-suite-hygiene-foundation-3737 → jakob-be`, draft): testsvit-hygien.
-  i konflikt efter #236 — väntar på författar-rebase mot `4144ecf`. Inte vår att tvinga.
+  Rebase PÅGÅR via agent (konfliktytan = EN commit, c5343c5 StackBlitz-lås → portas till
+  split-strukturen med test-namn-paritet). Mergas efter grönt + granskning.
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
-  (publik POST utan auth/rate-limit kan starta sandboxar) — INTE vår att merga/fixa.
-
-- **#238** (`cursor/delade-renderhj-lpare-ca61 → jakob-be`, draft): **slice 5 — render helpers**.
-  Cloud-agenten körde den korrekt mot rätt bas — exakt 2 filer, alla checks gröna, mergeable.
-  Redo att granskas/mergas (operatörsbeslut). Sista megafil-slicen.
-
-- **Begrepp- & backoffice-sammanhållning** (`cursor/begrepp-och-backoffice-sammanh-llning-9ea2`,
-  draft mot `[REDACTED]`): docs/governance/backoffice-tung städ-PR. Registrerar `Golden Path`
-  som canonical term (ADR 0039, naming-dict v28), lägger begreppskarta i `docs/glossary.md`
-  (golden/blueprint/DNA/scorecard), binder ihop golden-ytorna i runbooken, döper om
-  "golden truth"→"snapshot baseline" i två testkommentarer, lägger en read-only Golden Path-
-  status-vy i backoffice + vy-audit (`docs/backoffice/overview.md`) och synliggör
-  `section_add`-render-gapet som känd brist. Ingen generation-/output-ändring; `Project DNA`
-  behålls aktivt. Guards gröna lokalt.
+  (publik POST utan auth/rate-limit kan starta sandboxar). Behålls som arkitektur-referens;
+  görs om på färsk bas med auth/rate-limit designat från start när runtime-spåret väljs aktivt.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
