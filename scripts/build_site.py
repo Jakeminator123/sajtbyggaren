@@ -4334,18 +4334,34 @@ def build(
 
     if do_build:
         if not (target / "node_modules").exists():
-            print(f"Running npm install (timeout {NPM_INSTALL_TIMEOUT_SECONDS}s)...")
+            # Prefer ``npm ci`` for strict, reproducible installs when a
+            # lockfile is present: it installs exactly the pinned tree and
+            # fails fast on package.json/lockfile drift instead of silently
+            # mutating the lockfile the way ``npm install`` can. Each
+            # immutable ``builds/<buildId>/`` is a fresh copy of the starter
+            # (which ships a committed, in-sync lockfile), so ``npm ci`` is
+            # the right tool. Fall back to ``npm install`` only when no
+            # lockfile was copied (e.g. minimal test starters) so those
+            # builds still work. ``patch_package_json`` only rewrites the
+            # root ``name`` (not the dependency set), which ``npm ci`` does
+            # not treat as drift.
+            if (target / "package-lock.json").is_file():
+                install_cmd = ["npm", "ci"]
+            else:
+                install_cmd = ["npm", "install"]
+            install_label = " ".join(install_cmd)
+            print(f"Running {install_label} (timeout {NPM_INSTALL_TIMEOUT_SECONDS}s)...")
             ok, secs, last = run_npm(
-                ["npm", "install"],
+                install_cmd,
                 target,
                 timeout=NPM_INSTALL_TIMEOUT_SECONDS,
             )
-            npm_steps.append(_npm_step_result("npm install", ok, secs, last))
+            npm_steps.append(_npm_step_result(install_label, ok, secs, last))
             trace.event(
                 "build",
                 "npm.install",
                 "done" if ok else "failed",
-                f"npm install ok={ok} seconds={secs:.1f}",
+                f"{install_label} ok={ok} seconds={secs:.1f}",
             )
             if not ok:
                 overall_status = "failed"

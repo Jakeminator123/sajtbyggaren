@@ -55,14 +55,21 @@ const HEALTH_INTERVAL_MS = 200;
  * default-pathen till ``/sajtbyggaren-output/.generated/``.
  */
 function resolveGeneratedDir(): string {
+  // Viewser körs från apps/viewser/ så två steg upp = repo-roten.
+  const repoRoot = path.resolve(process.cwd(), "..", "..");
   const envOverride = process.env.SAJTBYGGAREN_GENERATED_DIR;
   if (envOverride && envOverride.trim()) {
-    return path.resolve(envOverride.trim());
+    const raw = envOverride.trim();
+    // En RELATIV env-väg resolvas mot REPO-ROTEN (inte process.cwd()) så
+    // den matchar Python-sidans ``resolve_generated_dir`` (REPO_ROOT /
+    // relative). Utan detta skrev build_site.py till ``<repo>/<rel>`` medan
+    // preview letade i ``<repo>/apps/viewser/<rel>`` → olika mappar och
+    // "Genererad sajt saknas". Absoluta värden används oförändrade.
+    return path.isAbsolute(raw)
+      ? path.resolve(raw)
+      : path.resolve(repoRoot, raw);
   }
   // Default: ../sajtbyggaren-output/.generated/ relativt repo-roten.
-  // Viewser körs från apps/viewser/ så vi behöver kliva upp två steg
-  // till repo-roten + ut och in i sajtbyggaren-output.
-  const repoRoot = path.resolve(process.cwd(), "..", "..");
   return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
 }
 

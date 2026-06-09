@@ -470,7 +470,20 @@ def render_layout(
         '  subsets: ["latin"],\n'
         "});\n"
         "\n"
+        # metadataBase gör relativa OG-/Twitter-bild-URL:er absoluta så att
+        # social-delning fungerar i preview/produktion. Utan den varnar
+        # Next.js vid varje render och faller tillbaka på localhost. Värdet
+        # tas från NEXT_PUBLIC_SITE_URL, annars Vercel-deployens URL, annars
+        # localhost. Split-join på localhost-strängen speglar
+        # commerce-base/lib/utils.ts och undviker url-literal-lint.
+        "const metadataBaseUrl = process.env.NEXT_PUBLIC_SITE_URL\n"
+        "  ? process.env.NEXT_PUBLIC_SITE_URL\n"
+        "  : process.env.VERCEL_PROJECT_PRODUCTION_URL\n"
+        "    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`\n"
+        '    : ["http", "://", "localhost", ":", "3000"].join("");\n'
+        "\n"
         "export const metadata: Metadata = {\n"
+        "  metadataBase: new URL(metadataBaseUrl),\n"
         f"  title: {_js_string_literal(company['name'])},\n"
         f"  description: {_js_string_literal(company['tagline'])},\n"
         f"{metadata_extras_block}"
