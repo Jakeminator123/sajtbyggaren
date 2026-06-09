@@ -11,6 +11,36 @@ Alla begrepp som finns i Sajtbyggarens governance, förklarade i en mänsklig to
 
 Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förbjudet i kod om det inte uttryckligen står i `aliasesAllowed` på respektive term.
 
+## Begreppskarta - golden, blueprint, DNA, scorecard
+
+Den här kartan finns för att binda ihop fyra begrepp som lätt blandas ihop.
+Sanningskällan är fortfarande `naming-dictionary.v1.json`; det här är den
+mänskliga förklaringen av hur de förhåller sig till varandra.
+
+| Canonical term | Betyder | Ägs av (fil/område) | Förbjudna/utgångna alias | Använd INTE för |
+| --- | --- | --- | --- | --- |
+| `Golden Path` | Produktens kanoniska huvudflöde (`prompt -> företagshemsida -> preview -> följdprompt -> ny version`) och den smala motor-skivan som bevisar att det lever. | `scripts/run_golden_path_eval.py` (mätning) + `docs/llm-golden-path-runbook.md` (flöde) | happy-path, main-flow, core-path, goldenflow | snapshot-/golden-master-tester (se "golden" nedan) |
+| Blueprint (fältgrupper) | Åtta valfria fältgrupper (`Business Facts`, `Positioning`, `Content Strategy`, `Conversion`, `Section Plan`, `Content Blocks`, `Visual Direction`, `Quality Risks`) på de tre befintliga artefakterna (ADR 0036). | naming-dict + `packages/generation/planning/blueprint.py` | (samlingsnamn, ej eget canonical-ord) | en sparad artefakt - det finns ingen `site-blueprint.json` |
+| `Blueprint Repair` | `repairModel`-passet i `Repair Pipeline` som patchar namngivna blueprint-fält (kor-5). | `packages/generation/repair` | — | hela blueprint-konceptet |
+| `Project DNA` | Persistent projekt-state över versioner: `scaffoldId`, `variantId`, valda dossiers, theme-tokens, språk, route-baseline. Init skapar, follow-up patchar, redesign forkar. | `data/projects/` + `project-dna.v1.json` | projectState, projectMeta | blueprint-fältgrupperna - DNA är vad projektet *är*, blueprint är planinnehåll |
+
+**"golden" betyder två olika saker** - håll isär dem:
+
+1. `Golden Path` = huvudflödet ovan (produktbegrepp).
+2. "snapshot baseline" = den vanliga test-idiomatiken där ett fruset facit
+   jämförs byte-för-byte (t.ex. `tests/test_section_treatments_json_parity.py`,
+   `tests/test_build_tokens_parity.py`). Detta är **inte** Golden Path. Säg
+   "snapshot baseline" eller "fruset facit", inte "golden", i sådan testtext.
+
+**scorecard finns redan i två betydelser** - inget tredje "Quality Scorecard"-ord
+ska uppfinnas:
+
+1. Automatiskt: fältet `scorecard` på `Quality Result` (från `Quality Gate`,
+   härlett ur `page-quality-traits`). Maskinmätt.
+2. Manuellt: operatörens 1-10-bedömning per case, sparad separat under
+   `data/evals/.../manual-scorecards/` och redigerad i backoffice
+   ("Evals och telemetri"). Blandas aldrig in i `quality-result.json`.
+
 ## Stora bilden - en körning
 
 | Term | Vad det är |
