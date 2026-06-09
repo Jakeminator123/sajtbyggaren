@@ -1191,6 +1191,10 @@ COMMON_WORDS = {
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
     "SandboxStopResult",
+    # FAS 2B hostad artefaktkälla (apps/viewser/lib/generated-blob-source.ts):
+    # lokala TS-implementation-shapes för blob-snapshot-läsningen. Inte canonical
+    # domain terms — samma kategori som CollectedSource ovan.
+    "CollectedBlobSource", "BlobSdkListItem",
     # Heavy-LLM-flow run-plan docs (docs/heavy-llm-flow/, commit 8c0e7c4).
     # These docs were pushed directly to jakob-be without a CI run, so
     # term-coverage first surfaced them on later PRs. They are NOT canonical
