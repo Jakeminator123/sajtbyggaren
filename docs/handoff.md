@@ -1,11 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-10 strax efter midnatt (UTC+2). Verifierad `jakob-be` är `68bbde3`
-(docs-bump ovanpå merge-HEAD `79bedef`); `main` är oförändrad `16278c1`.
+**Datum:** 2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs). Verifierad `main` är `1cc8a92`.
 
-Nya PRs sedan föregående checkpoint (ALLA mergade till `jakob-be`, ej `main`):
-#238, #239, #240, #241, #242, #243, #244, #245, #246, #247, #248, #249, #250,
-#251 samt #225 — femton stycken, ett i taget med alla guards + CI gröna per PR.
+Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
+2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
+recommendedPages-API m.m. (15 PRs).
 
 ## CLOSING-ROUND HANDOFF 2026-06-10 (natt) — ÖVERLÄMNING TILL NÄSTA AGENT
 
@@ -111,3 +110,14 @@ Allt äldre än toppblocket ovan är flyttat till
 [`docs/archive/2026-06/handoff-history-2026-06-09.md`](archive/2026-06/handoff-history-2026-06-09.md)
 (arkiv = historik, inte sanningskälla — verifiera mot git). Hela
 versionshistoriken finns kvar via `git log --follow docs/handoff.md`.
+
+## Föregående checkpoint
+
+### 2026-06-09 UTC — handoff.md före `79bedef`
+
+**Datum:** 2026-06-10 strax efter midnatt (UTC+2). Verifierad `jakob-be` är `68bbde3`
+(docs-bump ovanpå merge-HEAD `79bedef`); `main` är oförändrad `16278c1`.
+
+Nya PRs sedan föregående checkpoint (ALLA mergade till `jakob-be`, ej `main`):
+#238, #239, #240, #241, #242, #243, #244, #245, #246, #247, #248, #249, #250,
+#251 samt #225 — femton stycken, ett i taget med alla guards + CI gröna per PR.

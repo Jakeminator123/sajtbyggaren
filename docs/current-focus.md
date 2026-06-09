@@ -98,16 +98,10 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `79bedef` (2026-06-10 strax efter midnatt UTC+2, `jakob-be` HEAD —
-kvällens/nattens merge-tåg, FEMTON PR:ar: #238 (`d7b87a4`), #239 (`924f1d3`),
-#241 (`8faeb90`), #242 (`b5d6ec2`), #243 (`e63d46d`), #244 (`a645699`), #240 (`72f5563`),
-#245 (`4b85469`), #246 (`647eb9e`), #247 (`c67a7af`), #248 (`16e3ae6`),
-#249 (`b03770f`, granskningsrunda 2), #225 (`9dce32a`, testsvit-split 186=186),
-#250 (`dbfb905`, auto_prune default OFF i hela API-kedjan — #237-fällan stängd) och
-#251 (`79bedef`, recommendedPages i /api/discovery-options, msg-0056 punkt 1 levererad);
-`main` = `16278c1`, sync till main väntar operatörsbeslut — deltat är MYCKET STORT,
-en main-sync bör övervägas snarast). Post-merge-sanity: governance 19/19, rules_sync OK,
-ruff 0, sviter gröna. Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
+Last verified state: `1cc8a92` (2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs)).
+Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
+2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
+recommendedPages-API m.m. (15 PRs).
 
 ## Öppna PR att känna till
 
@@ -163,3 +157,16 @@ Tidigare "Last verified state"-block och äldre "Current objective"-block är
 flyttade till arkivet ovan (per `governance/rules/07-docs-focus-handoff.md`).
 Auto-bump-verktyget lägger nya korta checkpoint-block här vid main-sync; håll
 högst ett kvar och flytta resten till arkivet.
+
+### 2026-06-09 UTC — current-focus.md före `79bedef`
+
+Last verified state: `79bedef` (2026-06-10 strax efter midnatt UTC+2, `jakob-be` HEAD —
+kvällens/nattens merge-tåg, FEMTON PR:ar: #238 (`d7b87a4`), #239 (`924f1d3`),
+#241 (`8faeb90`), #242 (`b5d6ec2`), #243 (`e63d46d`), #244 (`a645699`), #240 (`72f5563`),
+#245 (`4b85469`), #246 (`647eb9e`), #247 (`c67a7af`), #248 (`16e3ae6`),
+#249 (`b03770f`, granskningsrunda 2), #225 (`9dce32a`, testsvit-split 186=186),
+#250 (`dbfb905`, auto_prune default OFF i hela API-kedjan — #237-fällan stängd) och
+#251 (`79bedef`, recommendedPages i /api/discovery-options, msg-0056 punkt 1 levererad);
+`main` = `16278c1`, sync till main väntar operatörsbeslut — deltat är MYCKET STORT,
+en main-sync bör övervägas snarast). Post-merge-sanity: governance 19/19, rules_sync OK,
+ruff 0, sviter gröna. Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
