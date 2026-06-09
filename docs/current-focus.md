@@ -23,6 +23,14 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 
 Sync `jakob-be → main` väntar **operatörsbeslut** — pusha aldrig main per slice.
 
+**Integrations-lås (checkpoint `a5db2dd`):** post-train-hälsokoll grön (3138 passed / 0 failed
+i ren env; ruff/governance/openclaw/baseline OK). Remote CI grön på alla merge-PRs **utom**
+#229:s `builder-smoke` (15-min timeout-flake, superseded av #228:s gröna `builder-smoke` på
+supersetet + lokal grön painter-palma-build — ingen riktig regression). #228 review-summary
+verifierad live i /studio: render + expand/collapse + gap-bricka ("Inget telefonnummer angivet")
++ 5 Ändra-knappar — 4.5/5; enda kvar är att operatören klickar en Ändra-knapp och bekräftar
+steg-hoppet. Sedan dess: docs-refresh (`61c8963`) + pwsh-regel (`a5db2dd`).
+
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
 befintliga in-repo-motorn — inte en ny parallell motor, inte extern Docker/
 Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
@@ -76,7 +84,7 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `4144ecf` (2026-06-09 UTC, `jakob-be` HEAD — efter dagens merge-tåg #235 (`b584638`), #237 prune-fix (`13bf768`), #236 brief-slice4 (`3aefa0d`), #229 docs (`a74ad24`) och #228 review-summary (`4144ecf`); `main` = `16278c1`, sync till main väntar operatörsbeslut).
+Last verified state: `a5db2dd` (2026-06-09 UTC, `jakob-be` HEAD — merge-tåget #235 (`b584638`), #237 (`13bf768`), #236 (`3aefa0d`), #229 (`a74ad24`), #228 (`4144ecf`), sedan docs-refresh (`61c8963`) + pwsh-regel (`a5db2dd`); `main` = `16278c1`, sync till main väntar operatörsbeslut).
 Nya PRs sedan föregående checkpoint: #235, #237, #236, #229, #228 — alla mergade på `jakob-be`, ej `main`. Live-loop-beviset kördes grönt (se ovan).
 
 ## Öppna PR att känna till
