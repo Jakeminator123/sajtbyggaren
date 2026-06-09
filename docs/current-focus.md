@@ -8,12 +8,15 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 
 ## Status nu (2026-06-09)
 
-**Git:** `main = 16278c1` (PR #212 officiell). `jakob-be = 0c89942`, rent träd,
-**32 commits före main** — sedan föregående checkpoint (`2ffce4a`) har landat på
+**Git:** `main = 16278c1` (PR #212 officiell). `jakob-be = a9504d7`, rent träd,
+**38 commits före main** — sedan föregående checkpoint (`2ffce4a`) har landat på
 `jakob-be`: Lane A docs-honesty-cleanup (merge `76b5ae4`), Cursor-regel-
-konsolidering 29→12 via #218 (`4139285` + merge `11b4f19`) och OpenClaw
-F1-readiness-plan (plan-only, gated; `6e08ce9` + merge `0c89942`). Sync
-`jakob-be → main` väntar **operatörsbeslut** — pusha aldrig main per slice.
+konsolidering 29→12 via #218 (`4139285` + merge `11b4f19`), OpenClaw
+F1-readiness-plan (plan-only, gated; `6e08ce9` + merge `0c89942`), Glue 1 —
+färsk build persisterar hittbar Project Input — via #219 (`892ef8e` + merge
+`2ad3655`) och docs-steward-städning (handoff-slim + current-focus-refresh) via
+#220 (merge `a9504d7`). Sync `jakob-be → main` väntar **operatörsbeslut** — pusha
+aldrig main per slice.
 
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
 befintliga in-repo-motorn — inte en ny parallell motor, inte extern Docker/
@@ -24,25 +27,30 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 [`docs/heavy-llm-flow/openclaw-2.0-conductor.md`](heavy-llm-flow/openclaw-2.0-conductor.md).
 `sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` = strikt read-only (AGENTS.md).
 
-**Nästa 3 prioriteringar:**
+**Nästa 3 prioriteringar:** (Glue 1-gaten är nu grön via #219 — se nedan.)
 
-1. **Glue 1 (gating, backend):** verifiera att en färsk build → följdprompt
-   hittar Project Input på disk (`data/prompt-inputs/<siteId>.project-input.json`).
-   Utan detta kan `section_add` inte ens köra på en nybyggd sajt.
-2. **Synlig render av `section_add`** + sida/position-placering — gör mount-only
+1. **Synlig render av `section_add`** + sida/position-placering — gör mount-only
    (`applied=true` men `appliedVisibleEffect=false`) till faktiskt synligt i
-   preview. Största produkthävstången nu. Förutsätter prio 1 grön.
+   preview. Största produkthävstången nu.
+2. Följdprompt copy-fix: "ändra denna text X till Y" ska göra literal replace via
+   `packages/generation/followup/copy_directives.py` (inte parafrasera/regenerera)
+   och ge ärlig no-op när inget kunde appliceras. Egen lane — delad bygg-write-set,
+   kör ej parallellt med prio 1.
 3. **OpenClaw F1 — registry-runtime:** gör `docs/openclaw-workspace/action-registry.json`
    körbar (kod läser registret och väljer roll), inte bara dokumentation.
-   Readiness-planen finns nu i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
+   Readiness-planen finns i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
    (plan-only). *Gås igenom med operatören innan kod skrivs.*
 
 **Öppna blockers:**
 
-- Glue 1 osäker på en färsk sajt (handoff-fynd "ingen Project Input på disk")
-  — gating för synlig `section_add`.
+- Glue 1 — **stängd via #219**: en färsk build persisterar nu en hittbar Project
+  Input på disk (CLI/exempel-vägen; prompt-vägen skrev redan sidecaren). Inte
+  längre en gate för synlig `section_add`.
 - `section_add` är mount-only för alla nio sanktionerade typer; synlig render +
   exakt placering återstår (Sprint-3B-spåret).
+- Följdprompt copy: "ändra denna text X till Y" parafraserar/regenererar i stället
+  för literal replace, och ärlig no-op-feedback saknas (UI). Rotorsak i
+  docs/gaps/GAP-followup-prompt-content-passthrough.md.
 
 **Cloud-lanes (status):**
 
@@ -57,14 +65,11 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `0c89942` (2026-06-09 UTC, `jakob-be` HEAD — efter Lane A-merge (`76b5ae4`), regel-konsolidering 29→12 via #218 (`11b4f19`) och OpenClaw F1-readiness-plan (`0c89942`); `main` = `16278c1` via PR #212, sync till main väntar operatörsbeslut).
-Nya PRs sedan föregående checkpoint: PR #218 (Cursor-regler 29→12, docs/governance). Lane A docs-honesty-cleanup och OpenClaw F1-readiness-plan landade via merge-commits (`76b5ae4` / `0c89942`), inte numrerade PR mot `jakob-be`. Alla på `jakob-be`, ej `main`.
+Last verified state: `a9504d7` (2026-06-09 UTC, `jakob-be` HEAD — efter #218 (`11b4f19`), OpenClaw F1-readiness-plan (`0c89942`), Glue 1 via #219 (`2ad3655`) och docs-steward-städning via #220 (`a9504d7`); `main` = `16278c1` via PR #212, sync till main väntar operatörsbeslut).
+Nya PRs sedan föregående checkpoint: PR #218 (Cursor-regler 29→12), PR #219 (Glue 1 — färsk build persisterar Project Input) och PR #220 (docs-steward: handoff-slim + current-focus-refresh). Alla mergade på `jakob-be`, ej `main`.
 
 ## Öppna PR att känna till
 
-- **#219** (`cursor/glue1-section-add → jakob-be`): feat(core-loop) Glue 1 — en
-  färsk build persisterar en hittbar Project Input på disk. Backend, mot prio 1
-  ovan (gating för synlig `section_add`). Öppen för review.
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga
   säkerhet** — live-lane, INTE vår att merga/fixa.
 - **#216** (`cursor/floating-chat-split-61b7 → christopher`): FloatingChat-split i
