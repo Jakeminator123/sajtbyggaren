@@ -4947,13 +4947,25 @@ def build_targeted_version(
                 + mismatch
             )
 
-    # Affected routes: prefer the apply_result, then an explicit list, then the
-    # meta provenance's patch fields, then the root route as a documented default.
+    # Affected routes: UNION the patch-derived routes (from the apply) with the
+    # surfaced section routes (passed explicitly via ``affected_routes``), then
+    # fall back to the meta provenance's patch fields and finally the root route.
+    # When a follow-up combines a normal patch (e.g. "home") with a visible
+    # section_add (e.g. ["faq"]), letting the patch route override the surfaced
+    # route dropped "faq" - so it reported only "home" though /faq changed and
+    # warned about an unexpected route (#221 P2). Order-preserving + deduped:
+    # patch route(s) first, then surfaced section route(s); neither overrides the
+    # other.
     affected: list[str] = []
-    if apply_result is not None:
-        affected = affected_routes_from_apply(apply_result)
-    if not affected and affected_routes:
-        affected = [route for route in affected_routes if isinstance(route, str)]
+    patch_routes = (
+        affected_routes_from_apply(apply_result) if apply_result is not None else []
+    )
+    explicit_routes = [
+        route for route in (affected_routes or []) if isinstance(route, str)
+    ]
+    for route_id in (*patch_routes, *explicit_routes):
+        if route_id and route_id not in affected:
+            affected.append(route_id)
     if not affected and isinstance(provenance, dict):
         for entry in provenance.get("appliedCapabilities") or []:
             field = entry.get("patchField") if isinstance(entry, dict) else None

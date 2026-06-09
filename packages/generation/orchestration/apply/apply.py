@@ -378,11 +378,20 @@ def apply_patch_plan(
     surfaced_routes: list[str] = []
     surfaced_wizard_pages: list[str] = []
     section_mount_only: list[dict[str, str]] = []
-    section_capabilities_applied = [
-        entry.capability
-        for entry in capabilities
-        if entry.patchField.startswith("sectionAdd:")
-    ]
+    # Visible surfacing considers the pre-resolved section_add capabilities
+    # DIRECTLY (deduped, order-preserving), not the merged ``capabilities`` list
+    # filtered by ``sectionAdd:`` patchField. When the SAME capability ALSO
+    # arrives via a component patch, the dedupe above keeps only the patch entry
+    # (whose patchField is not ``sectionAdd:``), which would otherwise drop the
+    # section_add surfacing intent and leave the dedicated route invisible even
+    # on a wizard-route scaffold (#221 P2). The section_add intent is preserved
+    # separately from capability-dedupe, independent of how the capability was
+    # mounted. Each entry is already verified to have an implementing Dossier by
+    # the caller, so it is genuinely mounted.
+    section_capabilities_applied: list[str] = []
+    for capability in section_capabilities:
+        if capability not in section_capabilities_applied:
+            section_capabilities_applied.append(capability)
     if section_capabilities_applied:
         from packages.generation.followup.section_directives import (
             resolve_visible_section_pages,
