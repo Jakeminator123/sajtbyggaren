@@ -979,16 +979,51 @@ def patch_globals_css(
         token_overrides,
         typography_overlay=typography_overlay,
     )
+    font_marker = "/* sajtbyggaren-font-import:start */"
+    font_end = "/* sajtbyggaren-font-import:end */"
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
-    if marker in original:
-        before, _, rest = original.partition(marker)
+
+    # Strip any previously emitted regions so re-patching (follow-up
+    # rebuilds) stays idempotent: the hoisted font @import block at the
+    # top AND the variant-tokens block further down.
+    base_contents = original
+    if font_marker in base_contents:
+        before, _, rest = base_contents.partition(font_marker)
+        _, _, after = rest.partition(font_end)
+        base_contents = f"{before}{after}"
+    if marker in base_contents:
+        before, _, rest = base_contents.partition(marker)
         _, _, after = rest.partition(end)
-        base_contents = f"{before}{after}".rstrip()
-    else:
-        base_contents = original.rstrip()
-    # Append last so starter defaults earlier in globals.css cannot win the cascade.
-    new_contents = f"{base_contents}\n\n{marker}\n{block}{end}\n"
+        base_contents = f"{before}{after}"
+    base_contents = base_contents.strip()
+
+    # Hoist the Google Fonts @import line(s) out of the variant block to
+    # the absolute top of the file. CSS requires every @import rule to
+    # precede all other rules; appending the variant block verbatim put
+    # the font @import after the starter's :root/@layer rules, which
+    # triggers the build/browser warning "@import rules must precede all
+    # rules" on every build. (Longer-term fix: load the webfont via
+    # next/font/google or a <link> in the Next layout instead of a CSS
+    # @import — the layout already preconnects to fonts.googleapis.com.)
+    import_lines: list[str] = []
+    body_lines: list[str] = []
+    for line in block.splitlines():
+        if line.lstrip().startswith("@import"):
+            import_lines.append(line)
+        else:
+            body_lines.append(line)
+    block_body = "\n".join(body_lines)
+
+    font_region = ""
+    if import_lines:
+        font_region = f"{font_marker}\n" + "\n".join(import_lines) + f"\n{font_end}\n\n"
+
+    # Variant tokens appended last so starter defaults earlier in
+    # globals.css cannot win the cascade.
+    new_contents = (
+        f"{font_region}{base_contents}\n\n{marker}\n{block_body}\n{end}\n"
+    )
     write(css, new_contents)
     return warnings
 
