@@ -15,6 +15,10 @@ Locks the opt-in retention contract from ``.env.example``:
   ``tmp_path`` opt out automatically.
 - ``scripts/prompt_to_project_input.py:main()`` calls auto-prune
   immediately after argparse, before any disk write.
+- ``scripts/build_site.py`` CLI leaves auto-prune OFF unless
+  ``--allow-prune`` is passed, so a manual/smoke ``--dossier`` build can
+  never delete existing data when ``SAJTBYGGAREN_MAX_*`` caps are set;
+  the Viewser product flow (build-runner.ts) opts in explicitly.
 """
 
 from __future__ import annotations
@@ -326,3 +330,78 @@ def test_prompt_to_project_input_calls_auto_prune_on_main() -> None:
     assert args_index < auto_index < output_index, (
         "auto_prune_all() must run after argparse but before any disk write"
     )
+
+
+def test_build_site_cli_does_not_auto_prune_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Manual ``build_site.py --dossier ...`` must NOT prune by default.
+
+    Regression for the data-loss trap: with ``SAJTBYGGAREN_MAX_*`` caps set
+    in ``.env`` and more sites on disk than the cap, a plain smoke/manual
+    build would otherwise silently delete the oldest ``data/prompt-inputs/``
+    sidecars (and their ``.vN.*`` snapshots), ``data/runs/`` and
+    ``.generated/`` previews. The CLI now leaves ``auto_prune`` OFF unless
+    ``--allow-prune`` is passed. We monkeypatch ``build`` so no real build
+    runs; the assertion is purely on the wired ``auto_prune`` kwarg.
+    """
+    from scripts import build_site
+
+    dossier = tmp_path / "smoke.project-input.json"
+    _touch(dossier)
+    captured: dict[str, object] = {}
+
+    def _fake_build(dossier_path: Path, **kwargs: object) -> tuple[Path, Path]:
+        captured.update(kwargs)
+        captured["dossier_path"] = dossier_path
+        return (tmp_path / "target", tmp_path / "run")
+
+    monkeypatch.setattr(build_site, "build", _fake_build)
+    monkeypatch.setattr(
+        build_site.sys, "argv", ["build_site.py", "--dossier", str(dossier)]
+    )
+
+    assert build_site.main() == 0
+    assert captured["auto_prune"] is False
+
+
+def test_build_site_cli_allow_prune_opts_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``--allow-prune`` re-enables the retention sweep (explicit GC / Viewser)."""
+    from scripts import build_site
+
+    dossier = tmp_path / "smoke.project-input.json"
+    _touch(dossier)
+    captured: dict[str, object] = {}
+
+    def _fake_build(dossier_path: Path, **kwargs: object) -> tuple[Path, Path]:
+        captured.update(kwargs)
+        return (tmp_path / "target", tmp_path / "run")
+
+    monkeypatch.setattr(build_site, "build", _fake_build)
+    monkeypatch.setattr(
+        build_site.sys,
+        "argv",
+        ["build_site.py", "--dossier", str(dossier), "--allow-prune"],
+    )
+
+    assert build_site.main() == 0
+    assert captured["auto_prune"] is True
+
+
+def test_viewser_build_runner_opts_into_prune() -> None:
+    """Viewser keeps its retention sweep by passing ``--allow-prune`` explicitly.
+
+    The CLI default flip (``auto_prune`` OFF) must not silently change the
+    product flow: ``apps/viewser/lib/build-runner.ts`` opts in so ``/studio``
+    builds prune exactly as before the flip.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "apps"
+        / "viewser"
+        / "lib"
+        / "build-runner.ts"
+    ).read_text(encoding="utf-8")
+    assert '"--allow-prune"' in source

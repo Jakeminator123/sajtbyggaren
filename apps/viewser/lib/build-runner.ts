@@ -230,6 +230,16 @@ async function runBuildOnce(
 
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");
   const args = [scriptPath, "--dossier", dossierPath];
+  // Retention opt-in: build_site.py now leaves auto_prune OFF by default so a
+  // manual/smoke `--dossier` build can never silently delete existing
+  // data/prompt-inputs/ sidecars, data/runs/ or .generated/ previews when the
+  // SAJTBYGGAREN_MAX_* caps are set. The Viewser product flow DOES want the
+  // configured retention sweep on every build, so it opts in explicitly here —
+  // this keeps the product-flow behaviour byte-identical to before the CLI
+  // default flip. (In test mode --runs-dir below isolates artefakter, so the
+  // build()-internal `auto_prune and runs_dir is None` guard skips pruning
+  // regardless and this flag is a no-op.)
+  args.push("--allow-prune");
   // Test-only runs isolation: set SAJTBYGGAREN_TEST=1 and VIEWSER_RUNS_DIR.
   const testRunsDir = TEST_ENV_ACTIVE ? process.env.VIEWSER_RUNS_DIR?.trim() : "";
   if (testRunsDir) args.push("--runs-dir", path.resolve(repoRoot(), testRunsDir));

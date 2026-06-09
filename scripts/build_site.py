@@ -2742,11 +2742,20 @@ def build(
     ``runs_dir`` defaults to ``RUNS_DIR`` (``data/runs``); pass an isolated
     path (``tmp_path`` in tests) to keep the canonical history clean.
     ``generated_dir`` overrides where the dev-preview site is emitted.
-    ``auto_prune`` runs the opt-in retention sweep from
+    ``auto_prune`` runs the retention sweep from
     ``packages.generation.maintenance.auto_prune_all`` before Phase 0 so
     ``data/runs/``, ``data/prompt-inputs/`` and ``.generated/`` stay under
     the caps configured in ``.env``. Disabled automatically when ``runs_dir``
-    is overridden (tests with ``tmp_path``).
+    is overridden (tests with ``tmp_path``). The ``build_site.py`` CLI now
+    leaves this OFF unless ``--allow-prune`` is passed, so a manual or smoke
+    ``--dossier`` build can NEVER silently delete existing prompt-input
+    sidecars / runs / previews just because ``SAJTBYGGAREN_MAX_*`` caps are
+    set (the data-loss trap a smoke build would otherwise hit when there are
+    more sites on disk than the cap). The Viewser product flow opts in
+    explicitly via ``--allow-prune`` (apps/viewser/lib/build-runner.ts), and
+    the prompt-driven create path keeps its own sweep in
+    ``scripts/prompt_to_project_input.py``, so retention behaviour there is
+    unchanged.
 
     ``prompt_inputs_dir`` (Glue 1): where to persist a discoverable Project
     Input sidecar for a fresh init build that did not come through
@@ -4033,6 +4042,17 @@ def main() -> int:
             "the sibling folder ../sajtbyggaren-output/.generated."
         ),
     )
+    parser.add_argument(
+        "--allow-prune",
+        action="store_true",
+        help=(
+            "Opt in to the retention sweep (auto_prune_all) before building. "
+            "OFF by default so a manual or smoke `--dossier` build NEVER deletes "
+            "existing data/prompt-inputs/ sidecars, data/runs/ or .generated/ "
+            "previews when SAJTBYGGAREN_MAX_* caps are set in .env. The Viewser "
+            "product flow passes this explicitly to keep its retention behaviour."
+        ),
+    )
     args = parser.parse_args()
 
     runs_dir = Path(args.runs_dir).resolve() if args.runs_dir else None
@@ -4067,6 +4087,7 @@ def main() -> int:
         do_build=not args.skip_build,
         runs_dir=runs_dir,
         generated_dir=args.generated_dir,
+        auto_prune=args.allow_prune,
     )
     return 0
 
