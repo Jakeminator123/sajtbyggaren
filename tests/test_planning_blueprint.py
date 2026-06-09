@@ -758,6 +758,7 @@ def test_pinned_builder_path_produces_blueprint_deterministically(monkeypatch):
 
 
 @pytest.mark.tooling
+@pytest.mark.e2e
 @pytest.mark.skipif(
     os.environ.get("SAJTBYGGAREN_E2E") != "1" or not os.environ.get(OPENAI_API_KEY_ENV),
     reason="SAJTBYGGAREN_E2E=1 and OPENAI_API_KEY required for real LLM call",

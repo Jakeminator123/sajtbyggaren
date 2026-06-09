@@ -304,6 +304,7 @@ def test_llm_golden_path_multi_intent_followup_chain(
 
 @pytest.mark.tooling
 @pytest.mark.slow
+@pytest.mark.requires_node
 def test_llm_golden_path_real_build_end_to_end(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
