@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Produktkompass för Sajtbyggaren
 
 Det här dokumentet är den korta målbild som varje agent ska ha i ryggen

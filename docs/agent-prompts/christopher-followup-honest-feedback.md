@@ -1,3 +1,14 @@
+---
+status: historical
+owner: ui
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historisk engångsprompt (uppdraget är kört).
+> Aktiva startpromptar: `docs/agent-prompts.md` + `sprintvakt.md`,
+> `morning-fresh-start.md`, `steward-auto-bump.md`, `cloud-grind/`.
+
 # Christopher-handoff: ärlig follow-up-feedback i FloatingChat (ADR 0034 väg B)
 
 Datum: 2026-06-01. Avsändare: backend-agenten (`jakob-be`). Din branch: `christopher-ui`.

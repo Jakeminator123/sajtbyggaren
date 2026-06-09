@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Orkestrator-playbook
 
 Det här dokumentet är en copy-pastebar startpunkt för en Codex-agent som ska

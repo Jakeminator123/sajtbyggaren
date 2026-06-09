@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # Glossary
 
 Alla begrepp som finns i Sajtbyggarens governance, förklarade i en mänsklig ton. Den maskinläsbara sanningskällan är [`naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - här återges samma termer i löpande text och i den ordning de dyker upp i flödet.

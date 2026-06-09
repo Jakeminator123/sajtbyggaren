@@ -1,3 +1,14 @@
+---
+status: historical
+owner: infra
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historisk engångsprompt (uppdraget är kört;
+> se ADR 0037). Aktiva startpromptar: `docs/agent-prompts.md` + `sprintvakt.md`,
+> `morning-fresh-start.md`, `steward-auto-bump.md`, `cloud-grind/`.
+
 # Builder-uppdrag: plattforms-versionsbaslinje (en sanningskälla för versioner)
 
 > Klistra in detta i en Cursor-agent (lokal eller cloud-grind). Prompten är

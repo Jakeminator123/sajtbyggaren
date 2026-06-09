@@ -1,5 +1,13 @@
 # GAP-windows-safe-rebuild-pipeline
 
+> **status: superseded (lane A, 2026-06).** Gapets scope — nivå 4: immutable
+> `builds/<buildId>/` + atomär `current.json`-pointer-swap — är landat
+> (`packages/generation/build/immutable_builds.py`, `scripts/gc_old_builds.py`,
+> + flat-layout-städning + POSIX-tree-kill). Nivå 5 (`vercel-preview`-adapter,
+> "ny version"-banner) är uttryckligen framtida arbete utanför detta gap.
+> Arkiverat (frontmatter-statusen nedan är ögonblicksbilden vid skapandet;
+> auktoritativ lifecycle = `docs/workboard.json`). Se `docs/gaps/archive/README.md`.
+
 ```yaml
 id: GAP-windows-safe-rebuild-pipeline
 type: Gap/Backend

@@ -1,3 +1,13 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historisk import-readiness — behållen som
+> referens (ej sanningskälla). Nuläge: `docs/current-focus.md`. Se `docs/archive/README.md`.
+
 # Sajtmaskin dossier-import readiness
 
 **Scope:** docs-only inventering av det material som operatören parkerat i

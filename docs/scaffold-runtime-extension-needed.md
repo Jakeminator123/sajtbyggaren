@@ -1,4 +1,17 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
 # Scaffold runtime extension — handoff to Jakob
+
+> **Arkivnot (lane A, 2026-06):** Historiskt (kärngapet är stängt, se status nedan).
+> Behålls *på plats* eftersom sökvägen är inbäddad i runtime-kommentarer
+> (`packages/generation/planning/plan.py`, `packages/generation/build/renderers.py`,
+> `tests/test_backoffice_discovery_control.py`) och i en `docs/workboard.json`-relaterad
+> sprintvakt-seed. Sanningskälla för nuläget: `docs/current-focus.md`.
 
 **Status:** KLAR / HISTORIK (uppdaterad 2026-06-08). Kärngapet är stängt:
 `restaurant-hospitality` är runtime-aktiv (`_RUNTIME_SCAFFOLD_HINTS` i

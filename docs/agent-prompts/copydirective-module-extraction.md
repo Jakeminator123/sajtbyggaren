@@ -1,3 +1,14 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historisk engångsprompt (uppdraget är kört).
+> Aktiva startpromptar: `docs/agent-prompts.md` + `sprintvakt.md`,
+> `morning-fresh-start.md`, `steward-auto-bump.md`, `cloud-grind/`.
+
 # Builder-uppdrag: copyDirective-modulutbrytning (behavior-preserving)
 
 > Klistra in detta i en isolerad builder-agent (Cursor Cloud Background Agent

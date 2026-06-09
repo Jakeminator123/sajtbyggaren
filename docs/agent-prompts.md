@@ -1,3 +1,10 @@
+---
+status: active
+owner: governance
+truth_level: source
+last_verified_commit: f56ac30
+---
+
 # Agentprompter för Sajtbyggaren
 
 Den här filen är en copy-paste-katalog för tre fasta agentroller:

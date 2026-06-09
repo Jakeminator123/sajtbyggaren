@@ -1,3 +1,14 @@
+---
+status: historical
+owner: infra
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historisk engångsprompt (uppdraget är kört).
+> Aktiva startpromptar: `docs/agent-prompts.md` + `sprintvakt.md`,
+> `morning-fresh-start.md`, `steward-auto-bump.md`, `cloud-grind/`.
+
 # Builder-uppdrag: Vercel-länkning + minimal deploy-konfig
 
 > Klistra in detta i en Cursor Cloud Background Agent eller annan

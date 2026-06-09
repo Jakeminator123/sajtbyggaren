@@ -1,5 +1,12 @@
 # GAP-followup-prompt-content-passthrough
 
+> **status (lane A, 2026-06): delvis landat — behålls aktivt (ej arkiverat).**
+> Väg A (`copyDirectives[]`) + theme/visual_style-restyle + `section_add`
+> (mount-only) är landade i kod. Kvar: synlig render + placering av `section_add`,
+> Väg B (ärlig FloatingChat-feedback, UI), fler copy-targets och Väg C (sandbox-
+> patchning). Frontmatter-statusen nedan är ögonblicksbilden vid skapandet;
+> auktoritativ lifecycle = `docs/workboard.json`.
+
 ```yaml
 id: GAP-followup-prompt-content-passthrough
 type: Gap/Builder

@@ -1,3 +1,10 @@
+---
+status: active
+owner: backend
+truth_level: summary
+last_verified_commit: f56ac30
+---
+
 # routerDecision i /api/prompt (Fas 1, skiva 1a)
 
 Kort not om hur den deterministiska routern (KÖR-6a) syns i operatörens UI.

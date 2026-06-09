@@ -1,3 +1,14 @@
+---
+status: historical
+owner: backend
+truth_level: historical-reference
+last_verified_commit: f56ac30
+---
+
+> **Arkivnot (lane A, 2026-06):** Historiskt beslutsstöd (B125). Aktuell
+> runtime-status: [`docs/architecture/preview-runtime.md`](../architecture/preview-runtime.md)
+> + ADR 0033. Se `docs/archive/README.md`.
+
 # Preview-runtime matrix — beslutsstöd för B125
 
 Beslutsstöd för operatör + Christopher. Sex alternativ för
