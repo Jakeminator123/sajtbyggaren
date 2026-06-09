@@ -780,6 +780,11 @@ COMMON_WORDS = {
     "ProgressTrack", "ProgressValue",
     # Python stdlib + tredjepart-symboler i scrape_site.py och build_site.py
     "BeautifulSoup", "RequestException", "ChunkedEncodingError", "ConnectionError",
+    # Pillow (PIL) submodulnamn som asset-parity-testets avkodade pixel-jämförelse
+    # använder (tests/test_build_assets_parity.py). Externa bibliotekssymboler
+    # (samma kategori som BeautifulSoup / RequestException ovan), inte canonical
+    # domänbegrepp.
+    "ImageChops", "ImageStat",
     # Node typings
     "ProcessEnv",
     # Intake-flödets historiska namn (refererat i Sajtmaskin-port-kommentarer)
