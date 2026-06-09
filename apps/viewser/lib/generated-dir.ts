@@ -18,6 +18,7 @@
 // apps/viewser/scripts/dev.mjs so both read the same file the same way.
 
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -64,6 +65,24 @@ export function readRepoEnvVar(name: string): string | undefined {
 }
 
 /**
+ * Expand a leading `~` / `~/…` to the user's home directory, mirroring Python's
+ * `Path(value).expanduser()` in `scripts/build_site.py:resolve_generated_dir`.
+ * Without this, a value like `~/sajt-output` became a literal
+ * `<repoRoot>/~/sajt-output` folder on the Node side while the Python builder
+ * wrote to the real home dir — builder and preview would point at different
+ * directories. Only the common bare `~` and `~/`/`~\` prefixes are expanded; a
+ * `~user` form is left as-is (Node's path utilities don't resolve it and it is
+ * unused here).
+ */
+function expandHome(value: string): string {
+  if (value === "~") return homedir();
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    return path.join(homedir(), value.slice(2));
+  }
+  return value;
+}
+
+/**
  * Resolve the directory `build_site.py` writes generated sites into.
  *
  * Precedence (mirrors scripts/build_site.py:resolve_generated_dir):
@@ -71,15 +90,19 @@ export function readRepoEnvVar(name: string): string | undefined {
  *   2. repo-root `.env` `SAJTBYGGAREN_GENERATED_DIR` (the single-source file),
  *   3. default `../sajtbyggaren-output/.generated` relative to the repo root.
  *
- * A RELATIVE value resolves against the REPO ROOT (not `process.cwd()`), so the
- * preview side and the builder land on the exact same absolute directory.
+ * A leading `~` is expanded first (Python parity), then a RELATIVE value
+ * resolves against the REPO ROOT (not `process.cwd()`), so the preview side and
+ * the builder land on the exact same absolute directory.
  */
 export function resolveGeneratedDir(): string {
   const fromProcess = process.env.SAJTBYGGAREN_GENERATED_DIR?.trim();
   const raw = fromProcess || readRepoEnvVar("SAJTBYGGAREN_GENERATED_DIR")?.trim();
   const root = repoRoot();
   if (raw) {
-    return path.isAbsolute(raw) ? path.resolve(raw) : path.resolve(root, raw);
+    const expanded = expandHome(raw);
+    return path.isAbsolute(expanded)
+      ? path.resolve(expanded)
+      : path.resolve(root, expanded);
   }
   return path.join(root, "..", "sajtbyggaren-output", ".generated");
 }
