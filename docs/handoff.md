@@ -11,10 +11,12 @@ recommendedPages-API m.m. (15 PRs).
 > **Detta är det ENDA auktoritativa blocket. Allt äldre ligger i arkivet —
 > verifiera alltid mot git/koden, aldrig mot äldre block.**
 >
-> **Git-läge:** `origin/jakob-be = 68bbde3`, rent träd, lokal = origin.
-> `origin/main = 16278c1`. **Deltat jakob-be→main är MYCKET STORT (15 PRs) —
-> main-sync är nästa naturliga leveransfönster, men det är operatörens beslut.
-> Pusha aldrig main per slice.** Post-merge-sanity efter hela tåget: governance
+> **Git-läge (uppdaterat 2026-06-10 natt): MAIN-SYNC KLAR.** PR #252 mergade
+> `jakob-be → main` som ren övertagning (merge commit; main var förfader, ingen
+> squash-divergens). `origin/main = origin/jakob-be = e6a06a5`, tom diff
+> verifierad, CI grönt (governance, builder-smoke, ai-bug-review). Christophers
+> action: synka `christopher` mot `origin/main` (inbox msg-0059).
+> Post-merge-sanity efter hela tåget: governance
 > 19/19, rules_sync OK, ruff 0, term-coverage --strict OK, riktade sviter gröna.
 > Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
 
@@ -74,7 +76,9 @@ konfigurerad i `.cursor/mcp.json` (gitignorerad), dokumenterad i
    /studio "lägg till en öppettider-sektion överst" på LSB-sajt med riktiga
    öppettider → block efter hero; #228:s Ändra-knapp → steg-hopp;
    kontrastfärg "gör sajten mörkblå"; modul-dialogen (#245/#249) visuellt.
-3. **Main-sync-beslut** (operatören) — 15 PR:ar verifierade, bra fönster.
+3. **Main-sync — KLAR** (PR #252, 2026-06-10 natt; operatörsbeslut). Eval-rundan
+   på 4 branscher (elektriker/frisör/naprapat/keramik-shop) körs FÖRE
+   agentroll-sprinten per operatörsbeslut samma natt.
 4. **Punkt 2 till Christopher:** businessFamily-ankare (ADR + family-fält i
    discovery-taxonomy) + ev. recommendedCapabilities-fält i samma veva.
 5. **section_add skiva 2+:** fler inline-typer/routes/scaffolds (seam +

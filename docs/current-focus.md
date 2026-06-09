@@ -6,10 +6,13 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-09, sen kväll — efter kvällens stora merge-tåg)
+## Status nu (2026-06-10, natt — MAIN-SYNC KLAR via PR #252)
 
-**Git:** `main = 16278c1` (PR #212, oförändrad). `jakob-be = 16e3ae6`, rent träd.
-I kväll landade ELVA PR:ar på `jakob-be` (merge-tåg, ett i taget, alla guards + CI gröna):
+**Git:** `main = jakob-be = e6a06a5` (identiska träd, verifierat med tom diff).
+PR #252 mergade hela merge-tåget (15 PRs) till `main` som ren övertagning
+(merge commit, main var förfader — ingen squash-divergens). Steward-auto
+bumpade docs på main; `jakob-be` fast-forwardades och pushades.
+I går kväll landade PR:arna på `jakob-be` (merge-tåg, ett i taget, alla guards + CI gröna):
 
 - **#238** `refactor(builder)`: render helpers → `packages/generation/build/render_helpers.py`
   (sista megafil-slicen, byte-paritet verifierad).
@@ -34,8 +37,9 @@ I kväll landade ELVA PR:ar på `jakob-be` (merge-tåg, ett i taget, alla guards
   borta ur placeholder-scan; (4) golden-path-smoke kräver route-scan exakt `ok`.
 
 Plus inbox-trafik: msg-0057 (svar till Christopher: punkt 1 tas först, canonical sluggar,
-section_add synlig) + hans ack/uppföljning (#247). Sync `jakob-be → main` väntar
-**operatörsbeslut** — pusha aldrig main per slice.
+section_add synlig) + hans ack/uppföljning (#247). Sync `jakob-be → main` är **GENOMFÖRD**
+(operatörsbeslut 2026-06-10, PR #252) — Christophers action: synka `christopher` mot
+`origin/main` (inbox msg-0059).
 
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
 befintliga in-repo-motorn — inte en ny parallell motor, inte extern Docker/
@@ -53,17 +57,21 @@ versionslagret grönt (`themeApplied: true`, stabilt `projectId`). **Caveat:** f
 syntes knappt — sajten var redan grön (lågkontrast-testfall, ingen loop-bugg). Verifiera
 tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fasen.
 
-**Nästa prioriteringar:**
+**Nästa prioriteringar (operatörsbeslut 2026-06-10: eval-runda FÖRST, sedan agentroller):**
 
-1. **OpenClaw 2.0 / agentroller i llm-flödet — AVBLOCKAT:** F1-readiness var gated på
-   synlig `section_add`, som nu är inne (#240/#248). Plan:
-   `docs/heavy-llm-flow/openclaw-2.0-conductor.md` + `openclaw-f1-readiness.md`.
-   Strukturera rollerna (router/section_builder/stylist/copy) på den befintliga motorn.
-2. **Evals / golden path + manuell score + manuella /studio-checkar:** kör
+1. **Golden Path-eval på 4 branscher + manuell score (extern granskning + prio-beslut):**
+   elektriker, frisör, naprapat, keramik-shop. Kör
    `scripts/run_golden_path_eval.py --mode deterministic` + `scripts/run_eval_suite.py quick`,
    sätt manuell 1–10 i Backoffice. Inkludera kontrastfärg-testet ("gör sajten mörkblå") OCH
    den manuella section_add-checken: "lägg till en öppettider-sektion överst" på LSB-sajt med
    riktiga öppettider → block efter hero + ärlig toast (deterministiskt bevisat; klicket kvar).
+   Utfallet styr om nästa sprint blir copy/design-output, följdprompt-effekt eller motor.
+2. **OpenClaw 2.0 / agentroller i llm-flödet — AVBLOCKAT:** F1-readiness var gated på
+   synlig `section_add`, som nu är inne (#240/#248). Plan:
+   `docs/heavy-llm-flow/openclaw-2.0-conductor.md` + `openclaw-f1-readiness.md`.
+   Strukturera rollerna (router/section_builder/stylist/copy) på den befintliga motorn.
+   Detta är också vägen till operatörens "smarta chat" (skämt/omdöme/3d-banner =
+   messageKind-routing i dirigenten, inte ett separat projekt).
 3. **Punkt 2 till Christopher (businessFamily-ankare):** governance-slice (ADR +
    family-fält per kategori i discovery-taxonomy) så UI:ts 8 familjer slutar vara UI-påhitt.
    (Punkt 1 LEVERERAD: #251 exponerar `recommendedPages` i `/api/discovery-options`;
@@ -98,7 +106,9 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `1cc8a92` (2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs)).
+Last verified state: `e6a06a5` (2026-06-10 natt UTC+2; `main` = `jakob-be` = `e6a06a5`
+efter PR #252-sync + steward-auto-docs-bump + jakob-be fast-forward. Tom diff
+main↔jakob-be verifierad. CI grönt på #252: governance, builder-smoke, ai-bug-review).
 Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
 recommendedPages-API m.m. (15 PRs).
@@ -108,6 +118,8 @@ recommendedPages-API m.m. (15 PRs).
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
   (publik POST utan auth/rate-limit kan starta sandboxar). Behålls som arkitektur-referens;
   görs om på färsk bas med auth/rate-limit designat från start när runtime-spåret väljs aktivt.
+- **#253** (`cursor/dev-env-setup-2e12`): docs-PR från cloud-lane (Cloud VM
+  preview-mode env-override-not). Granskas/mergas när cloud-agenterna landar sina lanes.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
