@@ -50,21 +50,28 @@ POSITIVE_CASES = [
     "platshållare för ingressen",
     "replace_me",
     "<insert customer quote here>",
-    # Newly hardened generic-AI English boilerplate.
+    # Generic-AI English template slop in clear placeholder SHAPES (PR #244
+    # review): the bare phrase "your company" is no longer flagged, only
+    # template forms ("your company website", "welcome to your company"),
+    # an unfilled "company name (goes) here", or a bracketed "[company name]".
     "welcome to your company website",
-    "your company has served the region for years",
+    "your company logo goes in the header",
     "company name goes here",
     "[company name]",
+    "{ your company name }",
     # Imperative insert scaffolding.
     "insert your tagline here",
     "insert the company description",
     "insert business address",
     "insert logo above",
-    # Empty section headings (structural placeholders).
+    # Empty section headings (structural placeholders), incl. the pretty-printed
+    # multi-line form the per-line scan used to miss (PR #244 review).
     "<h1></h1>",
     "<h2>   </h2>",
     "<h3>&nbsp;</h3>",
     '<h2 className="hero-title"></h2>',
+    "<h2>\n          \n        </h2>",
+    '<h3 className="title">\n  &nbsp;\n</h3>',
 ]
 
 
@@ -98,6 +105,14 @@ NEGATIVE_CASES = [
     # Swedish equivalents of the English placeholders must stay clean.
     "Ditt företag förtjänar en bättre hemsida.",
     "Vårt företagsnamn står för kvalitet sedan 1999.",
+    # Legitimate English B2B prose on a language=="en" site must NOT trip the
+    # narrowed template patterns (PR #244 review): the bare phrase "your
+    # company" / "company name" in flowing copy is real content, not a
+    # placeholder. Only template SHAPES are flagged.
+    "We help your company grow every single quarter.",
+    "Your company has served the region for over twenty years.",
+    "Our company name has meant quality since 1999.",
+    "Tell us your company name and we will get started.",
     # Substring look-alikes that the word boundaries must NOT catch.
     "notbd is a single token, not a marker.",
     "replace_meeting room booking är ett vanligt ord.",
