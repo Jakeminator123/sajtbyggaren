@@ -127,6 +127,97 @@ def test_paths_module_exposes_runs_and_data():
     assert paths.DATA_DIR.parent == paths.REPO_ROOT
 
 
+@pytest.mark.tooling
+def test_status_views_include_golden_path():
+    """ADR 0039: a read-only Golden Path status view lives in the Status block."""
+    from backoffice.views import status
+
+    assert "Golden Path" in status.VIEWS
+    assert callable(status.VIEWS["Golden Path"])
+
+
+@pytest.mark.tooling
+def test_latest_golden_path_summary_none_when_empty(tmp_path: Path):
+    """No summary on disk -> (None, None), so the view renders an info state."""
+    from backoffice.views.status import latest_golden_path_summary
+
+    missing = tmp_path / "does-not-exist"
+    data, path = latest_golden_path_summary(missing)
+    assert data is None
+    assert path is None
+
+    empty = tmp_path / "summaries"
+    empty.mkdir()
+    data, path = latest_golden_path_summary(empty)
+    assert data is None
+    assert path is None
+
+
+@pytest.mark.tooling
+def test_latest_golden_path_summary_picks_newest(tmp_path: Path):
+    import json
+    import os
+
+    from backoffice.views.status import latest_golden_path_summary
+
+    summaries = tmp_path / "summaries"
+    summaries.mkdir()
+    old = summaries / "eval-old.json"
+    new = summaries / "eval-new.json"
+    old.write_text(json.dumps({"evalId": "old", "totalScore": 5}), encoding="utf-8")
+    new.write_text(json.dumps({"evalId": "new", "totalScore": 8}), encoding="utf-8")
+    # Force a deterministic mtime ordering (old older than new).
+    os.utime(old, (1_000_000, 1_000_000))
+    os.utime(new, (2_000_000, 2_000_000))
+
+    data, path = latest_golden_path_summary(summaries)
+    assert data is not None
+    assert data["evalId"] == "new"
+    assert path == new
+
+
+@pytest.mark.tooling
+def test_latest_golden_path_summary_skips_broken_json(tmp_path: Path):
+    import json
+    import os
+
+    from backoffice.views.status import latest_golden_path_summary
+
+    summaries = tmp_path / "summaries"
+    summaries.mkdir()
+    broken = summaries / "eval-broken.json"
+    good = summaries / "eval-good.json"
+    broken.write_text("{ not valid json", encoding="utf-8")
+    good.write_text(json.dumps({"evalId": "good"}), encoding="utf-8")
+    # Make the broken file *newer* so the helper must skip it to find the good one.
+    os.utime(good, (1_000_000, 1_000_000))
+    os.utime(broken, (2_000_000, 2_000_000))
+
+    data, path = latest_golden_path_summary(summaries)
+    assert data is not None
+    assert data["evalId"] == "good"
+    assert path == good
+
+
+@pytest.mark.tooling
+def test_latest_golden_path_summary_reads_legacy_dir(tmp_path: Path):
+    import json
+
+    from backoffice.views.status import latest_golden_path_summary
+
+    summaries = tmp_path / "summaries"
+    legacy = tmp_path / "legacy"
+    summaries.mkdir()
+    legacy.mkdir()
+    (legacy / "eval-legacy.json").write_text(
+        json.dumps({"evalId": "legacy"}), encoding="utf-8"
+    )
+
+    data, path = latest_golden_path_summary(summaries, legacy)
+    assert data is not None
+    assert data["evalId"] == "legacy"
+
+
 def _streamlit_floor_from_requirements(repo_root: Path) -> tuple[int, int]:
     """Parse the declared ``streamlit>=X.Y`` floor from requirements.txt."""
     import re

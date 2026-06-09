@@ -1,14 +1,51 @@
-"""Status-block: Översikt, System Health, Cross-Policy Status."""
+"""Status-block: Översikt, Golden Path, System Health, Cross-Policy Status."""
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
+from typing import Any
 
 import streamlit as st
 
 from .. import health, loaders
-from ..paths import REPO_ROOT
+from ..paths import (
+    EVALS_GOLDEN_PATH_SUMMARIES_DIR,
+    LEGACY_GOLDEN_PATH_DIR,
+    REPO_ROOT,
+)
 from ._helpers import render_check, safe_render
+
+
+def latest_golden_path_summary(
+    summaries_dir: Path,
+    legacy_dir: Path | None = None,
+) -> tuple[dict[str, Any] | None, Path | None]:
+    """Return the newest Golden Path eval summary as ``(data, path)``.
+
+    Pure read-only helper (no Streamlit, no subprocess): scans the given
+    summary directories for ``*.json`` files, picks the most recently
+    modified, and parses it. Returns ``(None, None)`` when there is no
+    readable summary. Broken JSON files are skipped so one corrupt report
+    never hides a valid newer/older one.
+
+    See ADR 0039 (Golden Path canonical) and ``docs/llm-golden-path-runbook.md``.
+    """
+    candidates: list[Path] = []
+    for root in (summaries_dir, legacy_dir):
+        if root is None or not root.exists():
+            continue
+        candidates.extend(p for p in root.glob("*.json") if p.is_file())
+
+    for path in sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if isinstance(data, dict):
+            return data, path
+    return None, None
 
 
 def _hard_reset_caches() -> None:
@@ -20,7 +57,11 @@ def view_overview() -> None:
     st.title("Översikt")
     st.caption(
         "Sajtbyggaren styrs av JSON-policies under `governance/policies/`. "
-        "Detta är operatörens redigeringsyta. Användarens runtime ligger inte här."
+        "Detta är operatörens redigeringsyta. Användarens runtime ligger inte här. "
+        "Dagens motor: `Golden Path` (huvudflödet) bygger via Site Brief -> Site Plan "
+        "-> Generation Package -> Quality Gate, med `Project DNA` för "
+        "follow-up-versionering. Begreppskarta: `docs/glossary.md`; vy-status: "
+        "`docs/backoffice/overview.md`."
     )
 
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -45,6 +86,28 @@ def view_overview() -> None:
         st.caption(qt.get("meaning", ""))
 
     st.divider()
+    st.subheader("Golden Path")
+    summary, summary_path = latest_golden_path_summary(
+        EVALS_GOLDEN_PATH_SUMMARIES_DIR, LEGACY_GOLDEN_PATH_DIR
+    )
+    if summary is None:
+        st.info(
+            "Ingen golden-path-eval än. Kör `python scripts/run_golden_path_eval.py "
+            "--mode deterministic` (offline, ingen API-nyckel). Detaljer i fliken "
+            "**Golden Path** och i `docs/llm-golden-path-runbook.md`."
+        )
+    else:
+        g1, g2, g3 = st.columns(3)
+        g1.metric("Total score", f"{summary.get('totalScore', '—')} / 10")
+        g2.metric("Embeddings gate", str(summary.get("embeddingsReadiness", "—")))
+        g3.metric("Cases", summary.get("caseCount", "—"))
+        st.caption(
+            f"Senaste eval `{summary.get('evalId', '—')}` "
+            f"({summary.get('mode', '—')}, {summary.get('createdAt', '—')}). "
+            "Read-only — se fliken Golden Path för per-case-detaljer."
+        )
+
+    st.divider()
     st.subheader("Snabbåtgärder")
     a1, a2, a3 = st.columns(3)
     if a1.button("Kör governance-validering", width="stretch", key="ov_validate"):
@@ -56,6 +119,74 @@ def view_overview() -> None:
 
     if "overview_check" in st.session_state:
         render_check(st.session_state["overview_check"])
+
+    st.divider()
+    st.subheader("Kända brister")
+    st.caption(
+        "Synliggjorda som brister, inte som nya features. `section_add` monterar "
+        "dossiers men renderar ännu inte alltid synligt på sidan/positionen "
+        "(`applied=true`, `appliedVisibleEffect=false`). Följdprompt-copy gör "
+        "ibland parafras i stället för literal replace. Spårning i "
+        "`docs/known-issues.md` och "
+        "`docs/gaps/GAP-followup-prompt-content-passthrough.md`."
+    )
+
+
+def view_golden_path_status() -> None:
+    st.title("Golden Path")
+    st.caption(
+        "Read-only status för produktens kanoniska huvudflöde (ADR 0039). "
+        "Speglar senaste `scripts/run_golden_path_eval.py`-summary under "
+        "`data/evals/summaries/golden-path/`. Den här vyn kör inget — den läser "
+        "bara. Flöde + entrypoint-yta i `docs/llm-golden-path-runbook.md`, "
+        "begreppskarta i `docs/glossary.md`."
+    )
+
+    summary, summary_path = latest_golden_path_summary(
+        EVALS_GOLDEN_PATH_SUMMARIES_DIR, LEGACY_GOLDEN_PATH_DIR
+    )
+    if summary is None:
+        st.info(
+            "Ingen golden-path-eval hittad. Kör från terminal:\n\n"
+            "```\npython scripts/run_golden_path_eval.py --mode deterministic\n```\n\n"
+            "Defaultläget är offline (ingen `OPENAI_API_KEY`, ingen npm-build)."
+        )
+        return
+
+    thresholds = summary.get("thresholds", {}) or {}
+    cols = st.columns(4)
+    cols[0].metric("Total score", f"{summary.get('totalScore', '—')} / 10")
+    cols[1].metric("Embeddings gate", str(summary.get("embeddingsReadiness", "—")))
+    cols[2].metric("Cases", summary.get("caseCount", "—"))
+    cols[3].metric("Go-snitt", thresholds.get("averageScoreGo", "—"))
+    st.caption(
+        f"Eval `{summary.get('evalId', '—')}` — läge `{summary.get('mode', '—')}`, "
+        f"skapad {summary.get('createdAt', '—')}."
+        + (f" Källa: `{summary_path.name}`." if summary_path is not None else "")
+    )
+
+    cases = summary.get("cases", [])
+    if isinstance(cases, list) and cases:
+        rows = [
+            {
+                "caseId": case.get("caseId", "—"),
+                "totalScore": case.get("totalScore", "—"),
+                "passThreshold": case.get("passThreshold", "—"),
+                "passed": "ja" if case.get("passed") else "nej",
+                "scaffoldId": (case.get("scaffoldSelection", {}) or {}).get(
+                    "selectedScaffoldId", "—"
+                ),
+                "qualityStatus": case.get("qualityStatus", "—"),
+                "buildStatus": case.get("buildStatus", "—"),
+            }
+            for case in cases
+            if isinstance(case, dict)
+        ]
+        st.dataframe(rows, width="stretch", hide_index=True)
+
+    problem_mix = summary.get("problemMix", {}) or {}
+    if problem_mix.get("dominantProblem"):
+        st.caption(f"Dominerande problemtyp: `{problem_mix['dominantProblem']}`.")
 
 
 def view_system_health() -> None:
@@ -229,6 +360,7 @@ def view_cross_policy() -> None:
 
 VIEWS = {
     "Översikt": lambda: safe_render(view_overview),
+    "Golden Path": lambda: safe_render(view_golden_path_status),
     "System Health": lambda: safe_render(view_system_health),
     "Cross-Policy Status": lambda: safe_render(view_cross_policy),
 }
