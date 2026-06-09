@@ -57,7 +57,11 @@ def view_overview() -> None:
     st.title("Översikt")
     st.caption(
         "Sajtbyggaren styrs av JSON-policies under `governance/policies/`. "
-        "Detta är operatörens redigeringsyta. Användarens runtime ligger inte här."
+        "Detta är operatörens redigeringsyta. Användarens runtime ligger inte här. "
+        "Dagens motor: `Golden Path` (huvudflödet) bygger via Site Brief -> Site Plan "
+        "-> Generation Package -> Quality Gate, med `Project DNA` för "
+        "follow-up-versionering. Begreppskarta: `docs/glossary.md`; vy-status: "
+        "`docs/backoffice/overview.md`."
     )
 
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -115,6 +119,17 @@ def view_overview() -> None:
 
     if "overview_check" in st.session_state:
         render_check(st.session_state["overview_check"])
+
+    st.divider()
+    st.subheader("Kända brister")
+    st.caption(
+        "Synliggjorda som brister, inte som nya features. `section_add` monterar "
+        "dossiers men renderar ännu inte alltid synligt på sidan/positionen "
+        "(`applied=true`, `appliedVisibleEffect=false`). Följdprompt-copy gör "
+        "ibland parafras i stället för literal replace. Spårning i "
+        "`docs/known-issues.md` och "
+        "`docs/gaps/GAP-followup-prompt-content-passthrough.md`."
+    )
 
 
 def view_golden_path_status() -> None:
