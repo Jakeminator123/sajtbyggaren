@@ -38,6 +38,44 @@ def test_discovery_options_route_reads_taxonomy_and_omits_starter_id() -> None:
 
 
 @pytest.mark.tooling
+def test_b166_scrape_patch_merges_contact_and_brand_preserving_operator() -> None:
+    """B166: 'Hämta från webbplats' får inte nolla operatörens ifyllda fält.
+
+    Scrape-backenden (scripts/scrape_site.py:run) fyller alltid komplett
+    contact-shape med tomma strängar för fält den inte hittade. En shallow
+    spread av patchen (updateAnswers gör ``{ ...prev, ...next }``) skulle
+    då ERSÄTTA hela contact/brand-objektet och tyst radera operatörens
+    redan ifyllda öppettider/telefon/toneTags. Källåset kräver att
+    foundation-step merge:ar nested objekt per subfält med operatörens
+    värde som vinnare.
+    """
+    text = (
+        VIEWSER_DIR
+        / "components"
+        / "discovery-wizard"
+        / "steps"
+        / "foundation-step.tsx"
+    ).read_text(encoding="utf-8")
+    assert "mergeNestedPreservingOperator" in text, (
+        "foundation-step.tsx måste merge:a nested scrape-objekt per subfält "
+        "(B166) — en wholesale-ersättning av contact/brand raderar "
+        "operatörens ifyllda fält."
+    )
+    assert "patch.contact = mergeNestedPreservingOperator(" in text, (
+        "Scrape-patchens contact måste gå genom nested-merge med "
+        "answers.contact som bas (B166)."
+    )
+    assert "patch.brand = mergeNestedPreservingOperator(" in text, (
+        "Scrape-patchens brand måste gå genom nested-merge med "
+        "answers.brand som bas (B166)."
+    )
+    assert "if (operatorFilled) continue;" in text, (
+        "Nested-mergen måste låta operatörens ifyllda värde VINNA över "
+        "scrape-värdet (B166)."
+    )
+
+
+@pytest.mark.tooling
 def test_discovery_options_route_exposes_recommended_pages_from_taxonomy() -> None:
     """Inbox msg-0056 punkt 1: /api/discovery-options ska exponera taxonomins
     recommendedPages per kategori så FunctionsStep kan hämta sidförslag från
