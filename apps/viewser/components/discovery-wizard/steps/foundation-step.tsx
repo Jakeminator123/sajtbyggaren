@@ -100,10 +100,58 @@ export function FoundationStep({
       }
       const data = payload.data ?? {};
       const patch: Partial<WizardAnswers> = {};
+      // B166: nested objekt (contact/brand) får ALDRIG ersättas wholesale.
+      // Scrape-backenden fyller alltid komplett contact-shape med tomma
+      // strängar för fält den inte hittade — en shallow spread skulle då
+      // tyst nolla operatörens redan ifyllda öppettider/telefon m.m.
+      // Merge per subfält: operatörens ifyllda värde vinner, scrape fyller
+      // bara luckor (tomma/saknade fält).
+      const mergeNestedPreservingOperator = <
+        T extends Record<string, unknown>,
+      >(
+        current: T,
+        incoming: Record<string, unknown>,
+      ): T => {
+        const merged: Record<string, unknown> = { ...current };
+        for (const [k, v] of Object.entries(incoming)) {
+          if (v === undefined || v === null) continue;
+          if (typeof v === "string" && v.trim().length === 0) continue;
+          if (Array.isArray(v) && v.length === 0) continue;
+          const existing = merged[k];
+          const operatorFilled =
+            (typeof existing === "string" && existing.trim().length > 0) ||
+            (Array.isArray(existing) && existing.length > 0);
+          if (operatorFilled) continue;
+          merged[k] = v;
+        }
+        return merged as T;
+      };
       for (const [key, value] of Object.entries(data)) {
         if (value === undefined || value === null) continue;
         if (typeof value === "string" && value.trim().length === 0) continue;
         if (Array.isArray(value) && value.length === 0) continue;
+        if (
+          key === "contact" &&
+          typeof value === "object" &&
+          !Array.isArray(value)
+        ) {
+          patch.contact = mergeNestedPreservingOperator(
+            answers.contact,
+            value as Record<string, unknown>,
+          );
+          continue;
+        }
+        if (
+          key === "brand" &&
+          typeof value === "object" &&
+          !Array.isArray(value)
+        ) {
+          patch.brand = mergeNestedPreservingOperator(
+            answers.brand,
+            value as Record<string, unknown>,
+          );
+          continue;
+        }
         (patch as Record<string, unknown>)[key] = value;
       }
       // Auto-härleda business family från första matchande sub-kategori
@@ -137,8 +185,10 @@ export function FoundationStep({
       onScrapeStateChange?.({ status: "error", message: errorMessage, url });
     }
   }, [
+    answers.brand,
     answers.businessFamily,
     answers.companyName,
+    answers.contact,
     answers.existingSite,
     onChange,
     onScrapeStateChange,
