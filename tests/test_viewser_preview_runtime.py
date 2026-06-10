@@ -698,3 +698,100 @@ def test_viewer_panel_site_id_follows_selected_run() -> None:
         "ViewerPanel:s siteId måste följa den valda runens site (runSiteId) så "
         "preview-POST:en inte desynkar mot runId (C4)."
     )
+
+
+# ---------------------------------------------------------------------------
+# Tier 1 sandbox-smidighet (operatörsbeslut 2026-06-10): pre-built upload (B3),
+# OIDC-token-refresh före Sandbox.create (B1a), synliga timings (B6-light).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_vercel_sandbox_runner_prebuilt_upload_auto_killswitch_and_fallback() -> None:
+    """B3: när den aktiva immutable builden har en färdig ``.next/`` på disk
+    ska runnern ladda upp byggartefakterna och köra ENBART ``next start`` i
+    sandboxen (ingen ``next build``, prod-deps-install via ``--omit=dev``).
+    Sparar ~10-15 s av dagens ~25 s cold-start per preview.
+
+    Sex lås:
+      1. AUTO-beteende med kill-switch: ``VIEWSER_SANDBOX_UPLOAD_BUILT=0``
+         återställer dagens fulla väg — allt annat värde (inkl. osatt) ger
+         pre-built när ``.next`` finns. Låses som ``!== "0"``.
+      2. Readiness-signal: ``.next/BUILD_ID`` (skrivs sist i en lyckad build)
+         på den resolvade käll-katalogen — inte bara att ``.next/`` existerar.
+      3. Pre-built-grenen installerar prod-deps (``--omit=dev`` — typescript/
+         tailwind/eslint behövs bara av next build) och hoppar över
+         ``next build`` (gated på ``!prebuilt``).
+      4. ``.next/cache`` (webpack-disk-cache, merparten av .next-bytes) och
+         ``.next/trace`` (build-telemetri med operatörens absoluta paths)
+         laddas ALDRIG upp.
+      5. Ärlig en-gångs-fallback: failar pre-built-vägen i sandboxen körs
+         fulla vägen om EXAKT en gång (ingen loop), gated på
+         ``fallbackEligible && status === "failed"``.
+      6. Immutable-build-kontraktet: runnern muterar aldrig build-katalogen
+         (ingen writeFileSync/rmSync mot källan).
+    """
+    text = (VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts").read_text(encoding="utf-8")
+
+    # Lock 1: kill-switch-env + AUTO-default (!== "0" → på när osatt).
+    assert "VIEWSER_SANDBOX_UPLOAD_BUILT" in text, (
+        "vercel-sandbox-runner.ts saknar kill-switch-env "
+        "VIEWSER_SANDBOX_UPLOAD_BUILT (B3). =0 måste återställa fulla vägen."
+    )
+    assert re.search(r'process\.env\[UPLOAD_BUILT_ENV\]\s*!==\s*["\']0["\']', text), (
+        "Pre-built-läget måste vara AUTO (på när .next finns): gaten ska vara "
+        '``process.env[UPLOAD_BUILT_ENV] !== "0"`` så bara ett explicit ``0`` '
+        "stänger av."
+    )
+
+    # Lock 2: BUILD_ID-detektion på käll-katalogen.
+    assert re.search(
+        r'join\(\s*sourceDir,\s*["\']\.next["\'],\s*["\']BUILD_ID["\']\s*\)', text
+    ), (
+        "Pre-built-detektionen måste kolla ``<sourceDir>/.next/BUILD_ID`` "
+        "(skrivs sist i en lyckad next build) — en halvfärdig/avbruten build "
+        "får inte trigga pre-built-vägen."
+    )
+
+    # Lock 3: prod-deps-install + skippad next build i pre-built-grenen.
+    assert '"--omit=dev"' in text, (
+        "Pre-built-grenen ska installera med ``--omit=dev`` — dev-deps "
+        "(typescript/tailwind/eslint) behövs bara av next build, som hoppas över."
+    )
+    assert re.search(r'if\s*\(\s*!prebuilt\s*\)\s*\{[\s\S]{0,500}?"next",\s*"build"', text), (
+        "``npx next build`` måste vara gated på ``if (!prebuilt)`` så "
+        "pre-built-vägen aldrig bygger om i sandboxen."
+    )
+
+    # Lock 4: .next/cache + .next/trace exkluderas alltid.
+    assert '".next/cache"' in text, (
+        "``.next/cache`` (webpack-disk-cache, 60+ MB) får aldrig laddas upp — "
+        "den läses inte av next start."
+    )
+    assert '".next/trace"' in text, (
+        "``.next/trace`` (build-telemetri med operatörens absoluta paths) får "
+        "aldrig laddas upp."
+    )
+
+    # Lock 5: en-gångs-fallback utan loop.
+    assert len(re.findall(r"createSandboxPreviewAttempt\(request,\s*false\)", text)) == 1, (
+        "Fallbacken till fulla vägen ska ske EXAKT en gång "
+        "(createSandboxPreviewAttempt(request, false)) — ingen loop."
+    )
+    assert len(re.findall(r"createSandboxPreviewAttempt\(request,\s*true\)", text)) == 1, (
+        "Första försöket (allowPrebuilt=true) ska ske exakt en gång."
+    )
+    assert re.search(
+        r'first\.fallbackEligible\s*&&\s*first\.result\.status\s*===\s*["\']failed["\']',
+        text,
+    ), (
+        "Fallbacken måste vara gated på fallbackEligible && status === 'failed' "
+        "— auth-/valideringsfel (som failar identiskt på fulla vägen) får inte "
+        "trigga en andra kostsam sandbox-körning."
+    )
+
+    # Lock 6: immutable-build-kontraktet — runnern bara LÄSER källan.
+    assert "writeFileSync" not in text and "rmSync" not in text, (
+        "vercel-sandbox-runner.ts får aldrig mutera den immutable "
+        "build-katalogen på disk (B157 nivå 4)."
+    )
