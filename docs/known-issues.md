@@ -683,7 +683,7 @@ round 2); se Stängda-sektionen.
   `tests/test_run_openclaw_followup.py::test_cli_apply_sentinel_survives_build_progress_noise`
   + `::test_cli_readonly_emits_sentinel_prefixed_payload_line`
   + `::test_cli_apply_conversation_emits_sentinel_payload`
-  + `tests/test_viewser_floating_chat.py::test_openclaw_runner_extracts_bridge_json_from_noisy_stdout`.
+  + `tests/test_viewser_openclaw_runner.py::test_openclaw_runner_extracts_bridge_json_from_noisy_stdout`.
 - **`B173` Medel** (stängd 2026-06-10, hero-stabilisering, samma PR som
   registreringen) - Hero-H1 fick NY text vid VARJE följdprompt trots att ingen
   prompt gällde rubriken (tre gånger bevisat på painter-palma: färgändring,
