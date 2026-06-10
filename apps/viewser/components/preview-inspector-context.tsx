@@ -97,6 +97,35 @@ export type MarkedSectionRef = {
 /** Max antal samtidiga modulmarkeringar — speglar /api/prompt-kontraktet. */
 export const MAX_MARKED_SECTIONS = 5;
 
+/**
+ * Åtgärd vald i sektionsmenyn (klick på sektion i Markera modul-läget).
+ * "Markera för prompt" hanteras direkt i overlayn (addMarkedSection) och
+ * passerar aldrig hit — bara åtgärder som BuilderShell/FloatingChat ska
+ * utföra signaleras:
+ *
+ *   - "prefill-copy" — chip + förifylld composer ("Ändra texten i …").
+ *   - "asset"        — öppna AssetUploaderDialog med sektions-hint.
+ *   - "module"       — öppna AddModuleDialog med förvald grovposition.
+ *   - "move"         — kör section_add-followup direkt (move-semantik,
+ *     ADR 0042). Visas bara för sektioner backendens inline-allowlist
+ *     faktiskt kan flytta (gallery/hours-summary på home).
+ */
+export type SectionAction = "prefill-copy" | "asset" | "module" | "move";
+
+export type SectionActionRequest = {
+  action: SectionAction;
+  ref: MarkedSectionRef;
+  /** Grov position (top/bottom) för modul-/flytt-åtgärden. */
+  position?: "top" | "bottom";
+  /**
+   * Sektionstyp för flytt-åtgärden — samma stabila modul-id som
+   * AddModuleDialog:s katalog/toolIntent ("gallery", "opening-hours").
+   */
+  sectionType?: string;
+  /** Monoton nonce så BuilderShell kan skilja två likadana requests åt. */
+  requestedAt: number;
+};
+
 type RequestPlacementPickOptions = {
   payload?: PlacementDragPayload;
   requester?: PlacementRequester;
@@ -141,6 +170,26 @@ type PreviewInspectorContextValue = {
   removeMarkedSection: (routeId: string, sectionId: string) => void;
   clearMarkedSections: () => void;
   /**
+   * Senaste åtgärds-request från sektionsmenyn (overlayn) — konsumeras
+   * (nollas) av BuilderShell. Null när ingen åtgärd väntar.
+   */
+  sectionActionRequest: SectionActionRequest | null;
+  requestSectionAction: (
+    request: Omit<SectionActionRequest, "requestedAt">,
+  ) => void;
+  clearSectionAction: () => void;
+  /**
+   * Hela preview-sidans höjd i CSS-pixlar — sätts av overlayn när
+   * elementkartan (med documentHeightPx) hämtats och nollas när läget
+   * stängs. ViewerPanel renderar då iframen i full sidhöjd inuti en
+   * skrollbar wrapper så operatören kan skrolla previewn MED overlayn
+   * (overlayn ovanpå iframen fångar annars alla wheel-events och
+   * cross-origin-iframen kan aldrig skrollas — operatörsbugg
+   * 2026-06-10). null = normal viewport-hög iframe med intern skroll.
+   */
+  previewPageHeightPx: number | null;
+  setPreviewPageHeightPx: (height: number | null) => void;
+  /**
    * True medan ett bygge som startades av "Placera här" pågår.
    * BuilderShell sätter true vid bekräftat släpp; ViewerPanel renderar
    * då den nordiska 0–100-bannern I STÄLLET för BuildProgressCard och
@@ -172,6 +221,11 @@ export function PreviewInspectorProvider({
   const [inspectModeActive, setInspectModeActiveInternal] = useState(false);
   const [markModeActive, setMarkModeActiveInternal] = useState(false);
   const [markedSections, setMarkedSections] = useState<MarkedSectionRef[]>([]);
+  const [sectionActionRequest, setSectionActionRequest] =
+    useState<SectionActionRequest | null>(null);
+  const [previewPageHeightPx, setPreviewPageHeightPx] = useState<number | null>(
+    null,
+  );
   const [placementBuildActive, setPlacementBuildActive] = useState(false);
 
   const setPreviewUrl = useCallback((url: string | null) => {
@@ -232,8 +286,7 @@ export function PreviewInspectorProvider({
     (routeId: string, sectionId: string) => {
       setMarkedSections((prev) =>
         prev.filter(
-          (item) =>
-            !(item.routeId === routeId && item.sectionId === sectionId),
+          (item) => !(item.routeId === routeId && item.sectionId === sectionId),
         ),
       );
     },
@@ -242,6 +295,17 @@ export function PreviewInspectorProvider({
 
   const clearMarkedSections = useCallback(() => {
     setMarkedSections([]);
+  }, []);
+
+  const requestSectionAction = useCallback(
+    (request: Omit<SectionActionRequest, "requestedAt">) => {
+      setSectionActionRequest({ ...request, requestedAt: Date.now() });
+    },
+    [],
+  );
+
+  const clearSectionAction = useCallback(() => {
+    setSectionActionRequest(null);
   }, []);
 
   const value = useMemo(
@@ -265,6 +329,11 @@ export function PreviewInspectorProvider({
       addMarkedSection,
       removeMarkedSection,
       clearMarkedSections,
+      sectionActionRequest,
+      requestSectionAction,
+      clearSectionAction,
+      previewPageHeightPx,
+      setPreviewPageHeightPx,
       placementBuildActive,
       setPlacementBuildActive,
     }),
@@ -288,6 +357,11 @@ export function PreviewInspectorProvider({
       addMarkedSection,
       removeMarkedSection,
       clearMarkedSections,
+      sectionActionRequest,
+      requestSectionAction,
+      clearSectionAction,
+      previewPageHeightPx,
+      setPreviewPageHeightPx,
       placementBuildActive,
       setPlacementBuildActive,
     ],
@@ -320,6 +394,11 @@ const FALLBACK_VALUE: PreviewInspectorContextValue = {
   addMarkedSection: () => {},
   removeMarkedSection: () => {},
   clearMarkedSections: () => {},
+  sectionActionRequest: null,
+  requestSectionAction: () => {},
+  clearSectionAction: () => {},
+  previewPageHeightPx: null,
+  setPreviewPageHeightPx: () => {},
   placementBuildActive: false,
   setPlacementBuildActive: () => {},
 };

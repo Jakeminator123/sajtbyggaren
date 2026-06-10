@@ -94,6 +94,14 @@ type AssetUploaderDialogProps = {
   /** C2 globalt bygg-lås + C1 "Iterera från denna"-pin (från BuilderShell). */
   isBuilding?: boolean;
   baseRunId?: string | null;
+  /**
+   * Initial sektionskontext från sektionsmenyn i previewn ("Byt bild
+   * här"): förifyller önskemåls-fältet med en placerings-hint
+   * ('Bilden gäller sektionen "…"'). Null/utelämnad → oförändrat
+   * beteende. Fylls bara i när fältet är tomt — operatörens egen text
+   * skrivs aldrig över.
+   */
+  initialHint?: string | null;
 };
 
 export function AssetUploaderDialog({
@@ -105,6 +113,7 @@ export function AssetUploaderDialog({
   onBuildDone,
   isBuilding = false,
   baseRunId = null,
+  initialHint = null,
 }: AssetUploaderDialogProps) {
   const [role, setRole] = useState<AssetRole>("hero");
   const [file, setFile] = useState<File | null>(null);
@@ -132,6 +141,18 @@ export function AssetUploaderDialog({
     setHint("");
     setUploadError(null);
   }, []);
+
+  // Förifyll önskemåls-fältet med sektionsmenyns hint när dialogen
+  // öppnas med en sektionskontext. setTimeout(0) deferar setState:n ur
+  // effektkroppen (react-hooks/set-state-in-effect); funktions-settern
+  // garanterar att en redan skriven operatörstext aldrig skrivs över.
+  useEffect(() => {
+    if (!open || !initialHint) return;
+    const timerId = window.setTimeout(() => {
+      setHint((current) => (current.trim() ? current : initialHint));
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [open, initialHint]);
 
   const handleClose = useCallback(
     (next: boolean) => {

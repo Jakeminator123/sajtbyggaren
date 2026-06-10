@@ -380,6 +380,14 @@ export function ViewerPanel({
     setPreviewUrl: publishInspectorPreviewUrl,
     placementBuildActive,
     setPlacementBuildActive,
+    // Full sidhöjd publicerad av overlayn när ett peka-läge är aktivt
+    // och elementkartan hämtats lokalt (documentHeightPx). Då renderas
+    // iframen i full sidhöjd inuti en skrollbar wrapper så operatören
+    // kan skrolla previewn trots att overlayn fångar alla mus-events
+    // (cross-origin-iframen kan aldrig skrollas via förälder-events).
+    // Kartan är dokument-relativ så overlay + preview skrollar ihop
+    // med bibehållen justering. null = normal iframe med intern skroll.
+    previewPageHeightPx,
   } = usePreviewInspector();
 
   useEffect(() => {
@@ -923,32 +931,74 @@ export function ViewerPanel({
         // cardet flyttar fokus. Inga visuella regressioner för
         // första-bygget eftersom localPreviewUrl då är null.
         <div
-          className="absolute inset-0 z-[5] mx-auto h-full w-full bg-white transition-[max-width] duration-300 ease-out"
+          className={cn(
+            "absolute inset-0 z-[5] mx-auto h-full w-full bg-white transition-[max-width] duration-300 ease-out",
+            // Skroll-läge för peka-i-previewn: wrappern blir skrollporten
+            // och inner-divet nedan dras ut till hela sidans höjd, så
+            // iframe + overlay skrollar ihop. overscroll-contain hindrar
+            // skrollen från att kedja vidare till studio-layouten.
+            previewPageHeightPx ? "overflow-y-auto overscroll-contain" : "",
+          )}
           style={previewWrapperStyle}
         >
-          <iframe
-            ref={iframeRef}
-            src={localPreviewUrl}
-            title="Sajt-preview"
-            className="h-full w-full border-0 bg-white"
-            // onLoad flippar iframeLoaded → skelett-overlayn nedan döljs.
-            // Fångar både första render och byte av vald run. (Hanterar
-            // inte fel inuti iframen — det är ett separat, framtida steg.)
-            onLoad={() => setIframeLoaded(true)}
-            // Tillåt scripts (Next.js client-side hydration) och
-            // same-origin (sajten behåller sin egen origin —
-            // localhost:<port> som vi spawnat, eller vercel.run-sandboxen
-            // vi startat) men inte top-navigation eller popups. För den
-            // cross-origin publika vercel.run-URL:en är allow-same-origin
-            // ofarlig (sajten är cross-origin mot oss → ingen sandbox-escape)
-            // och behövs så den genererade sajtens egna fetch/hydration fungerar.
-            sandbox="allow-scripts allow-same-origin allow-forms"
-          />
+          {/*
+            Inner-div: exakt elementkartans dokumenthöjd i skroll-läget —
+            kartans y/h-procent räknas mot den höjden, så containern
+            MÅSTE matcha exakt för att overlay-markeringarna ska ligga
+            kant i kant med previewn. Utanför peka-lägena h-full
+            (oförändrat default-beteende, iframen skrollar internt).
+          */}
+          <div
+            className={cn(
+              "relative w-full",
+              previewPageHeightPx ? "" : "h-full",
+            )}
+            style={
+              previewPageHeightPx
+                ? { height: `${previewPageHeightPx}px` }
+                : undefined
+            }
+          >
+            <iframe
+              ref={iframeRef}
+              src={localPreviewUrl}
+              title="Sajt-preview"
+              className="h-full w-full border-0 bg-white"
+              // onLoad flippar iframeLoaded → skelett-overlayn nedan döljs.
+              // Fångar både första render och byte av vald run. (Hanterar
+              // inte fel inuti iframen — det är ett separat, framtida steg.)
+              onLoad={() => setIframeLoaded(true)}
+              // Tillåt scripts (Next.js client-side hydration) och
+              // same-origin (sajten behåller sin egen origin —
+              // localhost:<port> som vi spawnat, eller vercel.run-sandboxen
+              // vi startat) men inte top-navigation eller popups. För den
+              // cross-origin publika vercel.run-URL:en är allow-same-origin
+              // ofarlig (sajten är cross-origin mot oss → ingen sandbox-escape)
+              // och behövs så den genererade sajtens egna fetch/hydration fungerar.
+              sandbox="allow-scripts allow-same-origin allow-forms"
+            />
+            {/*
+            Preview-inspector-overlayn (peka-i-previewn): inspektera-toggle
+            + placeringsläge ovanpå iframen. Ligger i inner-divet (z 7–9)
+            så den följer device-preset-bredden OCH dras ut till full
+            sidhöjd i skroll-läget (absolute inset-0 mot inner-divet =
+            exakt kartans koordinatyta), under BuildProgressCard (z-20).
+            `active` gate:as mot laddat dokument + inget pågående bygge
+            så lägena aldrig kartlägger en halvfärdig sajt.
+          */}
+            <PreviewInspectorOverlay
+              previewUrl={localPreviewUrl}
+              active={iframeLoaded && !isBuilding && !isFinalizing}
+              runId={runId}
+            />
+          </div>
           {/*
             Skelett-overlay tills iframens dokument laddat. Dödar den vita
             blixten mellan att URL:en sätts och Next.js hydrerat. Gate:ad
             mot isBuilding/isFinalizing så den inte dubblerar
-            BuildProgressCard (som redan äger ytan under bygge).
+            BuildProgressCard (som redan äger ytan under bygge). Ligger i
+            wrappern (inte inner-divet) så den alltid täcker den synliga
+            canvasen.
           */}
           {!iframeLoaded && !isBuilding && !isFinalizing ? (
             <div
@@ -963,18 +1013,6 @@ export function ViewerPanel({
               />
             </div>
           ) : null}
-          {/*
-            Preview-inspector-overlayn (peka-i-previewn): inspektera-toggle
-            + placeringsläge ovanpå iframen. Ligger i wrappern (z 7–9) så
-            den följer device-preset-bredden, och under BuildProgressCard
-            (z-20). `active` gate:as mot laddat dokument + inget pågående
-            bygge så lägena aldrig kartlägger en halvfärdig sajt.
-          */}
-          <PreviewInspectorOverlay
-            previewUrl={localPreviewUrl}
-            active={iframeLoaded && !isBuilding && !isFinalizing}
-            runId={runId}
-          />
         </div>
       ) : null}
 

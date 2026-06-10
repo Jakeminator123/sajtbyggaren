@@ -501,3 +501,57 @@ def test_change_set_carries_applied_focus_sections() -> None:
     )
     assert "appliedFocusSections" in build_changes_text
     assert "Markerad modul" in build_changes_text
+
+
+@pytest.mark.tooling
+def test_section_menu_move_allowlist_mirrors_inline_placements() -> None:
+    """Sektionsmenyns flytt-allowlist i overlayn speglar backendens
+    inlinePlacements-karta i section_directives.py — menyn får aldrig
+    lova en flytt som section_add-pipelinen inte kan utföra
+    (ärlighetsprincipen). Locket bryter om någon sida ändras ensam."""
+    from packages.generation.followup.section_directives import (
+        INLINE_SECTION_PLACEMENTS,
+        INLINE_SECTION_ROUTES,
+    )
+
+    overlay_text = (
+        VIEWSER_DIR / "components" / "preview-inspector-overlay.tsx"
+    ).read_text(encoding="utf-8")
+    match = re.search(
+        r"const MOVABLE_SECTION_TYPES[^=]*=\s*\{(.*?)\};",
+        overlay_text,
+        re.DOTALL,
+    )
+    assert match, "MOVABLE_SECTION_TYPES saknas i preview-inspector-overlay.tsx"
+    movable = dict(
+        re.findall(r'"?([\w-]+)"?\s*:\s*"([\w-]+)"', match.group(1))
+    )
+
+    backend_section_ids = {
+        placement["sectionId"]
+        for placement in INLINE_SECTION_PLACEMENTS.values()
+    }
+    assert set(movable) == backend_section_ids
+
+    # Flytt gäller bara home-routen — samma gräns i UI och backend.
+    assert 'MOVABLE_SECTION_ROUTE = "home"' in overlay_text
+    assert INLINE_SECTION_ROUTES == frozenset({"home"})
+
+    # BuilderShell:s promptnoun-karta täcker varje flyttbar modultyp så
+    # en flytt-request aldrig tyst no-op:ar i dispatch-effekten.
+    shell_text = (
+        VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx"
+    ).read_text(encoding="utf-8")
+    noun_match = re.search(
+        r"const MOVE_PROMPT_NOUNS[^=]*=\s*\{(.*?)\};",
+        shell_text,
+        re.DOTALL,
+    )
+    assert noun_match, "MOVE_PROMPT_NOUNS saknas i builder-shell.tsx"
+    noun_keys = {
+        key
+        for key, _ in re.findall(
+            r'"?([\w-]+)"?\s*:\s*"([^"]+)"', noun_match.group(1)
+        )
+    }
+    assert set(movable.values()) <= noun_keys

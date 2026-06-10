@@ -24,9 +24,15 @@ export type ElementMapItem = {
   text: string | null;
   /** CSS-selector (id-förankrad när möjligt, annars nth-of-type-kedja). */
   selector: string;
-  /** Bounding box i CSS-pixlar relativt viewporten vid kartläggningen. */
+  /** Bounding box i CSS-pixlar relativt dokumenttoppen vid kartläggningen. */
   rect: { x: number; y: number; width: number; height: number };
-  /** Bounding box i procent av viewporten — skalfri, används av overlayn. */
+  /**
+   * Bounding box i procent — skalfri, används av overlayn. Lokal
+   * Playwright räknar y/h mot HELA dokumenthöjden (documentHeightPx i
+   * svaret) så overlayn kan göras skrollbar i full sidhöjd; en extern
+   * inspector-worker av äldre version räknar mot viewporten (utan
+   * documentHeightPx) och overlayn behåller då topp-vy-beteendet.
+   */
   vpPercent: { x: number; y: number; w: number; h: number };
   /**
    * Kanoniskt sektions-id från närmaste `[data-section-id]`-förälder
@@ -48,6 +54,11 @@ export type ElementMapItem = {
 export type ElementMapResponse = {
   success: boolean;
   elements?: ElementMapItem[];
+  /**
+   * Hela dokumentets höjd i CSS-pixlar (lokal Playwright-väg). Saknas
+   * från äldre extern worker → overlayn degraderar till topp-vy.
+   */
+  documentHeightPx?: number;
   viewport?: { width: number; height: number };
   elementCount?: number;
   collectedAt?: string;

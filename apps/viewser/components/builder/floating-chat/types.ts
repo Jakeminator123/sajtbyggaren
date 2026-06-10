@@ -137,6 +137,17 @@ export type FloatingChatProps = {
    * ingen effekt vid mount (vi jämför mot föregående värde via en ref).
    */
   focusComposerSignal?: number;
+  /**
+   * Sektionsmenyns "Ändra text"-åtgärd (klick på sektion i previewns
+   * markläge): förifyll composern med en promptstart ('Ändra texten i
+   * sektionen "…": ') och flytta focus dit. ``nonce`` bumpas per request
+   * så två likadana prefills i rad ändå triggar (jämförs mot föregående
+   * värde via en ref — mount har ingen effekt). Själva chippen läggs av
+   * overlayn via markedSections; prefill:en rör bara input-texten och
+   * skriver medvetet ÖVER ev. halvskriven text (operatören valde just
+   * en ny åtgärd).
+   */
+  composerPrefill?: { text: string; nonce: number } | null;
 };
 
 /**

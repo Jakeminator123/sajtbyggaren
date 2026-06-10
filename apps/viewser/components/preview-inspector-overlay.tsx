@@ -1,6 +1,16 @@
 "use client";
 
-import { Loader2, Move, X } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowUpToLine,
+  Blocks,
+  ImagePlus,
+  Loader2,
+  MessageSquareText,
+  Move,
+  Pin,
+  X,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -54,10 +64,21 @@ import { cn } from "@/lib/utils";
  * (Verktyg-menyn resp. Lägg till modul-dialogen) och stängs med Esc
  * eller X-knappen i statusraden.
  *
- * Kända begränsningar (samma som originalet): kartan tas vid sidtopp
- * (scroll 0) — element under första viewporten kläms mot 100 % och
- * zoner därunder degraderar ärligt till "Längst ner". Overlayn fångar
- * mus-events medan ett läge är aktivt; annars är den pointer-genomskinlig.
+ * Skroll (operatörsbugg 2026-06-10: "kan inte skrolla i markläge"):
+ * overlayn fångar alla mus-events medan ett läge är aktivt, och en
+ * cross-origin-iframe kan aldrig skrollas via förälder-events. Lösningen
+ * är att den lokala kartläggningen numera räknar y/h mot HELA dokument-
+ * höjden och skickar med documentHeightPx — overlayn publicerar höjden
+ * via contexten (setPreviewPageHeightPx) och ViewerPanel renderar då
+ * iframen i full sidhöjd inuti en skrollbar wrapper, så preview och
+ * overlay skrollar ihop med bibehållen kartjustering. Statusrad, X-knapp
+ * och info-kort ligger i sticky h-0-wrappers så de följer skrollporten.
+ *
+ * Kvarvarande begränsning: en extern inspector-worker (vercel-sandbox-
+ * previews) svarar utan documentHeightPx och med viewport-relativa
+ * procent — då degraderar overlayn ärligt till det gamla topp-vy-
+ * beteendet utan skroll. Overlayn fångar mus-events medan ett läge är
+ * aktivt; annars är den pointer-genomskinlig.
  */
 
 type MapFetchState = "idle" | "loading" | "ready" | "failed";
@@ -126,6 +147,38 @@ type MarkableSection = {
   canonical: boolean;
 };
 
+/**
+ * Sektioner backendens section_add-pipeline faktiskt kan FLYTTA (ADR
+ * 0042, move-semantik när sektionen redan finns). Speglar
+ * ``INLINE_SECTION_PLACEMENTS`` i
+ * packages/generation/followup/section_directives.py: nyckeln är
+ * sektionens data-section-id i previewn, värdet är det stabila modul-id
+ * som AddModuleDialog/toolIntent använder. Flytt gäller bara home-routen
+ * (``INLINE_SECTION_ROUTES``). Source-lockad i
+ * tests/test_marked_sections_followup.py — ändra ALDRIG den här listan
+ * utan att backend-allowlisten ändrats först (ärlighetsprincipen:
+ * menyn ljuger aldrig om kapacitet).
+ */
+const MOVABLE_SECTION_TYPES: Record<string, string> = {
+  gallery: "gallery",
+  "hours-summary": "opening-hours",
+};
+
+/** Routes där flytt-åtgärden stöds — speglar INLINE_SECTION_ROUTES. */
+const MOVABLE_SECTION_ROUTE = "home";
+
+/**
+ * Sektionsmenyn (klick i markläge): ankare + vilken sektion den gäller.
+ * routeId är redan upplöst via routePlan-kartan vid klicket.
+ */
+type SectionActionMenuState = {
+  section: MarkableSection;
+  routeId: string;
+  /** Klickpunkten i procent av overlay-ytan — menyn ankras här. */
+  anchorXPercent: number;
+  anchorYPercent: number;
+};
+
 /** Mappa previewns pathname till routePlan-route-id ("/" → home). */
 function routeIdForPath(
   path: string | null | undefined,
@@ -163,6 +216,9 @@ export function PreviewInspectorOverlay({
     setMarkModeActive,
     markedSections,
     addMarkedSection,
+    requestSectionAction,
+    previewPageHeightPx,
+    setPreviewPageHeightPx,
   } = usePreviewInspector();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -215,6 +271,11 @@ export function PreviewInspectorOverlay({
   // site-plan (routePlan). Kartan hämtas lazily när läget aktiveras.
   const [hoveredMarkable, setHoveredMarkable] =
     useState<MarkableSection | null>(null);
+  // Sektionsmenyn: öppnas vid klick på en sektion i markläge i stället
+  // för att direkt lägga chip. Null = ingen meny öppen.
+  const [actionMenu, setActionMenu] = useState<SectionActionMenuState | null>(
+    null,
+  );
   const [pathToRouteId, setPathToRouteId] = useState<Record<string, string>>(
     {},
   );
@@ -320,9 +381,13 @@ export function PreviewInspectorOverlay({
     setMapError(null);
     setElementMap([]);
 
+    // Bredd från containern (följer device-preset), höjd från operatörens
+    // fönster — containern kan redan vara uppdragen till full sidhöjd
+    // från en tidigare kartläggning och får inte blåsa upp Playwright-
+    // viewporten.
     const rect = containerRef.current?.getBoundingClientRect();
     const width = Math.round(rect?.width || 1280);
-    const height = Math.round(rect?.height || 800);
+    const height = Math.min(Math.round(window.innerHeight || 800), 1600);
 
     // Upp till tre försök med kort paus — previewn kan hydrera klart
     // strax efter att operatören aktiverar läget (samma kadens-idé som
@@ -337,7 +402,10 @@ export function PreviewInspectorOverlay({
             url: previewUrl,
             viewportWidth: width,
             viewportHeight: height,
-            maxElements: 300,
+            // Kartan täcker numera HELA sidan (dokument-relativa
+            // koordinater) — 600 är routens tak och behövs för att
+            // längre sidor inte ska kapas under folden.
+            maxElements: 600,
           }),
         });
         const data = (await res
@@ -352,6 +420,16 @@ export function PreviewInspectorOverlay({
           data.elements.length > 0
         ) {
           setElementMap(data.elements);
+          // Full sidhöjd från den lokala Playwright-vägen → ViewerPanel
+          // gör previewn skrollbar i full höjd så overlay + iframe
+          // skrollar ihop. Extern worker (utan documentHeightPx) →
+          // null → ärlig topp-vy som tidigare.
+          setPreviewPageHeightPx(
+            typeof data.documentHeightPx === "number" &&
+              data.documentHeightPx > 0
+              ? Math.round(data.documentHeightPx)
+              : null,
+          );
           setMapState("ready");
           return;
         }
@@ -374,7 +452,7 @@ export function PreviewInspectorOverlay({
       "Förhandsvisningen gav ingen elementkarta. Försök igen om en stund.",
     );
     setMapState("failed");
-  }, [previewUrl]);
+  }, [previewUrl, setPreviewPageHeightPx]);
 
   // Hämta kartan när ett läge aktiveras; släng den när läget stängs så
   // nästa aktivering alltid kartlägger aktuell version av sajten.
@@ -405,9 +483,12 @@ export function PreviewInspectorOverlay({
       setInspected(null);
       setCopied(false);
       setHoveredMarkable(null);
+      setActionMenu(null);
       setMapState("idle");
       setMapError(null);
       setElementMap([]);
+      // Tillbaka till normal viewport-hög iframe med intern skroll.
+      setPreviewPageHeightPx(null);
       dropResizeRef.current = null;
       setIsDropResizing(false);
       dropDragRef.current = null;
@@ -415,7 +496,7 @@ export function PreviewInspectorOverlay({
       lastInsertionRef.current = null;
     }, 0);
     return () => window.clearTimeout(timerId);
-  }, [overlayActive]);
+  }, [overlayActive, setPreviewPageHeightPx]);
 
   // Startstorlek per payload-typ när ett nytt placeringsläge öppnas
   // (moduler dockas som halvbreda sektioner, bilder mindre).
@@ -441,6 +522,11 @@ export function PreviewInspectorOverlay({
         }
         cancelPlacementPick();
       }
+      // I markläge stänger Esc sektionsmenyn först; nästa Esc avslutar läget.
+      if (actionMenu) {
+        setActionMenu(null);
+        return;
+      }
       setInspectModeActive(false);
       setMarkModeActive(false);
     };
@@ -450,6 +536,7 @@ export function PreviewInspectorOverlay({
     overlayActive,
     placementPickActive,
     pendingDrop,
+    actionMenu,
     cancelPlacementPick,
     setInspectModeActive,
     setMarkModeActive,
@@ -526,6 +613,9 @@ export function PreviewInspectorOverlay({
       }
 
       if (markMode && markableSections.length > 0) {
+        // Medan sektionsmenyn är öppen fryser vi hover-valet — menyn
+        // gäller den klickade sektionen tills den stängs.
+        if (actionMenu) return;
         // Sektionen vars vertikala band innehåller punkten — smalast
         // band vinner när kanoniska sektioner överlappar (hero-bannern
         // ligger t.ex. inom hero-totalytan).
@@ -574,6 +664,7 @@ export function PreviewInspectorOverlay({
       pendingDrop,
       inspectMode,
       markMode,
+      actionMenu,
       markableSections,
       elementMap,
       sectionZones,
@@ -612,18 +703,26 @@ export function PreviewInspectorOverlay({
         return;
       }
 
-      if (markMode && hoveredMarkable) {
-        // Klick = markera modulen. routeId mappas via routePlan-kartan
-        // (elementkartan bär previewns pathname); chips + borttagning
-        // bor i FloatingChat-composern.
+      if (markMode) {
+        // Klick utanför en öppen sektionsmeny stänger den (menyns egna
+        // knappar stopPropagation:ar så de aldrig landar här).
+        if (actionMenu) {
+          setActionMenu(null);
+          return;
+        }
+        if (!hoveredMarkable) return;
+        // Klick öppnar sektionsmenyn förankrad vid klickpunkten.
+        // routeId mappas via routePlan-kartan (elementkartan bär
+        // previewns pathname); själva markeringen sker först när
+        // operatören väljer en åtgärd i menyn.
         const routePath =
           elementMap.find((el) => el.routePath)?.routePath ?? "/";
-        const marking: MarkedSectionRef = {
+        setActionMenu({
+          section: hoveredMarkable,
           routeId: routeIdForPath(routePath, pathToRouteId),
-          sectionId: hoveredMarkable.sectionId,
-          headingText: hoveredMarkable.headingText,
-        };
-        addMarkedSection(marking);
+          anchorXPercent: point.x,
+          anchorYPercent: point.y,
+        });
         return;
       }
 
@@ -641,13 +740,68 @@ export function PreviewInspectorOverlay({
       sectionZones,
       inspectMode,
       markMode,
+      actionMenu,
       hoveredMarkable,
       elementMap,
       pathToRouteId,
-      addMarkedSection,
       hoveredElement,
       nearestHeadingFor,
     ],
+  );
+
+  // Sektionsmenyns åtgärder. "Markera för prompt" hanteras helt lokalt
+  // (chip via addMarkedSection, som tidigare direkt-klicket); övriga
+  // signaleras till BuilderShell via contextens sectionActionRequest.
+  // Alla åtgärder utom ren markering lämnar markläget — operatören
+  // landar i dialogen/composern och previewn blir ren igen.
+  const handleMenuAction = useCallback(
+    (
+      action:
+        | "mark"
+        | "prefill-copy"
+        | "asset"
+        | "module"
+        | "move-top"
+        | "move-bottom",
+    ) => {
+      if (!actionMenu) return;
+      const { section, routeId } = actionMenu;
+      const ref: MarkedSectionRef = {
+        routeId,
+        sectionId: section.sectionId,
+        headingText: section.headingText,
+      };
+      // Grov position härledd ur sektionens mittpunkt — samma top/bottom-
+      // semantik som placeringslägets coarsePositionFor.
+      const coarsePosition: "top" | "bottom" =
+        (section.top + section.bottom) / 2 <= 50 ? "top" : "bottom";
+      setActionMenu(null);
+      if (action === "mark") {
+        addMarkedSection(ref);
+        return;
+      }
+      if (action === "prefill-copy") {
+        addMarkedSection(ref);
+        requestSectionAction({ action: "prefill-copy", ref });
+      } else if (action === "asset") {
+        requestSectionAction({ action: "asset", ref });
+      } else if (action === "module") {
+        requestSectionAction({
+          action: "module",
+          ref,
+          position: coarsePosition,
+        });
+      } else {
+        requestSectionAction({
+          action: "move",
+          ref,
+          position: action === "move-top" ? "top" : "bottom",
+          sectionType: MOVABLE_SECTION_TYPES[section.sectionId],
+        });
+      }
+      setMarkModeActive(false);
+    },
+    [actionMenu, addMarkedSection, requestSectionAction, setMarkModeActive],
   );
 
   const handleConfirmDrop = useCallback(() => {
@@ -832,76 +986,87 @@ export function PreviewInspectorOverlay({
                 : "Inspektera förhandsvisningen"
           }
         >
-          {/* Statusrad högst upp. Döljs medan ett släpp väntar på
-              bekräftelse — knappraden vid linjen (Placera här / flytta /
-              avbryt) är självförklarande, och när släppet snäpper högt
-              upp skulle pillen annars täcka knapparna (operatörsfynd
-              2026-06-10). */}
-          {pendingDrop ? null : (
-            <div className="pointer-events-none absolute inset-x-0 top-3 z-[9] flex justify-center px-12">
-              <div className="border-border/60 bg-background/90 text-foreground flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] shadow-sm backdrop-blur">
-                {mapState === "loading" ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                    Kartlägger förhandsvisningen…
-                  </>
-                ) : mapState === "failed" ? (
-                  <span className="text-amber-700 dark:text-amber-300">
-                    {mapError}
-                  </span>
-                ) : placementPickActive ? (
-                  <>
-                    {placementDragPayload
-                      ? `Dra ${placementDragPayload.label} till önskad plats och klicka`
-                      : "Klicka där modulen ska placeras"}
-                    <span className="text-muted-foreground">
-                      · Esc avbryter
+          {/* Statusrad + stäng-knapp i en sticky h-0-wrapper: overlayn
+              kan vara hela sidan hög (skrollbar preview) och pillen/X:et
+              ska följa med skrollporten i stället för att försvinna upp
+              med dokumenttoppen. h-0 håller wrappern utanför layouten
+              (alla övriga barn är absolute). Statusraden döljs medan ett
+              släpp väntar på bekräftelse — knappraden vid linjen är
+              självförklarande och pillen skulle täcka knapparna när
+              släppet snäpper högt upp (operatörsfynd 2026-06-10). */}
+          <div className="sticky top-0 z-[9] h-0">
+            {pendingDrop ? null : (
+              <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-12">
+                <div className="border-border/60 bg-background/90 text-foreground flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] shadow-sm backdrop-blur">
+                  {mapState === "loading" ? (
+                    <>
+                      <Loader2
+                        className="h-3.5 w-3.5 animate-spin"
+                        aria-hidden
+                      />
+                      Kartlägger förhandsvisningen…
+                    </>
+                  ) : mapState === "failed" ? (
+                    <span className="text-amber-700 dark:text-amber-300">
+                      {mapError}
                     </span>
-                  </>
-                ) : markMode ? (
-                  <>
-                    Klicka på en modul för att markera den ({markedSections.length}/5)
-                    <span className="text-muted-foreground">
-                      · Esc avslutar
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    Hovra och klicka för att identifiera element
-                    <span className="text-muted-foreground">
-                      · gäller sajtens topp-vy
-                    </span>
-                  </>
-                )}
+                  ) : placementPickActive ? (
+                    <>
+                      {placementDragPayload
+                        ? `Dra ${placementDragPayload.label} till önskad plats och klicka`
+                        : "Klicka där modulen ska placeras"}
+                      <span className="text-muted-foreground">
+                        · Esc avbryter
+                      </span>
+                    </>
+                  ) : markMode ? (
+                    <>
+                      Klicka på en modul för åtgärder ({markedSections.length}
+                      /5 markerade)
+                      <span className="text-muted-foreground">
+                        · Esc avslutar
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Hovra och klicka för att identifiera element
+                      <span className="text-muted-foreground">
+                        {previewPageHeightPx
+                          ? "· skrolla för hela sidan"
+                          : "· gäller sajtens topp-vy"}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Stäng-knapp — avbryter platsvalet resp. stänger inspektionen.
-              Syns BARA medan ett läge är aktivt (ren canvas annars). */}
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              if (placementPickActive) {
-                cancelPlacementPick();
-              } else if (markMode) {
-                setMarkModeActive(false);
-              } else {
-                setInspectModeActive(false);
+            {/* Stäng-knapp — avbryter platsvalet resp. stänger inspektionen.
+                Syns BARA medan ett läge är aktivt (ren canvas annars). */}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (placementPickActive) {
+                  cancelPlacementPick();
+                } else if (markMode) {
+                  setMarkModeActive(false);
+                } else {
+                  setInspectModeActive(false);
+                }
+              }}
+              className="border-border/60 bg-background/90 text-muted-foreground hover:text-foreground absolute top-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm backdrop-blur transition"
+              aria-label={
+                placementPickActive
+                  ? "Avbryt platsval"
+                  : markMode
+                    ? "Avsluta modulmarkeringen"
+                    : "Stäng inspektionen"
               }
-            }}
-            className="border-border/60 bg-background/90 text-muted-foreground hover:text-foreground absolute top-3 right-3 z-[9] inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm backdrop-blur transition"
-            aria-label={
-              placementPickActive
-                ? "Avbryt platsval"
-                : markMode
-                  ? "Avsluta modulmarkeringen"
-                  : "Stäng inspektionen"
-            }
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
 
           {/* Sektionszoner som visuell kontext i placeringsläget. */}
           {placementPickActive
@@ -925,94 +1090,94 @@ export function PreviewInspectorOverlay({
               låses linjen vid släpp-punkten och bekräftelseknapparna tar
               chipens plats. translate-y lyfter knappraden ovanför linjen
               nära botten så den aldrig klipps. */}
-          {placementPickActive && (pendingDrop ?? hoveredInsertion) ? (
-            (() => {
-              const line = pendingDrop ?? hoveredInsertion!;
-              const yPercent = Math.min(
-                Math.max(line.lineYPercent, 0.5),
-                99.5,
-              );
-              const flipChip = yPercent > 88;
-              return (
-                <div
-                  className="pointer-events-none absolute inset-x-0 z-[8]"
-                  style={{ top: `${yPercent}%` }}
-                >
+          {placementPickActive && (pendingDrop ?? hoveredInsertion)
+            ? (() => {
+                const line = pendingDrop ?? hoveredInsertion!;
+                const yPercent = Math.min(
+                  Math.max(line.lineYPercent, 0.5),
+                  99.5,
+                );
+                const flipChip = yPercent > 88;
+                return (
                   <div
-                    className={cn(
-                      "h-[2px] w-full shadow-[0_0_0_1px_rgba(255,255,255,0.6)]",
-                      pendingDrop ? "bg-emerald-500" : "bg-foreground",
-                    )}
-                  />
-                  <div
-                    className={cn(
-                      "absolute left-1/2 -translate-x-1/2",
-                      flipChip ? "bottom-1.5" : "top-1.5",
-                    )}
+                    className="pointer-events-none absolute inset-x-0 z-[8]"
+                    style={{ top: `${yPercent}%` }}
                   >
-                    {pendingDrop ? (
-                      <div className="pointer-events-auto flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleConfirmDrop();
-                          }}
-                          className="bg-foreground text-background rounded-full px-3 py-1.5 text-[11.5px] font-medium whitespace-nowrap shadow transition hover:opacity-90 active:scale-95"
-                        >
-                          Placera här
-                          <span className="opacity-75">
-                            {" "}
-                            · {COARSE_LABELS[coarsePositionFor(pendingDrop)]}
-                          </span>
-                        </button>
-                        {/* Flytta: ta upp modulen igen så den följer
+                    <div
+                      className={cn(
+                        "h-[2px] w-full shadow-[0_0_0_1px_rgba(255,255,255,0.6)]",
+                        pendingDrop ? "bg-emerald-500" : "bg-foreground",
+                      )}
+                    />
+                    <div
+                      className={cn(
+                        "absolute left-1/2 -translate-x-1/2",
+                        flipChip ? "bottom-1.5" : "top-1.5",
+                      )}
+                    >
+                      {pendingDrop ? (
+                        <div className="pointer-events-auto flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleConfirmDrop();
+                            }}
+                            className="bg-foreground text-background rounded-full px-3 py-1.5 text-[11.5px] font-medium whitespace-nowrap shadow transition hover:opacity-90 active:scale-95"
+                          >
+                            Placera här
+                            <span className="opacity-75">
+                              {" "}
+                              · {COARSE_LABELS[coarsePositionFor(pendingDrop)]}
+                            </span>
+                          </button>
+                          {/* Flytta: ta upp modulen igen så den följer
                             pekaren (operatörskrav 2026-06-10) — samma
                             effekt som att klicka en ny plats, men som
                             explicit knapp. */}
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setPendingDrop(null);
-                          }}
-                          aria-label="Flytta — ta upp och välj ny plats"
-                          title="Flytta — ta upp och välj ny plats"
-                          className="border-border/60 bg-background/95 text-muted-foreground hover:text-foreground inline-flex h-7 w-7 items-center justify-center rounded-full border shadow backdrop-blur transition active:scale-95"
-                        >
-                          <Move className="h-3.5 w-3.5" aria-hidden />
-                        </button>
-                        {/* X: avbryt HELA placeringen (dialogen öppnas
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingDrop(null);
+                            }}
+                            aria-label="Flytta — ta upp och välj ny plats"
+                            title="Flytta — ta upp och välj ny plats"
+                            className="border-border/60 bg-background/95 text-muted-foreground hover:text-foreground inline-flex h-7 w-7 items-center justify-center rounded-full border shadow backdrop-blur transition active:scale-95"
+                          >
+                            <Move className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                          {/* X: avbryt HELA placeringen (dialogen öppnas
                             igen utan val) — tidigare ångrade X:et bara
                             släppet, vilket var otydligt när flytta-
                             knappen tillkom. */}
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            cancelPlacementPick();
-                          }}
-                          aria-label="Avbryt placeringen"
-                          title="Avbryt placeringen"
-                          className="border-border/60 bg-background/95 text-muted-foreground hover:text-foreground inline-flex h-7 w-7 items-center justify-center rounded-full border shadow backdrop-blur transition active:scale-95"
-                        >
-                          <X className="h-3.5 w-3.5" aria-hidden />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="bg-foreground text-background rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap shadow">
-                        {line.label}
-                        <span className="opacity-75">
-                          {" "}
-                          → {COARSE_LABELS[coarsePositionFor(line)]}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              cancelPlacementPick();
+                            }}
+                            aria-label="Avbryt placeringen"
+                            title="Avbryt placeringen"
+                            className="border-border/60 bg-background/95 text-muted-foreground hover:text-foreground inline-flex h-7 w-7 items-center justify-center rounded-full border shadow backdrop-blur transition active:scale-95"
+                          >
+                            <X className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="bg-foreground text-background rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap shadow">
+                          {line.label}
+                          <span className="opacity-75">
+                            {" "}
+                            → {COARSE_LABELS[coarsePositionFor(line)]}
+                          </span>
                         </span>
-                      </span>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })()
-          ) : null}
+                );
+              })()
+            : null}
 
           {/* Ghost som följer pekaren i drag-läget (payload från dialogen):
               moduler visas som wireframe-mockup av sektionen (operatörs-
@@ -1064,142 +1229,254 @@ export function PreviewInspectorOverlay({
               2026-06-10). Vald bredd i % följer med picken så prompten
               kan beskriva storleken. flip:en speglar chip-raden så
               mockupen aldrig klipps vid sidans botten. */}
-          {placementPickActive && pendingDrop && placementDragPayload ? (
-            (() => {
-              const yPercent = Math.min(
-                Math.max(pendingDrop.lineYPercent, 0.5),
-                99.5,
-              );
-              const flip = yPercent > 70;
-              return (
-                <div
-                  className={cn(
-                    "pointer-events-none absolute left-1/2 z-[8] -translate-x-1/2",
-                    flip ? "-translate-y-full pb-8" : "pt-8",
-                  )}
-                  style={{
-                    top: `${yPercent}%`,
-                    width: `${clampDropSize(dropSizePercent)}%`,
-                  }}
-                >
-                  <div className="relative">
-                    {/* Grab-yta: hela mockupen är dragbar. pointerdown
+          {placementPickActive && pendingDrop && placementDragPayload
+            ? (() => {
+                const yPercent = Math.min(
+                  Math.max(pendingDrop.lineYPercent, 0.5),
+                  99.5,
+                );
+                const flip = yPercent > 70;
+                return (
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute left-1/2 z-[8] -translate-x-1/2",
+                      flip ? "-translate-y-full pb-8" : "pt-8",
+                    )}
+                    style={{
+                      top: `${yPercent}%`,
+                      width: `${clampDropSize(dropSizePercent)}%`,
+                    }}
+                  >
+                    <div className="relative">
+                      {/* Grab-yta: hela mockupen är dragbar. pointerdown
                         fångar pekaren och boxen snäpper till närmaste
                         insättningspunkt medan den dras; handtagen nedan
                         stopPropagation:ar så resize aldrig startar ett
                         boxdrag. */}
-                    <div
-                      onPointerDown={handleDropBoxPointerDown}
-                      onPointerMove={handleDropBoxPointerMove}
-                      onPointerUp={handleDropBoxPointerUp}
-                      onPointerCancel={handleDropBoxPointerUp}
-                      onClick={(event) => event.stopPropagation()}
-                      role="presentation"
-                      className={cn(
-                        "pointer-events-auto touch-none select-none",
-                        isDropDragging ? "cursor-grabbing" : "cursor-grab",
-                      )}
-                    >
-                      {placementDragPayload.kind === "image" &&
-                      placementDragPayload.thumbnailUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={placementDragPayload.thumbnailUrl}
-                          alt={placementDragPayload.label}
-                          className="border-border/60 pointer-events-none w-full rounded-lg border object-cover opacity-95 shadow-xl"
-                          draggable={false}
-                        />
-                      ) : (
-                        <ModuleMockup
-                          moduleId={placementDragPayload.moduleId ?? ""}
-                          className="pointer-events-none w-full opacity-95"
-                        />
-                      )}
-                    </div>
-
-                    {/* Storleks-badge — uppdateras live under resize-draget. */}
-                    <span
-                      className={cn(
-                        "bg-foreground text-background absolute -top-2 right-2 -translate-y-full rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap shadow transition-opacity",
-                        isDropResizing ? "opacity-100" : "opacity-80",
-                      )}
-                    >
-                      ≈ {Math.round(clampDropSize(dropSizePercent))} % av
-                      sidbredden
-                    </span>
-
-                    {/* Åtta resize-handtag (kanter + hörn) — samma mönster
-                        som fönster-resizen i FloatingChat. stopPropagation i
-                        alla handlers så draget aldrig tolkas som "flytta
-                        droppen" av overlayns klick. */}
-                    {DROP_RESIZE_HANDLES.map(([edge, cls]) => (
                       <div
-                        key={edge}
-                        onPointerDown={handleDropResizePointerDown(edge)}
-                        onPointerMove={handleDropResizePointerMove}
-                        onPointerUp={handleDropResizePointerUp}
-                        onPointerCancel={handleDropResizePointerUp}
+                        onPointerDown={handleDropBoxPointerDown}
+                        onPointerMove={handleDropBoxPointerMove}
+                        onPointerUp={handleDropBoxPointerUp}
+                        onPointerCancel={handleDropBoxPointerUp}
                         onClick={(event) => event.stopPropagation()}
                         role="presentation"
                         className={cn(
-                          "pointer-events-auto absolute touch-none",
-                          cls,
+                          "pointer-events-auto touch-none select-none",
+                          isDropDragging ? "cursor-grabbing" : "cursor-grab",
                         )}
-                      />
-                    ))}
+                      >
+                        {placementDragPayload.kind === "image" &&
+                        placementDragPayload.thumbnailUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={placementDragPayload.thumbnailUrl}
+                            alt={placementDragPayload.label}
+                            className="border-border/60 pointer-events-none w-full rounded-lg border object-cover opacity-95 shadow-xl"
+                            draggable={false}
+                          />
+                        ) : (
+                          <ModuleMockup
+                            moduleId={placementDragPayload.moduleId ?? ""}
+                            className="pointer-events-none w-full opacity-95"
+                          />
+                        )}
+                      </div>
 
-                    {/* Synliga grepp-markörer: streck mitt på kanterna +
+                      {/* Storleks-badge — uppdateras live under resize-draget. */}
+                      <span
+                        className={cn(
+                          "bg-foreground text-background absolute -top-2 right-2 -translate-y-full rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap shadow transition-opacity",
+                          isDropResizing ? "opacity-100" : "opacity-80",
+                        )}
+                      >
+                        ≈ {Math.round(clampDropSize(dropSizePercent))} % av
+                        sidbredden
+                      </span>
+
+                      {/* Åtta resize-handtag (kanter + hörn) — samma mönster
+                        som fönster-resizen i FloatingChat. stopPropagation i
+                        alla handlers så draget aldrig tolkas som "flytta
+                        droppen" av overlayns klick. */}
+                      {DROP_RESIZE_HANDLES.map(([edge, cls]) => (
+                        <div
+                          key={edge}
+                          onPointerDown={handleDropResizePointerDown(edge)}
+                          onPointerMove={handleDropResizePointerMove}
+                          onPointerUp={handleDropResizePointerUp}
+                          onPointerCancel={handleDropResizePointerUp}
+                          onClick={(event) => event.stopPropagation()}
+                          role="presentation"
+                          className={cn(
+                            "pointer-events-auto absolute touch-none",
+                            cls,
+                          )}
+                        />
+                      ))}
+
+                      {/* Synliga grepp-markörer: streck mitt på kanterna +
                         punkter i hörnen så det syns var boxen kan dras
                         ut. pointer-events-none — träffytorna ovanför äger
                         interaktionen. */}
-                    <span className="bg-foreground/70 pointer-events-none absolute top-1/2 -left-1 h-9 w-1 -translate-y-1/2 rounded-full shadow" />
-                    <span className="bg-foreground/70 pointer-events-none absolute top-1/2 -right-1 h-9 w-1 -translate-y-1/2 rounded-full shadow" />
-                    <span className="bg-foreground/70 pointer-events-none absolute -top-1 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full shadow" />
-                    <span className="bg-foreground/70 pointer-events-none absolute -bottom-1 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full shadow" />
-                    {(
-                      [
-                        "-top-1 -left-1",
-                        "-top-1 -right-1",
-                        "-bottom-1 -left-1",
-                        "-bottom-1 -right-1",
-                      ] as const
-                    ).map((pos) => (
-                      <span
-                        key={pos}
-                        className={cn(
-                          "bg-background border-foreground/80 pointer-events-none absolute h-2.5 w-2.5 rounded-full border-2 shadow",
-                          pos,
-                        )}
-                      />
-                    ))}
+                      <span className="bg-foreground/70 pointer-events-none absolute top-1/2 -left-1 h-9 w-1 -translate-y-1/2 rounded-full shadow" />
+                      <span className="bg-foreground/70 pointer-events-none absolute top-1/2 -right-1 h-9 w-1 -translate-y-1/2 rounded-full shadow" />
+                      <span className="bg-foreground/70 pointer-events-none absolute -top-1 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full shadow" />
+                      <span className="bg-foreground/70 pointer-events-none absolute -bottom-1 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full shadow" />
+                      {(
+                        [
+                          "-top-1 -left-1",
+                          "-top-1 -right-1",
+                          "-bottom-1 -left-1",
+                          "-bottom-1 -right-1",
+                        ] as const
+                      ).map((pos) => (
+                        <span
+                          key={pos}
+                          className={cn(
+                            "bg-background border-foreground/80 pointer-events-none absolute h-2.5 w-2.5 rounded-full border-2 shadow",
+                            pos,
+                          )}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })()
-          ) : null}
+                );
+              })()
+            : null}
 
           {/* Markera modul-läget: hover-ram med sektions-id-etikett +
               ihållande emerald-kontur på redan markerade sektioner.
               Kanoniska markeringar visar id:t från data-section-id;
               heuristik-fallbacken (äldre builds) flaggas med "≈" så
-              operatören ser att id:t är en gissning. */}
-          {markMode && hoveredMarkable ? (
-            <div
-              className="border-foreground/80 bg-foreground/5 pointer-events-none absolute inset-x-1 z-[8] rounded-md border-2"
-              style={{
-                top: `${Math.max(hoveredMarkable.top, 0)}%`,
-                height: `${Math.max(hoveredMarkable.bottom - hoveredMarkable.top, 2)}%`,
-              }}
-            >
-              <span className="bg-foreground text-background absolute top-1.5 left-2 max-w-[280px] truncate rounded px-1.5 py-0.5 font-mono text-[10px]">
-                {hoveredMarkable.canonical ? "" : "≈ "}
-                {hoveredMarkable.sectionId}
-                {hoveredMarkable.headingText
-                  ? ` · ${hoveredMarkable.headingText.slice(0, 40)}`
-                  : ""}
-              </span>
-            </div>
-          ) : null}
+              operatören ser att id:t är en gissning. Medan sektions-
+              menyn är öppen pinnas ramen vid menyns sektion (hovring
+              är frusen) så det alltid syns vilken sektion menyn gäller. */}
+          {(() => {
+            const framed = markMode
+              ? (actionMenu?.section ?? hoveredMarkable)
+              : null;
+            if (!framed) return null;
+            return (
+              <div
+                className="border-foreground/80 bg-foreground/5 pointer-events-none absolute inset-x-1 z-[8] rounded-md border-2"
+                style={{
+                  top: `${Math.max(framed.top, 0)}%`,
+                  height: `${Math.max(framed.bottom - framed.top, 2)}%`,
+                }}
+              >
+                <span className="bg-foreground text-background absolute top-1.5 left-2 max-w-[280px] truncate rounded px-1.5 py-0.5 font-mono text-[10px]">
+                  {framed.canonical ? "" : "≈ "}
+                  {framed.sectionId}
+                  {framed.headingText
+                    ? ` · ${framed.headingText.slice(0, 40)}`
+                    : ""}
+                </span>
+              </div>
+            );
+          })()}
+          {/* Sektionsmenyn: popover förankrad vid klickpunkten. Varje
+              åtgärd återanvänder en befintlig pipeline (chip, composer-
+              prefill, asset-/modul-dialog, section_add-move) — ingen ny
+              backend-kapacitet utlovas. Flytt-alternativen visas BARA
+              för sektioner backendens inline-allowlist kan flytta
+              (MOVABLE_SECTION_TYPES + home-routen, ADR 0042). */}
+          {markMode && actionMenu
+            ? (() => {
+                const { section, routeId, anchorXPercent, anchorYPercent } =
+                  actionMenu;
+                const movable =
+                  section.canonical &&
+                  routeId === MOVABLE_SECTION_ROUTE &&
+                  Boolean(MOVABLE_SECTION_TYPES[section.sectionId]);
+                const flip = anchorYPercent > 62;
+                const left = Math.min(Math.max(anchorXPercent, 6), 70);
+                const items: Array<{
+                  key:
+                    | "mark"
+                    | "prefill-copy"
+                    | "asset"
+                    | "module"
+                    | "move-top"
+                    | "move-bottom";
+                  label: string;
+                  Icon: typeof Pin;
+                }> = [
+                  { key: "mark", label: "Markera för prompt", Icon: Pin },
+                  {
+                    key: "prefill-copy",
+                    label: "Ändra text i sektionen",
+                    Icon: MessageSquareText,
+                  },
+                  { key: "asset", label: "Byt bild här", Icon: ImagePlus },
+                  {
+                    key: "module",
+                    label: "Lägg till modul här",
+                    Icon: Blocks,
+                  },
+                  ...(movable
+                    ? ([
+                        {
+                          key: "move-top",
+                          label: "Flytta överst",
+                          Icon: ArrowUpToLine,
+                        },
+                        {
+                          key: "move-bottom",
+                          label: "Flytta nederst",
+                          Icon: ArrowDownToLine,
+                        },
+                      ] as const)
+                    : []),
+                ];
+                return (
+                  <div
+                    className={cn(
+                      "border-border/70 bg-background/95 absolute z-[10] w-[240px] rounded-xl border p-1.5 shadow-lg backdrop-blur",
+                      flip ? "-translate-y-full" : "",
+                    )}
+                    style={{
+                      left: `${left}%`,
+                      top: `${Math.min(Math.max(anchorYPercent, 2), 96)}%`,
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                    role="menu"
+                    aria-label={`Åtgärder för sektionen ${section.sectionId}`}
+                  >
+                    <div className="text-muted-foreground flex items-center justify-between gap-2 px-2 py-1">
+                      <span className="truncate font-mono text-[10px]">
+                        {section.canonical ? "" : "≈ "}
+                        {section.sectionId}
+                        {section.headingText
+                          ? ` · ${section.headingText.slice(0, 28)}`
+                          : ""}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActionMenu(null)}
+                        aria-label="Stäng sektionsmenyn"
+                        className="hover:text-foreground rounded p-0.5 transition"
+                      >
+                        <X className="h-3 w-3" aria-hidden />
+                      </button>
+                    </div>
+                    {items.map(({ key, label, Icon }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleMenuAction(key)}
+                        className="text-foreground hover:bg-muted/70 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] transition"
+                      >
+                        <Icon
+                          className="text-muted-foreground h-3.5 w-3.5 shrink-0"
+                          aria-hidden
+                        />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()
+            : null}
           {markMode
             ? markableSections
                 .filter((section) =>
@@ -1243,49 +1520,54 @@ export function PreviewInspectorOverlay({
             </div>
           ) : null}
 
-          {/* Info-kort efter klick i inspektionsläget. */}
+          {/* Info-kort efter klick i inspektionsläget. Sticky h-0-wrapper
+              (samma trick som statusraden) så kortet följer skrollporten
+              i den fullhöga overlayn — absolute bottom-4 hade hamnat vid
+              dokumentets botten, utanför synfältet. */}
           {inspectMode && !placementPickActive && inspected ? (
-            <div
-              className="border-border/70 bg-background/95 absolute bottom-4 left-4 z-[9] w-[min(340px,calc(100%-2rem))] rounded-xl border p-3.5 shadow-lg backdrop-blur"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mb-1.5 flex items-start justify-between gap-2">
-                <span className="text-foreground font-mono text-[11px] font-semibold">
-                  &lt;{inspected.item.tag}&gt;
-                </span>
+            <div className="sticky top-0 z-[9] h-0">
+              <div
+                className="border-border/70 bg-background/95 absolute top-14 left-4 w-[min(340px,calc(100%-2rem))] rounded-xl border p-3.5 shadow-lg backdrop-blur"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="mb-1.5 flex items-start justify-between gap-2">
+                  <span className="text-foreground font-mono text-[11px] font-semibold">
+                    &lt;{inspected.item.tag}&gt;
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setInspected(null)}
+                    aria-label="Stäng elementinfo"
+                    className="text-muted-foreground hover:text-foreground rounded p-0.5 transition"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
+                {inspected.nearestHeading ? (
+                  <p className="text-muted-foreground text-[11px]">
+                    Närmaste rubrik:{" "}
+                    <span className="text-foreground">
+                      {inspected.nearestHeading}
+                    </span>
+                  </p>
+                ) : null}
+                {inspected.item.text ? (
+                  <p className="text-foreground mt-1 line-clamp-3 text-[12px] leading-snug">
+                    ”{inspected.item.text}”
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground mt-1 text-[11px]">
+                    Ingen synlig text.
+                  </p>
+                )}
                 <button
                   type="button"
-                  onClick={() => setInspected(null)}
-                  aria-label="Stäng elementinfo"
-                  className="text-muted-foreground hover:text-foreground rounded p-0.5 transition"
+                  onClick={() => void handleCopyDescription()}
+                  className="border-border/60 hover:border-border text-foreground mt-2.5 rounded-md border px-2.5 py-1 text-[11px] transition"
                 >
-                  <X className="h-3.5 w-3.5" aria-hidden />
+                  {copied ? "Kopierad!" : "Kopiera beskrivning till prompt"}
                 </button>
               </div>
-              {inspected.nearestHeading ? (
-                <p className="text-muted-foreground text-[11px]">
-                  Närmaste rubrik:{" "}
-                  <span className="text-foreground">
-                    {inspected.nearestHeading}
-                  </span>
-                </p>
-              ) : null}
-              {inspected.item.text ? (
-                <p className="text-foreground mt-1 line-clamp-3 text-[12px] leading-snug">
-                  ”{inspected.item.text}”
-                </p>
-              ) : (
-                <p className="text-muted-foreground mt-1 text-[11px]">
-                  Ingen synlig text.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => void handleCopyDescription()}
-                className="border-border/60 hover:border-border text-foreground mt-2.5 rounded-md border px-2.5 py-1 text-[11px] transition"
-              >
-                {copied ? "Kopierad!" : "Kopiera beskrivning till prompt"}
-              </button>
             </div>
           ) : null}
         </div>

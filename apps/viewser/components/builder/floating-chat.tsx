@@ -976,6 +976,7 @@ export function FloatingChat({
   onShowVersions,
   tools,
   focusComposerSignal,
+  composerPrefill,
 }: FloatingChatProps) {
   const [position, setPosition] = useState<Position | null>(null);
   // Panel-storlek (desktop). Startar på default 360×460 = nuvarande fasta
@@ -1109,6 +1110,25 @@ export function FloatingChat({
     const timer = setTimeout(() => expandAndFocus(), 0);
     return () => clearTimeout(timer);
   }, [focusComposerSignal, expandAndFocus]);
+
+  // Sektionsmenyns "Ändra text"-åtgärd: förifyll composern + flytta
+  // focus. Nonce-jämförelsen via ref gör mount no-op och låter samma
+  // text triggas två gånger i rad. setTimeout(0) deferar setState:n ur
+  // effektkroppen (react-hooks/set-state-in-effect, samma mönster som
+  // focusComposerSignal-effekten ovan).
+  const lastPrefillNonceRef = useRef(composerPrefill?.nonce ?? 0);
+  useEffect(() => {
+    const nonce = composerPrefill?.nonce ?? 0;
+    if (nonce === lastPrefillNonceRef.current) return;
+    lastPrefillNonceRef.current = nonce;
+    if (!composerPrefill || nonce <= 0) return;
+    const text = composerPrefill.text;
+    const timer = setTimeout(() => {
+      setInput(text);
+      expandAndFocus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [composerPrefill, expandAndFocus]);
 
   // Initiera position + minimized från localStorage efter mount.
   //

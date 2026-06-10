@@ -277,6 +277,13 @@ type AddModuleDialogProps = {
   onBuildDone: OnFollowupBuildDone;
   isBuilding?: boolean;
   baseRunId?: string | null;
+  /**
+   * Initial sektionskontext från sektionsmenyn i previewn ("Lägg till
+   * modul här"): förvald grovposition härledd ur den klickade
+   * sektionens läge. Null/utelämnad → backendens default (bottom).
+   * Drag-flödets platsval skriver som vanligt över valet.
+   */
+  initialPositionId?: "top" | "bottom" | null;
 };
 
 export function AddModuleDialog({
@@ -288,6 +295,7 @@ export function AddModuleDialog({
   onBuildDone,
   isBuilding = false,
   baseRunId = null,
+  initialPositionId = null,
 }: AddModuleDialogProps) {
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [dragOverPageId, setDragOverPageId] = useState<string | null>(null);
@@ -413,23 +421,28 @@ export function AddModuleDialog({
     onOpenChange(false);
   }, [requestPlacementPick, onOpenChange]);
 
-  const addPlacement = useCallback((moduleId: string, pageId: string) => {
-    // En modul per bygge (skiva 1): routern klassar EN section_add-klausul
-    // tillförlitligt, men flera moduler i samma prompt kollapsar till fel
-    // editKind (empiriskt verifierat mot classify.py). Ett nytt val ersätter
-    // därför det föregående i stället för att köa.
-    setPlacements([
-      {
-        key: `${moduleId}-${pageId}-${Date.now()}`,
-        moduleId,
-        pageId,
-        // Default: längst ner (backendens default-slot, före kontakt-CTA:n)
-        // så vi inte överlovar topp-placering operatören inte bett om.
-        positionId: "bottom",
-      },
-    ]);
-    setPickedLabel(null);
-  }, []);
+  const addPlacement = useCallback(
+    (moduleId: string, pageId: string) => {
+      // En modul per bygge (skiva 1): routern klassar EN section_add-klausul
+      // tillförlitligt, men flera moduler i samma prompt kollapsar till fel
+      // editKind (empiriskt verifierat mot classify.py). Ett nytt val ersätter
+      // därför det föregående i stället för att köa.
+      setPlacements([
+        {
+          key: `${moduleId}-${pageId}-${Date.now()}`,
+          moduleId,
+          pageId,
+          // Default: sektionsmenyns förvalda grovposition om dialogen
+          // öppnades därifrån, annars längst ner (backendens default-slot,
+          // före kontakt-CTA:n) så vi inte överlovar topp-placering
+          // operatören inte bett om.
+          positionId: initialPositionId ?? "bottom",
+        },
+      ]);
+      setPickedLabel(null);
+    },
+    [initialPositionId],
+  );
 
   const removePlacement = useCallback((key: string) => {
     setPlacements((current) => current.filter((p) => p.key !== key));

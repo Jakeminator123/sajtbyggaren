@@ -195,11 +195,29 @@ async function waitForStabilizedPage(page: Page): Promise<void> {
   await page.waitForTimeout(500).catch(() => undefined);
 }
 
-/** Kartlägg synliga element på sidan (samma evaluering som worker-originalet). */
+export type CollectedElementMap = {
+  elements: ElementMapItem[];
+  /**
+   * Hela dokumentets höjd i CSS-pixlar vid kartläggningen. Lät overlayn
+   * och ViewerPanel rendera previewn i full sidhöjd (skrollbar wrapper)
+   * så operatören kan nå sektioner under första viewporten — tidigare
+   * klämdes allt under folden mot 100 % och previewn gick inte att
+   * skrolla i markläge (operatörsbugg 2026-06-10).
+   */
+  documentHeightPx: number;
+};
+
+/**
+ * Kartlägg synliga element på sidan. Evalueringen är porterad från
+ * worker-originalet med EN avvikelse: y/h-procenten räknas mot HELA
+ * dokumenthöjden (inte viewporten) så kartan täcker hela sidan och
+ * overlayn kan göras skrollbar. x/w räknas fortsatt mot viewport-
+ * bredden (= dokumentbredden — ingen horisontell scroll i previews).
+ */
 export async function collectElementMap(
   page: Page,
   maxElements: number,
-): Promise<ElementMapItem[]> {
+): Promise<CollectedElementMap> {
   // Vänta in att sidan faktiskt har synligt innehåll (SPA-hydrering kan
   // släpa efter networkidle); upp till 4 × 2 s precis som i originalet.
   for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -239,6 +257,14 @@ export async function collectElementMap(
       ]);
       const vpW = window.innerWidth || 1;
       const vpH = window.innerHeight || 1;
+      // Full dokumenthöjd — y/h-procenten räknas mot den så element
+      // under första viewporten får riktiga koordinater i stället för
+      // att klämmas mot 100 %.
+      const docH = Math.max(
+        document.documentElement?.scrollHeight || 0,
+        document.body?.scrollHeight || 0,
+        vpH,
+      );
       const pct = (v: number, base: number) =>
         Math.round(Math.max(0, Math.min(1, v / base)) * 100 * 10) / 10;
 
@@ -293,7 +319,7 @@ export async function collectElementMap(
 
       const routePath = window.location?.pathname || null;
 
-      return all.slice(0, params.max).map((el) => {
+      const elements = all.slice(0, params.max).map((el) => {
         const r = el.getBoundingClientRect();
         const tag = el.tagName.toLowerCase();
         const text =
@@ -326,12 +352,14 @@ export async function collectElementMap(
           },
           vpPercent: {
             x: pct(r.left, vpW),
-            y: pct(r.top, vpH),
+            y: pct(r.top, docH),
             w: pct(r.width, vpW),
-            h: pct(r.height, vpH),
+            h: pct(r.height, docH),
           },
         };
       });
+
+      return { elements, documentHeightPx: Math.round(docH) };
     },
     { max: maxElements },
   );

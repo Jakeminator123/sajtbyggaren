@@ -645,6 +645,14 @@ COMMON_WORDS = {
     # som canonical domänterm i naming-dictionary; dessa är lokala
     # implementationssymboler runt overlay-läget och zod-valideringen.
     "MarkedSectionSchema", "MarkableSection",
+    # Sektionsmenyn i preview (uppföljning till ADR 0046): lokala
+    # implementationssymboler för åtgärdsmenyn (context-request +
+    # overlay-meny-state) samt lucide-ikonimporter.
+    "SectionAction", "SectionActionRequest", "SectionActionMenuState",
+    "ArrowUpToLine", "ArrowDownToLine", "MessageSquareText",
+    # Skrollbar preview i peka-lägena (operatörsbugg 2026-06-10): lokal
+    # retur-shape för dokument-relativ elementkarta + sidhöjd.
+    "CollectedElementMap",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",

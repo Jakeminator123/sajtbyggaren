@@ -17,7 +17,11 @@ import {
 } from "@/components/builder/dialogs";
 import { FloatingChat } from "@/components/builder/floating-chat";
 import { SiteInspectorSheet } from "@/components/builder/inspector";
-import type { OnFollowupBuildDone } from "@/components/builder/use-followup-build";
+import {
+  useFollowupBuild,
+  type FollowupToolIntent,
+  type OnFollowupBuildDone,
+} from "@/components/builder/use-followup-build";
 import type {
   PendingBaseRunIdState,
   PendingBuildBegin,
@@ -25,6 +29,7 @@ import type {
 } from "@/components/builder/use-pending-build";
 import type { PromptStage } from "@/components/prompt-builder";
 import { usePreviewInspector } from "@/components/preview-inspector-context";
+import { useToast } from "@/components/ui/toast";
 
 /**
  * BuilderShell är compositionen som tar över hela kant-ytan när
@@ -107,6 +112,19 @@ type DialogId =
   | "ask"
   | "inspect";
 
+/**
+ * Substantivfras per flyttbar sektionstyp för sektionsmenyns flytt-
+ * followup. Samma EMPIRISKT router-verifierade promptformat som
+ * AddModuleDialog ("Lägg till <noun> <överst|längst ner>.") — ADR 0042
+ * gör att en explicit position på en redan rendrad sektion blir en
+ * FLYTT, aldrig en dubblett. Nycklarna är modul-id:n ur
+ * MOVABLE_SECTION_TYPES i preview-inspector-overlay.tsx.
+ */
+const MOVE_PROMPT_NOUNS: Record<string, string> = {
+  gallery: "en galleri-sektion",
+  "opening-hours": "en öppettider-sektion",
+};
+
 export function BuilderShell({
   siteId,
   runId,
@@ -136,7 +154,10 @@ export function BuilderShell({
     markModeActive,
     setMarkModeActive,
     setPlacementBuildActive,
+    sectionActionRequest,
+    clearSectionAction,
   } = usePreviewInspector();
+  const toast = useToast();
 
   // Wrappar onBuildStart så den även registrerar pending-build-state
   // åt Versions-tab. Föräldern (page.tsx) får en utvidgad signatur som
@@ -224,14 +245,109 @@ export function BuilderShell({
     setPlacementBuildActive,
   ]);
 
+  // Sektionsmenyns kontext till dialogerna: hint-text för bilddialogen
+  // ("Bilden gäller sektionen …") resp. förvald grovposition för
+  // moduldialogen. Nollas när dialogen stängs så vanliga öppningar via
+  // Verktyg-menyn aldrig ärver en gammal sektionskontext.
+  const [assetSectionHint, setAssetSectionHint] = useState<string | null>(
+    null,
+  );
+  const [moduleInitialPosition, setModuleInitialPosition] = useState<
+    "top" | "bottom" | null
+  >(null);
+  // Composer-prefill för "Ändra text"-åtgärden: text + monoton nonce så
+  // FloatingChat kan skilja två likadana prefills åt. Chippen läggs
+  // redan av overlayn (addMarkedSection) — här fylls bara composern.
+  const [composerPrefill, setComposerPrefill] = useState<{
+    text: string;
+    nonce: number;
+  } | null>(null);
+
+  // Flytt-followup (sektionsmenyns "Flytta överst/nederst"): kör
+  // section_add direkt via samma seam som dialogerna. ADR 0042 ger
+  // move-semantik när sektionen redan finns. Fel ytas via toast —
+  // BuilderShell har ingen egen dialog-yta att rendera dem i.
+  const { runFollowup: runSectionMove } = useFollowupBuild({
+    siteId,
+    onBuildStart: handleBuildStart,
+    onBuildEnd: handleBuildEnd,
+    onBuildDone: handleSurfaceBuildDone,
+    isBuilding,
+    baseRunId: pendingBaseRunId?.baseRunId ?? null,
+  });
+
   const openDialogFactory = useCallback(
     (id: DialogId) => () => setOpenDialog(id),
     [],
   );
 
   const closeDialog = useCallback((next: boolean) => {
-    if (!next) setOpenDialog(null);
+    if (!next) {
+      setOpenDialog(null);
+      setAssetSectionHint(null);
+      setModuleInitialPosition(null);
+    }
   }, []);
+
+  // Konsumera sektionsmenyns åtgärds-request (overlayn → contexten →
+  // hit). setTimeout(0) deferar setState:n ur effektkroppen
+  // (react-hooks/set-state-in-effect, samma mönster som placement-
+  // effekten ovan). requestedAt-nonce + ref-jämförelse gör att samma
+  // request aldrig konsumeras två gånger.
+  const lastSectionActionRef = useRef(0);
+  useEffect(() => {
+    const request = sectionActionRequest;
+    if (!request || request.requestedAt === lastSectionActionRef.current) {
+      return;
+    }
+    lastSectionActionRef.current = request.requestedAt;
+    const timerId = window.setTimeout(() => {
+      clearSectionAction();
+      const heading = request.ref.headingText?.trim();
+      const label = heading || request.ref.sectionId;
+      if (request.action === "prefill-copy") {
+        setComposerPrefill((prev) => ({
+          text: `Ändra texten i sektionen "${label}": `,
+          nonce: (prev?.nonce ?? 0) + 1,
+        }));
+        return;
+      }
+      if (request.action === "asset") {
+        setAssetSectionHint(`Bilden gäller sektionen "${label}".`);
+        setOpenDialog("asset");
+        return;
+      }
+      if (request.action === "module") {
+        setModuleInitialPosition(request.position ?? "bottom");
+        setOpenDialog("module");
+        return;
+      }
+      // "move": kör followup direkt — overlayn visar bara alternativet
+      // för sektioner i backend-allowlisten, men vi gate:ar ärligt en
+      // gång till mot promptnoun-kartan i stället för att gissa.
+      const sectionType = request.sectionType;
+      const noun = sectionType ? MOVE_PROMPT_NOUNS[sectionType] : undefined;
+      if (!sectionType || !noun) return;
+      const position = request.position ?? "top";
+      const prompt =
+        `Lägg till ${noun} ` +
+        `${position === "top" ? "överst" : "längst ner"}. ` +
+        "Behåll övrig design, copy och struktur intakt.";
+      const toolIntent: FollowupToolIntent = {
+        tool: "section_add",
+        params: { sectionType, position },
+      };
+      void runSectionMove(prompt, { toolIntent }).then((result) => {
+        if (!result.ok) {
+          toast.show({
+            description: result.error,
+            variant: result.isAnswer ? "info" : "error",
+          });
+        }
+      });
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [sectionActionRequest, clearSectionAction, runSectionMove, toast]);
 
   const actions = useMemo<BuilderAction[]>(
     () => [
@@ -403,6 +519,9 @@ export function BuilderShell({
         // Surfa chatten (expandera + fokusera composern) när ett bygge från
         // en dialog/inspector blir klart, så operatören kan iterera direkt.
         focusComposerSignal={focusComposerSignal}
+        // Sektionsmenyns "Ändra text"-åtgärd: förifyll composern med en
+        // promptstart för den klickade sektionen (chippen är redan lagd).
+        composerPrefill={composerPrefill}
         tools={
           <BuilderActions
             actions={actions}
@@ -441,6 +560,7 @@ export function BuilderShell({
         onBuildDone={handleSurfaceBuildDone}
         isBuilding={isBuilding}
         baseRunId={pendingBaseRunId?.baseRunId ?? null}
+        initialHint={assetSectionHint}
       />
       <AddModuleDialog
         open={openDialog === "module"}
@@ -451,6 +571,7 @@ export function BuilderShell({
         onBuildDone={handleSurfaceBuildDone}
         isBuilding={isBuilding}
         baseRunId={pendingBaseRunId?.baseRunId ?? null}
+        initialPositionId={moduleInitialPosition}
       />
       <ScrapeUrlDialog
         open={openDialog === "scrape"}
