@@ -327,9 +327,28 @@ def reuse_previous_site_brief(
 
     previous_notes = previous.get("notesForPlanner")
     notes_text = previous_notes if isinstance(previous_notes, str) else ""
-    for block in _deterministic_note_blocks(dossier):
+    new_blocks = _deterministic_note_blocks(dossier)
+    # Forward: every deterministic block the NEW PI injects must already be in
+    # the previous brief - an ADDED or CHANGED directive/mood note must reach
+    # the planner, so it regenerates.
+    for block in new_blocks:
         if block not in notes_text:
             return None
+    # Reverse (removed-notes guard): if the previous brief carries an operator-
+    # directive or mood-vision block but the NEW PI injects none of that kind,
+    # the operator REMOVED that directive. The previous brief's creative copy
+    # was shaped by it, so a byte-stable reuse would silently keep the dropped
+    # instruction's influence - regenerate instead.
+    new_has_operator = any(
+        block.startswith(_OPERATOR_DIRECTIVE_NOTE_PREFIX) for block in new_blocks
+    )
+    new_has_mood = any(
+        block.startswith(_MOOD_VISUAL_NOTE_PREFIX) for block in new_blocks
+    )
+    if _OPERATOR_DIRECTIVE_NOTE_PREFIX in notes_text and not new_has_operator:
+        return None
+    if _MOOD_VISUAL_NOTE_PREFIX in notes_text and not new_has_mood:
+        return None
 
     from scripts.build_site import utc_now
 

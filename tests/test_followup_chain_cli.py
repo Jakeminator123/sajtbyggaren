@@ -762,6 +762,29 @@ def test_followup_chain_forwards_base_run_id_to_apply(
     assert captured["base_run_id"] == base_run_id
 
 
+def test_followup_chain_rejects_cross_site_base_run_id(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An EXPLICIT baseRunId that belongs to ANOTHER site is rejected before any
+    build: iterating a follow-up from a foreign run would read the wrong
+    artefakts and pin the wrong hero headline (cross-site guard)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, base_run_id = _seed_init_build(tmp_path)
+    # base_run_id belongs to SITE_ID; passing it for another site must STOP.
+    with pytest.raises(SystemExit, match="cross-site"):
+        run_followup_chain(
+            "some-other-site",
+            CAPABILITY_FOLLOWUP,
+            base_run_id=base_run_id,
+            do_build=False,
+            runs_dir=runs_dir,
+            generated_dir=generated_dir,
+            output_dir=prompt_inputs,
+        )
+
+
 def test_followup_chain_is_mock_safe_without_key(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
