@@ -113,3 +113,28 @@ mer. Token-budget per nivå.
 3. Roll-registry-modul (Fas 1) när 2-3 roller finns (copy_editor + stylist +
    section_builder klara — registryt är nu meningsfullt).
 4. Extern Docker-dirigent (Fas 2) när registryt är stabilt.
+
+### Stylist-scope — slice 3-kandidat (operatörsfynd 2026-06-10)
+
+> Status: beslutsunderlag, plan-only — ingen kod i denna not. Gated på
+> operatörsbeslut inför nästa F1-slice.
+
+Operatörsfynd: prompten "gör sajten mörkblå" applicerade `#1e3a8a` korrekt
+men ENDAST på `--primary`/knappar — operatörens intention var hela sajten.
+Verifierat mot run-artefakter (painter-palma v4): `brand.primaryColorHex`
+satt, `--background` orörd. Stylistens scope-tolkning är alltså för snäv
+när prompten pekar på "sajten" snarare än "knapparna".
+
+Tre optioner att besluta mellan:
+
+- (a) Bredare honesty-gated token-mappning: mörk bakgrund/surface-variant
+  när prompten säger "sajten" snarare än "knapparna". Minst ny yta, men
+  kräver fler tema-tokens genom apply-kedjan.
+- (b) Förtydligande-motfråga via nya answer-only-vägen ("menar du hela
+  färgtemat eller accentfärgen?"). Blev möjlig först i och med PR #262
+  (konversations-svar utan byggning).
+- (c) Variant-/scaffoldbyte som verktyg för helhetsfärg — stylisten väljer
+  mörk variant i stället för att mappa enskilda tokens.
+
+Inget av alternativen byggs utan operatörsbeslut; noten är endast underlag
+inför morgondagens F1-beslut.
