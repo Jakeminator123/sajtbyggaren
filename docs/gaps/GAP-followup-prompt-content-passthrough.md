@@ -53,6 +53,51 @@ Tre väg A-edge-cases från Codex-genomgång stängda i
 
 Påverkar inte "Kvar"-punkterna ovan (nivå 2-targets, väg B/C).
 
+### Slice 2026-06-10: okvoterad literal replace (B155)
+
+Tidigare krävde literal-replace-vägen att operatören citerade gammeltexten
+(`_QUOTED_SPAN_RE`-gaten i `packages/generation/followup/copy_directives.py`),
+så en okvoterad "ändra X till Y" parafraserade (semantisk patch) eller blev en
+tyst no-op. Nu finns en okvoterad väg som:
+
+- extraherar gammel- och nytext ur formen `<bytverb> <gammel> till/to <ny>` när
+  prompten saknar citattecken, och
+- matchar gammeltexten som en exakt (normaliserad, versal-/gemen-okänslig)
+  delsträng mot sparade kända copy-fält: `company.tagline`, `company.story`
+  (om-oss) och varje `services[].summary`. (`company.heroHeadline` matchas inte
+  separat — det är en spegling av `company.tagline` och hålls i synk av
+  apply-steget.)
+
+Utfall:
+
+- exakt en träff → literal byte-ersättning i fältet (resten av copyn bevaras),
+  applicerad som ett validerat `replace-text`-direktiv på ett befintligt
+  schema-target. Nytexten går genom samma public-copy-guards, så
+  instruktionstext kan aldrig bli kundcopy.
+- ingen träff → ärlig no-op (vi gissar aldrig ett target och parafraserar
+  aldrig).
+- tvetydig träff (gammeltexten finns i ≥2 olika copy-fält) → ärlig no-op som
+  dessutom surfar en reason via `unappliedFollowupIntents` (meta-sidecar) så
+  `build-result.json` inte låter en orelaterad ombyggnads-diff se ut som en
+  lyckad ändring.
+
+Engagemanget är medvetet smalt: ingen citerad span, ett bytverb, en `till`/`to`-
+markör, inget target-nyckelord (`taglinen`/`namnet`/`hero`/`tjänsten` ägs
+fortfarande av `_extract_copy_directives`) och inte en additiv/section-add-ask.
+Den citerade hel-fält-vägen är oförändrad — den okvoterade resolvern körs bara
+när ingen citerad gammel-/nytext finns. Ingen schemaändring, ingen
+LLM-roll-ändring.
+
+Kvarvarande gap (denna slice täcker dem inte):
+
+- **Byte av tjänst-namn/label.** Schemat modellerar bara `services[].summary`
+  för `services`-direktiv; det finns inget fält för att byta en tjänsts
+  namn/label, och att lägga till ett vore en schemaändring. Den okvoterade vägen
+  matchar därför tjänst-*summaries*, inte tjänst-namn. En egen slice (schema +
+  targeting) krävs för label-byte.
+- Bredare/multi-target literal replace, route-/element-targeting (utanför scope),
+  samt väg B-presentation (FloatingChat) och väg C.
+
 ## Reproduktion
 
 Operatören verifierade 2026-05-27 att följdpromptar i dag inte når en
