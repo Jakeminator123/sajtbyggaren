@@ -1,98 +1,95 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs). Verifierad `main` är `1cc8a92`.
+**Datum:** 2026-06-10 natt UTC+2, steward post-merge checkpoint efter nattens
+merge-tåg #254/#256/#257/#259/#260 (10 buggar stängda) + branch-städning.
+Verifierad `origin/jakob-be` är `3674475` (#258 mergad ovanpå tåg-HEAD
+`5e6b008`); `main` är `7486145` (efter #255).
 
-Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
-2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
-recommendedPages-API m.m. (15 PRs).
+Nya PRs sedan föregående checkpoint: #254, #256, #257, #259, #260, #258
+(alla mergade till `jakob-be`), #255 (docs-dedupe, mergad till `main`),
+#253 (stängd), #261 (öppen draft, B155).
 
-## CLOSING-ROUND HANDOFF 2026-06-10 (natt) — ÖVERLÄMNING TILL NÄSTA AGENT
+## CLOSING-ROUND HANDOFF 2026-06-10 (natt, runda 2) — ÖVERLÄMNING TILL NÄSTA AGENT
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre ligger i arkivet —
 > verifiera alltid mot git/koden, aldrig mot äldre block.**
 >
-> **Git-läge (uppdaterat 2026-06-10 natt): MAIN-SYNC KLAR.** PR #252 mergade
-> `jakob-be → main` som ren övertagning (merge commit; main var förfader, ingen
-> squash-divergens). `origin/main = origin/jakob-be = e6a06a5`, tom diff
-> verifierad, CI grönt (governance, builder-smoke, ai-bug-review). Christophers
-> action: synka `christopher` mot `origin/main` (inbox msg-0059).
-> Post-merge-sanity efter hela tåget: governance
-> 19/19, rules_sync OK, ruff 0, term-coverage --strict OK, riktade sviter gröna.
-> Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
+> **Git-läge (uppdaterat 2026-06-10 natt, runda 2):**
+> `origin/jakob-be = 3674475` efter nattens merge-tåg #254/#256/#257/#259/#260
+> (tåg-HEAD `5e6b008`) + #258-mergen strax därefter (alla mergade, CI grönt
+> per PR). `main = 7486145` (efter #255) —
+> `jakob-be` ligger åter FÖRE `main`; ny main-sync är ett operatörsbeslut.
+> Branch-städning gjord: nattens mergade PR-brancher raderade remote
+> (fix/viewser-prompt-robustness-b164-b169-b172,
+> feat/openclaw-f1-slice1-role-contracts, feat/viewser-hosted-vercel-sandbox
+> + dess cursor-spegel, SHA-verifierad) och lokalt (samma två
+> feature-brancher). Lokala `rescue/openclaw-f1-d76ad9c` BEHÅLLEN:
+> innehållet bedöms ha landat via #259+#260 (kodfilerna är identiska med
+> jakob-be) men diffen mot PR-#259-HEAD var inte tom — operatören bekräftar
+> innan radering.
 
 ### Vad som landade i natt (per tema)
 
-**Synlig section_add (ADR 0038) — kärnloops-grinden STÄNGD:**
-- **#240**: `directives.mountedSections` på Project Input + render-seam i
-  `render_home`. Skiva 1: `hours` → `hours-summary` renderas INLINE på
-  local-service-business-home, position top/bottom från routerns
-  "överst"/"längst ner". faq/team behåller egen-route-vägen.
-- **#248** (Codex-granskning): intent-gate (bara section_add SKAPAR
-  inline-placering; component_add kan högst BEVARA via explicit carry-forward) +
-  render-time-allowlist `_INLINE_SECTION_ALLOWLIST` (paritetslåst mot resolverns
-  `INLINE_SECTION_*`) + `{company}`-false-positive borta ur placeholder-scan.
-- **#245+#249** (UI-halvan + granskningsrunda 2): AddModuleDialog med ärliga
-  synlighets-badges ("kan synas på startsidan"/"kan bli egen sida"), EMPIRISKT
-  verifierat promptformat (en modul per bygge; "Lägg till <promptNoun>
-  <överst|längst ner>." — alla 9 moduler × 2 positioner klassas korrekt som
-  section_add; sid-omnämnande i prompten tippar pris/team/garantier till
-  route_add och undviks), inaktiva sidzoner utom Startsida ("stöds inte än").
-- Honesty-grindar hela vägen: registrerad renderare + grundat innehåll + ej
-  dubblett + allowlist; `appliedVisibleEffect` = ärlig fil-diff.
+**Bug-sweep round 1 (#254, 6 buggar):** B163 stale preview efter ny version,
+B165 apex↔www-crawl, B167 prune-guardens portar, B168/B170/B171
+OpenAI-env-kedjan (nyckelhantering/Token Meter/cache).
 
-**Refaktor/städ:** #238 (render_helpers — SISTA megafil-slicen på build_site),
-#225 (test_viewser_files splittad i 7 temafiler + storleksvakt; test-namn-
-paritet 186=186), #246 (`Golden Path` canonical, ADR 0039, naming-dict v28;
-begreppskarta; backoffice Golden Path-statusvy).
+**Wizard (#256):** B166 — Hämta-knappen gör nested merge så scrape-fält inte
+skriver över operatörens ifyllda fält. Prioriterad direkt av eval-rundans
+dominanta `contact`-problem.
 
-**Skyddsnät:** #241 (contact-CTA-routes), #242 (followup-versionering, inkl.
-"mounted = dossier i selectedDossiers.required"), #243 (golden-path-smoke med
-RIKTIGA svenska prompts + exakta statusar build=skipped/quality=ok/route-scan=ok),
-#244 (placeholder-scan härdad, multiline-empty-heading, smala engelska
-template-mönster), #250 (**auto_prune default OFF i hela API-kedjan** —
-#237-granskningens dataförlust-fälla stängd: build()/build_targeted_version/
-run_followup_chain defaultar False; --followup trådar args.allow_prune).
+**Hostad Viewser (#257, FAS 2A+2B):** ärlig 2A-degradering (hostad läge utan
+Python-vägar svarar ärligt i stället för att låtsas), gatad 2B
+sandbox-preview med blob-source (`generated-blob-source.ts`,
+snapshot-CLI). VIKTIGT: sandbox-flaggan får ALDRIG sättas i Vercel-projektet
+utan Deployment Protection (Vercels åtkomstskydd) aktiv.
 
-**Christopher-lane (inbox helt ikapp):** #239 (branschanpassat sidrutnät),
-#247 (canonical capability-sluggar + scaffold-nyans), #251 (`recommendedPages`
-exponeras i `/api/discovery-options` — msg-0056 punkt 1 LEVERERAD, se
-msg-0058; `recommendedCapabilities` finns INTE i taxonomin → eget
-governance-fält om önskat, hör ihop med punkt 2 businessFamily-ankaret).
-Resolver-alias för wizardens legacy-sluggar + kontraktstest
-(`tests/test_wizard_capability_slugs.py`, `KNOWN_UNMAPPED` medvetet —
-`user-auth` hålls ogated per ADR 0035).
+**OpenClaw F1 slice 1 (#259):** rollkontrakt i
+`packages/generation/orchestration/openclaw/roles.py` + `ConversationKind`
+(conductor-klassning småprat/omdöme/edit; messageKind-låsningen på 8 intakt),
+58 tester.
 
-**Docs-MCP (agent-uppslagsverk):** hostad MCP på `https://docs.openclaw.ai/mcp`
-konfigurerad i `.cursor/mcp.json` (gitignorerad), dokumenterad i
-`docs/openclaw-workspace/README.md` — UPPSLAGSVERK för repo-agenter,
-**INTE** runtime-yta för produktens OpenClaw-dirigent.
+**Följdprompt-robusthet (#260):** B164 dubbelbygge-recovery (ingen tyst
+legacy-fallback ovanpå redan skriven chain-version), B169 per-site-mutex i
+`/api/prompt` (site A blockerar inte site B), B172 siteId-filtrerad
+runId-detektion i `build-runner.ts`.
+
+**Backoffice-grinden (#258, cloud-lane):** governance-lås för vy-registret
+(`governance/policies/backoffice-views.v1.json` + schema), Idag-landningsvy
+med färskhetsbrickor, Loop-bevis-vy som bygger sajt deterministiskt.
+Mergad strax efter tåget (HEAD `3674475`).
+
+**Eval (styrde prioriteringen):** real-LLM Golden Path 2026-06-10 = 8.2/10
+totalt, alla 4 case pass, gate go; deterministisk baseline 7.75. Dominant
+problem `contact` i alla case → B166 togs först.
 
 ### Lösa trådar (för dig, prioriterat)
 
-1. **OpenClaw 2.0 / agentroller i llm-flödet — AVBLOCKAT.** F1-readiness var
-   gated på synlig section_add (nu inne). Plan:
-   `docs/heavy-llm-flow/openclaw-2.0-conductor.md` + `openclaw-f1-readiness.md`.
-2. **Operatörens manuella klick-checkar** (täcks inte av tester):
+1. **F1 slice 2 — wira rollvalet i conductor-flödet:**
+   `scripts/run_openclaw_followup.py` + `/api/prompt` answer-only för
+   konversations-kinds (småprat/omdöme svaras direkt utan bygge).
+   `route.ts` är ledig efter #260. Plan:
+   `docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
+2. **B155-slicen (okvoterad literal replace):** PR **#261** (draft, cloud)
+   öppnad mot `jakob-be` enligt godkänd plan — granska + merga när den
+   lämnar draft.
+3. **Vercel-deploy av 2A** (cloud-agent; Vercel-projektet
+   sajtbyggaren-viewser finns; Deployment Protection FÖRE eventuell
+   sandbox-flagga). Backoffice-grinden #258 är INNE.
+4. **Operatörens manuella klick-checkar** (täcks inte av tester):
    /studio "lägg till en öppettider-sektion överst" på LSB-sajt med riktiga
    öppettider → block efter hero; #228:s Ändra-knapp → steg-hopp;
    kontrastfärg "gör sajten mörkblå"; modul-dialogen (#245/#249) visuellt.
-3. **Main-sync — KLAR** (PR #252, 2026-06-10 natt; operatörsbeslut). Eval-rundan
-   på 4 branscher (elektriker/frisör/naprapat/keramik-shop) körs FÖRE
-   agentroll-sprinten per operatörsbeslut samma natt.
-4. **Punkt 2 till Christopher:** businessFamily-ankare (ADR + family-fält i
-   discovery-taxonomy) + ev. recommendedCapabilities-fält i samma veva.
-5. **section_add skiva 2+:** fler inline-typer/routes/scaffolds (seam +
-   allowlists redo; varje ny route trår injektions-seamen själv).
-6. **Två färdiga cloud-agent-prompter** (chatlogg 2026-06-09 sen kväll):
-   backoffice-grind (governance-register + Idag-vy + playground) och
-   Vercel-hosted sandbox-preview (med ärlig 501-gating av python-vägar).
-7. **#156 hosted `/live`** — parkerad (säkerhet), arkitektur-referens; görs om
+5. **Main-sync-beslut:** `jakob-be` före `main` igen efter nattens tåg;
+   ny sync-PR när operatören vill ha en officiell version.
+6. **#156 hosted `/live`** — parkerad (säkerhet), arkitektur-referens; görs om
    på färsk bas med auth/rate-limit när runtime-spåret väljs aktivt.
-8. **Branch-rester för operatörsbeslut:** `cursor/gap-3a-offer-service-guard`,
+7. **Branch-rester för operatörsbeslut:** `cursor/gap-3a-offer-service-guard`,
    `cursor/dossier-intake-v11-review-895d`, `feat/kor-5-repair-pass` (ingen
    PR, ej bevisat mergade), `cursor/preview-runtime-adapters` (avsiktlig
    snapshot), Christophers stängda `feat/viewser-ui-overhaul`/
-   `feat/viewser-router-decision-readiness`.
+   `feat/viewser-router-decision-readiness`, samt lokala
+   `rescue/openclaw-f1-d76ad9c` (se git-läget ovan).
 
 ### Kända småsaker (inte buggar)
 
@@ -117,11 +114,13 @@ versionshistoriken finns kvar via `git log --follow docs/handoff.md`.
 
 ## Föregående checkpoint
 
-### 2026-06-09 UTC — handoff.md före `79bedef`
+### 2026-06-10 UTC — handoff.md före `3674475`
 
-**Datum:** 2026-06-10 strax efter midnatt (UTC+2). Verifierad `jakob-be` är `68bbde3`
-(docs-bump ovanpå merge-HEAD `79bedef`); `main` är oförändrad `16278c1`.
+**Datum:** 2026-06-10 natt (UTC+2), efter PR #252-main-syncen. Verifierad
+`main` = `jakob-be` = `e6a06a5` (ren övertagning av merge-tåget #238-#251 +
+#225, tom diff verifierad, CI grönt). Post-merge-sanity: governance 19/19,
+rules_sync OK, ruff 0, term-coverage --strict OK, riktade sviter gröna.
 
-Nya PRs sedan föregående checkpoint (ALLA mergade till `jakob-be`, ej `main`):
-#238, #239, #240, #241, #242, #243, #244, #245, #246, #247, #248, #249, #250,
-#251 samt #225 — femton stycken, ett i taget med alla guards + CI gröna per PR.
+Nya PRs sedan dess checkpoint: PR #252 (sync jakob-be→main). Därefter kom
+nattens runda 2 (#254/#256/#257/#259/#260 på `jakob-be`, #255 på `main`) —
+se toppblocket.
