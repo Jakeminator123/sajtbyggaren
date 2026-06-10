@@ -370,6 +370,119 @@ def test_cli_apply_conversation_emits_sentinel_payload(monkeypatch, capsys):
     assert payload["bridge"]["status"] == "no_build_needed"
 
 
+# ---------------------------------------------------------------------------
+# B178: a site-scoped question WITHOUT an explicit baseRunId auto-resolves the
+# site's latest completed run (read-only) so the context payload is populated.
+# /api/prompt normally sends no baseRunId, so before the fix a site_opinion
+# question got an empty context despite runs on disk.
+# ---------------------------------------------------------------------------
+
+
+def _seed_run(runs_dir, run_id: str, site_id: str):
+    """Seed a minimal completed run: build-result.json + site-brief.json."""
+    run_dir = runs_dir / run_id
+    run_dir.mkdir(parents=True)
+    (run_dir / "build-result.json").write_text(
+        json.dumps({"siteId": site_id, "runId": run_id}), encoding="utf-8"
+    )
+    (run_dir / "site-brief.json").write_text(
+        json.dumps({"runId": run_id, "language": "sv", "rawPrompt": "seeded"}),
+        encoding="utf-8",
+    )
+    return run_dir
+
+
+def _file_snapshot(root) -> set[str]:
+    return {str(p.relative_to(root)) for p in root.rglob("*")}
+
+
+@pytest.mark.tooling
+def test_b178_site_opinion_without_base_run_gets_populated_context(
+    monkeypatch, tmp_path
+):
+    """A site_opinion decision without baseRunId reads the site's latest run:
+    non-empty context payload, runId resolved, and NOTHING written to disk."""
+    runs_dir = tmp_path / "runs"
+    _seed_run(runs_dir, "run-volt-1", "volt-watt")
+    monkeypatch.setenv("VIEWSER_RUNS_DIR", str(runs_dir))
+
+    before = _file_snapshot(tmp_path)
+    payload = json.loads(
+        decide_to_json("vad tycker du om sajten?", site_id="volt-watt")
+    )
+    after = _file_snapshot(tmp_path)
+
+    context = payload["context"]
+    assert context["runId"] == "run-volt-1"
+    assert context["payload"], "context payload must not be empty (B178)"
+    assert "siteBrief" in context["payload"]
+    assert payload["conversation"]["conversationKind"] == "site_opinion"
+    # Read-only guarantee: the decision created no files anywhere in the tree.
+    assert before == after
+
+
+@pytest.mark.tooling
+def test_b178_resolution_filters_on_site_id(monkeypatch, tmp_path):
+    """The newest run on disk belongs to ANOTHER site - the resolver must skip
+    it and pick the newest run that actually belongs to the asked site."""
+    import os
+    import time
+
+    runs_dir = tmp_path / "runs"
+    mine = _seed_run(runs_dir, "run-volt-1", "volt-watt")
+    other = _seed_run(runs_dir, "run-other-9", "other-site")
+    now = time.time()
+    os.utime(mine, (now - 100, now - 100))
+    os.utime(other, (now, now))
+    monkeypatch.setenv("VIEWSER_RUNS_DIR", str(runs_dir))
+
+    payload = json.loads(
+        decide_to_json("vad tycker du om sajten?", site_id="volt-watt")
+    )
+    assert payload["context"]["runId"] == "run-volt-1"
+
+
+@pytest.mark.tooling
+def test_b178_explicit_base_run_id_still_wins(monkeypatch, tmp_path):
+    """An explicit baseRunId ('Iterera från denna') is forwarded verbatim and
+    never overridden by the auto-resolver."""
+    import os
+    import time
+
+    runs_dir = tmp_path / "runs"
+    old = _seed_run(runs_dir, "run-volt-1", "volt-watt")
+    new = _seed_run(runs_dir, "run-volt-2", "volt-watt")
+    now = time.time()
+    os.utime(old, (now - 100, now - 100))
+    os.utime(new, (now, now))
+    monkeypatch.setenv("VIEWSER_RUNS_DIR", str(runs_dir))
+
+    payload = json.loads(
+        decide_to_json(
+            "vad tycker du om sajten?",
+            site_id="volt-watt",
+            base_run_id="run-volt-1",
+        )
+    )
+    assert payload["context"]["runId"] == "run-volt-1"
+
+
+@pytest.mark.tooling
+def test_b178_no_runs_on_disk_keeps_honest_empty_context(monkeypatch, tmp_path):
+    """Without any completed run the context stays honestly empty (the same
+    missing-run_id note as before the fix) - nothing is invented."""
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    monkeypatch.setenv("VIEWSER_RUNS_DIR", str(runs_dir))
+
+    payload = json.loads(
+        decide_to_json("vad tycker du om sajten?", site_id="volt-watt")
+    )
+    context = payload["context"]
+    assert context["payload"] == {}
+    assert any("run_id" in note for note in context["notes"])
+
+
 @pytest.mark.tooling
 def test_conversation_gate_no_key_parity(monkeypatch):
     """Without OPENAI_API_KEY the gate still answers honestly (exit 0 path):
