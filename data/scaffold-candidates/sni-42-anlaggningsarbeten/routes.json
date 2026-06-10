@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget inom anläggningsarbeten, visa kapacitet och leda till offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets anläggningstjänster konkret så att besökaren snabbt förstår vad som utförs."
+    },
+    {
+      "id": "projects",
+      "path": "/referensprojekt",
+      "required": true,
+      "purpose": "Visa utförda projekt och arbetsresultat för att styrka erfarenhet och relevans."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att begära offert eller ta kontakt via telefon, e-post och formulär."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att beskriva företaget, arbetssättet och relevant erfarenhet."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "när företaget vill visa flera geografiska områden eller kommuner för lokal synlighet"
+    },
+    {
+      "id": "machine-park",
+      "path": "/maskinpark",
+      "when": "när maskiner, utrustning och kapacitet är en viktig del av erbjudandet"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när många kunder behöver vägledning om process, offert, tidsplan eller praktiska förutsättningar"
+    }
+  ]
+}

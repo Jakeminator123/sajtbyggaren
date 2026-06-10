@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-30-tillverkning-av-andra-transportmedel",
+  "version": "0.1.0",
+  "label": "Tillverkning av andra transportmedel",
+  "description": "Scaffold för företag inom tillverkning av andra transportmedel, med fokus på produktionskapacitet, erbjudande, referensprojekt och enkel kontakt för offert- eller dialogförfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera erbjudande och tillverkningskapacitet",
+    "bygga förtroende genom referenser, process och företagsfakta",
+    "driva kontakt för offert, förfrågan eller affärsdialog"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

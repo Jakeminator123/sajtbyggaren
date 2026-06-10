@@ -1,0 +1,40 @@
+{
+  "id": "sni-43-specialiserad-bygg-och-anlaggningsve",
+  "embeddingText": "Specialiserad bygg- och anlaggningsverksamhet inom SNI 43 behover en scaffold som lyfter konkreta tjanster, referensjobb, fore- och efterbilder, behorigheter, garantier och tydlig offertkontakt. Viktiga sidor ar startsida, tjanster, referenser och kontakt, med mojlighet att lagga till om oss, verksamhetsomraden och vanliga fragor.",
+  "semanticSignals": [
+    "bygg",
+    "hantverk",
+    "entreprenad",
+    "renovering",
+    "installation",
+    "anlaggning",
+    "markarbete",
+    "maleri",
+    "plattsattning",
+    "tak",
+    "el",
+    "vvs",
+    "referensjobb",
+    "offert",
+    "behorigheter",
+    "garantier",
+    "id06"
+  ],
+  "negativeSignals": [
+    "meny",
+    "bokning-av-bord",
+    "produktkatalog",
+    "webbshop",
+    "kurser",
+    "recept",
+    "spel",
+    "apptjanst"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold for tradespeople and specialized construction firms that perform practical on-site jobs.",
+    "Strong fit when the business needs both services and project references.",
+    "Trust content should center on real qualifications, industry rules, guarantees and workmanship rather than brand storytelling alone."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

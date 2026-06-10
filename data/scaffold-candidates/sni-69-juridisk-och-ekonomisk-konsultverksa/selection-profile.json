@@ -1,0 +1,36 @@
+{
+  "id": "sni-69-juridisk-och-ekonomisk-konsultverksa",
+  "embeddingText": "Juridisk och ekonomisk konsultverksamhet, advokatbyrå, juristbyrå, redovisningsbyrå, skatterådgivning, bokföring, familjerätt, affärsjuridik, avtal, tvist, årsredovisning, deklaration, lön, revisionnärliggande rådgivning, specialisering, sekretess, auktorisation, kontaktformulär, team, FAQ.",
+  "semanticSignals": [
+    "juridik",
+    "advokat",
+    "jurist",
+    "redovisning",
+    "ekonomisk-radgivning",
+    "skatt",
+    "bokforing",
+    "arsredovisning",
+    "avtal",
+    "tvist",
+    "familjeratt",
+    "affarsjuridik",
+    "sekretess",
+    "auktorisation",
+    "specialisering"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "produktkatalog",
+    "webbshop",
+    "bokningskalender-for-behandlingar",
+    "eventschema",
+    "portfoljgalleri-som-huvudstruktur"
+  ],
+  "llmClassificationHints": [
+    "Verksamheter i denna scaffold säljer förtroendebaserad rådgivning snarare än fysiska produkter.",
+    "Besökaren vill förstå kompetensområde, ansvarig person, kontaktväg och hur första dialogen går till.",
+    "Team, specialistområden, FAQ och kontakt är starka signaler för denna bransch."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

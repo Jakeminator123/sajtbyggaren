@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, sammanfatta produktomraden och leda vidare till kontakt eller produktoversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktkategorier, tillampningar och centrala egenskaper sa att besokaren snabbt forstar erbjudandet."
+    },
+    {
+      "id": "manufacturing",
+      "path": "/tillverkning",
+      "required": true,
+      "purpose": "Beskriva tillverkningskapacitet, arbetssatt och kvalitet for att bygga fortroende hos inkopare och partners."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga fortroende genom foretagsbeskrivning, team och relevanta uppgifter om verksamheten."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gora det enkelt att skicka forfragan eller ta direktkontakt via telefon, e-post och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "nar foretaget har kundcase, leveransprojekt eller omnamnanden som kan visas utan att röja konfidentiell information"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "nar saljprocessen ofta innefattar aterkommande fragor om specifikationer, leverans, produktion eller support"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "sni-39-sanering-efterbehandling-av-jord-och",
+  "embeddingText": "Saneringsföretag, marksanering, vattensanering, efterbehandling av förorenad mark och vatten, föroreningsbekämpning, miljöåtgärder, saneringstjänster, arbetsprocess, referenser, kontakt och offert.",
+  "semanticSignals": [
+    "sanering",
+    "efterbehandling",
+    "fororenad-mark",
+    "fororenat-vatten",
+    "miljoatgarder",
+    "provtagning",
+    "atgardsarbete",
+    "riskreducering",
+    "entreprenad",
+    "referenser",
+    "kontaktformular"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "e-handel",
+    "fotograf",
+    "frisor",
+    "bokningskalender",
+    "meny",
+    "produktkatalog"
+  ],
+  "llmClassificationHints": [
+    "This scaffold is for remediation and contamination-control businesses, not generic consultants.",
+    "Prioritize service clarity, process explanation and trust-building for technically sensitive field work.",
+    "Contact conversion is central, but the site should first reduce uncertainty about what the company actually does."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera transportföretaget, sammanfatta tjänster och områden samt leda besökaren till kontakt eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva transporttjänster, upplägg, godstyper eller flöden på ett konkret sätt och hjälpa kunden att avgöra om företaget passar behovet."
+    },
+    {
+      "id": "service-areas",
+      "path": "/omraden",
+      "required": true,
+      "purpose": "Visa vilka orter, stråk, terminaler eller geografiska områden som företaget trafikerar eller betjänar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för bokning, offert eller trafikfrågor via telefon, e-post, formulär och adressuppgifter."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "when the business has a meaningful company story, team, fleet culture or operating experience that strengthens trust"
+    },
+    {
+      "id": "quote-request",
+      "path": "/begar-offert",
+      "when": "when the business wants a dedicated page for transportförfrågningar with route, volume or timing details"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-42-anlaggningsarbeten",
+  "version": "0.1.0",
+  "label": "Anläggningsarbeten",
+  "description": "Scaffold för företag inom anläggningsarbeten med fokus på kapacitet, tjänster, referensprojekt och snabb offertförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera anläggningstjänster tydligt",
+    "visa referensprojekt och utförd kapacitet",
+    "bygga förtroende med maskinpark, erfarenhet och arbetssätt",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

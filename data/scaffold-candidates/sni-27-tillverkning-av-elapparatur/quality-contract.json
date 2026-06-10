@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Includes a home route and a contact route.",
+    "Page set is adapted to manufacturing of electrical apparatus with dedicated products and manufacturing pages.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "Contact path is Swedish, lowercase and starts with '/'.",
+    "Recommended dossiers only use allowed dossier ids.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic local-service structure that lacks product or manufacturing information.",
+    "Invented certifications, standards compliance, production volumes or customer logos.",
+    "Vague service copy that does not explain what is manufactured.",
+    "Repeating the same trust claims on every page.",
+    "Using pricing tables for products that are typically quote-based or specification-dependent without real pricing data."
+  ]
+}

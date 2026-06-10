@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en tydlig överblick av bolaget, dess verksamhet och hur besökare kommer i kontakt."
+    },
+    {
+      "id": "verksamhet",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Beskriva vad företaget utvinner, hur verksamheten är upplagd och vilka delar av värdekedjan som ingår."
+    },
+    {
+      "id": "sakerhet-miljo",
+      "path": "/sakerhet-miljo",
+      "required": true,
+      "purpose": "Redovisa företagets arbete med säkerhet, miljöhänsyn och ansvar på ett sakligt sätt."
+    },
+    {
+      "id": "anlaggningar-projekt",
+      "path": "/anlaggningar-projekt",
+      "required": true,
+      "purpose": "Visa gruvor, anläggningar eller projekt med kort fakta och relevant kontext."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter, adress och kontaktformulär för affärskontakt och allmänna frågor."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "when": "när företaget vill lyfta historia, organisation, ägare eller ledning mer utförligt"
+    },
+    {
+      "id": "karriar",
+      "path": "/karriar",
+      "when": "när sajten behöver stödja rekrytering och visa arbetsroller, arbetsmiljö och intresseanmälan"
+    },
+    {
+      "id": "leverantorer",
+      "path": "/leverantorer",
+      "when": "när företaget behöver informera entreprenörer eller leverantörer om kontaktvägar och samarbeten"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-07-utvinning-av-metallmalmer",
+  "version": "0.1.0",
+  "label": "Utvinning av metallmalmer",
+  "description": "Scaffold för företag inom utvinning av metallmalmer med fokus på verksamhetsöversikt, driftområden, säkerhet/miljö, projekt/anläggningar och tydlig kontaktväg för intressenter, leverantörer och rekrytering.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara verksamhetens inriktning och driftområden",
+    "bygga förtroende kring säkerhet, miljö och ansvar",
+    "presentera anläggningar, projekt eller malmtyper på ett sakligt sätt",
+    "göra det enkelt att ta kontakt med företaget"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

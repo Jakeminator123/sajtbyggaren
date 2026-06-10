@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Introducera reseerbjudandet, väcka reslust, bygga trygghet och leda vidare till bokning eller kontakt."
+    },
+    {
+      "id": "trips",
+      "path": "/resor",
+      "required": true,
+      "purpose": "Visa företagets resor, destinationer eller upplevelser med tydlig inriktning och CTA till bokning eller förfrågan."
+    },
+    {
+      "id": "pricing-packages",
+      "path": "/priser-och-paket",
+      "required": true,
+      "purpose": "Presentera priser, paket och vad som ingår så att besökaren kan jämföra alternativ och gå vidare till bokning."
+    },
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "required": true,
+      "purpose": "Samla bokningsvägar, bokningsförfrågan och praktisk information om hur kunden bokar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för frågor, rådgivning, offert eller bokningshjälp."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "gallery",
+      "path": "/bildgalleri",
+      "when": "when strong destination or experience imagery is available and visual inspiration is important for conversion"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "when the business needs to answer common questions about bokning, ombokning, betalning, resvillkor or what is included"
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "when founder story, specialist knowledge, team or company background materially strengthens trust"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en snabb och trygg överblick över verksamheten: vilka finansiella eller försäkringsnära stödtjänster som erbjuds, för vem de passar, hur arbetet går till och hur besökaren tar nästa steg mot kontakt eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva erbjudandet i tydliga tjänstekategorier så att besökaren kan förstå om bolaget arbetar med exempelvis försäkringsförmedling, skaderegleringsstöd, administration, compliance-nära stöd, analys eller annan finansiell supportverksamhet."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Förklara hur arvoden, provisioner, paket eller offertupplägg fungerar på ett sakligt sätt så att kunden förstår vad som påverkar prisbilden och när individuell offert behövs."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presentera verksamhetens arbetssätt, kompetens, kundlöfte och team så att företaget upplevs som en seriös och tillgänglig partner i ekonomiska och försäkringsrelaterade frågor."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter och kontaktformulär för offertförfrågan, rådgivningsförfrågan eller allmän kontakt på ett enkelt och förtroendeingivande sätt."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "verksamheten drivs av namngivna rådgivare, specialister eller handläggare vars erfarenhet är viktig för konvertering"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "bolaget ofta behöver förklara vanliga frågor om process, ansvar, ersättning, dokumentation eller hur samarbetet går till"
+    },
+    {
+      "id": "industries",
+      "path": "/branscher",
+      "when": "verksamheten riktar sig till särskilda kundgrupper eller branscher, exempelvis företag, privatkunder, fastighetsägare eller organisationer med särskilda behov"
+    }
+  ]
+}

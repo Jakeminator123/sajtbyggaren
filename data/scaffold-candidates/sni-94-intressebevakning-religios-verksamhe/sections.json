@@ -1,0 +1,95 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "mission-summary",
+      "activity-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "news-highlight",
+      "membership-cta",
+      "faq",
+      "newsletter-signup"
+    ],
+    "sectionOrderRules": [
+      "Hero måste tydligt ange organisationstyp eller sammanhang, vad verksamheten vill uppnå och en primär CTA för registrering eller kontakt.",
+      "Mission-summary ska beskriva uppdraget konkret och människonära, inte med vaga allmänord.",
+      "Activity-summary ska visa vad organisationen faktiskt gör i praktiken, till exempel möten, stöd, undervisning, gemenskap eller opinionsarbete.",
+      "Trust-proof ska lyfta transparenta och verifierbara uppgifter som organisationsnummer, demokratisk styrning eller årsredovisning när sådant finns.",
+      "Den sista CTA-sektionen ska leda till medlemskap, nyhetsbrev eller kontakt utan att upprepa exakt samma formulering som i hero."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "values",
+      "governance",
+      "team"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "About-story måste förklara bakgrund, inriktning och varför organisationen finns på ett konkret sätt.",
+      "Values ska beskriva värdegrund eller trosmässig/idéburen inriktning sakligt och respektfullt.",
+      "Governance ska förklara hur organisationen leds, till exempel styrelse, församling eller annan demokratisk struktur, utan att hitta på formella titlar.",
+      "Team kan visa styrelse, ledare, anställda eller nyckelpersoner beroende på organisationens form."
+    ]
+  },
+  "membership": {
+    "requiredSections": [
+      "membership-intro",
+      "member-benefits",
+      "how-to-join",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof",
+      "newsletter-signup"
+    ],
+    "sectionOrderRules": [
+      "Membership-intro måste förklara vem sidan riktar sig till och vad medlemskap eller engagemang betyder i just denna organisation.",
+      "Member-benefits ska vara realistiska och fokusera på delaktighet, information, gemenskap eller möjlighet att bidra, inte kommersiella löften.",
+      "How-to-join ska beskriva processen tydligt, exempelvis registrering, intresseanmälan, kontakt eller deltagande i introduktion.",
+      "Avslutande CTA ska peka vidare till registrering eller kontaktformulär beroende på vilket underlag som finns."
+    ]
+  },
+  "news": {
+    "requiredSections": [
+      "news-intro",
+      "news-list",
+      "newsletter-signup"
+    ],
+    "optionalSections": [
+      "faq",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "News-intro ska förklara vilken typ av uppdateringar som publiceras här.",
+      "News-list ska prioritera aktuella och daterbara nyheter eller informationsposter, inte generisk marknadsföringstext.",
+      "Newsletter-signup ska erbjuda prenumeration på kommande information när den förmågan finns aktiverad."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "visit-info"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Kontaktvägar ska vara verkliga och användbara, till exempel e-post, telefon, adress eller annan tydlig kontaktkanal.",
+      "Contact-form ska användas för frågor, intresseanmälan eller engagemang och får inte ersätta all grundläggande kontaktinformation.",
+      "Visit-info ska förklara hur besök, möten eller deltagande fungerar om organisationen tar emot besökare."
+    ]
+  }
+}

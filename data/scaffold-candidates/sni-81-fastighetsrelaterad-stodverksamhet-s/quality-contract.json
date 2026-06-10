@@ -1,0 +1,28 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "home route and contact route are included",
+    "all default routes have matching sectionsPerRoute entries",
+    "routes and section ids use kebab-case slugs",
+    "route paths are Swedish, lowercase, start with '/' and have no trailing slash",
+    "page set reflects this industry's need to explain services, recurring agreements and contact intake",
+    "recommended dossiers only use allowed ids",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic brochure structure that omits service details specific to property support or green area maintenance",
+    "invented certifications, guarantees, team size or customer counts",
+    "vague service labels without examples of actual tasks",
+    "forcing booking flows that do not fit quote-based or agreement-based services",
+    "duplicating the same trust proof content on every page"
+  ]
+}

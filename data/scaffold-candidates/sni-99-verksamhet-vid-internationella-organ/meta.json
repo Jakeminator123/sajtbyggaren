@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-99-verksamhet-vid-internationella-organ",
+  "sniCode": "99",
+  "wizardCategoryId": "other",
+  "industryProfileId": "sni-99",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:33:59Z",
+  "outputPath": "data/scaffold-candidates/sni-99-verksamhet-vid-internationella-organ",
+  "operatorBriefHash": "sha256:982d51895d0edd253376c1403d09b7441f40c52c1fffa8c6ff1f8629aaae0a96",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

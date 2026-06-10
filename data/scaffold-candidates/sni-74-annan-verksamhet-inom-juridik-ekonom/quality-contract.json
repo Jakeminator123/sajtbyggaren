@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Fits specialist consulting and agency-like firms within SNI 74 that sell expertise, analysis, creative or technical assignments.",
+    "Includes a clear route for services and a clear route for cases because buyers need both offer clarity and proof.",
+    "Supports both solo experts and small teams without forcing a large-company structure.",
+    "Provides a strong quote/contact path on home and contact pages.",
+    "Uses honest trust-building elements appropriate for expert services.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the scaffold like a restaurant, clinic, event venue or webshop.",
+    "Do not make pricing mandatory because many firms in this industry price by scope or quote.",
+    "Do not force booking flows as the main conversion path when the brief emphasises quote/request contact.",
+    "Do not rely on generic slogan-only pages without concrete services, cases or expertise.",
+    "Do not assume regulated legal credentials or authorisations unless explicitly provided."
+  ]
+}

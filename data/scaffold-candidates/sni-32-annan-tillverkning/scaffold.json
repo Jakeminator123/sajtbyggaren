@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-32-annan-tillverkning",
+  "version": "0.1.0",
+  "label": "Annan tillverkning",
+  "description": "Scaffold för tillverkningsföretag inom SNI 32 som behöver visa vad de tillverkar, hur produktionen går till, material/kvalitet och ge en enkel väg till offert eller kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera tillverkningserbjudande",
+    "visa produkt- eller tillverkningskategorier",
+    "bygga förtroende med kapacitet, process och referenser",
+    "driva kontakt eller offertförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

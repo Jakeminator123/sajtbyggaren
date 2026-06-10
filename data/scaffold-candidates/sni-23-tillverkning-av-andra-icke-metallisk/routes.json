@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, visa huvudsakliga produktområden och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera företagets produktkategorier, användningsområden och relevant produktinformation på ett tydligt sätt."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Beskriva tillverkning, material, kapacitet och arbetssätt för att hjälpa kunder att bedöma om företaget passar deras behov."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en enkel väg till kontakt med telefon, e-post, adress, öppettider och formulär för offert eller frågor."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget vill lyfta historia, anläggning, team eller ägarbild för ökat förtroende"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "när det finns verkliga kundcase, leveransprojekt eller användningsexempel som kan visas utan att röja känslig information"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "when": "när fysisk anläggning, fabrik, terminal eller hämtlager behöver en egen sida med karta och logistikinfo"
+    }
+  ]
+}

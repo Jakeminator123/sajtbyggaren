@@ -1,0 +1,252 @@
+{
+  "id": "sni-02-skogsbruk",
+  "label": "Skogsbruk",
+  "description": "Branschspecifik scaffold för skogsbruksföretag med fokus på tydliga tjänster, arbetsområden, förtroendeskapande information och enkel kontakt för offert eller förfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera skogsbrukstjänster tydligt",
+    "bygga förtroende med referenser och företagsuppgifter",
+    "visa geografiskt arbetsområde",
+    "driva kontakt för offert och platsbesök"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera skogsbruksföretaget, förklara huvudsakliga tjänster och leda besökaren till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets skogliga tjänster konkret så att markägare och kunder förstår vad som erbjuds."
+    },
+    {
+      "id": "service-area",
+      "path": "/arbetsomraden",
+      "required": true,
+      "purpose": "Visa vilka geografiska områden företaget arbetar i och ge lokal relevans för kontaktförfrågningar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via telefon, e-post och adress."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när företaget vill lyfta erfarenhet, arbetssätt, ägare eller personal mer utförligt"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när det finns verkliga kundcase, omdömen eller bildmaterial från utförda uppdrag"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "gallery",
+        "reviews",
+        "service-area-summary",
+        "faq",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must include skogsbruk/skogliga tjänster, verksamhetsområde if known and a primary CTA.",
+        "Service summary must mention concrete skogsbrukstjänster such as avverkning, gallring, skogsvård or liknande only when supported by supplied data.",
+        "Trust proof must rely on real signals such as organisationsnummer, F-skattsedel, references or visible contact details.",
+        "Gallery and reviews may appear before trust-proof when dossier data exists.",
+        "Do not repeat the same service claims in both hero and service-summary."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-summary",
+        "faq",
+        "gallery"
+      ],
+      "sectionOrderRules": [
+        "Services intro must explain who tjänsterna passar for, such as markägare, företag or samfälligheter, when supported by input.",
+        "Service list items must be specific and operational, not generic quality claims.",
+        "If pricing-summary is shown, it must present honest pricing guidance or explain that offert lämnas efter bedömning rather than invented fixed prices."
+      ]
+    },
+    "service-area": {
+      "requiredSections": [
+        "service-area-intro",
+        "service-area-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "local-trust",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Service-area intro must describe where the company works without overstating coverage.",
+        "Area list should use real orter, kommuner or regioner only if supplied.",
+        "Map may be shown only when address or service geography data exists."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must all be present and not be lorem placeholders.",
+        "Contact CTA should support quote requests or general inquiries and stay simple.",
+        "Opening hours are optional because field work may make fixed drop-in times unclear."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har alltid startsida med tydlig CTA till kontakt.",
+      "Har alltid kontaktsida.",
+      "Tjänstesidan är anpassad för skogsbruk och beskriver skogliga tjänster konkret.",
+      "Scaffolden innehåller yta för geografiskt arbetsområde eftersom verksamheten ofta är platsbunden.",
+      "Förtroendesignaler kan visa organisationsnummer, F-skattsedel och referenser utan att hitta på meriter.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska sidor som portfolio eller meny som inte passar skogsbruk som standard.",
+      "Påståenden om certifieringar, maskinpark eller kapacitet som inte finns i underlaget.",
+      "Överdrivna rikstäckande formuleringar om arbetsområde utan stöd.",
+      "Onödigt många konverteringsvägar; huvudmålet är enkel kontakt/offertförfrågan."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "reviews-display",
+      "image-gallery",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Skogsbruk, skogliga tjänster, avverkning, gallring, skogsvård, markägare, arbetsområden, offertförfrågan, lokal tjänsteverksamhet, kontaktfokuserad företagswebbplats.",
+    "semanticSignals": [
+      "skogliga-tjanster",
+      "avverkning",
+      "gallring",
+      "skogsvard",
+      "markberedning",
+      "arbetsomrade",
+      "markagare",
+      "kontakt-for-offert",
+      "referenser",
+      "f-skattsedel"
+    ],
+    "negativeSignals": [
+      "webshop",
+      "produktkatalog",
+      "restaurangmeny",
+      "bordsbokning",
+      "fotogalleri-som-huvudsyfte",
+      "digital-saas-tjanst"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for forestry and forest service companies where the main website goal is to explain services and drive contact.",
+      "Prioritize concrete service descriptions and geography over broad brand storytelling.",
+      "A dedicated service-area route is more relevant here than a generic team or testimonials page."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

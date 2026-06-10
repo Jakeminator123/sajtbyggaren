@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-88-oppna-sociala-insatser",
+  "version": "0.1.0",
+  "label": "Öppna sociala insatser",
+  "description": "Scaffold för verksamheter inom öppna sociala insatser och ideella stödverksamheter. Strukturen prioriterar uppdrag, målgrupper, hur stödet fungerar, möjligheter att engagera sig samt transparent kontakt och förtroendeskapande information.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara verksamhetens uppdrag och målgrupper",
+    "göra det tydligt hur stödinsatserna fungerar",
+    "driva registrering, intresseanmälan eller engagemang",
+    "bygga förtroende genom transparens och verksamhetsnära information",
+    "samla kontaktförfrågningar och nyhetsbrevsanmälningar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

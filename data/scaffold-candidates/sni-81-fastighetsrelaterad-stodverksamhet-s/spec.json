@@ -1,0 +1,273 @@
+{
+  "id": "sni-81-fastighetsrelaterad-stodverksamhet-s",
+  "label": "Fastighetsrelaterad stödverksamhet samt skötsel och underhåll av grönytor",
+  "description": "Scaffold för företag inom lokalvård, fastighetsskötsel, städning, trädgårdsskötsel och annan stödverksamhet kopplad till fastigheter och utemiljöer. Fokuserar på tydliga tjänster, avtalsupplägg, förtroendeskapande bevis och enkel offert- eller kontaktförfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänsteutbud inom fastighetsservice och grönyteskötsel",
+    "bygga förtroende med referenser, försäkring och arbetssätt",
+    "driva offertförfrågningar och kontakt för löpande avtal eller enstaka uppdrag"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera företaget, visa huvudtjänsterna och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva tjänster inom fastighetsskötsel, lokalvård, grönyteskötsel eller närliggande uppdrag på ett konkret sätt."
+    },
+    {
+      "id": "contracts",
+      "path": "/avtal",
+      "required": true,
+      "purpose": "Förklara hur löpande skötsel, fasta intervall och upplägg för återkommande uppdrag fungerar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan, ringa eller hitta företaget."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när företaget har en tydlig historia, lokalt team eller arbetssätt som stärker förtroendet"
+    },
+    {
+      "id": "reviews",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när det finns kundomdömen eller referensuppdrag att visa utan att upprepa samma bevis på flera sidor"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "när företaget arbetar i flera orter eller stadsdelar och behöver en tydlig lokal närvarosida"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "contracts-summary",
+        "gallery",
+        "reviews",
+        "faq",
+        "service-area",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the type of service business and include the primary contact CTA.",
+        "Service summary must highlight concrete recurring or one-off services relevant to property care or green area maintenance.",
+        "Trust proof must appear before the final CTA and should use real signals such as insurance, collective agreement or reference assignments when available.",
+        "Contracts summary may appear before trust proof when the business mainly sells recurring service agreements.",
+        "Sections should avoid repeating the same promise in multiple blocks."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq",
+        "gallery"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company to practical property-related support services.",
+        "Service list items must be specific, such as trappstädning, kontorsstädning, fastighetsskötsel, gräsklippning, häckklippning or seasonal outdoor maintenance, rather than vague labels.",
+        "If pricing overview is shown, it must describe how quotes or scope-based pricing works without invented fixed prices.",
+        "Contact CTA should invite quote requests for both recurring agreements and individual jobs when relevant."
+      ]
+    },
+    "contracts": {
+      "requiredSections": [
+        "contracts-intro",
+        "contract-models",
+        "process",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Contracts intro must explain why recurring care agreements are useful for the customer type served.",
+        "Contract models must describe realistic differences such as recurring visits, seasonal plans or property-specific scope, without making guarantees the business cannot support.",
+        "Process should explain how inspection, proposal, start-up and follow-up work in a straightforward way.",
+        "Trust proof, if used here, should not duplicate the exact same review content already shown prominently on home."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real phone, email and address details when available.",
+        "Contact form should be suitable for quote or service inquiries and may ask about property type, service need and preferred contact method.",
+        "Map and opening hours should only render when accurate business data exists."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "home route and contact route are included",
+      "all default routes have matching sectionsPerRoute entries",
+      "routes and section ids use kebab-case slugs",
+      "route paths are Swedish, lowercase, start with '/' and have no trailing slash",
+      "page set reflects this industry's need to explain services, recurring agreements and contact intake",
+      "recommended dossiers only use allowed ids",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic brochure structure that omits service details specific to property support or green area maintenance",
+      "invented certifications, guarantees, team size or customer counts",
+      "vague service labels without examples of actual tasks",
+      "forcing booking flows that do not fit quote-based or agreement-based services",
+      "duplicating the same trust proof content on every page"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "trust-guarantees",
+      "reviews-display",
+      "image-gallery",
+      "map-embed",
+      "opening-hours",
+      "team-roster",
+      "faq-accordion",
+      "pricing-table"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Fastighetsservice, lokalvård, fastighetsskötsel och skötsel av grönytor för bostadsrättsföreningar, företag, fastighetsägare och andra kunder som behöver återkommande eller enstaka uppdrag. Scaffolden prioriterar startsida, tjänster, avtal och kontakt, med möjlighet att lägga till om oss, referenser och områden.",
+    "semanticSignals": [
+      "fastighetsskotsel",
+      "lokalvard",
+      "trappstadning",
+      "kontorsstadning",
+      "grasklippning",
+      "hackklippning",
+      "gronyteskotsel",
+      "utemiljo",
+      "sasongsskotsel",
+      "drift-och-underhall",
+      "aterkommande-avtal",
+      "offertforfragan",
+      "referensuppdrag",
+      "forsakring",
+      "kollektivavtal"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "e-handel",
+      "meny",
+      "produktkatalog",
+      "hotellbokning",
+      "lakartider",
+      "fotografportfolio",
+      "onlinekurs"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for businesses performing cleaning, caretaking, maintenance or outdoor upkeep connected to properties and managed environments.",
+      "Prefer the contracts route because recurring service agreements are central in this industry.",
+      "Include green area and property care language when the company works with outdoor maintenance as well as indoor support services.",
+      "Do not choose retail, restaurant or appointment-led service scaffolds unless the business clearly operates that way."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

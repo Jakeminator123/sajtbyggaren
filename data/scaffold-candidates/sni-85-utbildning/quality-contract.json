@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Scaffolden måste kännas byggd för utbildning, inte som en generisk tjänsteföretagssajt.",
+    "Kurser eller program måste ha en egen obligatorisk route.",
+    "Anmälan måste få en tydlig egen route eftersom branschens huvudmål är registrering eller intresseanmälan.",
+    "Kontaktvägen måste stödja frågor om kursval, nivå och praktiskt upplägg.",
+    "Sektionerna måste stödja pedagogik, kursplanering, lärarförtroende och vanliga frågor.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generiska services/service-list-upplägg utan utbildningsspråk",
+    "påhittade examina, certifieringar eller resultat",
+    "e-handelsspråk som produktkort och varukorg om det inte faktiskt finns",
+    "överdrivet säljig copy som saknar pedagogisk förklaring",
+    "att göra team-sidan obligatorisk för alla utbildningsverksamheter"
+  ]
+}

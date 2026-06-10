@@ -1,0 +1,96 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "manufacturing-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "industry-applications",
+      "image-gallery",
+      "reviews",
+      "faq",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what kinds of rubber or plastic products the company manufactures and include a primary CTA.",
+      "Product summary should describe concrete product categories or component types, not vague claims.",
+      "Manufacturing summary must appear before the final CTA and should mention relevant materials, methods or production capabilities when available.",
+      "Trust proof should use real references, visible company details or documented experience and must not invent certifications or volumes.",
+      "Sections should distinguish products, processes and applications so the same message is not repeated."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "industry-applications",
+      "image-gallery",
+      "faq",
+      "pricing-table"
+    ],
+    "sectionOrderRules": [
+      "Products intro must connect the company offering to actual manufactured items or component families.",
+      "Product list items must be concrete, such as seals, hoses, molded parts, profiles, packaging details or custom plastic components when supported by the dossier.",
+      "If pricing-table is used, it should present indicative structures or request-based pricing only when honest for the business.",
+      "A CTA to technical dialogue or quote request should follow the product list."
+    ]
+  },
+  "manufacturing": {
+    "requiredSections": [
+      "manufacturing-intro",
+      "materials-and-processes",
+      "quality-workflow",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq",
+      "trust-guarantees",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Manufacturing intro must explain how the company works from requirement to finished part or delivery.",
+      "Materials and processes should name actual materials or methods only when supported by the input.",
+      "Quality workflow must describe real checks, tolerances, testing, traceability or documentation practices if available, without implying formal certification unless provided.",
+      "This page should help a buyer evaluate fit, so process details should be more specific than the home page."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "reviews",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the company, its production focus or customer collaboration, not generic branding copy.",
+      "Team should highlight relevant roles such as production, sales or technical support when data exists.",
+      "Trust proof may include references, organization number visibility and business facts, but must stay factual."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Contact page must provide real phone, email and address details when supplied.",
+      "Contact form should support quote or inquiry intent and allow the visitor to describe need, volume, drawing or material request in plain language.",
+      "Map and opening hours are optional enhancements and should appear after the core contact options."
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "The scaffold must support B2B sales journeys rather than consumer checkout assumptions.",
+    "Home, sortiment, bli-kund and contact must work together to explain what is sold, to whom and how a business relationship starts.",
+    "Copy structure must make room for logistics, assortment breadth, supplier relationships and practical purchasing information.",
+    "Contact conversion must support inquiry-led sales, not only generic brand awareness.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the business like a restaurant, portfolio site or appointment-led local service.",
+    "Do not assume consumer prices, add-to-cart flows or webshop behavior unless explicitly available.",
+    "Do not overuse generic trust language that says little about assortment, delivery or business customers.",
+    "Do not invent certifications, warehouse size, delivery times, brand partnerships or customer counts."
+  ]
+}

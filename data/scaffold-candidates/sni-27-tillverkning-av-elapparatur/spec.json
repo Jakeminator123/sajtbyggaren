@@ -1,0 +1,291 @@
+{
+  "id": "sni-27-tillverkning-av-elapparatur",
+  "label": "Tillverkning av elapparatur",
+  "description": "Scaffold för företag som tillverkar elapparatur och behöver presentera produktområden, tillverkningskapacitet, kvalitet/förtroende och en tydlig väg till kontakt för offert eller teknisk dialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktomraden och erbjudande",
+    "bygga fortroende kring tillverkningskapacitet och kvalitet",
+    "gora det enkelt att ta kontakt for offert eller teknisk forfragan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, sammanfatta produktomraden och leda vidare till kontakt eller produktoversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktkategorier, tillampningar och centrala egenskaper sa att besokaren snabbt forstar erbjudandet."
+    },
+    {
+      "id": "manufacturing",
+      "path": "/tillverkning",
+      "required": true,
+      "purpose": "Beskriva tillverkningskapacitet, arbetssatt och kvalitet for att bygga fortroende hos inkopare och partners."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga fortroende genom foretagsbeskrivning, team och relevanta uppgifter om verksamheten."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gora det enkelt att skicka forfragan eller ta direktkontakt via telefon, e-post och adress."
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "optional": true,
+      "when": "nar foretaget har kundcase, leveransprojekt eller omnamnanden som kan visas utan att röja konfidentiell information"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "nar saljprocessen ofta innefattar aterkommande fragor om specifikationer, leverans, produktion eller support"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-summary",
+        "capabilities-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "application-areas",
+        "reviews",
+        "faq",
+        "map-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company manufactures and include a primary contact CTA.",
+        "Product summary must highlight concrete product areas or apparatus types, not vague claims.",
+        "Capabilities summary should focus on manufacturing, customization, assembly, testing or delivery capabilities when such data exists.",
+        "Trust proof must appear before the final contact CTA and may include references, organizational details or quality-related process descriptions that are actually provided.",
+        "Sections must avoid repeating the same claims across product summary and capabilities summary."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-category-list",
+        "applications",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Products intro must connect the manufacturer's offer to buyer needs or use cases.",
+        "Product category list items must be concrete categories, component groups or apparatus families.",
+        "Applications should explain where or how the products are used without inventing performance data.",
+        "A contact CTA should invite technical questions, quote requests or dialogue about requirements."
+      ]
+    },
+    "manufacturing": {
+      "requiredSections": [
+        "manufacturing-intro",
+        "process-overview",
+        "capabilities-detail",
+        "quality-and-delivery",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "team",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Manufacturing intro must explain the company's production role clearly, such as own manufacturing, assembly or customization.",
+        "Process overview should describe real steps such as design support, production, assembly, testing or logistics when provided.",
+        "Capabilities detail must stay specific and avoid unsupported claims about capacity, tolerances or certifications.",
+        "Quality and delivery may mention documented routines, testing, traceability or lead-time dialogue only when such information exists.",
+        "The page should emphasize operational trust, not generic brand storytelling."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "company-facts",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "map-preview",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific to the business, its history, focus or customer relationships.",
+        "Team should only appear when real people or roles are available.",
+        "Company facts should prioritize factual details such as organization number, location and business focus.",
+        "Trust proof must not invent certifications, customer counts or years of experience."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "map",
+        "opening-hours"
+      ],
+      "optionalSections": [
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must all be present and not be placeholders.",
+        "Contact form should be suitable for quote requests or technical inquiries.",
+        "Map should be shown when a visitable address exists.",
+        "Opening hours should only be shown when actual hours are available."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes a home route and a contact route.",
+      "Page set is adapted to manufacturing of electrical apparatus with dedicated products and manufacturing pages.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Contact path is Swedish, lowercase and starts with '/'.",
+      "Recommended dossiers only use allowed dossier ids.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic local-service structure that lacks product or manufacturing information.",
+      "Invented certifications, standards compliance, production volumes or customer logos.",
+      "Vague service copy that does not explain what is manufactured.",
+      "Repeating the same trust claims on every page.",
+      "Using pricing tables for products that are typically quote-based or specification-dependent without real pricing data."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "team-roster",
+      "reviews-display",
+      "image-gallery",
+      "trust-guarantees",
+      "video-hero",
+      "faq-accordion"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tillverkning av elapparatur, industriell tillverkare, elektriska produkter, produktkategorier, tillverkningskapacitet, montering, testning, kvalitet, leverans, teknisk forfragan, offert, kontakt.",
+    "semanticSignals": [
+      "manufacturer",
+      "electrical-apparatus",
+      "products",
+      "product-categories",
+      "industrial-production",
+      "assembly",
+      "testing",
+      "quality-process",
+      "technical-inquiry",
+      "quote-request",
+      "b2b",
+      "factory",
+      "applications"
+    ],
+    "negativeSignals": [
+      "restaurant",
+      "menu",
+      "booking",
+      "portfolio-only",
+      "medical-clinic",
+      "real-estate-listings",
+      "event-schedule",
+      "ecommerce-cart-first"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the business manufactures electrical apparatus or closely related electrical product lines.",
+      "Prefer this over a generic service-business scaffold when products and production capability are central to the buying decision.",
+      "The site should support B2B trust-building through product overview, manufacturing information and direct inquiry contact."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

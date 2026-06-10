@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera sjötransportföretaget, förklara erbjudandet kort och leda till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva transporttjänster, lasttyper och upplägg på ett konkret sätt."
+    },
+    {
+      "id": "routes-destinations",
+      "path": "/rutter-och-destinationer",
+      "required": true,
+      "purpose": "Visa geografisk täckning, trafikupplägg eller vanliga destinationer så att kunder snabbt ser relevans."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, arbetssätt, erfarenhet och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta direktkontakt via telefon, e-post och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när verksamheten ofta behöver besvara återkommande frågor om bokning, gods, tider eller praktiska villkor"
+    },
+    {
+      "id": "fleet",
+      "path": "/fartyg-och-kapacitet",
+      "when": "när företaget vill visa fartygstyper, kapacitet eller särskilda transportförutsättningar"
+    }
+  ]
+}

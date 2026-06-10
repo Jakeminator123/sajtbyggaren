@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "include a dedicated trips route because this industry needs a clear surface for resor, destinationer or upplevelser",
+    "include a dedicated pricing or packages route because comparison of packages and inclusions is central to booking decisions",
+    "include a dedicated booking route because the industry often depends on structured booking or booking inquiry flows",
+    "use trust-oriented sections that can support resegaranti, villkor, paketreselagen and authentic reviews without inventing claims",
+    "support both inspirational browsing and practical conversion to booking or contact",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic service-business structure that lacks resor or paket pages",
+    "copy that promises destinations, departures or inclusions not supported by supplied data",
+    "fake urgency, fake review counts or invented certifications",
+    "treating booking as identical to a simple local-service contact request",
+    "overusing broad lifestyle claims instead of concrete travel information"
+  ]
+}

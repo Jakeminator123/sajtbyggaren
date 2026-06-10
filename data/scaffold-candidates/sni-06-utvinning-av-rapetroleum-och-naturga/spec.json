@@ -1,0 +1,311 @@
+{
+  "id": "sni-06-utvinning-av-rapetroleum-och-naturga",
+  "label": "Utvinning av råpetroleum och naturgas",
+  "description": "Scaffold för företag inom utvinning av råpetroleum och naturgas med fokus på verksamhetsöversikt, drift- och säkerhetsarbete, projekt/tillgångar, bolagsförtroende och tydlig kontaktväg för affärsdialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Presentera verksamhetens inriktning och tillgångar",
+    "Bygga förtroende genom säkerhets-, hållbarhets- och bolagsinformation",
+    "Ge en tydlig väg till kontakt för partners, leverantörer, markägare, myndigheter och investerarrelaterade förfrågningar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera bolaget, förklara verksamheten på en begriplig nivå och leda vidare till kontakt eller relevanta undersidor."
+    },
+    {
+      "id": "operations",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Beskriva utvinningsverksamheten, från prospektering och produktion till drift, logistik och teknisk kapacitet."
+    },
+    {
+      "id": "safety-sustainability",
+      "path": "/sakerhet-och-hallbarhet",
+      "required": true,
+      "purpose": "Visa hur bolaget arbetar med säkerhet, miljö, efterlevnad och ansvar i verksamheten."
+    },
+    {
+      "id": "assets-projects",
+      "path": "/tillgangar-och-projekt",
+      "required": true,
+      "purpose": "Presentera geografiska områden, fält, licenser eller projekt på en strukturerad och saklig nivå."
+    },
+    {
+      "id": "about",
+      "path": "/om-bolaget",
+      "required": true,
+      "purpose": "Bygga förtroende genom bolagsöversikt, ledning, organisation och grundläggande företagsfakta."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att nå bolaget för affärskontakt, leverantörsfrågor, platsrelaterade frågor och allmänna ärenden."
+    },
+    {
+      "id": "careers",
+      "path": "/karriar",
+      "optional": true,
+      "when": "när bolaget rekryterar aktivt eller vill presentera kompetensbehov och arbetsmiljö"
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "optional": true,
+      "when": "när bolaget publicerar driftuppdateringar, pressmeddelanden eller projektinformation löpande"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "business-summary",
+        "operations-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "assets-highlight",
+        "safety-summary",
+        "news-summary",
+        "map-overview",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the company's business area and include a primary contact CTA.",
+        "Business summary must explain the operation in plain language and avoid technical overload in the first screen.",
+        "Operations summary should precede detailed trust or contact content.",
+        "Trust proof must rely on factual company information, visible identifiers or real references only.",
+        "Final CTA should invite relevant business contact without promising availability, output or approvals that are not provided in the dossier."
+      ]
+    },
+    "operations": {
+      "requiredSections": [
+        "operations-intro",
+        "operations-scope",
+        "process-overview",
+        "technical-capabilities",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "faq",
+        "map-overview"
+      ],
+      "sectionOrderRules": [
+        "Operations intro must connect the company identity to its actual upstream activities.",
+        "Process overview should describe the main stages in a neutral and comprehensible way.",
+        "Technical capabilities must stay specific to real equipment, methods or competencies when such data exists.",
+        "Do not present generic service language better suited for local trades or consumer services."
+      ]
+    },
+    "safety-sustainability": {
+      "requiredSections": [
+        "safety-intro",
+        "safety-principles",
+        "environmental-work",
+        "compliance-governance",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Safety content must come before the final CTA.",
+        "Environmental work must avoid unsupported claims such as climate neutrality or zero impact unless supplied by the dossier.",
+        "Compliance and governance content should be factual and not framed as legal advice.",
+        "If trust-proof is shown here, it must add unique supporting information and not duplicate the same proof blocks from other pages."
+      ]
+    },
+    "assets-projects": {
+      "requiredSections": [
+        "assets-intro",
+        "assets-list",
+        "geography-or-map",
+        "project-status",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Assets intro must explain what the listed fields, licenses or projects represent.",
+        "Assets list items must be concrete and named when names are available.",
+        "Geography or map should appear before the final CTA.",
+        "Project status descriptions must be careful, factual and not imply reserves, output levels or approvals that are not documented."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "company-facts",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "timeline",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company in a specific, factual way rather than generic branding language.",
+        "Company facts should include visible organization details when available.",
+        "Team should show leadership or contact roles when dossier data exists, without inventing titles or headcount."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "location",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Contact page must provide real contact channels and a clear purpose for the form.",
+        "Location must be shown when address or map data exists.",
+        "Opening hours are optional and should be omitted rather than guessed for industrial operations."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Industry fit must reflect upstream petroleum and natural gas extraction rather than consumer-facing energy sales or generic consulting.",
+      "Home and contact routes must always be present.",
+      "All default routes must have matching sectionsPerRoute entries.",
+      "Purposes and section rules must remain factual and avoid invented certifications, reserves, production volumes or incident claims.",
+      "Contact flow must support business enquiries through contact details and form capability.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Consumer-oriented sections such as menus, booking flows or retail product catalogs.",
+      "Overstating environmental performance, safety results or regulatory status without source data.",
+      "Generic local-service framing like household jobs, emergency callouts or neighborhood service areas.",
+      "Investor-specific claims, production figures or project milestones unless explicitly provided by the dossier."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "team-roster",
+      "trust-guarantees",
+      "image-gallery",
+      "faq-accordion",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Företagswebb för utvinning av råpetroleum och naturgas. Typiska sidor är startsida, verksamhet, säkerhet och hållbarhet, tillgångar och projekt, om bolaget samt kontakt. Innehållet ska vara sakligt, förtroendeingivande och tydligt för affärskontakter, leverantörer, myndigheter och andra intressenter. Viktiga signaler är driftöversikt, geografiska tillgångar, säkerhetsarbete, miljöansvar, bolagsfakta, ledning och kontaktvägar.",
+    "semanticSignals": [
+      "upstream-energy-company",
+      "petroleum-extraction",
+      "natural-gas-extraction",
+      "production-fields",
+      "licenses-and-concessions",
+      "operations-and-production-overview",
+      "safety-and-environmental-management",
+      "industrial-site-location",
+      "company-facts-and-leadership",
+      "business-contact-for-partners-and-suppliers"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "consumer-webshop",
+      "appointment-booking",
+      "beauty-salon-treatments",
+      "local-home-repair-services",
+      "retail-product-catalog",
+      "event-ticket-sales",
+      "medical-clinic-booking"
+    ],
+    "llmClassificationHints": [
+      "Classify as industrial extraction business within petroleum and natural gas, not as utility retailer.",
+      "Prefer routes for operations, assets/projects and safety/sustainability over generic services pages.",
+      "Use formal business-trust content rather than consumer testimonials as the main credibility pattern."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

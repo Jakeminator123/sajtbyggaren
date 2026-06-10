@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-92-spel-och-vadhallningsverksamhet",
+  "sniCode": "92",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-92",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:32:49Z",
+  "outputPath": "data/scaffold-candidates/sni-92-spel-och-vadhallningsverksamhet",
+  "operatorBriefHash": "sha256:f4d9550016d56ccaa38fdff19ac003d6b1b75278fd52e5894cedfad2752a54ba",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

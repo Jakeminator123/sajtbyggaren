@@ -1,0 +1,36 @@
+{
+  "id": "sni-71-arkitekt-och-teknisk-konsultverksamh",
+  "embeddingText": "Arkitekt- och teknisk konsultverksamhet samt teknisk provning och analys behöver en webbstruktur som visar tjänster, referensprojekt, team, behörigheter, process och kontakt för offert. Besökaren vill snabbt förstå kompetensområde, uppdragstyper, hur arbetet går till och hur man initierar ett projekt eller en utredning.",
+  "semanticSignals": [
+    "arkitekt",
+    "teknisk-konsult",
+    "projektering",
+    "bygglov",
+    "konstruktionsunderlag",
+    "provning",
+    "analys",
+    "teknisk-utredning",
+    "referensprojekt",
+    "behorigheter",
+    "ansvarsforsakring",
+    "ingenjorer",
+    "team",
+    "offertforfragan"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "restaurangmeny",
+    "produktkatalog-med-kopknapp",
+    "bokningskalender-for-behandlingar",
+    "eventbiljetter",
+    "receptsajt"
+  ],
+  "llmClassificationHints": [
+    "Liknar konsult- och byråupplägg men måste vara mer tekniskt och sakligt än en kreativ byrå.",
+    "Referensprojekt är centralt och bör ofta få egen sida.",
+    "Tjänstesida är viktigare än ren varumärkesberättelse.",
+    "Team, kompetens, behörigheter och ansvar är starka förtroendesignaler i denna bransch."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

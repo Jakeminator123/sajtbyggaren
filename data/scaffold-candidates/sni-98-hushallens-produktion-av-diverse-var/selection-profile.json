@@ -1,0 +1,30 @@
+{
+  "id": "sni-98-hushallens-produktion-av-diverse-var",
+  "embeddingText": "Hushållens produktion av diverse varor och tjänster för eget bruk, SNI 98, enkel informationswebb, tydlig startsida, om-sida, kontakt, egenproduktion, hushållsbaserad verksamhet, saklig presentation, kontaktformulär, organisationsnummer, verksamhetsbeskrivning.",
+  "semanticSignals": [
+    "egenproduktion",
+    "eget-bruk",
+    "hushallsbaserad-verksamhet",
+    "enkel-foretagsinformation",
+    "saklig-verksamhetsbeskrivning",
+    "kontakt-i-fokus",
+    "varor-och-tjanster-i-liten-skala",
+    "tydlig-avsandare"
+  ],
+  "negativeSignals": [
+    "webbshop",
+    "produktkorg",
+    "onlinebokning",
+    "restaurangmeny",
+    "fastighetsobjekt",
+    "medicinsk-vard",
+    "stort-tjansteutbud-med-specialistkategorier"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten är svår att placera i mer specifik bransch men behöver en enkel och trovärdig närvaro på webben.",
+    "Prioritera tydlighet om vad verksamheten gör framför marknadssektioner med många varianter.",
+    "Om underlaget bara stödjer mycket kort information ska home och contact fortfarande räcka för en fungerande webbplats."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

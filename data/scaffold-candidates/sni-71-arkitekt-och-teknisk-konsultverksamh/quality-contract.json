@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Har startsida och kontaktsida.",
+    "Sidtstrukturen speglar branschens behov av tjänster, referensprojekt, kompetens och offertkontakt.",
+    "Alla standardsidor har matchande sectionsPerRoute.",
+    "Referensprojekt prioriteras som förtroendeskapare för tekniska och arkitektrelaterade uppdrag.",
+    "FAQ och kontaktform stöds eftersom kategorin efterfrågar detta.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generisk byråstruktur där endast varumärkesmanifest och kreativ ton prioriteras över teknisk tydlighet.",
+    "Prislistor som antyder fasta standardpriser för komplexa konsult- eller provningsuppdrag utan kontext.",
+    "Påhittade certifieringar, antal projekt eller kundomdömen.",
+    "För mycket allmän företagscopy före tjänster, referenser och praktisk kontaktväg."
+  ]
+}

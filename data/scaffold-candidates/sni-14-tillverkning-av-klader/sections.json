@@ -1,0 +1,93 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "production-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews",
+      "faq",
+      "story"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what kinds of clothing the company manufactures and include a primary contact CTA.",
+      "Product-summary should show concrete clothing categories or customer segments, not vague claims.",
+      "Production-summary must explain the manufacturing offer briefly before trust-proof.",
+      "Trust-proof must use real business details such as organisation information, references or visible production context and appear before the final CTA.",
+      "Avoid repeating the same manufacturing claim across hero, summaries and CTA."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-categories",
+      "use-cases",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "pricing-overview",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Products-intro must connect the company to the types of garments it manufactures.",
+      "Product-categories must be specific, for example arbetskläder, profilkläder, modeplagg or barnkläder when supported by input data.",
+      "Use-cases should clarify customer needs, order types or intended applications without inventing brands or client names.",
+      "If pricing-overview is shown, it must describe pricing principles or quote process rather than fabricated fixed prices."
+    ]
+  },
+  "production": {
+    "requiredSections": [
+      "production-intro",
+      "process-steps",
+      "capacity-and-quality",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Production-intro must explain how assignments move from inquiry or design to finished garment.",
+      "Process-steps should follow a logical sequence such as design, sampling, cutting, sewing, finishing and delivery when supported by the dossier.",
+      "Capacity-and-quality must stay factual and avoid promises about certifications, volumes or lead times unless provided by source data.",
+      "A final CTA should invite manufacturing inquiries, sampling requests or collaboration contact."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About-story must describe the company's background or focus in a concrete way.",
+      "Team should highlight real roles or functions when available and may be omitted by the renderer if no people data exists.",
+      "Trust-proof should reinforce credibility with visible business facts, references or production experience without generic filler."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real phone, email and address details when available.",
+      "Contact-form should be suitable for inquiries about manufacturing, quotes or collaboration.",
+      "Opening-hours and map may appear after primary contact details and must not replace direct contact methods."
+    ]
+  }
+}

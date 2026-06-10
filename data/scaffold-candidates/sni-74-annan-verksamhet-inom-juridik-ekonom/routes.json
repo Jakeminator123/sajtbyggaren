@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Startsida som snabbt förklarar vilken specialistkompetens verksamheten erbjuder, för vilka kunder och vilken nytta uppdragen skapar. Ska leda vidare till case, om oss eller offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Översikt över tjänster, uppdragstyper eller kompetensområden. Besökaren ska snabbt förstå vad företaget hjälper till med och när det är relevant att ta kontakt."
+    },
+    {
+      "id": "cases",
+      "path": "/case",
+      "required": true,
+      "purpose": "Sida för utvalda kundcase, projekt eller uppdragsexempel som visar arbetsområde, utmaning, insats och resultat på ett trovärdigt sätt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presentera företaget, specialistbakgrund, arbetssätt och team. Ska stärka förtroendet genom erfarenhet, fokus och tydlig ansvarsfördelning."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Tydlig kontaktsida med kontaktuppgifter och formulär för offert eller första dialog. Ska göra det enkelt att beskriva behov och ta nästa steg."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "process",
+      "path": "/process",
+      "when": "när verksamheten säljer in ett tydligt upplägg för analys, genomförande och leverans som hjälper kunden att förstå hur samarbetet går till"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när kunder ofta behöver svar på vanliga frågor om upplägg, leverans, sekretess, offert eller samarbetsstart innan de kontaktar företaget"
+    },
+    {
+      "id": "team",
+      "path": "/vart-team",
+      "when": "när verksamheten har flera konsulter eller specialister och teamets kompetens är ett viktigt säljargument"
+    }
+  ]
+}

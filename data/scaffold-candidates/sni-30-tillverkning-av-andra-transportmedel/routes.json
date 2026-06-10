@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, tydliggöra vad som tillverkas och leda vidare till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "solutions",
+      "path": "/erbjudande",
+      "required": true,
+      "purpose": "Beskriva produktområden, tillverkningsuppdrag eller tekniska lösningar på ett konkret sätt."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Visa produktionsprocess, kapacitet, arbetssätt och kvalitetsfokus för att stärka förtroendet."
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "required": true,
+      "purpose": "Lyfta exempel på leveranser, projekt eller kunduppdrag utan att överdriva omfattning eller resultat."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, team och verksamhetsmiljö."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, samarbete eller teknisk dialog via formulär och kontaktuppgifter."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "careers",
+      "path": "/karriar",
+      "when": "när företaget vill rekrytera och visa arbetsplats, roller eller kompetensbehov"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när vanliga frågor om ledtider, upplägg, material eller samarbetssätt behöver besvaras tydligt"
+    }
+  ]
+}

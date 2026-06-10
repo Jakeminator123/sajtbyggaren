@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-01-jordbruk-och-jakt-samt-stodverksamhe",
+  "version": "0.1.0",
+  "label": "Jordbruk och jakt samt stödverksamhet i anslutning härtill",
+  "description": "Scaffold för gårdar, jordbruksverksamheter, gårdsbutiker, odling, djurhållning, jaktverksamhet och närliggande stödverksamheter. Fokuserar på gårdens erbjudande, produkter eller tjänster, lokal förankring, öppettider och kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa gårdens produkter eller tjänster",
+    "bygga förtroende genom gårdens berättelse och plats",
+    "hjälpa besökare att hitta hit och ta kontakt",
+    "informera om öppettider, säsong och gårdsförsäljning"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

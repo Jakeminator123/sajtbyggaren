@@ -1,0 +1,92 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-category-preview",
+      "value-props",
+      "trust-proof",
+      "quote-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews",
+      "production-highlight"
+    ],
+    "sectionOrderRules": [
+      "Hero must include brand name, what the producer makes and a primary CTA to /produkter or /kontakt.",
+      "Product-category-preview must show real categories or flagship products, not generic placeholder cards.",
+      "Trust-proof must only mention concrete signals such as local sourcing, egenkontroll or retailer availability when actually relevant to the business.",
+      "Quote-cta should be framed for realistic next steps such as offert, återförsäljarkontakt or product inquiry."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-grid",
+      "product-details-notes",
+      "quote-cta"
+    ],
+    "optionalSections": [
+      "menu-display",
+      "pricing-table",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Products-intro must explain what defines the assortment, such as type of food, production style, audience or packaging format.",
+      "Product-grid items must be concrete products or product families with image, name and useful facts when available.",
+      "Product-details-notes should cover relevant facts such as ingredients focus, storage, packaging sizes or serving suggestions without making unsupported claims.",
+      "Pricing-table is optional and should only be used when the business publicly shares prices or package levels."
+    ]
+  },
+  "resellers": {
+    "requiredSections": [
+      "resellers-intro",
+      "reseller-list",
+      "map",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Reseller-list must contain actual sales locations, areas or partner names when available, not placeholder geography.",
+      "Map should only be shown when there is meaningful location data for a shop, factory outlet or reseller cluster.",
+      "Contact-cta should help visitors who cannot find a nearby retailer or want to become a reseller."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "production-process",
+      "values"
+    ],
+    "optionalSections": [
+      "team",
+      "image-gallery",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "About-story must be specific to the company, its products and its way of working.",
+      "Production-process should describe real steps or principles in sourcing, preparation, manufacturing or delivery at a truthful level of detail.",
+      "Values must be concrete and tied to actual choices, such as ingredient quality, local suppliers or small-batch production."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "quote-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real contact paths such as email, phone or address where available.",
+      "Contact-form should be suitable for offert, retailer inquiry or product questions.",
+      "Map and opening-hours should only appear when the business has a relevant public location or pickup point."
+    ]
+  }
+}

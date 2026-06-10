@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, förklara erbjudandet inom avloppsrening och leda vidare till kontakt."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva renings-, drift-, underhålls- och provtagningstjänster med konkret innehåll."
+    },
+    {
+      "id": "anlaggningar-och-process",
+      "path": "/anlaggningar-och-process",
+      "required": true,
+      "purpose": "Förklara anläggningstyper, processer, kapacitet och hur arbetet bedrivs på ett sakligt sätt."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att nå verksamheten via formulär, telefon, e-post, adress och karta."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "when": "när företaget vill bygga extra förtroende med bakgrund, team och arbetssätt"
+    },
+    {
+      "id": "driftinformation",
+      "path": "/driftinformation",
+      "when": "när verksamheten behöver publicera öppettider, besöksinformation eller praktiska uppgifter för kunder och samarbetspartners"
+    },
+    {
+      "id": "fragor-och-svar",
+      "path": "/fragor-och-svar",
+      "when": "när återkommande frågor om process, mottagning, kontaktvägar eller arbetsgång behöver besvaras tydligt"
+    }
+  ]
+}

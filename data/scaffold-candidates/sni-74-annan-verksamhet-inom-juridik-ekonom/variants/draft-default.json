@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../governance/schemas/variant.schema.json",
+  "id": "draft-default",
+  "enabled": false,
+  "label": "Draft Default",
+  "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+  "tokens": {
+    "color": {
+      "background": "#ffffff",
+      "foreground": "#0a0a0a",
+      "muted": "#5b5b5b",
+      "border": "#e0e0e0",
+      "primary": "#0a0a0a",
+      "primaryForeground": "#ffffff",
+      "accent": "#caa14a",
+      "accentForeground": "#0a0a0a"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.25
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.25rem",
+      "lg": "0.5rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(76rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "monochrome",
+      "modular",
+      "sharp",
+      "curated",
+      "confident",
+      "creative"
+    ]
+  }
+}

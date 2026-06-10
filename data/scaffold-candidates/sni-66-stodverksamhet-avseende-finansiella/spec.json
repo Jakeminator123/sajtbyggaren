@@ -1,0 +1,302 @@
+{
+  "id": "sni-66-stodverksamhet-avseende-finansiella",
+  "label": "Stödverksamhet avseende finansiella tjänster och försäkringsverksamhet",
+  "description": "Branschspecifik scaffold för företag inom SNI 66 som stödjer finansiella tjänster och försäkringsverksamhet, med fokus på rådgivning, förmedling, administration, analys och kundkontakt där trygghet, tydlighet och korrekt processkommunikation är central.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänster inom finansiell och försäkringsnära stödverksamhet",
+    "bygga förtroende genom tydlig process, kompetens och arbetssätt",
+    "låta besökaren förstå målgrupper, erbjudande och hur kontakt eller offertförfrågan går till",
+    "besvara vanliga frågor om upplägg, ansvar, ersättningsmodell och kontaktvägar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en snabb och trygg överblick över verksamheten: vilka finansiella eller försäkringsnära stödtjänster som erbjuds, för vem de passar, hur arbetet går till och hur besökaren tar nästa steg mot kontakt eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva erbjudandet i tydliga tjänstekategorier så att besökaren kan förstå om bolaget arbetar med exempelvis försäkringsförmedling, skaderegleringsstöd, administration, compliance-nära stöd, analys eller annan finansiell supportverksamhet."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Förklara hur arvoden, provisioner, paket eller offertupplägg fungerar på ett sakligt sätt så att kunden förstår vad som påverkar prisbilden och när individuell offert behövs."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presentera verksamhetens arbetssätt, kompetens, kundlöfte och team så att företaget upplevs som en seriös och tillgänglig partner i ekonomiska och försäkringsrelaterade frågor."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter och kontaktformulär för offertförfrågan, rådgivningsförfrågan eller allmän kontakt på ett enkelt och förtroendeingivande sätt."
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "optional": true,
+      "when": "verksamheten drivs av namngivna rådgivare, specialister eller handläggare vars erfarenhet är viktig för konvertering"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "bolaget ofta behöver förklara vanliga frågor om process, ansvar, ersättning, dokumentation eller hur samarbetet går till"
+    },
+    {
+      "id": "industries",
+      "path": "/branscher",
+      "optional": true,
+      "when": "verksamheten riktar sig till särskilda kundgrupper eller branscher, exempelvis företag, privatkunder, fastighetsägare eller organisationer med särskilda behov"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "services-overview",
+        "value-proposition",
+        "process-steps",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq-preview",
+        "team-preview",
+        "reviews",
+        "industries-served"
+      ],
+      "sectionOrderRules": [
+        "Hero ska snabbt förklara vilken typ av finansiell eller försäkringsnära stödverksamhet företaget erbjuder och för vem, med ett sakligt huvudbudskap och tydlig primär CTA.",
+        "Services overview ska gruppera erbjudandet i begripliga tjänsteområden istället för en osorterad lista, så att besökaren snabbt kan självsortera.",
+        "Process-steps ska minska osäkerhet genom att visa hur en förfrågan, genomgång eller löpande hantering går till steg för steg.",
+        "Trust-signals ska bygga trygghet med verkliga arbetsmetoder, medlemskap eller arbetssätt som företaget faktiskt använder, utan överdrivna påståenden.",
+        "Contact CTA ska komma efter att besökaren förstått erbjudande och arbetssätt och använda återhållsam formulering som 'Begär offert' eller 'Kontakta oss'."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "service-categories",
+        "service-details",
+        "who-it-is-for",
+        "process-steps",
+        "faq-preview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-summary",
+        "trust-signals",
+        "industries-served"
+      ],
+      "sectionOrderRules": [
+        "Service-categories ska delas upp i tydliga områden med kort beskrivning av vad som ingår och vilken typ av kundbehov varje område möter.",
+        "Service-details ska förklara omfattning, avgränsningar och praktiskt upplägg utan juridiskt eller finansiellt otydligt säljspråk.",
+        "Who-it-is-for ska hjälpa besökaren att förstå om tjänsten främst passar företag, privatpersoner eller andra målgrupper.",
+        "FAQ-preview ska fånga de vanligaste invändningarna eller oklarheterna kopplade till ansvar, ersättning, dokumentation eller startprocess."
+      ]
+    },
+    "pricing": {
+      "requiredSections": [
+        "pricing-models",
+        "pricing-table",
+        "what-affects-price",
+        "faq-preview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "service-categories",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "Pricing-models ska först förklara om verksamheten arbetar med fasta paket, löpande arvode, provision, individuell offert eller kombinationer av dessa.",
+        "Pricing-table får bara användas för sådant som verkligen kan prissättas publikt; annars ska tabellen visa exempelpaket eller nivåer och tydligt ange att slutlig offert kan variera.",
+        "What-affects-price ska konkret beskriva vilka faktorer som påverkar kostnaden, exempelvis omfattning, ärendets komplexitet, antal objekt eller rådgivningsnivå.",
+        "Sidan ska minska osäkerhet kring kostnad utan att lova exakt pris där individuell bedömning krävs."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story-block",
+        "working-method",
+        "team-preview",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "values",
+        "industries-served",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About-story-block ska beskriva verksamhetens inriktning, erfarenhet och hur man arbetar med ordning, tillgänglighet och uppföljning, utan generiska floskler.",
+        "Working-method ska visa hur företaget skapar struktur för kunden, exempelvis genom tydliga kontaktvägar, digital hantering eller löpande återkoppling.",
+        "Team-preview ska innehålla namngivna personer eller roller om sådana används publikt; annars kan sektionen beskriva funktioner och ansvarsfördelning.",
+        "Trust-signals ska använda verifierbara signaler som medlemskap, digitala arbetssätt eller tydliga processer, men aldrig påstå auktorisationer som inte kan styrkas."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "faq-preview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours",
+        "team-preview"
+      ],
+      "sectionOrderRules": [
+        "Contact-info ska göra det enkelt att välja rätt kontaktväg med telefon, e-post och eventuell besöksadress i läsbara block.",
+        "Contact-form ska vara kort och tydligt, anpassat för offertförfrågan eller första kontakt snarare än långa fritextfält.",
+        "FAQ-preview på kontaktsidan ska avlasta vanliga frågor om svarstid, vad som bör skickas in och vad nästa steg blir efter kontakt.",
+        "Om adress eller öppettider anges ska dessa vara praktiska och aktuella, inte dekorativa utfyllnadssektioner."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "ha tydlig informationsarkitektur för tjänster, prisupplägg, förtroendeskapande innehåll och kontakt",
+      "signalera trygghet, ordning och proaktivitet snarare än aggressiv försäljning",
+      "stödja både offertförfrågan och allmän kontakt med låg tröskel",
+      "kunna fungera som en trovärdig webb för rådgivande och administrativ finansiell stödverksamhet",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "förväxla verksamheten med bank, försäkringsbolag eller fullständig juridisk huvudman om det inte uttryckligen framgår",
+      "överdrivna löften om avkastning, besparingar eller utfall",
+      "oprecisa tjänstebeskrivningar som döljer ansvar eller omfattning",
+      "påhittade certifieringar, kundantal eller omdömen"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "pricing-table",
+      "team-roster",
+      "trust-guarantees",
+      "reviews-display"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Stödverksamhet avseende finansiella tjänster och försäkringsverksamhet behöver en webbstruktur som förklarar tjänster, målgrupper, process, prisupplägg och kontakt på ett tryggt och sakligt sätt. Vanliga behov är tjänstesida, prissida, om-sida med arbetssätt och team samt kontaktsida med formulär och vanliga frågor. Innehållet ska minska osäkerhet kring ansvar, upplägg och nästa steg.",
+    "semanticSignals": [
+      "finansiell-radgivning",
+      "forsakringsformedling",
+      "skaderegleringsstod",
+      "administration",
+      "prisupplagg",
+      "offert",
+      "radgivningsmote",
+      "digitala-arbetssatt",
+      "team",
+      "vanliga-fragor",
+      "kontaktformular",
+      "trygg-process"
+    ],
+    "negativeSignals": [
+      "produktkatalog",
+      "varukorg",
+      "bordsbokning",
+      "meny",
+      "galleri-som-huvudsyfte",
+      "eventbiljetter",
+      "medicinsk-behandling",
+      "restaurangupplagg"
+    ],
+    "llmClassificationHints": [
+      "Liknar professionella tjänster inom ekonomi och rådgivning men ska vara mer inriktad på finansiell och försäkringsnära stödverksamhet än klassisk redovisningsbyrå.",
+      "Ska prioritera sidor för tjänster, priser, om oss och kontakt framför blogg eller nyhetsflöde.",
+      "FAQ är ofta relevant eftersom besökare behöver förstå ansvar, process och ersättningsmodell innan kontakt."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#f7f4ec",
+          "foreground": "#1d2a23",
+          "muted": "#5a6660",
+          "border": "#d6d2c1",
+          "primary": "#1f4d3a",
+          "primaryForeground": "#f7f4ec",
+          "accent": "#c9a55a",
+          "accentForeground": "#1d2a23"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.625rem",
+          "lg": "1rem"
+        },
+        "spacing": {
+          "section": "5.5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "warm",
+          "trustworthy",
+          "competent",
+          "approachable",
+          "professional",
+          "steady"
+        ]
+      }
+    }
+  ]
+}

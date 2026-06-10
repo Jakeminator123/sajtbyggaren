@@ -1,0 +1,57 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera boendet, läget och känslan i vistelsen samt leda vidare till bokning."
+    },
+    {
+      "id": "rooms-and-prices",
+      "path": "/rum-och-priser",
+      "required": true,
+      "purpose": "Visa rumstyper, vad som ingår, priser eller prisexempel och leda vidare till bokning."
+    },
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "required": true,
+      "purpose": "Samla boknings-CTA, bokningsförfrågan och viktig information inför bokning."
+    },
+    {
+      "id": "gallery",
+      "path": "/bildgalleri",
+      "required": false,
+      "purpose": "Visa boendet, rummen, gemensamma ytor och omgivningen med starkt bildfokus."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att berätta om boendet, värdskapet och platsen."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta boendet och hitta adress, karta och praktisk information."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "packages",
+      "path": "/paket-erbjudanden",
+      "when": "när verksamheten säljer weekendpaket, säsongserbjudanden eller tillägg utöver vanliga rumsbokningar"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när gäster ofta behöver svar om incheckning, avbokning, parkering, husdjur eller frukost"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "when": "när läge, resväg, parkering eller lokal orientering är en central del av köpresan"
+    }
+  ]
+}

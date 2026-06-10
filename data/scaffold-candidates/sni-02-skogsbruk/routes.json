@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera skogsbruksföretaget, förklara huvudsakliga tjänster och leda besökaren till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets skogliga tjänster konkret så att markägare och kunder förstår vad som erbjuds."
+    },
+    {
+      "id": "service-area",
+      "path": "/arbetsomraden",
+      "required": true,
+      "purpose": "Visa vilka geografiska områden företaget arbetar i och ge lokal relevans för kontaktförfrågningar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via telefon, e-post och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget vill lyfta erfarenhet, arbetssätt, ägare eller personal mer utförligt"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "när det finns verkliga kundcase, omdömen eller bildmaterial från utförda uppdrag"
+    }
+  ]
+}

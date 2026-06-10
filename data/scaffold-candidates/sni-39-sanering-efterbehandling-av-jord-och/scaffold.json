@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-39-sanering-efterbehandling-av-jord-och",
+  "version": "0.1.0",
+  "label": "Sanering, efterbehandling av jord och vatten samt annan verksamhet för föroreningsbekämpning",
+  "description": "Branschspecifik scaffold för företag inom sanering och föroreningsbekämpning med fokus på tjänsteöversikt, arbetsprocess, förtroendeskapande information och tydlig kontaktväg.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara saneringstjänster tydligt",
+    "bygga förtroende kring säkerhet, arbetssätt och erfarenhet",
+    "göra det enkelt att ta kontakt för offert eller rådgivning"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

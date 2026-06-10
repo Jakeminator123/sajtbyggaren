@@ -1,0 +1,37 @@
+{
+  "id": "sni-28-tillverkning-av-ovriga-maskiner",
+  "embeddingText": "Branschspecifik webbplatsstruktur för tillverkare av övriga maskiner inom SNI 28. Sajten bör ha startsida, maskinsida, service och support, om oss och kontakt. Innehållet ska lyfta maskintyper, användningsområden, kundanpassning, produktion och teknisk kompetens. Tydlig CTA till offert eller teknisk dialog. Förtroende byggs genom referenser, synliga företagsuppgifter, team och konkret kapacitet snarare än generiska löften.",
+  "semanticSignals": [
+    "maskintillverkare",
+    "specialmaskiner",
+    "industrimaskiner",
+    "kundanpassad-tillverkning",
+    "konstruktion-och-tillverkning",
+    "produktion-och-montering",
+    "service-och-support",
+    "reservdelar",
+    "teknisk-forfragan",
+    "offertforfragan",
+    "verkstad",
+    "industriella-losningar"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "meny",
+    "bordsbokning",
+    "webshop",
+    "varukorg",
+    "fotografportfolj",
+    "fastighetsmaklare",
+    "frisorbokning",
+    "kurskatalog",
+    "patientbokning"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten tillverkar maskiner, maskinutrustning eller industriella lösningar för företag.",
+    "Passar även företag som bygger specialmaskiner eller anpassade produktionslösningar och behöver visa både erbjudande och eftermarknad.",
+    "Nedprioritera denna scaffold om verksamheten främst säljer standardprodukter online utan service- eller projektinslag."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

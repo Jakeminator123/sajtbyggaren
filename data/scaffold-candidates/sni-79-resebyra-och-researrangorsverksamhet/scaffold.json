@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-79-resebyra-och-researrangorsverksamhet",
+  "version": "0.1.0",
+  "label": "Resebyrå och researrangör",
+  "description": "Branschspecifik scaffold för resebyråer, researrangörer och annan boknings- och reserelaterad verksamhet. Fokuserar på inspiration, tydliga reseupplägg, priser och paket, bokningsvägar samt trygghet kring villkor och resegaranti.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "inspirera besökare till resa eller upplevelse",
+    "presentera resor, paket och upplägg tydligt",
+    "driva bokningsförfrågningar eller tidsbokning",
+    "bygga trygghet kring villkor, resegaranti och köpprocess",
+    "besvara vanliga frågor inför bokning"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

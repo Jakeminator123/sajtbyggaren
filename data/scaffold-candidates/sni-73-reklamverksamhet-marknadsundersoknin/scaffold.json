@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-73-reklamverksamhet-marknadsundersoknin",
+  "version": "0.1.0",
+  "label": "Reklamverksamhet, marknadsundersökningar och PR",
+  "description": "Branschspecifik scaffold för reklam-, marknadsundersöknings- och PR-byråer. Strukturen prioriterar case, erbjudande, arbetssätt, team och tydlig kontaktväg för offertförfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa kundcase och kampanjresultat",
+    "förklara erbjudande inom reklam, PR och marknadsinsikter",
+    "bygga förtroende genom team, referenser och arbetssätt",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

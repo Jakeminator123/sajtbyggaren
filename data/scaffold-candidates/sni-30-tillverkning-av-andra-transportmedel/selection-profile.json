@@ -1,0 +1,38 @@
+{
+  "id": "sni-30-tillverkning-av-andra-transportmedel",
+  "embeddingText": "Branschspecifik scaffold för tillverkning av andra transportmedel. Sajten ska passa företag som utvecklar, bygger, monterar eller levererar transportrelaterade produkter, komponenter, specialfordon, farkoster eller andra tekniska lösningar inom området. Informationsarkitekturen ska tydligt visa erbjudande, produktionsprocess, kapacitet, referenser och kontaktvägar för offert eller affärsdialog.",
+  "semanticSignals": [
+    "tillverkning",
+    "produktion",
+    "montering",
+    "utveckling",
+    "konstruktion",
+    "specialfordon",
+    "farkoster",
+    "komponenter",
+    "serieproduktion",
+    "prototyper",
+    "leveranser",
+    "referensprojekt",
+    "kapacitet",
+    "verkstad",
+    "industriell-tillverkning"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "fotograf",
+    "frisor",
+    "e-handel-med-kundvagn",
+    "meny",
+    "bordsbokning",
+    "behandlingsmeny",
+    "privat-blogg"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company primarily manufactures transport-related products or systems rather than selling generic consulting.",
+    "Prefer this scaffold when production capability, technical process and reference deliveries are central to buyer trust.",
+    "Do not classify as a generic local-service business if the site needs dedicated pages for offering, production and references."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

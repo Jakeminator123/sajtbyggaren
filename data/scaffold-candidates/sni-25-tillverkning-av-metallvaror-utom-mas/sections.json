@@ -1,0 +1,96 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "erbjudande-oversikt",
+      "kapacitet-sammanfattning",
+      "fortroendesignaler",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "bildgalleri",
+      "referenser",
+      "process-oversikt",
+      "faq",
+      "karta",
+      "oppettider"
+    ],
+    "sectionOrderRules": [
+      "Hero ska tydligt ange att företaget tillverkar metallvaror eller erbjuder metallbearbetning samt innehålla primär CTA.",
+      "Erbjudande-översikt ska beskriva faktiska produkt- eller tjänsteområden, inte bara allmänna formuleringar om kvalitet.",
+      "Kapacitet-sammanfattning ska komma före slutlig kontakt-CTA när data om material, metoder eller seriestorlekar finns.",
+      "Förtroendesignaler ska bygga på verkliga uppgifter som organisationsnummer, referenser eller konkret branscherfarenhet.",
+      "Sektioner får inte upprepa samma budskap med olika rubriker."
+    ]
+  },
+  "produkter-tjanster": {
+    "requiredSections": [
+      "tjanster-intro",
+      "produkt-tjanstelista",
+      "anvandningsomraden",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "prisexempel",
+      "bildgalleri",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Introduktionen ska koppla företagets inriktning till vad som faktiskt tillverkas eller bearbetas.",
+      "Produkt- och tjänstelistan ska vara konkret, till exempel svetsade konstruktioner, plåtdetaljer, legotillverkning eller ytbehandling om sådant erbjuds.",
+      "Användningsområden ska beskriva typiska kundbehov eller branscher utan att påstå uppdrag som inte kan styrkas."
+    ]
+  },
+  "kapacitet": {
+    "requiredSections": [
+      "kapacitet-intro",
+      "material-och-metoder",
+      "produktionsprocess",
+      "leverans-och-serier",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "bildgalleri",
+      "faq",
+      "fortroendesignaler"
+    ],
+    "sectionOrderRules": [
+      "Kapacitet-intro ska hjälpa besökaren förstå vilka typer av uppdrag som passar företaget.",
+      "Material och metoder ska presenteras sakligt och endast om företaget faktiskt arbetar med dem.",
+      "Produktionsprocess kan beskriva steg som ritning, prototyp, tillverkning, kontroll och leverans när underlag finns.",
+      "Leverans- och seriestorlekar ska hållas på en realistisk nivå och inte lova ledtider eller volymer utan stöd."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "om-oss-berattelse",
+      "team",
+      "fortroendesignaler"
+    ],
+    "optionalSections": [
+      "referenser",
+      "bildgalleri",
+      "karta"
+    ],
+    "sectionOrderRules": [
+      "Om oss-berättelsen ska vara specifik kring verksamhet, erfarenhet eller arbetssätt och undvika generiska fraser.",
+      "Teamsektionen visas när det finns verkliga personer eller roller att presentera.",
+      "Förtroendesignaler får inte innehålla påhittade certifieringar, volymer eller kundnamn."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "kontaktinformation",
+      "kontaktformular",
+      "karta"
+    ],
+    "optionalSections": [
+      "oppettider"
+    ],
+    "sectionOrderRules": [
+      "Kontaktinformationen ska innehålla verkliga kontaktvägar som telefon, e-post eller adress när de finns.",
+      "Kontaktformuläret ska tydligt uppmana till förfrågan om tillverkning, offert eller dialog.",
+      "Karta visas när besöksadress eller anläggningens läge är relevant för kunder eller leveranser."
+    ]
+  }
+}

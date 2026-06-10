@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Scaffold must reflect manufacturing of computers, electronics or optical products rather than generic tech consulting.",
+    "Home, products and contact must be present.",
+    "Routes and sections must support both technical credibility and lead generation.",
+    "Purposes and rules must stay honest and avoid unsupported compliance or certification claims.",
+    "All route paths must be Swedish and lowercase.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic saas-only structure without product or application pages",
+    "portfolio framing better suited to agencies or creators",
+    "invented certifications, factory claims or customer counts",
+    "forcing public pricing when sales are specification- or quote-driven",
+    "overusing startup language that hides the manufacturing context"
+  ]
+}

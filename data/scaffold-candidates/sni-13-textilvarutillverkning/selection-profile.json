@@ -1,0 +1,31 @@
+{
+  "id": "sni-13-textilvarutillverkning",
+  "embeddingText": "Textilvarutillverkning, tillverkare av textila produkter, produktområden, material, sömnad, produktion, specialanpassning, serietillverkning, företagsfakta, referenser, kontakt och offertförfrågan.",
+  "semanticSignals": [
+    "manufacturing-business",
+    "textile-products",
+    "production-process",
+    "materials-and-capabilities",
+    "custom-manufacturing",
+    "series-production",
+    "b2b-inquiries",
+    "references-and-trust",
+    "factory-or-workshop-imagery",
+    "contact-led-conversion"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "online-store-checkout",
+    "photography-portfolio",
+    "medical-clinic-booking",
+    "software-app-features",
+    "real-estate-listings"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business manufactures textile goods rather than primarily selling finished retail products online.",
+    "Prefer this scaffold when product categories, production methods, materials or customization are central to the business.",
+    "Do not choose this scaffold for pure textile retail, fashion ecommerce or tailoring-only service businesses unless manufacturing is the core identity."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

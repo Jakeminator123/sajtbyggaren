@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, förklara vad som servas och driva kontakt för service eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Visa konkreta tjänster inom reparation, underhåll och installation av maskiner och utrustning."
+    },
+    {
+      "id": "service-agreements",
+      "path": "/serviceavtal",
+      "required": true,
+      "purpose": "Förklara upplägg, nytta och omfattning för serviceavtal och förebyggande underhåll."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets erfarenhet, arbetssätt och teamets kompetens."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att snabbt kontakta företaget för felanmälan, serviceförfrågan eller installation."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "företaget arbetar i flera orter eller regioner och behöver en tydlig lokal närvarosida"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "det finns tillräckligt med verkliga kundomdömen, projektbilder eller uppdrag att visa utan att sidan blir tunn"
+    }
+  ]
+}

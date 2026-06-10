@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-65-forsakrings-aterforsakrings-och-pens",
+  "sniCode": "65",
+  "wizardCategoryId": "accounting",
+  "industryProfileId": "sni-65",
+  "referenceScaffoldId": "professional-services",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:58Z",
+  "outputPath": "data/scaffold-candidates/sni-65-forsakrings-aterforsakrings-och-pens",
+  "operatorBriefHash": "sha256:b0dfe5abe2ad345e475172c618e203bfbd10d5bf3b362ff32880b933c34cef7d",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

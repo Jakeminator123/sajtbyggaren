@@ -1,0 +1,288 @@
+{
+  "id": "sni-24-stal-och-metallframstallning",
+  "label": "Stål- och metallframställning",
+  "description": "Scaffold för företag inom stål- och metallframställning med fokus på produktionskapacitet, processer, kvalitet, leveransförmåga och tydlig kontaktväg för offert eller dialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera verksamhet och produktionsinriktning",
+    "bygga förtroende genom process-, kvalitets- och anläggningsinformation",
+    "göra det enkelt att ta kontakt för offert, materialförfrågan eller samarbete"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad företaget tillverkar eller bearbetar och leda till kontakt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa huvudsakliga stål- eller metallprodukter, materialslag eller produktkategorier på ett konkret sätt."
+    },
+    {
+      "id": "processes",
+      "path": "/processer",
+      "required": true,
+      "purpose": "Beskriva tillverknings- eller bearbetningsprocesser, kapacitet och hur uppdrag hanteras från förfrågan till leverans."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, anläggning, arbetssätt och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att komma i kontakt för offert, materialfrågor, leveransdialog eller besök."
+    },
+    {
+      "id": "quality",
+      "path": "/kvalitet",
+      "optional": true,
+      "when": "when the company has documented quality, testing, traceability or sustainability work worth describing"
+    },
+    {
+      "id": "industries",
+      "path": "/branscher",
+      "optional": true,
+      "when": "when the company serves distinct customer segments such as bygg, verkstad, energi or industri and needs segment-specific messaging"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "production-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "facility-overview",
+        "product-highlights",
+        "process-highlights",
+        "industries-served",
+        "gallery",
+        "faq",
+        "reviews",
+        "location-summary"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and what is produced, processed or supplied, with a primary contact CTA.",
+        "Production summary must be concrete about materials, product types or manufacturing focus rather than generic industrial wording.",
+        "Trust proof must rely on real signals such as experience, facility information, delivery capability, visible company details or named references when available.",
+        "Facility overview, product highlights and process highlights may appear before trust proof when supported by source data.",
+        "Sections should avoid repeating the same claims about quality, precision or reliability."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq",
+        "gallery"
+      ],
+      "sectionOrderRules": [
+        "Products intro must explain what categories, materials or formats the company offers.",
+        "Product list items must be specific, for example material groups, semi-finished products, dimensions, finishing options or customer-adapted production.",
+        "Do not imply stock levels, delivery times or standards unless such details are actually provided."
+      ]
+    },
+    "processes": {
+      "requiredSections": [
+        "processes-intro",
+        "process-list",
+        "workflow",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "facility-overview",
+        "quality-points",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Processes intro must connect the company's production setup to customer needs such as repeatability, volume, tolerance or further processing.",
+        "Process list must describe real manufacturing or processing steps and not generic business services.",
+        "Workflow should show a plausible sequence such as inquiry, specification, production, control and delivery without inventing guarantees."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "facility-overview",
+        "team"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "gallery",
+        "location-summary"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company, its production focus or history in specific terms.",
+        "Facility overview should focus on plant, equipment environment or way of working if data exists.",
+        "Team is optional in rendering if no staff data is available, but the route structure should support it."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map",
+        "facility-visit-notice"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real available contact paths such as phone, email, address or contact form.",
+        "If map or visit information is shown, it should help visitors find the site or understand how visits and goods reception work.",
+        "No placeholder contact details may be used."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes home and contact routes.",
+      "Route set is adapted to stål- och metallframställning through products and processes pages.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Paths are Swedish, lowercase and start with '/'.",
+      "Recommended dossiers only use allowed ids.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic local-service structure without industrial production context.",
+      "Vague claims about quality, capacity or certifications without source support.",
+      "Consumer-oriented sections that do not fit B2B manufacturing intent.",
+      "Invented standards, testing regimes, volumes or delivery promises."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "team-roster",
+      "trust-guarantees",
+      "faq-accordion",
+      "reviews-display"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Industriscaffold för stål- och metallframställning som prioriterar produktöversikt, processbeskrivning, anläggningsförtroende, kvalitetsarbete och kontakt för offert eller samarbete.",
+    "semanticSignals": [
+      "stal",
+      "metall",
+      "framstallning",
+      "valsning",
+      "gjutning",
+      "bearbetning",
+      "legeringar",
+      "ramaterial",
+      "halvfabrikat",
+      "produktion",
+      "industri",
+      "anlaggning",
+      "kvalitet",
+      "leverans",
+      "offert",
+      "materialspecifikation"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "meny",
+      "bokning-av-bord",
+      "e-handel",
+      "produktkassa",
+      "fotogalleri-som-huvudsyfte",
+      "salong",
+      "klinik"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the company primarily manufactures, processes or supplies steel and metal products in an industrial B2B context.",
+      "Prefer this over a generic service-business scaffold when product categories, material types, production processes or plant capabilities are central to the offering.",
+      "Quality and process transparency matter more than lifestyle branding for this industry."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

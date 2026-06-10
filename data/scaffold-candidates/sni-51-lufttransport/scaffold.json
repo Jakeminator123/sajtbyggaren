@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-51-lufttransport",
+  "version": "0.1.0",
+  "label": "Lufttransport",
+  "description": "Scaffold för företag inom lufttransport med fokus på tydliga transporttjänster, operationell trovärdighet, geografisk täckning och enkel kontakt för förfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara lufttransporttjänster tydligt",
+    "bygga förtroende genom operativ information och referenser",
+    "leda besökaren till kontakt eller bokningsförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

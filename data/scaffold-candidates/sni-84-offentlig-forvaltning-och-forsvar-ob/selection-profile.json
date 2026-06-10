@@ -1,0 +1,34 @@
+{
+  "id": "sni-84-offentlig-forvaltning-och-forsvar-ob",
+  "embeddingText": "Offentlig förvaltning och försvar samt obligatorisk socialförsäkring. Webbplatsstruktur för myndighet, offentlig verksamhet eller samhällsfunktion med startsida, tjänster eller ärenden, om verksamheten och kontakt. Fokus på uppdrag, ansvar, tydlig information, rätt kontaktväg och förtroendeskapande offentlig avsändare.",
+  "semanticSignals": [
+    "myndighet",
+    "offentlig-verksamhet",
+    "samhallsuppdrag",
+    "socialforsakring",
+    "forsvar",
+    "forvaltning",
+    "medborgare",
+    "arenden",
+    "kontaktvagar",
+    "ansvar",
+    "organisation",
+    "officiell-information"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "restaurang",
+    "portfolj",
+    "bokning-som-huvudflode",
+    "prislista",
+    "produktkatalog",
+    "kampanjsida"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the organization is a public authority, municipal/state function, defense-related public body or social insurance administration.",
+    "Prefer this scaffold when trust comes from clarity, mandate and official contact details rather than testimonials or commercial proof.",
+    "Use service and mission framing rather than sales and offers."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

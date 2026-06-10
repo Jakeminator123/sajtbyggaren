@@ -1,0 +1,77 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "contracts-summary",
+      "gallery",
+      "reviews",
+      "faq",
+      "service-area",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the type of service business and include the primary contact CTA.",
+      "Service summary must highlight concrete recurring or one-off services relevant to property care or green area maintenance.",
+      "Trust proof must appear before the final CTA and should use real signals such as insurance, collective agreement or reference assignments when available.",
+      "Contracts summary may appear before trust proof when the business mainly sells recurring service agreements.",
+      "Sections should avoid repeating the same promise in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company to practical property-related support services.",
+      "Service list items must be specific, such as trappstädning, kontorsstädning, fastighetsskötsel, gräsklippning, häckklippning or seasonal outdoor maintenance, rather than vague labels.",
+      "If pricing overview is shown, it must describe how quotes or scope-based pricing works without invented fixed prices.",
+      "Contact CTA should invite quote requests for both recurring agreements and individual jobs when relevant."
+    ]
+  },
+  "contracts": {
+    "requiredSections": [
+      "contracts-intro",
+      "contract-models",
+      "process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contracts intro must explain why recurring care agreements are useful for the customer type served.",
+      "Contract models must describe realistic differences such as recurring visits, seasonal plans or property-specific scope, without making guarantees the business cannot support.",
+      "Process should explain how inspection, proposal, start-up and follow-up work in a straightforward way.",
+      "Trust proof, if used here, should not duplicate the exact same review content already shown prominently on home."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real phone, email and address details when available.",
+      "Contact form should be suitable for quote or service inquiries and may ask about property type, service need and preferred contact method.",
+      "Map and opening hours should only render when accurate business data exists."
+    ]
+  }
+}

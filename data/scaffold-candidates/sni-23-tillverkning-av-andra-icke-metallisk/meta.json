@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-23-tillverkning-av-andra-icke-metallisk",
+  "sniCode": "23",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-23",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:26:03Z",
+  "outputPath": "data/scaffold-candidates/sni-23-tillverkning-av-andra-icke-metallisk",
+  "operatorBriefHash": "sha256:a0ec21d896f21727171587356ee72364313bca9b1aed757e80cb657031d2f0e7",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

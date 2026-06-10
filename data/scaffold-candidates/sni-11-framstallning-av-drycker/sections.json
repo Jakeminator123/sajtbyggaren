@@ -1,0 +1,78 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "featured-products",
+      "value-props",
+      "production-highlights",
+      "primary-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews-or-trust",
+      "faq-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must include the brand name, what kinds of beverages are produced and a primary CTA to /produkter or /kontakt.",
+      "Featured-products must show real beverages or product lines, not generic placeholder cards.",
+      "Value-props must be tied to actual strengths such as ingredients, process, origin or flavor profile - avoid generic filler claims.",
+      "Production-highlights should briefly explain how the drinks are made and what makes the process relevant to the customer."
+    ]
+  },
+  "produkter": {
+    "requiredSections": [
+      "products-intro",
+      "product-grid",
+      "product-details-notes",
+      "inquiry-cta"
+    ],
+    "optionalSections": [
+      "pricing-or-packaging",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain the range clearly, for example beverage categories, seasonality or intended use.",
+      "Product-grid items must be concrete and include real names plus useful attributes such as type, flavor notes, volume or packaging.",
+      "Do not imply direct online purchase unless the business actually sells online; use inquiry-oriented CTA when needed.",
+      "Pricing-or-packaging is optional and should only show information the business can stand behind, such as available bottle sizes or case formats."
+    ]
+  },
+  "om-produktionen": {
+    "requiredSections": [
+      "about-story",
+      "ingredients-and-origin",
+      "production-process",
+      "quality-and-care"
+    ],
+    "optionalSections": [
+      "team",
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "About-story must describe the producer's real background, focus or philosophy without invented heritage claims.",
+      "Ingredients-and-origin should mention actual raw materials or sourcing principles when known.",
+      "Production-process must stay understandable for customers and avoid technical padding that says little.",
+      "Quality-and-care may mention real routines such as hygiene, traceability or allergen handling, but must not invent certifications."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form-cta",
+      "location-or-delivery-info"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real ways to get in touch such as phone, email and business address when available.",
+      "Contact-form-cta should fit the business model, for example offertförfrågan, återförsäljarfråga or allmän kontakt.",
+      "Location-or-delivery-info should clarify whether visitors can visit, pick up, or only order via delivery or distributor.",
+      "Map is only appropriate when there is a public-facing physical location."
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Etablera atmosfär, kök/inriktning och viktigaste handlingen direkt: se menyn, boka bord eller kontakta verksamheten."
+    },
+    {
+      "id": "menu",
+      "path": "/meny",
+      "required": true,
+      "purpose": "Visa mat- och dryckesutbud grupperat i tydliga kategorier med priser och relevant information om allergener eller specialkost."
+    },
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "required": true,
+      "purpose": "Få besökaren att boka bord eller skicka bokningsförfrågan med tydlig information om öppettider och kontaktvägar."
+    },
+    {
+      "id": "contact",
+      "path": "/hitta-hit",
+      "required": true,
+      "purpose": "Ge praktisk information som adress, karta, telefon, öppettider och annan info som behövs för att genomföra ett besök eller en beställning."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Berätta om verksamhetens profil, personerna bakom, matfilosofi eller råvarutänk så att stället känns personligt och trovärdigt."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "when": "verksamheten säljer mycket på miljö, uppläggningar, lokalens känsla eller visuellt uttryck"
+    },
+    {
+      "id": "catering",
+      "path": "/catering",
+      "when": "företaget erbjuder catering, takeaway för större sällskap eller mat för företag och privata event"
+    },
+    {
+      "id": "events",
+      "path": "/event",
+      "when": "verksamheten arrangerar provningar, livemusik, temakvällar eller tar emot bokningar för privata tillställningar"
+    },
+    {
+      "id": "lunch",
+      "path": "/lunch",
+      "when": "lunchutbudet uppdateras ofta och behöver en egen sida som är lätt att hitta återkommande"
+    }
+  ]
+}

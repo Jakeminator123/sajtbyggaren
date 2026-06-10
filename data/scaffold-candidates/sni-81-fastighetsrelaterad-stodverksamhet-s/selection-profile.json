@@ -1,0 +1,39 @@
+{
+  "id": "sni-81-fastighetsrelaterad-stodverksamhet-s",
+  "embeddingText": "Fastighetsservice, lokalvård, fastighetsskötsel och skötsel av grönytor för bostadsrättsföreningar, företag, fastighetsägare och andra kunder som behöver återkommande eller enstaka uppdrag. Scaffolden prioriterar startsida, tjänster, avtal och kontakt, med möjlighet att lägga till om oss, referenser och områden.",
+  "semanticSignals": [
+    "fastighetsskotsel",
+    "lokalvard",
+    "trappstadning",
+    "kontorsstadning",
+    "grasklippning",
+    "hackklippning",
+    "gronyteskotsel",
+    "utemiljo",
+    "sasongsskotsel",
+    "drift-och-underhall",
+    "aterkommande-avtal",
+    "offertforfragan",
+    "referensuppdrag",
+    "forsakring",
+    "kollektivavtal"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "e-handel",
+    "meny",
+    "produktkatalog",
+    "hotellbokning",
+    "lakartider",
+    "fotografportfolio",
+    "onlinekurs"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for businesses performing cleaning, caretaking, maintenance or outdoor upkeep connected to properties and managed environments.",
+    "Prefer the contracts route because recurring service agreements are central in this industry.",
+    "Include green area and property care language when the company works with outdoor maintenance as well as indoor support services.",
+    "Do not choose retail, restaurant or appointment-led service scaffolds unless the business clearly operates that way."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

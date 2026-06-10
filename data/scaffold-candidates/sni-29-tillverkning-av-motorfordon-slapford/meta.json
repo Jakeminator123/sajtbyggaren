@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-29-tillverkning-av-motorfordon-slapford",
+  "sniCode": "29",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-29",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:26:46Z",
+  "outputPath": "data/scaffold-candidates/sni-29-tillverkning-av-motorfordon-slapford",
+  "operatorBriefHash": "sha256:d2b5ac0365c423fdd14858ba55ae818241a246652a2788867884b879a6eb917e",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

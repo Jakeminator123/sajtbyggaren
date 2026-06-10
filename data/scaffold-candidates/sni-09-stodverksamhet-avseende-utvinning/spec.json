@@ -1,0 +1,265 @@
+{
+  "id": "sni-09-stodverksamhet-avseende-utvinning",
+  "label": "Stödverksamhet avseende utvinning",
+  "description": "Scaffold för företag som levererar stödverksamhet till utvinning, såsom tekniska fälttjänster, driftstöd, underhåll, logistiknära insatser och entreprenadstöd. Strukturen prioriterar tydlig tjänstepresentation, kapacitet/förtroende och enkel kontaktväg för företagskunder.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera specialisttjänster för stödverksamhet inom utvinning",
+    "bygga förtroende med kapacitet, arbetssätt och referensnära signaler",
+    "driva kontaktförfrågningar från företagskunder och uppdragsgivare"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vilken stödverksamhet som erbjuds inom utvinning och leda vidare till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets tjänster konkret, inklusive typiska uppdrag och vad leveransen omfattar."
+    },
+    {
+      "id": "capacity",
+      "path": "/kapacitet",
+      "required": true,
+      "purpose": "Visa resurser, arbetssätt, geografisk räckvidd och praktiska förutsättningar som är viktiga vid upphandling eller förfrågan."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via telefon, e-post, adress och formulär."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "when the business has a clear company story, leadership team or ownership background that strengthens trust"
+    },
+    {
+      "id": "projects",
+      "path": "/uppdrag",
+      "optional": true,
+      "when": "when the business can describe representative assignments, work types or case-like examples without revealing confidential customer details"
+    },
+    {
+      "id": "locations",
+      "path": "/verksamhetsomraden",
+      "optional": true,
+      "when": "when the company serves multiple sites, regions or operational areas and needs a dedicated page for geography and logistics"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "industry-focus",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "operations-overview",
+        "gallery",
+        "reviews",
+        "faq",
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and that the company works with support services for extraction-related operations, and include a primary contact CTA.",
+        "Service-summary must highlight concrete service categories rather than broad claims.",
+        "Industry-focus should clarify the types of environments, clients or operational contexts served without implying unsupported certifications or approvals.",
+        "Trust-proof must appear before the final contact-cta.",
+        "Do not repeat the same promise in hero, service-summary and trust-proof."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "work-process",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Services-intro must connect the company's role in extraction support to the listed services.",
+        "Service-list items must be concrete and operationally relevant, for example field support, maintenance support, site logistics support or technical assistance where applicable.",
+        "Work-process should explain how inquiries, planning, on-site execution and follow-up are handled.",
+        "If pricing-overview is shown, it must describe pricing model principles or quote-based setup honestly rather than invented fixed prices."
+      ]
+    },
+    "capacity": {
+      "requiredSections": [
+        "capacity-intro",
+        "equipment-and-resources",
+        "coverage-area",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team",
+        "operations-readiness",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Capacity-intro must explain why capacity matters for the buyer, such as staffing, equipment access, readiness or geographic reach.",
+        "Equipment-and-resources must stay factual and only mention assets, competencies or support functions actually provided by the business.",
+        "Coverage-area should describe where the company can operate and any practical limitations in clear terms.",
+        "Trust-proof on this page should emphasize organisational reliability, experience indicators or references, not duplicate long service descriptions."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "map"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must all be present and not be placeholders.",
+        "Contact-form must be suitable for business inquiries and allow the visitor to describe the requested assignment.",
+        "Map should only be shown when a real visitable address or operational office location is available."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes home and contact routes.",
+      "Routes and section ids use kebab-case slugs.",
+      "Page set is tailored to support services for extraction with dedicated services and capacity surfaces.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Contact route supports direct inquiry conversion.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic local-service structure without industry-specific capacity or operations content",
+      "consumer-oriented booking flows for a primarily B2B service",
+      "invented certifications, safety approvals, customer logos or project metrics",
+      "vague service labels that do not explain what the company actually does"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Stödverksamhet avseende utvinning. B2B-webbplats för företag som levererar specialisttjänster, driftstöd, underhållsnära insatser, teknisk support, platsnära entreprenad eller logistiskt stöd till utvinningsrelaterad verksamhet. Viktiga informationsytor är tjänster, kapacitet, geografisk räckvidd, resurser, arbetssätt, referenser och tydlig kontaktväg.",
+    "semanticSignals": [
+      "support-services-for-extraction",
+      "field-operations-support",
+      "technical-site-services",
+      "maintenance-support",
+      "industrial-contractor",
+      "operational-readiness",
+      "geographic-coverage",
+      "b2b-inquiry-flow",
+      "resources-and-equipment",
+      "project-based-service-delivery"
+    ],
+    "negativeSignals": [
+      "retail-products",
+      "restaurant-booking",
+      "consumer-ecommerce",
+      "portfolio-first-creative-business",
+      "medical-clinic",
+      "beauty-salon",
+      "menu-page"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for companies whose main offer is operational or technical support to extraction-related activities.",
+      "Prefer this scaffold when the website needs to explain both services and practical delivery capacity.",
+      "Do not classify as generic local service if capacity, site operations and industrial trust signals are central to the offer."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

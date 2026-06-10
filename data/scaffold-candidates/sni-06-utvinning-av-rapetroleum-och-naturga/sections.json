@@ -1,0 +1,118 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "business-summary",
+      "operations-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "assets-highlight",
+      "safety-summary",
+      "news-summary",
+      "map-overview",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the company's business area and include a primary contact CTA.",
+      "Business summary must explain the operation in plain language and avoid technical overload in the first screen.",
+      "Operations summary should precede detailed trust or contact content.",
+      "Trust proof must rely on factual company information, visible identifiers or real references only.",
+      "Final CTA should invite relevant business contact without promising availability, output or approvals that are not provided in the dossier."
+    ]
+  },
+  "operations": {
+    "requiredSections": [
+      "operations-intro",
+      "operations-scope",
+      "process-overview",
+      "technical-capabilities",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq",
+      "map-overview"
+    ],
+    "sectionOrderRules": [
+      "Operations intro must connect the company identity to its actual upstream activities.",
+      "Process overview should describe the main stages in a neutral and comprehensible way.",
+      "Technical capabilities must stay specific to real equipment, methods or competencies when such data exists.",
+      "Do not present generic service language better suited for local trades or consumer services."
+    ]
+  },
+  "safety-sustainability": {
+    "requiredSections": [
+      "safety-intro",
+      "safety-principles",
+      "environmental-work",
+      "compliance-governance",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Safety content must come before the final CTA.",
+      "Environmental work must avoid unsupported claims such as climate neutrality or zero impact unless supplied by the dossier.",
+      "Compliance and governance content should be factual and not framed as legal advice.",
+      "If trust-proof is shown here, it must add unique supporting information and not duplicate the same proof blocks from other pages."
+    ]
+  },
+  "assets-projects": {
+    "requiredSections": [
+      "assets-intro",
+      "assets-list",
+      "geography-or-map",
+      "project-status",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Assets intro must explain what the listed fields, licenses or projects represent.",
+      "Assets list items must be concrete and named when names are available.",
+      "Geography or map should appear before the final CTA.",
+      "Project status descriptions must be careful, factual and not imply reserves, output levels or approvals that are not documented."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "company-facts",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "timeline",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company in a specific, factual way rather than generic branding language.",
+      "Company facts should include visible organization details when available.",
+      "Team should show leadership or contact roles when dossier data exists, without inventing titles or headcount."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "location",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact page must provide real contact channels and a clear purpose for the form.",
+      "Location must be shown when address or map data exists.",
+      "Opening hours are optional and should be omitted rather than guessed for industrial operations."
+    ]
+  }
+}

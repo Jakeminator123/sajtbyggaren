@@ -1,0 +1,90 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "operations-summary",
+      "story",
+      "reviews",
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Hero must include business type and a primary CTA to contact or request transport inquiry.",
+      "Service summary must describe actual air transport offerings or assignment types, not generic claims.",
+      "Trust proof must use real company facts such as organisation number visibility, references or clear operating information.",
+      "Operations summary may appear before trust proof when geographic coverage or traffic type is central to understanding the offer.",
+      "Sections should avoid repeating the same safety or reliability claim in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company's air transport role to the listed services.",
+      "Service list items must be concrete, for example charter, freight, specialist transport or related operational services when actually offered.",
+      "Pricing may only describe pricing principles or request-for-quote flow unless exact prices are genuinely available."
+    ]
+  },
+  "operations": {
+    "requiredSections": [
+      "operations-intro",
+      "coverage-or-routes",
+      "process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "map",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Coverage-or-routes must describe real destinations, service areas, traffic patterns or operational scope without implying unavailable routes.",
+      "Process must explain how an inquiry, planning step or transport assignment typically proceeds.",
+      "Map should support location understanding and not falsely suggest live route tracking or airport partnerships."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific to the company and its operations, not generic corporate language.",
+      "Team section may show key people, flight operations staff or customer-facing roles when available.",
+      "Trust proof must stay factual and must not invent certifications, fleet size or flight volume."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must be present when available and must not be placeholders.",
+      "Contact CTA should support inquiry or booking request expectations clearly without promising instant confirmation unless that process exists.",
+      "Opening hours should reflect real contact availability, not assumed 24/7 service."
+    ]
+  }
+}

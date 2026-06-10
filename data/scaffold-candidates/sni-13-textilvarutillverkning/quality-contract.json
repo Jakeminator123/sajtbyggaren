@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Scaffold must reflect textile manufacturing needs with dedicated product and production pages.",
+    "Home and contact routes must always be present.",
+    "Every default route must have a matching sectionsPerRoute entry.",
+    "Copy structure must support inquiry/contact conversion rather than checkout flows.",
+    "Trust signals should use real company facts, references and contact details.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic local-service structure without manufacturing-specific pages",
+    "restaurant, portfolio or ecommerce-specific routes that do not fit the industry",
+    "invented certifications, production volumes or customer counts",
+    "overpromising fixed prices or lead times without supporting data",
+    "repeating the same trust claim in multiple adjacent sections"
+  ]
+}

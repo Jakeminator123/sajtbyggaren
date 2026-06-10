@@ -1,0 +1,68 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "mission-summary",
+      "service-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "faq",
+      "news-summary"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the verksamhetstyp or myndighetsroll in clear language and include a primary contact CTA.",
+      "Mission summary must explain public purpose or responsibility without marketing exaggeration.",
+      "Service summary must present concrete service areas, ärenden or responsibilities, not generic claims.",
+      "Trust proof, when used, should rely on transparent facts such as organisation identity, responsibility or official contact details rather than promotional language.",
+      "Sections must help visitors find the right next step quickly and must not repeat the same summary text verbatim."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the verksamhetens uppdrag to the listed services, functions or case types.",
+      "Service list items must be concrete and understandable to the public, for example permits, benefits administration, preparedness information or citizen support.",
+      "If FAQ is present, it should answer practical questions that arise from the listed services and not replace the service descriptions."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "organization-overview",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "team"
+    ],
+    "sectionOrderRules": [
+      "About story must explain mandate, role or public mission in specific terms, not generic brand language.",
+      "Organization overview should clarify responsibility, target groups or how the verksamhet is structured when such information is relevant.",
+      "Team is optional and should only be shown when named functions or leadership can be presented appropriately and accurately."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real contact channels and physical address when available, with no placeholder data.",
+      "Contact CTA may use form or mailto flow, but it should help the visitor reach the right unit or function.",
+      "Opening hours should only be shown when they are known and relevant for reception, office or phone service.",
+      "Map should only be shown when a visitor address is relevant for the public."
+    ]
+  }
+}

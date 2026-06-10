@@ -1,0 +1,57 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera bolaget, förklara vad ni bygger eller levererar och leda besökaren vidare till kontakt eller registrering."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva kärntjänster, teknikområden och typiska leveranser på ett konkret sätt."
+    },
+    {
+      "id": "cases",
+      "path": "/case",
+      "required": true,
+      "purpose": "Visa genomförda uppdrag, produktbyggen eller resultat som hjälper besökaren att förstå kompetens och arbetssätt."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": false,
+      "purpose": "Förklara prismodeller, paket eller hur offert och upplägg fungerar när fasta priser saknas."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom team, bakgrund, arbetssätt och syn på kvalitet, säkerhet och samarbete."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att starta dialog, boka möte, skicka förfrågan eller registrera sig."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "blog",
+      "path": "/blogg",
+      "when": "when the company publishes technical insights, product updates or news regularly"
+    },
+    {
+      "id": "careers",
+      "path": "/karriar",
+      "when": "when the company is actively recruiting developers, consultants or product roles"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "when the sales process benefits from answering common questions about scope, pricing, security or delivery"
+    }
+  ]
+}

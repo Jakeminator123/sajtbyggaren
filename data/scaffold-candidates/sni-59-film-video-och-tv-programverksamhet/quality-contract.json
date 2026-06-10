@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Hemsidan ska prioritera showreel eller rörligt material högt när sådant finns.",
+    "Scaffolden ska ha en tydlig portfolioyta för produktioner eller verkprover.",
+    "Kontaktväg och offert-CTA ska finnas tydligt både på startsidan och kontaktsidan.",
+    "Tjänstesidan ska förklara erbjudandet på ett konkret sätt anpassat till produktion och ljudarbete.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generiska lokala service-sektioner som service-area när de inte är centrala för denna bransch.",
+    "Överdrivna resultatpåståenden eller påhittade samarbeten.",
+    "Att ersätta portfolio med enbart allmän företagsbeskrivning.",
+    "Prissidor som antyder fasta priser för alla typer av produktion utan förklaring."
+  ]
+}

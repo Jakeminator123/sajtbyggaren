@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Scaffolden måste tydligt stödja både bokningsdrivna besök och snabba kontaktbehov vid oro eller akuta situationer.",
+    "Sidstrukturen måste passa veterinärverksamhet snarare än generell humanvård, inklusive hänsyn till djurägare som målgrupp.",
+    "Kontaktvägar, öppettider och hitta-hit-information måste vara centrala och lätta att nå.",
+    "Akut hjälp ska få en egen standardsida eftersom det är ett verkligt branschbehov.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Anta inte att alla veterinärkliniker erbjuder jour, operation, röntgen eller vård för alla djurslag.",
+    "Undvik alltför tekniskt veterinärspråk som gör det svårt för djurägare att förstå när de ska boka.",
+    "Undvik generiska vårdscaffolds som saknar akutlogik eller djurägarperspektiv.",
+    "Lova inte behandlingsresultat eller tillskriv inte kliniken certifieringar som inte uttryckligen finns."
+  ]
+}

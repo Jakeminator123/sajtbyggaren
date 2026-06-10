@@ -1,0 +1,29 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Has a home route and a contact route.",
+    "Routes and section ids use kebab-case slugs.",
+    "Paths are Swedish, lowercase, start with / and have no trailing slash.",
+    "Page set reflects this industry's need for mission clarity, practical services information and direct contact.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "Recommended dossiers are limited to the allowed dossier ids.",
+    "Copy avoids invented credentials, counts or unverifiable claims.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Tourism-style destination copy that hides the organisation's actual role.",
+    "Sales language that implies commercial offers when the entity mainly provides public, diplomatic or administrative functions.",
+    "Generic service descriptions with no guidance on what visitors can actually contact the organisation about.",
+    "Publishing sensitive or inappropriate submission prompts through the contact form.",
+    "Invented accreditations, embassy status details or operational claims not supported by source content."
+  ]
+}

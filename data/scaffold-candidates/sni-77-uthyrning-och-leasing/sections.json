@@ -1,0 +1,90 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "offer-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "how-it-works-summary",
+      "reviews",
+      "image-gallery",
+      "faq",
+      "opening-hours",
+      "map-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what is rented or leased, mention location if known, and include a primary contact CTA.",
+      "Offer summary should highlight concrete categories or object types, not vague claims about serving all needs.",
+      "How-it-works summary may appear before trust-proof when the business relies on explaining the rental or leasing process early.",
+      "Trust proof must use real company facts, references or practical assurances and must appear before the final contact CTA.",
+      "Sections should avoid repeating the same promise in hero, trust-proof and CTA."
+    ]
+  },
+  "rental-offer": {
+    "requiredSections": [
+      "offer-intro",
+      "offer-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Offer intro must connect the business identity to the kinds of items or agreements offered.",
+      "Offer list items must be concrete categories, models, use cases or rental types relevant to the business.",
+      "If pricing-overview is shown, it must be framed as indicative or standard pricing only when that is true.",
+      "Contact CTA should invite the visitor to ask about availability, lease setup or a quote."
+    ]
+  },
+  "how-it-works": {
+    "requiredSections": [
+      "process-steps",
+      "terms-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Process steps must explain the real customer journey such as inquiry, approval, pickup or delivery, usage period and return or contract follow-up.",
+      "Terms summary should cover practical basics like availability, rental period, leasing length, deposit, insurance or responsibility only when applicable.",
+      "This page should reduce uncertainty and avoid legal overclaiming or invented guarantees."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the company, its focus and how it works with customers.",
+      "Team should only be shown when real people or roles are available from the dossier.",
+      "Trust proof may include organisation details, references and practical experience but must not invent certifications or fleet size."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must be present when supplied and must not be placeholders.",
+      "Contact form CTA should be framed for rental or leasing inquiries, for example availability, quote or booking request.",
+      "Opening hours and map should appear after the primary contact details when available."
+    ]
+  }
+}

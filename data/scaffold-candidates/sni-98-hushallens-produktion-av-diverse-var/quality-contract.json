@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar verksamheter där enkel och tydlig informationsstruktur är viktigare än katalog, bokning eller e-handel.",
+    "Hemsidan måste kunna fungera väl med mycket begränsat innehåll.",
+    "Kontaktväg ska vara central på både startsida och kontaktsida.",
+    "Beskrivningen av verksamheten ska kunna hantera både varor och tjänster utan att lova mer än underlaget stödjer.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "E-handelsmönster som produktkorg eller checkout.",
+    "Bokningsflöden som antyder tidsbokning om sådan funktion inte finns.",
+    "Branschsektioner som certifieringar, installationer eller serviceområden utan tydlig relevans.",
+    "Överdrivet säljande copy för en verksamhet som främst behöver tydlighet och kontakt."
+  ]
+}

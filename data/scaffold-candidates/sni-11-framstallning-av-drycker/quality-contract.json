@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Includes home and contact routes.",
+    "Route set matches beverage manufacturing needs with a strong product page and production/story page.",
+    "All default routes have matching sectionsPerRoute entries.",
+    "CTAs work for inquiry, ordering interest or reseller contact without assuming unsupported ecommerce flow.",
+    "Copy framework supports trust through ingredients, process and origin rather than generic restaurant language.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not structure the site like a restaurant menu or catering site unless the business actually serves prepared food.",
+    "Do not require booking flows unless visits or tastings are truly offered.",
+    "Do not invent webshop checkout behavior if only inquiries or retailer contact are supported.",
+    "Do not use vague luxury language without product facts.",
+    "Do not claim certifications, awards or distribution scale unless explicitly provided."
+  ]
+}

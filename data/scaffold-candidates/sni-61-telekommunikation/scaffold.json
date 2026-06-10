@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-61-telekommunikation",
+  "version": "0.1.0",
+  "label": "Telekommunikation",
+  "description": "Scaffold för telekommunikationsbolag med fokus på produktnytta, teknisk trovärdighet, priser, support och leadgenerering.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara erbjudandet tydligt",
+    "bygga förtroende kring säkerhet, driftsäkerhet och support",
+    "driva registrering eller kontakt",
+    "presentera abonnemang, paket eller företagslösningar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

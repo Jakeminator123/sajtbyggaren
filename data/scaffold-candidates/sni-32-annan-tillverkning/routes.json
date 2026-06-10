@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, visa vad som produceras och leda vidare till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktkategorier eller tillverkningsområden med tydlig beskrivning av användning, material eller utförande."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Förklara tillverkningsprocess, material, kvalitet och arbetssätt för att skapa förtroende hos kunder och inköpare."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, team, arbetssätt och praktisk erfarenhet."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, frågor eller leverans- och produktionsdialog."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "när företaget har kundcase, projektbilder eller tydliga exempel på tidigare leveranser"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när kunder ofta behöver svar om material, minsta order, ledtider, specialanpassning eller leverans"
+    }
+  ]
+}

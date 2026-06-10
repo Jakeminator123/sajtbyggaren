@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "har alltid startsida och kontaktsida",
+    "har en tydlig produktsida för webshop/detaljhandel",
+    "stödjer både onlineköp och fysisk butik när relevant",
+    "lyfter trygghetssignaler kring betalning, byten eller recensioner utan att hitta på bevis",
+    "alla standardsidor har matchande sectionsPerRoute",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generisk konsultstruktur utan produktsida",
+    "påhittade kampanjer, lagersiffror eller kundantal",
+    "platshållarprodukter utan konkret innehåll",
+    "att beskriva fysisk butik om verksamheten saknar besöksadress",
+    "att lova fri frakt, öppet köp eller leveranstider utan källa"
+  ]
+}

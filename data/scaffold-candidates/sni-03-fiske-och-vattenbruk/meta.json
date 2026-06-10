@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-03-fiske-och-vattenbruk",
+  "sniCode": "03",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-03",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:24:07Z",
+  "outputPath": "data/scaffold-candidates/sni-03-fiske-och-vattenbruk",
+  "operatorBriefHash": "sha256:a7838434d39538eb49ce987accef13cf2e76c4a3d096e0230ea4fb3fa375c37d",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

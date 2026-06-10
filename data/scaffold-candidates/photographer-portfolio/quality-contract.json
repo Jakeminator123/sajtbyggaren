@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Includes a dedicated portfolio route because this industry depends on showcasing previous work.",
+    "Includes a contact route and clear inquiry path suitable for quote or booking requests.",
+    "Section structure prioritizes visual proof, concrete assignment types and personal trust signals.",
+    "All routes use Swedish lowercase paths and kebab-case ids.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic local-service structure where services dominate over visual work samples.",
+    "Invented awards, client logos, certifications or exaggerated shoot counts.",
+    "Large text-heavy pages that hide the portfolio behind marketing copy.",
+    "Repeating the same gallery content on every page without a distinct purpose.",
+    "Forcing address or map prominence when the business works on location or remotely."
+  ]
+}

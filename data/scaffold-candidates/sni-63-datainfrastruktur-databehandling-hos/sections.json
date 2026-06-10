@@ -1,0 +1,106 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-value",
+      "feature-summary",
+      "trust-proof",
+      "primary-cta"
+    ],
+    "optionalSections": [
+      "use-cases",
+      "pricing-teaser",
+      "faq",
+      "testimonials",
+      "uptime-support",
+      "newsletter-signup"
+    ],
+    "sectionOrderRules": [
+      "Hero måste tydligt säga vad tjänsten är till för och innehålla en primär CTA för registrering eller kontakt.",
+      "Product-value ska komma före djupare tekniska detaljer.",
+      "Feature-summary ska vara konkret och beskriva faktiska funktioner eller kapabiliteter, inte bara allmänna fördelar.",
+      "Trust-proof ska fokusera på verifierbara signaler som säkerhet, support, referenskunder eller tydliga arbetssätt.",
+      "Samma påstående om nytta eller säkerhet får inte upprepas i flera sektioner med nästan identisk formulering."
+    ]
+  },
+  "platform": {
+    "requiredSections": [
+      "platform-intro",
+      "feature-detail",
+      "use-cases",
+      "integration-or-workflow",
+      "primary-cta"
+    ],
+    "optionalSections": [
+      "architecture-overview",
+      "data-handling",
+      "faq",
+      "demo-invite"
+    ],
+    "sectionOrderRules": [
+      "Platform-intro måste koppla tjänstens funktioner till kundens problem eller arbetsflöde.",
+      "Feature-detail ska beskriva centrala funktioner i tydliga block och undvika intern jargong utan förklaring.",
+      "Use-cases ska vara realistiska och branschnära, inte påhittade kundresultat.",
+      "Integration-or-workflow ska förklara hur tjänsten införs, används eller kopplas in i befintlig miljö.",
+      "CTA ska komma efter att funktion och användningsfall blivit tydliga."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-intro",
+      "pricing-table",
+      "plan-comparison",
+      "pricing-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "custom-enterprise-note",
+      "billing-terms"
+    ],
+    "sectionOrderRules": [
+      "Pricing-intro måste förklara hur prissättningen fungerar, till exempel per paket, användning eller offert.",
+      "Pricing-table ska visa vad som ingår utan dolda eller oklara nivåskillnader.",
+      "Plan-comparison ska hjälpa besökaren att välja rätt nivå utifrån behov, inte bara lista funktioner.",
+      "Om exakta priser saknas får sidan vara ärlig med att offert krävs och vad som påverkar priset.",
+      "Pricing-cta ska vara tydlig och passa affären, till exempel registrering, boka demo eller kontakta sälj."
+    ]
+  },
+  "security": {
+    "requiredSections": [
+      "security-intro",
+      "security-measures",
+      "data-privacy",
+      "support-and-reliability",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "incident-process",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Security-intro måste förklara varför säkerhet och dataskydd är relevanta för tjänsten.",
+      "Security-measures ska beskriva konkreta skyddsåtgärder eller processer utan att lova mer än verksamheten faktiskt erbjuder.",
+      "Data-privacy ska behandla personuppgifter, lagring eller ansvar på en begriplig nivå.",
+      "Support-and-reliability ska beskriva supportkanaler, tillgänglighet eller driftarbete utan att hitta på SLA, certifieringar eller procentsiffror.",
+      "Om trust-proof används här får den inte duplicera identiskt innehåll från startsidan."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-intro",
+      "contact-options",
+      "contact-form"
+    ],
+    "optionalSections": [
+      "map",
+      "support-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Kontaktvägar ska vara tydliga och använda verkliga uppgifter, inte platshållare.",
+      "Contact-form ska ha en tydlig anledning att fylla i formuläret, till exempel demo, offert eller allmän fråga.",
+      "Om olika kontaktärenden finns bör sidan hjälpa besökaren att välja rätt väg, till exempel sälj eller support."
+    ]
+  }
+}

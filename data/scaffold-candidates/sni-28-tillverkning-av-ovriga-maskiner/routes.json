@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, visa maskinerbjudandet och driva kontakt för offert eller teknisk dialog."
+    },
+    {
+      "id": "products",
+      "path": "/maskiner",
+      "required": true,
+      "purpose": "Presentera maskintyper, användningsområden och kundanpassade lösningar på ett konkret sätt."
+    },
+    {
+      "id": "service",
+      "path": "/service-och-support",
+      "required": true,
+      "purpose": "Beskriva service, underhåll, reservdelar och teknisk support efter leverans."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets kompetens, arbetssätt, produktion och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan, boka möte eller hitta kontaktuppgifter och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "när företaget har namngivna kundcase, leveranser eller branschreferenser som kan visas öppet"
+    },
+    {
+      "id": "custom-manufacturing",
+      "path": "/kundanpassad-tillverkning",
+      "when": "när stor del av erbjudandet bygger på specialmaskiner, konstruktion efter kravspecifikation eller projekttillverkning"
+    }
+  ]
+}

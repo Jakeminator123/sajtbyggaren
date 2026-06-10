@@ -1,0 +1,266 @@
+{
+  "id": "sni-08-annan-utvinning-av-mineral",
+  "label": "Annan utvinning av mineral",
+  "description": "Branschspecifik scaffold för verksamheter inom annan utvinning av mineral. Strukturen fokuserar på att förklara material, utvinnings- och leveranskapacitet, verksamhetsområde, ansvarstagande och tydliga kontaktvägar för förfrågningar från företag, entreprenörer och offentliga beställare.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera mineral och material som erbjuds",
+    "förklara leverans- och verksamhetskapacitet",
+    "bygga förtroende genom konkret verksamhetsinformation",
+    "driva kontakt för offert, leveransförfrågan eller platsbesök"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, tydliggöra vilka mineral eller material som erbjuds och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "materials",
+      "path": "/material",
+      "required": true,
+      "purpose": "Visa vilka material eller fraktioner som finns, hur de används och ge en konkret väg till förfrågan."
+    },
+    {
+      "id": "operations",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Förklara hur verksamheten arbetar med utvinning, hantering, logistik och leverans på en tydlig och förtroendeingivande nivå."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, leveransfrågor, platsinformation och praktiska ärenden."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när företaget har en tydlig historia, ägarbild, team eller lokal förankring som stärker förtroendet"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när många återkommande frågor finns om material, leverans, hämtning, tillstånd på området eller praktiska villkor"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när plats, infart, öppettider eller karta behöver beskrivas separat för besök, upphämtning eller leveranser"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "material-summary",
+        "operations-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews",
+        "faq-preview",
+        "location-summary"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and the main offered materials or extraction focus, with a primary contact CTA.",
+        "Material-summary must appear before the final contact CTA so visitors quickly understand what is offered.",
+        "Operations-summary should explain capacity, delivery or handling in concrete terms without making unverifiable claims.",
+        "Trust-proof must use real business facts such as organisation details, references, visible location information or practical experience when provided.",
+        "Avoid repeating the same material list in multiple sections with identical wording."
+      ]
+    },
+    "materials": {
+      "requiredSections": [
+        "materials-intro",
+        "material-list",
+        "use-cases",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-note",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Materials intro must connect the offered materials to likely buyer needs in plain language.",
+        "Material-list items must be specific, for example material type, fraction, intended use or delivery format when known.",
+        "Use-cases should stay factual and describe suitable applications without promising performance that is not supported by supplied data.",
+        "If pricing-note is shown it must frame pricing as request-based or variable unless exact prices are actually supplied."
+      ]
+    },
+    "operations": {
+      "requiredSections": [
+        "operations-intro",
+        "process-overview",
+        "logistics-and-delivery",
+        "responsibility-and-safety",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "team",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Operations intro must explain what the site does in practical business terms, not generic marketing copy.",
+        "Process-overview should describe extraction, sorting, processing or handling only at a level supported by the dossier.",
+        "Logistics-and-delivery must clarify pickup, transport, delivery area or coordination details when known.",
+        "Responsibility-and-safety should present factual routines, site rules or environmental consideration without inventing certificates, permits or compliance claims."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "location",
+        "opening-hours"
+      ],
+      "optionalSections": [
+        "map",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real phone, email and address details when available and must not contain placeholders.",
+        "Contact form should be positioned after core contact details so urgent visitors can call directly.",
+        "Location and opening-hours should help visitors plan visits, pickups or deliveries.",
+        "If map is shown it should support the address and access information rather than replace written directions."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Ha en startsida och en kontaktsida.",
+      "Visa tydligt vilka material eller mineral verksamheten erbjuder.",
+      "Ge en konkret väg till kontakt eller offertförfrågan på alla kommersiellt viktiga sidor.",
+      "Beskriva verksamhet, logistik eller leveransupplägg på ett sätt som hjälper företagskunder att bedöma relevans.",
+      "All förtroendeskapande copy ska bygga på verkliga uppgifter från underlaget.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska tjänstebeskrivningar som inte säger vilka material som faktiskt erbjuds.",
+      "Påhittade certifieringar, miljöpåståenden eller produktionsvolymer.",
+      "Konsumentinriktad copy om verksamheten primärt säljer till företag och entreprenad.",
+      "Att dölja adress, plats eller praktisk kontaktinformation när sådan finns i underlaget.",
+      "Att använda samma kontaktuppmaning utan variation på varje sektion."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Website scaffold for other mining and quarrying businesses in Sweden, focused on mineral extraction, aggregates, industrial materials, site operations, logistics, delivery, pickup, trust, contact and location information.",
+    "semanticSignals": [
+      "mineralutvinning",
+      "taktverksamhet",
+      "materialleverans",
+      "fraktioner-och-materialtyper",
+      "hamtning-och-transport",
+      "verksamhetsplats",
+      "offertforfragan",
+      "entreprenad-och-foretagskunder",
+      "drift-och-hantering",
+      "kontakt-och-hitta-hit"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "e-handel-med-varukorg",
+      "bokningskalender-for-privatkunder",
+      "fotogalleri-som-huvudaffar",
+      "medicinska-tjanster",
+      "hotell-eller-boende"
+    ],
+    "llmClassificationHints": [
+      "Fits companies extracting, handling or supplying mineral-based raw materials rather than general local services.",
+      "Prefer routes for materials and operations over generic services when the business sells extracted materials.",
+      "Contact, location and practical delivery information are central conversion needs for this industry."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

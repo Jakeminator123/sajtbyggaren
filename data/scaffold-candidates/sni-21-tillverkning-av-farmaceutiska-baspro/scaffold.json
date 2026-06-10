@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-21-tillverkning-av-farmaceutiska-baspro",
+  "version": "0.1.0",
+  "label": "Tillverkning av farmaceutiska basprodukter och läkemedel",
+  "description": "Scaffold för företag inom tillverkning av farmaceutiska basprodukter och läkemedel, med fokus på förtroende, produktionskapacitet, kvalitet, regulatorisk tydlighet och enkel kontakt för affärs- och partnerförfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara verksamhetens inriktning och kapacitet",
+    "bygga förtroende kring kvalitet, process och ansvar",
+    "presentera produktions- och utvecklingsområden",
+    "leda besökare till kontakt för affärsdialog, partnerskap eller förfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

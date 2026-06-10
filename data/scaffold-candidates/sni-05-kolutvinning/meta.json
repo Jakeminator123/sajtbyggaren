@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-05-kolutvinning",
+  "sniCode": "05",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-05",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:23:51Z",
+  "outputPath": "data/scaffold-candidates/sni-05-kolutvinning",
+  "operatorBriefHash": "sha256:95514fd15deb5d84da00be3818c7c0444a3701d37848c70ba3e60a3b95a42ff8",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,36 @@
+{
+  "id": "sni-36-vattenforsorjning",
+  "embeddingText": "Vattenförsörjning, dricksvatten, vattenleverans, driftinformation, avbrott, underhåll, vattenkvalitet, provtagning, anslutning, vattenmätare, kundservice, kontakt, karta, öppettider, kommunal eller lokal vattenverksamhet.",
+  "semanticSignals": [
+    "vattenforsorjning",
+    "dricksvatten",
+    "vattenkvalitet",
+    "provtagning",
+    "driftstorning",
+    "planerat-avbrott",
+    "underhallsarbete",
+    "anslutning",
+    "vattenmatare",
+    "felanmalan",
+    "kundservice",
+    "oppettider",
+    "besoksadress"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "webbshop",
+    "produktkatalog",
+    "bordsbokning",
+    "portfoljfotografering",
+    "hotellrum",
+    "takeaway",
+    "medlemskapstraning"
+  ],
+  "llmClassificationHints": [
+    "Likely fits organisations that supply water or manage local drinking water distribution.",
+    "Look for signals about dricksvatten, ledningsnät, avbrott, vattenprov or anslutning.",
+    "Prioritise informative public-service-like structure over aggressive sales structure."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

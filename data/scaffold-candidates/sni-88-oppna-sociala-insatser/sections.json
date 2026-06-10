@@ -1,0 +1,108 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "uppdragsintroduktion",
+      "insatsoversikt",
+      "fortroende",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "malgrupper",
+      "engagemangsoversikt",
+      "nyheter-preview",
+      "faq",
+      "bildgalleri",
+      "nyhetsbrev"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the mission in plain language and include a primary CTA such as registrering, kontakt or engagemang.",
+      "Uppdragsintroduktion should explain who the organisation exists for and what kind of support or activity it offers.",
+      "Insatsoversikt must be concrete and visitor-oriented, not abstract value statements.",
+      "Förtroende should rely on transparent facts such as organisationsnummer, 90-konto or årsredovisning when available, and must appear before the final CTA.",
+      "Sections must avoid repeating the same appeal for support or engagement in multiple blocks."
+    ]
+  },
+  "insatser": {
+    "requiredSections": [
+      "insatser-intro",
+      "insatslista",
+      "hur-det-fungerar",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "malgrupper",
+      "faq",
+      "fortroende"
+    ],
+    "sectionOrderRules": [
+      "Insatser intro must connect the mission to the actual support, activities or counselling offered.",
+      "Insatslista items must describe real forms of support, participation or guidance in specific terms.",
+      "Hur-det-fungerar should explain practical next steps such as registration, eligibility, schedule or contact pathway without implying guaranteed outcomes.",
+      "If present, målgrupper should clarify who each offer is for and any important limitations."
+    ]
+  },
+  "engagera-dig": {
+    "requiredSections": [
+      "engagera-intro",
+      "engagemangsformer",
+      "registrering-cta"
+    ],
+    "optionalSections": [
+      "volontarprocess",
+      "faq",
+      "nyhetsbrev",
+      "fortroende"
+    ],
+    "sectionOrderRules": [
+      "Engagera intro must explain why engagement matters for the mission and what kinds of participation are possible.",
+      "Engagemangsformer must list concrete options such as bli medlem, volontär, delta i aktivitet or stöd verksamheten, depending on the dossier.",
+      "Registrering CTA should be the main conversion point on this route and may point to form, email or another clear next step.",
+      "The page must not pressure vulnerable visitors; wording should remain supportive and informative."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "om-oss-berattelse",
+      "arbetssatt",
+      "team",
+      "fortroende"
+    ],
+    "optionalSections": [
+      "bildgalleri",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Om oss berättelse must be specific to the organisation's background, local context or social mission.",
+      "Arbetssätt should describe how the organisation works in practice, including collaboration, accessibility or participation where relevant.",
+      "Team may show staff, board or key volunteers depending on the organisation's structure.",
+      "Förtroende should prioritise transparent organisational facts over generic claims."
+    ]
+  },
+  "nyheter": {
+    "requiredSections": [
+      "hero",
+      "contact-cta"
+    ],
+    "optionalSections": [],
+    "sectionOrderRules": []
+  },
+  "kontakt": {
+    "requiredSections": [
+      "kontaktinfo",
+      "kontaktformular",
+      "besok-och-tider"
+    ],
+    "optionalSections": [
+      "karta",
+      "faq",
+      "nyhetsbrev"
+    ],
+    "sectionOrderRules": [
+      "Kontaktinfo must include real contact ways such as email, phone, address or equivalent organisational contact points.",
+      "Kontaktformular should be suitable for general inquiries and must not promise immediate social support unless the organisation actually offers it.",
+      "Besök och tider should clarify opening hours, drop-in times or how to get in touch when staffed hours vary.",
+      "If a map is shown, it should support the contact information rather than replace full written address details."
+    ]
+  }
+}

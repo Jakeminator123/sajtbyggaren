@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-60-planering-radio-och-tv-sandning-nyhe",
+  "sniCode": "60",
+  "wizardCategoryId": "blog",
+  "industryProfileId": "sni-60",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:26Z",
+  "outputPath": "data/scaffold-candidates/sni-60-planering-radio-och-tv-sandning-nyhe",
+  "operatorBriefHash": "sha256:4f92c8d344ee1a7fb4efd6f5cc26c257028df19e22eefb347e776ab3e72fc40c",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

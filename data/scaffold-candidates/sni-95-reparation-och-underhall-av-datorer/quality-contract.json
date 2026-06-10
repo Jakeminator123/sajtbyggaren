@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Includes home and contact routes.",
+    "Page set reflects actual needs of repair and maintenance businesses by including services and pricing surfaces.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "All route ids, paths and section ids use kebab-case slugs.",
+    "Visitor-facing copy stays honest and avoids unsupported certifications, counts or guarantees.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic agency-style sections that do not fit a repair business.",
+    "Portfolio-first structure without explaining service categories or repair scope.",
+    "Vague service labels like 'high quality solutions' instead of actual repair work.",
+    "Hidden pricing structure when the site includes a dedicated pricing page.",
+    "Repeating the same trust claim in hero, trust-proof, reviews and CTA without adding new information."
+  ]
+}

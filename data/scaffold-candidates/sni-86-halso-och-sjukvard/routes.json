@@ -1,0 +1,50 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Skapa förtroende snabbt med tydlig vårdprofil, legitimerad personal, översikt av behandlingar och en enkel väg till att boka tid."
+    },
+    {
+      "id": "treatments",
+      "path": "/behandlingar",
+      "required": true,
+      "purpose": "Presentera mottagningens behandlingar eller vårdtjänster i klarspråk så att besökaren förstår vad som erbjuds, när det passar och hur nästa steg ser ut."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser-och-frikort",
+      "required": true,
+      "purpose": "Ge transparent information om priser, patientavgifter, frikort eller vad som ingår, så att besökaren kan planera sitt besök och känna sig trygg med kostnadsbilden."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter, öppettider, adress, karta och tydlig bokningsväg så att patienten snabbt hittar rätt utan att leta."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "team",
+      "path": "/vart-team",
+      "when": "verksamheten har flera namngivna behandlare eller läkare där personernas legitimation, roller och inriktningar påverkar förtroendet"
+    },
+    {
+      "id": "booking",
+      "path": "/boka-tid",
+      "when": "verksamheten vill ge bokning en egen sida med tydliga instruktioner, bokningsknapp och information inför besöket"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "kliniken ofta får återkommande frågor om remiss, frikort, avbokning, sekretess, förberedelser eller vad patienten ska ta med sig"
+    },
+    {
+      "id": "about",
+      "path": "/om-kliniken",
+      "when": "verksamheten vill berätta mer om arbetssätt, vårdfilosofi, mottagningens bakgrund och hur patientmötet går till"
+    }
+  ]
+}

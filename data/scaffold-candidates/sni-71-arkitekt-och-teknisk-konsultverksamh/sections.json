@@ -1,0 +1,93 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "services-overview",
+      "reference-project-preview",
+      "trust-signals",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the firm's focus clearly in plain professional language, with a primary CTA for quote/contact rather than vague brand copy.",
+      "Services overview must appear before deeper company story so visitors can confirm relevance within a few seconds.",
+      "Reference project preview should come before long explanatory text because this industry earns trust through concrete assignments.",
+      "Trust signals must be factual, such as roles, certifications, insurance, sectors or documented experience, never inflated claims."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-list",
+      "service-scope-block",
+      "process-steps",
+      "faq-accordion",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-signals",
+      "reference-project-preview"
+    ],
+    "sectionOrderRules": [
+      "Services list must use real client-facing service categories, for example projektering, bygglovsritningar, kontroll, provning, analys or teknisk utredning where relevant.",
+      "Service scope block should clarify what is typically included, required input from client and expected output, avoiding legal or technical overpromises.",
+      "FAQ should answer practical buying questions and reduce friction before contact."
+    ]
+  },
+  "projects": {
+    "requiredSections": [
+      "reference-project-grid",
+      "project-types-or-sectors",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews-or-testimonials"
+    ],
+    "sectionOrderRules": [
+      "Reference project grid must lead the page and each item should identify project type, scope or assignment nature without requiring exaggerated marketing language.",
+      "If confidentiality limits detail, cards may stay concise but should still communicate enough context to show relevant experience.",
+      "Trust signals on this page support the project evidence and should not overshadow the projects themselves."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story-block",
+      "team-block",
+      "credentials-and-responsibility",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-signals",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "About story must explain what the company does, who it serves and how it works, not rely on generic consultancy clichés.",
+      "Team block should make roles legible, such as arkitekt, konstruktör, projektledare, provningsingenjör or specialist.",
+      "Credentials and responsibility section may include certifications, authorisations, insurance or quality approach only when actually applicable."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "quote-request-helper",
+      "map-or-location",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq-accordion",
+      "opening-hours-or-availability"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include direct actionable details such as phone, email and address when available.",
+      "Contact form should support project or assignment enquiries and can prompt for type of service, location, timeline or existing underlag.",
+      "If map or location is shown, it should support visiting or service-area clarity rather than decorative filler."
+    ]
+  }
+}

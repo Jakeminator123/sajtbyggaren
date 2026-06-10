@@ -1,0 +1,36 @@
+{
+  "id": "sni-80-sakerhets-och-bevakningsverksamhet",
+  "embeddingText": "Säkerhets- och bevakningsverksamhet scaffold för småföretagswebb. Innehåller startsida, tjänster, avtal och priser, om oss och kontakt. Fokuserar på bevakningstjänster, rondering, stationär bevakning, larmutryckning, ordningshållning, jour, auktorisation, kompetens, trygghet, offertförfrågan och lokal närvaro.",
+  "semanticSignals": [
+    "bevakningsforetag",
+    "sakerhetstjanster",
+    "rondering",
+    "stationar-bevakning",
+    "larmutryckning",
+    "jour",
+    "ordningsvakt",
+    "vaktbolag",
+    "sakerhetslosningar",
+    "avtal-och-priser",
+    "auktorisation",
+    "certifierad-personal",
+    "kontakt-for-offert"
+  ],
+  "negativeSignals": [
+    "menu",
+    "restaurant-booking",
+    "product-catalog",
+    "ecommerce-checkout",
+    "portfolio-shoots",
+    "medical-clinic-booking",
+    "real-estate-listings"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for companies selling security and guarding services rather than physical alarm product ecommerce.",
+    "Strong match when the business emphasizes bevakning, ordningsvakter, rondering, larmutryckning, jour or auktorisation.",
+    "The avtal/priser page is important because buyers often compare ongoing agreements and quote-based assignments.",
+    "Trust and compliance signals matter more than lifestyle storytelling for this industry."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

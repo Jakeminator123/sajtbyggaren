@@ -1,0 +1,30 @@
+{
+  "id": "sni-62-dataprogrammering-datakonsultverksam",
+  "embeddingText": "Dataprogrammering, systemutveckling, mjukvarukonsult, teknikkonsult, SaaS, produktutveckling, integrationer, moln, apputveckling, webbutveckling, utvecklingsteam, techbolag, konsultbolag med tjänster, case, priser, team och kontakt.",
+  "semanticSignals": [
+    "software-development-services",
+    "it-consulting",
+    "custom-software",
+    "web-and-app-development",
+    "cloud-and-integrations",
+    "technical-case-studies",
+    "transparent-pricing-models",
+    "team-and-method",
+    "lead-capture-or-registration"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "ecommerce-product-catalog",
+    "medical-clinic-booking",
+    "beauty-treatment-list",
+    "real-estate-listings",
+    "event-ticketing"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for companies that build software, deliver development consulting, product engineering or technical advisory services.",
+    "Strong fit when the business needs to explain services, technologies, delivery model and cases.",
+    "Can serve both consultancy-led firms and product-oriented tech companies if contact or registration is the main conversion."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

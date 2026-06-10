@@ -1,0 +1,37 @@
+{
+  "id": "sni-42-anlaggningsarbeten",
+  "embeddingText": "Anläggningsarbeten, markentreprenad, schakt, dränering, väg, grundarbete, maskinpark, referensprojekt, offert, bygg och hantverk, entreprenadföretag med fokus på kapacitet och utförda arbeten.",
+  "semanticSignals": [
+    "anlaggning",
+    "markarbete",
+    "markentreprenad",
+    "schakt",
+    "dranering",
+    "vagbygge",
+    "grundarbete",
+    "maskinpark",
+    "entreprenad",
+    "referensprojekt",
+    "offert",
+    "byggarbetsplats"
+  ],
+  "negativeSignals": [
+    "meny",
+    "bokning-av-bord",
+    "webbshop",
+    "produktkatalog",
+    "behandlingar",
+    "frisor",
+    "fotografpaket",
+    "restaurang",
+    "e-handel"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for businesses performing anläggningsarbeten or markentreprenad under SNI 42.",
+    "Prioritize services, project references, machine capacity and quote conversion.",
+    "A projects/reference page is more important here than blog-like editorial content.",
+    "The tone should feel rak, pålitlig and operational rather than design-driven."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

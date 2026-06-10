@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Has a dedicated route for the company's offer and a dedicated route for production/process, since this industry needs more than generic service-business pages.",
+    "Includes home route with path '/' and a contact route.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "Purposes and rules stay honest and avoid invented certifications, customer volumes or technical claims.",
+    "Routes and sections support both trust-building and lead generation for B2B manufacturing contexts.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the company like a generic local handyman or consultant business.",
+    "Do not rely only on team/about content; the scaffold must foreground offering, production and references.",
+    "Do not invent export markets, defense approvals, certifications or fleet counts.",
+    "Do not force pricing where projects are typically custom and quote-based.",
+    "Do not use vague section logic that hides what is actually manufactured or delivered."
+  ]
+}

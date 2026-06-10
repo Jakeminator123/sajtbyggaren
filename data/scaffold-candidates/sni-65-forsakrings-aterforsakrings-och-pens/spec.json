@@ -1,0 +1,282 @@
+{
+  "id": "sni-65-forsakrings-aterforsakrings-och-pens",
+  "label": "Försäkrings-, återförsäkrings- och pensionsfondsverksamhet",
+  "description": "Scaffold för försäkringsbolag, återförsäkringsaktörer och pensionsfondsverksamheter som behöver förklara erbjudande, målgrupper, villkor på översiktlig nivå, förtroendeskapande information och tydliga kontaktvägar för rådgivning eller offertförfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara försäkrings- och pensionsrelaterade erbjudanden",
+    "hjälpa besökaren att hitta rätt produktområde eller kundkategori",
+    "bygga förtroende genom tydlighet, stabilitet och kontaktvägar",
+    "driva offert- eller rådgivningsförfrågningar"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en trygg och tydlig överblick över verksamheten: vilka försäkrings-, återförsäkrings- eller pensionslösningar som erbjuds, vilka kundgrupper man vänder sig till, varför besökaren kan känna förtroende och hur nästa steg tas."
+    },
+    {
+      "id": "erbjudande",
+      "path": "/erbjudande",
+      "required": true,
+      "purpose": "Presentera produkt- och tjänsteområden strukturerat så att besökaren snabbt kan förstå om verksamheten arbetar med exempelvis sakförsäkring, livförsäkring, tjänstepension, återförsäkring eller kapitalförvaltning inom pensionsramen."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Beskriva bolaget, uppdraget, arbetssättet, risk- och ansvarsperspektivet samt den typ av kompetens och organisation som bär erbjudandet."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Erbjuda tydliga kontaktvägar för offert, rådgivning, partnerdialog eller allmän fråga, med formulär och direkt kontaktinformation."
+    },
+    {
+      "id": "priser",
+      "path": "/priser",
+      "optional": true,
+      "when": "verksamheten säljer standardiserade försäkringspaket, rådgivningstjänster eller abonnemang som kan presenteras öppet utan individuell riskprövning"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "många återkommande frågor finns om villkor på översiktlig nivå, skadeanmälan, pensionssparande, återköp, flytt eller hur processen fungerar"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "optional": true,
+      "when": "namngivna rådgivare, specialister eller ledningspersoner stärker förtroendet och hjälper besökaren att förstå kompetensområden"
+    },
+    {
+      "id": "skador-och-arenden",
+      "path": "/skador-och-arenden",
+      "optional": true,
+      "when": "verksamheten behöver samla information om skadeanmälan, pågående ärenden, ersättningsprocess eller vägledning till rätt kanal"
+    },
+    {
+      "id": "insikter",
+      "path": "/insikter",
+      "optional": true,
+      "when": "bolaget publicerar marknadskommentarer, pensionsguider, riskråd eller förklarande innehåll som stödjer kundens beslutsprocess"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "erbjudande-oversikt",
+        "kundgrupper",
+        "trygghet-och-fortroende",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "process-oversikt",
+        "faq-preview",
+        "team-preview",
+        "insikter-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero ska snabbt förklara vilken typ av försäkrings-, återförsäkrings- eller pensionsverksamhet det gäller och vem erbjudandet riktar sig till.",
+        "Erbjudande-översikt ska ordnas i tydliga kategorier snarare än som en lös punktlista, så att besökaren kan självsortera till rätt område.",
+        "Trygghet-och-förtroende ska bygga på saklig information som bolagsprofil, arbetssätt, erfarenhetsområden eller tillsynsrelaterad tydlighet utan att påstå sådant som inte kan styrkas.",
+        "Kontakt-CTA ska använda lugn, handlingsinriktad formulering såsom 'Begär offert' eller 'Kontakta oss för rådgivning'."
+      ]
+    },
+    "erbjudande": {
+      "requiredSections": [
+        "tjansteomraden",
+        "malgrupper",
+        "villkors-och-processinfo",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq-preview",
+        "case-eller-exempel"
+      ],
+      "sectionOrderRules": [
+        "Tjänsteområden ska grupperas efter begripliga försäkrings- eller pensionskategorier och varje område ska ha en kort beskrivning av omfattning eller användning.",
+        "Målgrupper ska tydliggöra om erbjudandet riktar sig till privatpersoner, företag, institutioner, försäkringsförmedlare eller andra professionella motparter.",
+        "Villkors- och processinfo ska beskriva nivåer och steg på ett översiktligt sätt utan att ersätta fullständiga villkor eller individuell rådgivning."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "verksamhetsbeskrivning",
+        "arbetssatt",
+        "team-preview",
+        "trygghet-och-fortroende"
+      ],
+      "optionalSections": [
+        "historia",
+        "styrning-och-ansvar",
+        "partnerskap-eller-samarbeten"
+      ],
+      "sectionOrderRules": [
+        "Verksamhetsbeskrivning ska vara konkret om bolagets roll, fokus och erbjudande, inte allmänt hållen företagsprosa.",
+        "Arbetssätt ska förklara hur rådgivning, riskbedömning, förvaltning eller kunddialog går till på en nivå som skapar förståelse utan att lova utfall.",
+        "Trygghet-och-förtroende ska fokusera på transparens, ansvar och tillgänglighet snarare än marknadsföringssuperlativ."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "kontaktinfo",
+        "kontaktformular",
+        "faq-preview"
+      ],
+      "optionalSections": [
+        "map-or-location",
+        "oppettider",
+        "team-contact-points"
+      ],
+      "sectionOrderRules": [
+        "Kontaktinfo ska innehålla tydliga kontaktvägar för allmän fråga, offert eller rådgivning, med klickbara telefon- och e-postlänkar när sådana visas.",
+        "Kontaktformulär ska efterfråga endast den information som behövs för att kunna återkoppla och ska inte utformas som en full skadeanmälan om inte verksamheten uttryckligen stödjer det.",
+        "Om flera kontaktvägar finns ska det framgå vilken kanal som passar för exempelvis offert, kundservice eller pågående ärende."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "ha en startsida som förklarar erbjudande och målgrupp inom första scrollen",
+      "ha en kontaktväg som stödjer offert- eller rådgivningsförfrågan",
+      "presentera produkt- eller tjänsteområden i strukturerad form anpassad till försäkring, återförsäkring eller pension",
+      "använda saklig och trygg tonalitet utan överdrivna löften",
+      "inkludera sektioner eller sidlogik som kan bära FAQ eftersom det är en efterfrågad capability",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "bygga sajten som en generisk redovisningsbyrå trots wizard-kategorin",
+      "lova ersättning, avkastning eller godkännande utan förbehåll",
+      "uppfinna myndighetstillstånd, certifieringar eller medlemskap",
+      "gömma kontaktvägar bakom enbart allmän copy utan tydlig CTA",
+      "använda e-handelslogik med kundvagn eller produktkort som om försäkring vore standardvaror"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "pricing-table",
+      "team-roster",
+      "trust-guarantees",
+      "map-embed"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Försäkrings-, återförsäkrings- och pensionsfondsverksamhet behöver en saklig, förtroendeskapande webbstruktur med startsida, erbjudandesida, om-oss-sida och kontaktsida. Fokus ligger på att förklara produktområden, målgrupper, processer, villkor på översiktlig nivå, rådgivning och tydliga kontaktvägar för offert eller frågor. Vanliga kompletterande sidor är FAQ, team, priser för standardiserade upplägg, skade- eller ärendeinformation och insikter.",
+    "semanticSignals": [
+      "forsakring",
+      "aterforsakring",
+      "pensionsfond",
+      "tjanstepension",
+      "livforsakring",
+      "sakforsakring",
+      "riskbedomning",
+      "villkor",
+      "ersattning",
+      "kapitalforvaltning",
+      "kundservice",
+      "radgivning",
+      "offert",
+      "skadeanmalan"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "webshop",
+      "produktkorg",
+      "bokningskalender-for-behandlingar",
+      "fastighetsobjekt",
+      "fotogalleri-som-huvudlogik"
+    ],
+    "llmClassificationHints": [
+      "Denna scaffold passar verksamheter inom försäkring, återförsäkring och pension där besökaren behöver förstå erbjudande, villkor på hög nivå och kontaktvägar.",
+      "Om verksamheten säljer komplexa finansiella eller riskrelaterade produkter är strukturerade tjänsteområden viktigare än allmän prislista.",
+      "FAQ och kontaktformulär är centrala eftersom besökare ofta har process- och villkorsfrågor innan de tar kontakt."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#f7f4ec",
+          "foreground": "#1d2a23",
+          "muted": "#5a6660",
+          "border": "#d6d2c1",
+          "primary": "#1f4d3a",
+          "primaryForeground": "#f7f4ec",
+          "accent": "#c9a55a",
+          "accentForeground": "#1d2a23"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.625rem",
+          "lg": "1rem"
+        },
+        "spacing": {
+          "section": "5.5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "warm",
+          "trustworthy",
+          "competent",
+          "approachable",
+          "professional",
+          "steady"
+        ]
+      }
+    }
+  ]
+}

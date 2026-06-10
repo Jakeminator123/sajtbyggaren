@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad som produceras och leda till kontakt eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriv tryck-, prepress-, efterbehandlings- och reproduktionstjänster konkret så att kunden snabbt ser vad som erbjuds."
+    },
+    {
+      "id": "portfolio",
+      "path": "/portfolio",
+      "required": true,
+      "purpose": "Visa representativa exempel på trycksaker, förpackningar, etiketter eller andra produktioner för att göra kvalitet och användningsområden tydliga."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan med kontaktuppgifter, öppettider och platsinformation."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget vill bygga extra förtroende med historia, personal eller arbetssätt"
+    },
+    {
+      "id": "quote-request",
+      "path": "/begar-offert",
+      "when": "när webbplatsen ska fånga mer strukturerade förfrågningar om upplaga, format, material eller leveranstid"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när kunder ofta behöver vägledning om original, filformat, pappersval, upplagor eller leverans"
+    }
+  ]
+}

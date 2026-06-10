@@ -1,0 +1,19 @@
+{
+  "_comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+  "required": [],
+  "recommended": [
+    "mailto-contact-form",
+    "opening-hours",
+    "map-embed",
+    "reviews-display",
+    "trust-guarantees",
+    "image-gallery",
+    "faq-accordion"
+  ],
+  "conditional": [],
+  "disallowedByDefault": [
+    "auth-flow",
+    "dashboard-shell",
+    "pricing-table-saas"
+  ]
+}

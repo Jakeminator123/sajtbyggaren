@@ -1,0 +1,299 @@
+{
+  "id": "sni-26-tillverkning-av-datorer-elektronikva",
+  "label": "Tillverkning av datorer, elektronikvaror och optik",
+  "description": "Branschspecifik scaffold för företag inom SNI 26 som tillverkar datorer, elektronikvaror och optik. Fokuserar på produktöversikt, teknisk trovärdighet, tillämpningar, supportkontakt och nyheter för B2B-kunder, partners och upphandlare.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produktutbud och produktkategorier",
+    "bygga teknisk trovärdighet och förtroende",
+    "förklara användningsområden och kundnytta",
+    "driva kontakt för offert, dialog eller partnerskap",
+    "publicera nyheter och uppdateringar om produkter och verksamhet"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, lyft produktnyttan direkt och led besökaren vidare till produkter eller kontakt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera produktkategorier, huvudegenskaper och användningsområden på ett tydligt och jämförbart sätt."
+    },
+    {
+      "id": "applications",
+      "path": "/anvandningsomraden",
+      "required": true,
+      "purpose": "Visa vilka branscher, miljöer eller användningsfall produkterna är framtagna för och varför de passar där."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva verksamheten, teamet och hur företaget arbetar med kvalitet, support och långsiktighet."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": false,
+      "purpose": "Publicera produktnyheter, företagsuppdateringar och annan aktuell information som visar aktivitet och utveckling."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att komma i kontakt för offertförfrågan, produktfrågor, support eller samarbete."
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "när företaget ofta behöver besvara återkommande frågor om produkter, leverans, kompatibilitet, support eller arbetssätt"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "optional": true,
+      "when": "när standardiserade produkter, paket eller startnivåer kan beskrivas öppet utan att vilseleda om projektspecifika priser"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-category-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "applications-summary",
+        "news-summary",
+        "faq",
+        "team-preview",
+        "reviews",
+        "newsletter-signup"
+      ],
+      "sectionOrderRules": [
+        "Hero must communicate what the company manufactures, the main customer value and a primary CTA.",
+        "Product-category-summary must appear before the final contact CTA.",
+        "Trust proof must rely on real signals such as support approach, security information, delivery capability, references or documented experience when such data exists.",
+        "Applications-summary should connect products to real use cases rather than listing technical terms without context.",
+        "Sections must avoid repeating the same product claims in multiple blocks."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-category-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "product-comparison-notes",
+        "trust-proof",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Products intro must explain the scope of the offering in plain language.",
+        "Product-category-list items must describe concrete product groups, key benefits and typical use cases.",
+        "If product-comparison-notes is shown, it should help visitors choose category without pretending to be a full specification sheet.",
+        "Contact CTA should invite quote, product dialogue or requirement discussion."
+      ]
+    },
+    "applications": {
+      "requiredSections": [
+        "applications-intro",
+        "application-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "case-snippets",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Applications intro must explain how the products are used in practice.",
+        "Application-list entries must describe industries, environments or workflows the products fit, not vague audience labels.",
+        "Case snippets may only be shown when the dossier contains real customer-safe examples or anonymised use cases.",
+        "The page should connect each application to relevant product groups without duplicating the full products page."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "manufacturing-approach",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company in a specific and credible way.",
+        "Team should focus on relevant competence, roles or service responsibility when data exists.",
+        "Trust proof should highlight real capabilities such as support, quality routines, security work or customer relationships without inventing certifications."
+      ]
+    },
+    "news": {
+      "requiredSections": [
+        "news-intro",
+        "news-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "newsletter-signup"
+      ],
+      "sectionOrderRules": [
+        "News list should contain actual updates, articles or announcements when available.",
+        "If there are too few news items, the renderer should keep the page concise rather than padding with generic text.",
+        "Contact CTA should fit the context, for example product questions, press contact or partnership dialogue."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include the real contact methods available from the business data.",
+        "If a form is shown, it should support product, sales or support enquiries.",
+        "Map should only render when a real visit or office address exists and is suitable to publish."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Scaffold must reflect manufacturing of computers, electronics or optical products rather than generic tech consulting.",
+      "Home, products and contact must be present.",
+      "Routes and sections must support both technical credibility and lead generation.",
+      "Purposes and rules must stay honest and avoid unsupported compliance or certification claims.",
+      "All route paths must be Swedish and lowercase.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic saas-only structure without product or application pages",
+      "portfolio framing better suited to agencies or creators",
+      "invented certifications, factory claims or customer counts",
+      "forcing public pricing when sales are specification- or quote-driven",
+      "overusing startup language that hides the manufacturing context"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "team-roster",
+      "trust-guarantees",
+      "video-hero",
+      "reviews-display"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tillverkning av datorer, elektronikvaror och optik. Webbplatsstruktur för B2B-orienterad tillverkare med startsida, produktsida, användningsområden, om oss, nyheter och kontakt. Fokus på produktnytta först, teknisk trovärdighet direkt efter, med plats för FAQ, supportsignal, referenser och kontaktformulär.",
+    "semanticSignals": [
+      "elektronikproduktion",
+      "optikprodukter",
+      "datorhardvara",
+      "produktkategorier",
+      "teknisk-trovardighet",
+      "anvandningsomraden",
+      "industriella-kunder",
+      "support-och-kontakt",
+      "produktnyheter",
+      "referenskunder"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "bokningskalender-for-behandlingar",
+      "maklarobjekt",
+      "fotografportfolio",
+      "ren-konsultsajt-utan-produkter",
+      "ren-webbshopstruktur-med-kundkorg-som-huvudflode"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for manufacturers of hardware, electronics modules, optical equipment, instruments or related product families.",
+      "Prefer this scaffold when the business needs product overview pages and use-case explanation rather than service packages.",
+      "Do not classify pure software startups or IT consultancies here unless physical products are central."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

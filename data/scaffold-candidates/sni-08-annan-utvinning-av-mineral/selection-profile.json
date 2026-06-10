@@ -1,0 +1,31 @@
+{
+  "id": "sni-08-annan-utvinning-av-mineral",
+  "embeddingText": "Website scaffold for other mining and quarrying businesses in Sweden, focused on mineral extraction, aggregates, industrial materials, site operations, logistics, delivery, pickup, trust, contact and location information.",
+  "semanticSignals": [
+    "mineralutvinning",
+    "taktverksamhet",
+    "materialleverans",
+    "fraktioner-och-materialtyper",
+    "hamtning-och-transport",
+    "verksamhetsplats",
+    "offertforfragan",
+    "entreprenad-och-foretagskunder",
+    "drift-och-hantering",
+    "kontakt-och-hitta-hit"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "e-handel-med-varukorg",
+    "bokningskalender-for-privatkunder",
+    "fotogalleri-som-huvudaffar",
+    "medicinska-tjanster",
+    "hotell-eller-boende"
+  ],
+  "llmClassificationHints": [
+    "Fits companies extracting, handling or supplying mineral-based raw materials rather than general local services.",
+    "Prefer routes for materials and operations over generic services when the business sells extracted materials.",
+    "Contact, location and practical delivery information are central conversion needs for this industry."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

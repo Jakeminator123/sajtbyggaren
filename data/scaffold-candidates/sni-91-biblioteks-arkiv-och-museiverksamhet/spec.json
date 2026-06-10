@@ -1,0 +1,286 @@
+{
+  "id": "sni-91-biblioteks-arkiv-och-museiverksamhet",
+  "label": "Biblioteks-, arkiv- och museiverksamhet",
+  "description": "Scaffold för bibliotek, arkiv, museer och liknande verksamheter med fokus på besöksinformation, samlingar/program, uppdrag och kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "informera om verksamhetens uppdrag och erbjudande",
+    "hjälpa besökare planera besök med öppettider och kontaktvägar",
+    "lyfta program, utställningar, samlingar eller tjänster",
+    "bygga förtroende genom transparens, organisation och ansvar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, aktuella höjdpunkter och leda vidare till besök, program eller kontakt."
+    },
+    {
+      "id": "verksamhet",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Beskriva samlingar, tjänster, utställningar, program eller andra delar av verksamheten på ett tydligt sätt."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Förklara uppdrag, historia, organisation och människorna bakom verksamheten för att bygga förtroende."
+    },
+    {
+      "id": "nyheter",
+      "path": "/nyheter",
+      "required": false,
+      "purpose": "Visa nyheter, aktuella händelser och uppdateringar för återkommande besökare."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge tydliga kontaktvägar, adress, öppettider och praktisk information för besök och frågor."
+    },
+    {
+      "id": "besok",
+      "path": "/besok",
+      "optional": true,
+      "when": "när verksamheten har mycket praktisk besöksinformation som bör samlas på egen sida, till exempel öppettider, karta och tillgänglighet"
+    },
+    {
+      "id": "engagera-dig",
+      "path": "/engagera-dig",
+      "optional": true,
+      "when": "när verksamheten vill samla medlemskap, volontärinsatser, stöd eller nyhetsbrevsanmälan på en egen sida"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "optional": true,
+      "when": "när personal, styrelse, intendenter eller kontaktpersoner behöver presenteras mer utförligt än på om-oss-sidan"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "verksamhet-oversikt",
+        "aktuellt",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "oppettider",
+        "bildgalleri",
+        "fortroende",
+        "nyhetsbrev",
+        "besok-info"
+      ],
+      "sectionOrderRules": [
+        "Hero ska tydligt säga vilken typ av verksamhet det är och vad besökaren kan göra här, samt innehålla en primär CTA.",
+        "Verksamhet-oversikt ska sammanfatta centrala delar som samlingar, utställningar, lån, forskning eller program utan att lova mer än verksamheten faktiskt erbjuder.",
+        "Aktuellt bör placeras före slutlig kontakt-cta när nyheter eller kommande aktiviteter finns.",
+        "Öppettider och besök-info kan placeras högt på sidan när praktisk planering är ett huvudbehov.",
+        "Sektioner får inte upprepa samma budskap eller samma CTA i flera block."
+      ]
+    },
+    "verksamhet": {
+      "requiredSections": [
+        "verksamhet-intro",
+        "verksamhet-lista",
+        "praktisk-info-cta"
+      ],
+      "optionalSections": [
+        "bildgalleri",
+        "faq",
+        "priser-avgifter"
+      ],
+      "sectionOrderRules": [
+        "Verksamhet-intro ska koppla uppdraget till det faktiska erbjudandet, exempelvis utställningar, arkivtjänster, läsesal, program eller pedagogisk verksamhet.",
+        "Verksamhet-lista ska vara konkret och tydligt avgränsad, inte allmänt hållen marknadsföring.",
+        "Priser-avgifter används bara när verksamheten faktiskt har avgifter för exempelvis reproduktioner, biljetter eller särskilda tjänster.",
+        "Praktisk-info-cta ska leda vidare till kontakt eller besöksinformation beroende på innehåll."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "uppdrag-och-historia",
+        "organisation",
+        "fortroende"
+      ],
+      "optionalSections": [
+        "team",
+        "nyhetsbrev"
+      ],
+      "sectionOrderRules": [
+        "Uppdrag-och-historia ska vara saklig, specifik och förankrad i verksamhetens verkliga roll och utveckling.",
+        "Organisation ska kunna rymma förening, stiftelse, offentlig aktör eller annan relevant form utan att anta en viss struktur.",
+        "Fortroende ska bygga på verkliga uppgifter som organisationsnummer, årsredovisning eller tydlig ansvarsfördelning när sådant finns."
+      ]
+    },
+    "nyheter": {
+      "requiredSections": [
+        "nyheter-intro",
+        "nyhetslista",
+        "nyhetsbrev"
+      ],
+      "optionalSections": [
+        "kontakt-cta"
+      ],
+      "sectionOrderRules": [
+        "Nyhetslista ska prioritera aktuella och relevanta uppdateringar som program, utställningar, öppettidsändringar eller verksamhetsnyheter.",
+        "Nyhetsbrev ska bara uppmana till registrering om funktionen finns tillgänglig.",
+        "Kontakt-cta kan läggas sist för frågor om program eller innehåll."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "kontakt-info",
+        "oppettider",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "karta",
+        "team"
+      ],
+      "sectionOrderRules": [
+        "Kontakt-info ska innehålla verkliga kontaktvägar och inte tomma platshållare.",
+        "Öppettider ska visas när de finns och vara tydligt åtskilda från allmän kontaktinformation.",
+        "Karta används när fysisk besöksplats är relevant för verksamheten.",
+        "Om team visas här ska det vara ett litet urval av relevanta kontaktpersoner snarare än en full organisationspresentation."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Passar bibliotek, arkiv, museer och liknande publik eller samhällsinriktad verksamhet bättre än en generisk företagsmall.",
+      "Fångar både uppdragskommunikation och praktisk besöksinformation.",
+      "Har alltid startsida och kontaktsida.",
+      "Sektioner och syften stödjer nyhetsbrev och kontaktformulär utan att göra dem obligatoriska överallt.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "E-handelsstruktur med produkter och varukorg.",
+      "Tjänsteföretagsupplägg som utgår från offertförfrågningar som huvudmål.",
+      "Påhittade bevis som besökssiffror, certifieringar eller utmärkelser.",
+      "Restaurang- eller bokningscentrerad informationsarkitektur om det inte uttryckligen behövs."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "image-gallery",
+      "team-roster",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik scaffold för bibliotek, arkiv och museer. Fokus på startsida med aktuellt och besöksinformation, verksamhetssida för samlingar program eller tjänster, om-oss för uppdrag och organisation, nyheter för aktuella händelser och kontakt med öppettider och karta. Passar ideell, offentlig eller stiftelseburen kultur- och kunskapsverksamhet.",
+    "semanticSignals": [
+      "bibliotek",
+      "arkiv",
+      "museum",
+      "samlingar",
+      "utstallningar",
+      "program",
+      "besok",
+      "oppettider",
+      "lasesal",
+      "pedagogisk-verksamhet",
+      "kulturarv",
+      "forskning",
+      "nyheter",
+      "organisation",
+      "kontakt"
+    ],
+    "negativeSignals": [
+      "webshop",
+      "varukorg",
+      "produktkatalog",
+      "offerttjanster",
+      "akut-jour",
+      "meny",
+      "bordsbokning",
+      "rumsbokning"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten främst informerar om kulturarv, samlingar, utställningar, bibliotekstjänster, arkivtjänster eller publika program.",
+      "Välj denna scaffold när besöksinformation och uppdrag är viktigare än försäljning.",
+      "Undvik denna scaffold för kommersiella servicebolag, restauranger, hotell och rena e-handlare."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

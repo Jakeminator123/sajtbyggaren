@@ -1,0 +1,42 @@
+{
+  "id": "sni-56-restaurang-catering-och-barverksamhe",
+  "embeddingText": "Restaurang-, catering- och barscaffold med fokus på meny, bokning, öppettider, karta, atmosfär, recensioner, allergiinformation, galleri och catering/event som tillval. Passar restaurang, café, bar, bistro och liknande verksamheter där gästen snabbt vill se utbud, hitta öppettider och boka eller kontakta verksamheten.",
+  "semanticSignals": [
+    "restaurang",
+    "cafe",
+    "bar",
+    "bistro",
+    "matsedel",
+    "meny",
+    "boka-bord",
+    "bokning",
+    "oppettider",
+    "allergiinformation",
+    "hitta-hit",
+    "karta",
+    "dryck",
+    "lunch",
+    "middag",
+    "catering",
+    "event",
+    "gastrecensioner",
+    "atmosfar",
+    "signaturratter"
+  ],
+  "negativeSignals": [
+    "ren-e-handel-med-varukorg-som-huvudflode",
+    "industriell-tillverkning",
+    "ren-konsultverksamhet",
+    "juridiska-tjanster",
+    "byggentreprenad",
+    "portfoljfokuserad-kreator-utan-meny-eller-bokning"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten serverar mat eller dryck på plats eller tar emot bokningar.",
+    "Passar även caféer och barer där meny, öppettider och hitta-hit är viktigare än långa tjänstebeskrivningar.",
+    "Använd optional route för catering när större beställningar eller företagsevent är en tydlig del av erbjudandet.",
+    "Använd lunch-route när veckolunch eller dagsmeny är en återkommande sökingång."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

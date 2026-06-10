@@ -1,0 +1,107 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-category-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "applications-summary",
+      "news-summary",
+      "faq",
+      "team-preview",
+      "reviews",
+      "newsletter-signup"
+    ],
+    "sectionOrderRules": [
+      "Hero must communicate what the company manufactures, the main customer value and a primary CTA.",
+      "Product-category-summary must appear before the final contact CTA.",
+      "Trust proof must rely on real signals such as support approach, security information, delivery capability, references or documented experience when such data exists.",
+      "Applications-summary should connect products to real use cases rather than listing technical terms without context.",
+      "Sections must avoid repeating the same product claims in multiple blocks."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-category-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "product-comparison-notes",
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain the scope of the offering in plain language.",
+      "Product-category-list items must describe concrete product groups, key benefits and typical use cases.",
+      "If product-comparison-notes is shown, it should help visitors choose category without pretending to be a full specification sheet.",
+      "Contact CTA should invite quote, product dialogue or requirement discussion."
+    ]
+  },
+  "applications": {
+    "requiredSections": [
+      "applications-intro",
+      "application-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "case-snippets",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Applications intro must explain how the products are used in practice.",
+      "Application-list entries must describe industries, environments or workflows the products fit, not vague audience labels.",
+      "Case snippets may only be shown when the dossier contains real customer-safe examples or anonymised use cases.",
+      "The page should connect each application to relevant product groups without duplicating the full products page."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "manufacturing-approach",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company in a specific and credible way.",
+      "Team should focus on relevant competence, roles or service responsibility when data exists.",
+      "Trust proof should highlight real capabilities such as support, quality routines, security work or customer relationships without inventing certifications."
+    ]
+  },
+  "news": {
+    "requiredSections": [
+      "news-intro",
+      "news-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "newsletter-signup"
+    ],
+    "sectionOrderRules": [
+      "News list should contain actual updates, articles or announcements when available.",
+      "If there are too few news items, the renderer should keep the page concise rather than padding with generic text.",
+      "Contact CTA should fit the context, for example product questions, press contact or partnership dialogue."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include the real contact methods available from the business data.",
+      "If a form is shown, it should support product, sales or support enquiries.",
+      "Map should only render when a real visit or office address exists and is suitable to publish."
+    ]
+  }
+}

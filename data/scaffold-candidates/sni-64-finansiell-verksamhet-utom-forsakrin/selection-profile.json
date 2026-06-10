@@ -1,0 +1,38 @@
+{
+  "id": "sni-64-finansiell-verksamhet-utom-forsakrin",
+  "embeddingText": "Finansiell verksamhet utom försäkrings- och pensionsfondsverksamhet. Webbplats för finansbolag eller rådgivningsnära finansiell aktör med fokus på tillstånd, process, sekretess, tjänster, prislista, FAQ, team och kontakt. Tonen ska vara saklig och trygg. Besökaren ska förstå erbjudande, målgrupp, prissättning där möjlig, och hur första kontakt går till.",
+  "semanticSignals": [
+    "finansiella-tjanster",
+    "radgivning",
+    "kapital",
+    "finansiering",
+    "investering",
+    "tillstand",
+    "finansinspektionen",
+    "sekretess",
+    "riskinformation",
+    "prislista",
+    "offert",
+    "kundprocess",
+    "radgivningsmote",
+    "fortroende",
+    "ansvarsforsakring"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "e-handel",
+    "produktkatalog-med-varukorg",
+    "fotogalleri-som-huvudsyfte",
+    "bokning-av-bord",
+    "medicinsk-behandling",
+    "forsakringsradgivning-som-huvudkategori",
+    "pensionsfondsverksamhet"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten verkar inom finansiell verksamhet och behöver kommunicera tillstånd, rådgivning, process och trygg kontakt.",
+    "Särskilt lämplig när prislista, FAQ och kontaktformulär är viktiga delar av kundresan.",
+    "Skilj från ren redovisning genom att fokus här ligger på finansiella upplägg, kapital, finansiering eller investeringsnära tjänster snarare än löpande bokföring."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

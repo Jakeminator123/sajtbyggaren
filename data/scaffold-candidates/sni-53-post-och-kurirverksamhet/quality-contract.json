@@ -1,0 +1,31 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "home route with '/' is present",
+    "contact route is present",
+    "services route exists because this industry needs explicit presentation of delivery and courier offerings",
+    "coverage route exists because service geography is central to courier and postal operations",
+    "every default route has a matching sectionsPerRoute entry",
+    "all route ids and section ids are kebab-case slugs",
+    "all paths are Swedish, lowercase, start with '/' and have no trailing slash",
+    "recommended dossiers only use allowed dossier ids",
+    "copy avoids invented certifications, fake counts or unsupported promises",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic local-service structure without explicit coverage or delivery logic",
+    "vague service descriptions like 'hög kvalitet' without naming shipment or courier tasks",
+    "invented claims about delivery speed, fleet size, response times or national reach",
+    "forcing pricing when the business primarily works via quote requests",
+    "portfolio-style galleries as primary structure instead of operational service information"
+  ]
+}

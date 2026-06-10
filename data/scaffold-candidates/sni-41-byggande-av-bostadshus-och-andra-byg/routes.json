@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera byggföretaget, visa typ av byggprojekt och leda besökaren till offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets byggtjänster, entreprenadformer och vad kunden kan få hjälp med."
+    },
+    {
+      "id": "projects",
+      "path": "/referensprojekt",
+      "required": true,
+      "purpose": "Visa tidigare byggprojekt med bilder och kort projektbeskrivning för att stärka förtroendet."
+    },
+    {
+      "id": "quote",
+      "path": "/begar-offert",
+      "required": true,
+      "purpose": "Samla in projektförfrågningar med tydlig uppmaning och kontaktvägar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget via telefon, e-post, adress och kontaktformulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget vill lyfta team, arbetssätt, bakgrund och lokala förankring"
+    },
+    {
+      "id": "process",
+      "path": "/sa-gar-det-till",
+      "when": "när säljprocess, projekteringssteg eller totalentreprenad behöver förklaras tydligt"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "när företaget arbetar i flera orter och behöver lokal SEO-yta"
+    }
+  ]
+}

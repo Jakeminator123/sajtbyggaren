@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Home and contact routes are always present.",
+    "The scaffold must support both sales to employers and trust-building for a people-focused service business.",
+    "Service and process explanation must be central because the industry sells fit, speed and reliability rather than products.",
+    "Sections and routes must allow case, team and FAQ content because they are common proof and conversion tools in this industry.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Portfolio-first structure that hides the actual staffing or recruitment offer.",
+    "E-commerce patterns such as product grids or checkout-oriented flows.",
+    "Restaurant, clinic or booking-led route logic that does not fit staffing and recruitment services.",
+    "Claims about guaranteed hires, exact delivery speed or certifications unless the business can verify them.",
+    "Overweight candidate content on core sales pages aimed at employers."
+  ]
+}

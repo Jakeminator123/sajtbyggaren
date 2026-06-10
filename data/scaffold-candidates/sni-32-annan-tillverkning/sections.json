@@ -1,0 +1,92 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "production-summary",
+      "image-gallery",
+      "reviews",
+      "faq",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero måste ange vad företaget tillverkar och ha en tydlig primär CTA.",
+      "Product-summary ska beskriva verkliga produkt- eller tillverkningskategorier, inte allmän marknadsföring.",
+      "Trust-proof ska bygga på verifierbara uppgifter som organisationsnummer, referenser, erfarenhet, materialkunskap eller tydligt arbetssätt.",
+      "Sista sektionen ska leda vidare till kontakt eller offert utan att upprepa samma budskap ordagrant."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-table",
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Inledningen ska koppla företagets tillverkning till de produktkategorier som erbjuds.",
+      "Service-list används här som produkt- eller tillverkningslista och varje post måste vara konkret.",
+      "Om pricing-table används ska den beskriva prisexempel, nivåer eller offertupplägg ärligt och utan skenexakthet där pris beror på specifikation.",
+      "Kontakt-CTA ska uppmana till förfrågan om produkt, serie eller speciallösning."
+    ]
+  },
+  "production": {
+    "requiredSections": [
+      "services-intro",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq",
+      "trust-guarantees",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Sidan ska förklara hur produktion, materialval, kvalitetsarbete eller specialanpassning går till.",
+      "Trust-proof på denna sida ska fokusera på process, noggrannhet, leveransförmåga eller dokumenterad erfarenhet snarare än allmän säljkopia.",
+      "Bild- eller videoinnehåll ska visa verklig verksamhetsmiljö eller arbetsmoment om sådant underlag finns.",
+      "Avsluta med CTA för dialog om specifikation, offert eller produktion."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About-story ska vara företagsnära och beskriva faktisk bakgrund, inriktning eller hantverks-/produktionskompetens.",
+      "Team visas när det finns riktiga personer eller roller att presentera.",
+      "Trust-proof får inte upprepa samma referenser eller påståenden flera gånger på sidan."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map-embed",
+      "opening-hours",
+      "mailto-contact-form"
+    ],
+    "sectionOrderRules": [
+      "Kontaktuppgifter ska vara riktiga och innehålla relevanta vägar in för kunddialog.",
+      "Om adress anges bör karta kunna visas när platsinformation finns.",
+      "Kontakt-CTA ska fungera för offertförfrågan, produktfråga eller allmän kontakt."
+    ]
+  }
+}

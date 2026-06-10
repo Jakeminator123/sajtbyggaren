@@ -1,0 +1,320 @@
+{
+  "id": "sni-47-detaljhandel",
+  "label": "Detaljhandel",
+  "description": "Branschspecifik scaffold för detaljhandel med fokus på produkter, köpkänsla, trygghet i köpflödet och möjlighet att leda både till onlineköp och fysisk butik.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa sortiment tydligt",
+    "driva köp eller köpintresse",
+    "bygga förtroende kring betalning, byten och recensioner",
+    "hjälpa kunder hitta butik, öppettider och kontaktvägar"
+  ],
+  "defaultPageCount": 7,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera butiken, lyfta utvalda produkter eller kategorier och leda besökaren vidare till köp eller sortiment."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa sortimentet med konkreta produkter, priser när de finns och tydlig väg vidare till köp."
+    },
+    {
+      "id": "store",
+      "path": "/butik-oppettider",
+      "required": true,
+      "purpose": "Hjälpa kunder som vill besöka den fysiska butiken med adress, öppettider och praktisk information."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Fånga upp frågor före köp eller efter köp via kontaktuppgifter och kontaktformulär."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att förklara butikens inriktning, bakgrund och vad som gör utbudet relevant."
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "required": false,
+      "purpose": "Besvara vanliga frågor om köp, betalning, leverans, byten, returer och butiksinformation."
+    },
+    {
+      "id": "reviews",
+      "path": "/kundrecensioner",
+      "required": false,
+      "purpose": "Visa kundomdömen som stärker trygghet och köplust utan att överdriva eller hitta på social proof."
+    },
+    {
+      "id": "lookbook",
+      "path": "/inspiration",
+      "optional": true,
+      "when": "när butiken säljer visuellt drivna produkter och behöver en inspirationsyta utöver vanlig produktlista"
+    },
+    {
+      "id": "categories",
+      "path": "/kategorier",
+      "optional": true,
+      "when": "när sortimentet är brett nog att behöva en separat översikt över produktkategorier"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "featured-products",
+        "value-props",
+        "shop-cta"
+      ],
+      "optionalSections": [
+        "category-teaser",
+        "trust-proof",
+        "reviews-preview",
+        "newsletter-signup"
+      ],
+      "sectionOrderRules": [
+        "Hero måste innehålla butikens namn eller tydlig avsändare, ett konkret köplöfte och en primär CTA till /produkter.",
+        "Featured-products måste visa faktiska produkter eller verkliga produktgrupper, inte generiska platshållare.",
+        "Value-props ska vara kopplade till verkliga styrkor som trygg betalning, öppet köp, byten eller personlig service - undvik tomma standardpåståenden.",
+        "Om trust-proof används ska innehållet vara verifierbart och relevant för köpbeslutet."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-grid",
+        "shop-cta"
+      ],
+      "optionalSections": [
+        "filter-bar",
+        "category-links",
+        "trust-proof",
+        "faq-preview"
+      ],
+      "sectionOrderRules": [
+        "Products-intro ska förklara sortimentets inriktning eller urval, inte bara säga att kunden är välkommen.",
+        "Product-grid måste bestå av konkreta produkter eller tydliga produktkort med namn, bild och pris när pris finns tillgängligt.",
+        "Filter-bar får bara användas om filtren speglar verkliga attribut som kategori, storlek, färg, material eller varumärke.",
+        "Shop-cta ska leda vidare till köp, produktförfrågan eller kontakt beroende på butikens faktiska säljflöde."
+      ]
+    },
+    "store": {
+      "requiredSections": [
+        "store-info",
+        "opening-hours",
+        "map-section"
+      ],
+      "optionalSections": [
+        "parking-info",
+        "store-gallery",
+        "contact-quick"
+      ],
+      "sectionOrderRules": [
+        "Store-info måste innehålla fysisk adress och kort praktisk beskrivning av butiksbesöket.",
+        "Opening-hours ska presenteras tydligt och får inte fyllas med antagna tider om underlag saknas.",
+        "Map-section används bara när en riktig adress finns att visa."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "shop-cta"
+      ],
+      "optionalSections": [
+        "faq-preview",
+        "store-info"
+      ],
+      "sectionOrderRules": [
+        "Contact-info måste innehålla verkliga kontaktvägar som e-post, telefon eller adress beroende på vad verksamheten faktiskt erbjuder.",
+        "Contact-form ska vara avsedd för frågor om produkter, beställning, butik eller support och inte lova svarstider som inte är bekräftade.",
+        "Om store-info visas här får det inte ersätta tydliga direkta kontaktvägar."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "values"
+      ],
+      "optionalSections": [
+        "team",
+        "sourcing",
+        "store-gallery"
+      ],
+      "sectionOrderRules": [
+        "About-story ska beskriva butikens verkliga inriktning, bakgrund eller urvalstanke utan generisk varumärkesprosa.",
+        "Values måste vara konkreta och kopplade till hur butiken väljer sortiment, bemöter kunder eller arbetar med kvalitet.",
+        "Team används bara om det finns personer eller roller som faktiskt ska presenteras."
+      ]
+    },
+    "faq": {
+      "requiredSections": [
+        "faq"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "contact-quick"
+      ],
+      "sectionOrderRules": [
+        "FAQ ska fokusera på verkliga frågor om betalning, köp, leverans, byten, returer, lagerstatus eller butik.",
+        "Svar får inte lova villkor som inte stöds av verksamheten.",
+        "Frågor om fysisk butik ska bara finnas med när butiken faktiskt tar emot besök."
+      ]
+    },
+    "reviews": {
+      "requiredSections": [
+        "reviews-list",
+        "shop-cta"
+      ],
+      "optionalSections": [
+        "rating-summary",
+        "review-policy"
+      ],
+      "sectionOrderRules": [
+        "Reviews-list får bara innehålla äkta omdömen eller verifierade citat som verksamheten faktiskt kan stå för.",
+        "Rating-summary ska utelämnas om underlag för sammanvägt betyg saknas.",
+        "Shop-cta ska stödja köpbeslutet utan att överdriva recensionernas omfattning eller effekt."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "har alltid startsida och kontaktsida",
+      "har en tydlig produktsida för webshop/detaljhandel",
+      "stödjer både onlineköp och fysisk butik när relevant",
+      "lyfter trygghetssignaler kring betalning, byten eller recensioner utan att hitta på bevis",
+      "alla standardsidor har matchande sectionsPerRoute",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generisk konsultstruktur utan produktsida",
+      "påhittade kampanjer, lagersiffror eller kundantal",
+      "platshållarprodukter utan konkret innehåll",
+      "att beskriva fysisk butik om verksamheten saknar besöksadress",
+      "att lova fri frakt, öppet köp eller leveranstider utan källa"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "reviews-display",
+      "trust-guarantees",
+      "image-gallery",
+      "faq-accordion"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "auth-flow",
+      "dashboard-shell",
+      "pricing-table-saas"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Detaljhandel SNI 47. Webbplats för butik eller webshop med fokus på produktsortiment, köpkänsla, trygg betalning, byten, recensioner, fysisk butik, öppettider, kontakt och tydlig väg till köp. Passar retail, concept store, presentbutik, mode, inredning, specialbutik och liknande handel.",
+    "semanticSignals": [
+      "webshop",
+      "e-handel",
+      "produkter",
+      "sortiment",
+      "kassa",
+      "betalning",
+      "kundrecensioner",
+      "butik",
+      "oppettider",
+      "adress",
+      "returer",
+      "byten",
+      "kop-nu",
+      "detaljhandel"
+    ],
+    "negativeSignals": [
+      "bokningsdriven-verksamhet",
+      "ren-restaurangmeny",
+      "tjansteforetag-utan-produkter",
+      "portfolio-utan-kopflode",
+      "eventfokus-utan-sortiment"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten primärt säljer varor till konsumenter.",
+      "Produkter eller sortiment ska vara central route, inte sekundär informationssida.",
+      "Om fysisk butik finns bör butik-oppettider prioriteras som egen sida.",
+      "FAQ om köp, betalning och returer är vanligt och relevant för denna bransch."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fbfaf7",
+          "foreground": "#1a1a1a",
+          "muted": "#6e6e68",
+          "border": "#e8e6e0",
+          "primary": "#1a1a1a",
+          "primaryForeground": "#fbfaf7",
+          "accent": "#c9a87c",
+          "accentForeground": "#1a1a1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.25rem",
+          "md": "0.375rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "editorial",
+          "premium-but-restrained",
+          "product-led",
+          "calm"
+        ]
+      }
+    }
+  ]
+}

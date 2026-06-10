@@ -1,0 +1,28 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "home route and contact route are included",
+    "all default routes have matching sectionsPerRoute entries",
+    "route ids and section ids use kebab-case slugs where applicable",
+    "route paths are Swedish, lowercase, start with '/' and have no trailing slash",
+    "page set is tailored to metallmalmsutvinning with verksamhet, säkerhet/miljö and anläggningar/projekt as core routes",
+    "recommended dossiers only use allowed dossier ids",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic local-service structure without mining-specific pages",
+    "invented safety certifications, permit claims or production figures",
+    "consumer-style pricing or booking flows",
+    "testimonial-heavy layouts that imply retail purchasing behaviour",
+    "vague sustainability language without concrete context"
+  ]
+}

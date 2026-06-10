@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Översiktssida som snabbt förklarar verksamhetens forskningsinriktning, vilka typer av uppdrag eller samarbeten som erbjuds, utvalda projekt/case och en tydlig väg till kontakt."
+    },
+    {
+      "id": "research-areas",
+      "path": "/forskningsomraden",
+      "required": true,
+      "purpose": "Samlad sida för forskningsområden, specialistkompetenser och tillämpningsfält så att besökaren snabbt ser var verksamheten har djup expertis."
+    },
+    {
+      "id": "projects",
+      "path": "/projekt",
+      "required": true,
+      "purpose": "Visar projekt, uppdrag eller kundcase med problemställning, metod, genomförande och resultat eller leveranser. För denna bransch är projektbevis ofta viktigare än en generell tjänstelista."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presenterar verksamhetens bakgrund, vetenskapliga arbetssätt, team och hur forskning omsätts i uppdrag, analys eller utveckling."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Tydlig kontaktsida för offert, samarbete, forskningsförfrågningar och allmän kontakt, med direktinformation och formulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "process",
+      "path": "/arbetsprocess",
+      "when": "när verksamheten säljer in sitt arbetssätt som en viktig del av erbjudandet, till exempel från frågeställning och studiedesign till analys, rapportering och implementering"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när många förfrågningar gäller upplägg, sekretess, datainsamling, projektstart eller hur samarbeten brukar gå till"
+    },
+    {
+      "id": "publications",
+      "path": "/publikationer",
+      "when": "när verksamheten har rapporter, white papers, vetenskapliga publikationer eller metodartiklar som är viktiga för trovärdighet och inbound-förfrågningar"
+    }
+  ]
+}

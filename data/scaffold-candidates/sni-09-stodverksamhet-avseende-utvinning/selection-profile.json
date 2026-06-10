@@ -1,0 +1,32 @@
+{
+  "id": "sni-09-stodverksamhet-avseende-utvinning",
+  "embeddingText": "Stödverksamhet avseende utvinning. B2B-webbplats för företag som levererar specialisttjänster, driftstöd, underhållsnära insatser, teknisk support, platsnära entreprenad eller logistiskt stöd till utvinningsrelaterad verksamhet. Viktiga informationsytor är tjänster, kapacitet, geografisk räckvidd, resurser, arbetssätt, referenser och tydlig kontaktväg.",
+  "semanticSignals": [
+    "support-services-for-extraction",
+    "field-operations-support",
+    "technical-site-services",
+    "maintenance-support",
+    "industrial-contractor",
+    "operational-readiness",
+    "geographic-coverage",
+    "b2b-inquiry-flow",
+    "resources-and-equipment",
+    "project-based-service-delivery"
+  ],
+  "negativeSignals": [
+    "retail-products",
+    "restaurant-booking",
+    "consumer-ecommerce",
+    "portfolio-first-creative-business",
+    "medical-clinic",
+    "beauty-salon",
+    "menu-page"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for companies whose main offer is operational or technical support to extraction-related activities.",
+    "Prefer this scaffold when the website needs to explain both services and practical delivery capacity.",
+    "Do not classify as generic local service if capacity, site operations and industrial trust signals are central to the offer."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

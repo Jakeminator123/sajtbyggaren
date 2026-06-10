@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, förklara vad som tillverkas och leda besökaren vidare till kontakt eller produktområden."
+    },
+    {
+      "id": "product-areas",
+      "path": "/produktomraden",
+      "required": true,
+      "purpose": "Visa företagets huvudsakliga produktområden, användningsområden och relevanta egenskaper på en affärsmässig nivå."
+    },
+    {
+      "id": "production-and-quality",
+      "path": "/produktion-och-kvalitet",
+      "required": true,
+      "purpose": "Beskriva tillverkning, kvalitetsarbete och arbetssätt för att stärka förtroendet hos kunder och inköpare."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Ge en tydlig bild av verksamheten, bakgrunden och teamet bakom företaget."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, produktfrågor, leveransdialog eller besök."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när företaget ofta behöver besvara återkommande frågor om produktområden, beställning, leverans eller samarbete"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "when": "när anläggning, kontor eller mottagning behöver kunna hittas via karta och adress"
+    }
+  ]
+}

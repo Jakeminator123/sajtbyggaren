@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-29-tillverkning-av-motorfordon-slapford",
+  "version": "0.1.0",
+  "label": "Tillverkning av motorfordon, släpfordon och påhängsvagnar",
+  "description": "Scaffold för tillverkare inom motorfordon, släpfordon och påhängsvagnar med fokus på produktöversikt, teknisk kapacitet, kvalitetsarbete och kontakt för offert eller affärsdialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera fordons- eller släpvagnsprogram",
+    "visa tillverkningskapacitet och teknisk kompetens",
+    "bygga förtroende med kvalitets- och leveransinformation",
+    "driva kontakt för offert, försäljning eller partnerskap"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

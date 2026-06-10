@@ -1,0 +1,39 @@
+{
+  "id": "sni-49-landtransport-transport-i-rorsystem",
+  "embeddingText": "Transportföretag inom landtransport och transport i rörsystem. Webbplatsen behöver startsida, tjänster, områden och kontakt. Innehållet ska lyfta transportupplägg, kapacitet, geografisk täckning, tillstånd, försäkrat gods, punktlighet och enkel kontakt eller offertväg. Optional routes kan vara om oss och begär offert.",
+  "semanticSignals": [
+    "transport",
+    "landtransport",
+    "rorsystem",
+    "logistik",
+    "distribution",
+    "gods",
+    "leverans",
+    "hamtning",
+    "trafikledning",
+    "terminal",
+    "omrade",
+    "rutt",
+    "offert",
+    "bokning",
+    "trafiktillstand",
+    "forsakrat-gods"
+  ],
+  "negativeSignals": [
+    "meny",
+    "bokbord",
+    "produktkatalog",
+    "webbshop",
+    "portfolio",
+    "brollopsfoto",
+    "behandlingar",
+    "recept"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold for businesses whose core offer is moving goods or materials by land or via pipeline systems.",
+    "Prefer this scaffold when geography, routes, coverage, capacity and booking/contact details are more important than showcasing projects.",
+    "Service-area content is usually essential for this industry, not merely optional local SEO filler."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

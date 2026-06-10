@@ -1,0 +1,286 @@
+{
+  "id": "sni-25-tillverkning-av-metallvaror-utom-mas",
+  "label": "Tillverkning av metallvaror utom maskiner och apparater",
+  "description": "Scaffold för företag inom metallvarutillverkning som behöver visa tillverkningskapacitet, produktionsområden, materialkompetens och en tydlig väg till offert eller kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara vad företaget tillverkar",
+    "visa produktionskapacitet och materialkompetens",
+    "bygga förtroende med referenser, process och företagsfakta",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera metallföretaget, förklara erbjudandet och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "produkter-tjanster",
+      "path": "/produkter-tjanster",
+      "required": true,
+      "purpose": "Beskriva vilka metallvaror, bearbetningar och tillverkningstjänster företaget erbjuder med konkret information."
+    },
+    {
+      "id": "kapacitet",
+      "path": "/kapacitet",
+      "required": true,
+      "purpose": "Visa material, tillverkningsmetoder, seriestorlekar och praktisk produktionskapacitet för att hjälpa kunden bedöma matchning."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, arbetssätt, team och referenser."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt med telefon, e-post, adress och kontaktformulär."
+    },
+    {
+      "id": "referenser",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när företaget har visningsbara kundcase, produktbilder eller projekt att lyfta utan sekretessproblem"
+    },
+    {
+      "id": "hitta-hit",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när fysisk adress, karta, leveransinfart eller besöksinformation behöver en egen sida"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "erbjudande-oversikt",
+        "kapacitet-sammanfattning",
+        "fortroendesignaler",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "bildgalleri",
+        "referenser",
+        "process-oversikt",
+        "faq",
+        "karta",
+        "oppettider"
+      ],
+      "sectionOrderRules": [
+        "Hero ska tydligt ange att företaget tillverkar metallvaror eller erbjuder metallbearbetning samt innehålla primär CTA.",
+        "Erbjudande-översikt ska beskriva faktiska produkt- eller tjänsteområden, inte bara allmänna formuleringar om kvalitet.",
+        "Kapacitet-sammanfattning ska komma före slutlig kontakt-CTA när data om material, metoder eller seriestorlekar finns.",
+        "Förtroendesignaler ska bygga på verkliga uppgifter som organisationsnummer, referenser eller konkret branscherfarenhet.",
+        "Sektioner får inte upprepa samma budskap med olika rubriker."
+      ]
+    },
+    "produkter-tjanster": {
+      "requiredSections": [
+        "tjanster-intro",
+        "produkt-tjanstelista",
+        "anvandningsomraden",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "prisexempel",
+        "bildgalleri",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Introduktionen ska koppla företagets inriktning till vad som faktiskt tillverkas eller bearbetas.",
+        "Produkt- och tjänstelistan ska vara konkret, till exempel svetsade konstruktioner, plåtdetaljer, legotillverkning eller ytbehandling om sådant erbjuds.",
+        "Användningsområden ska beskriva typiska kundbehov eller branscher utan att påstå uppdrag som inte kan styrkas."
+      ]
+    },
+    "kapacitet": {
+      "requiredSections": [
+        "kapacitet-intro",
+        "material-och-metoder",
+        "produktionsprocess",
+        "leverans-och-serier",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "bildgalleri",
+        "faq",
+        "fortroendesignaler"
+      ],
+      "sectionOrderRules": [
+        "Kapacitet-intro ska hjälpa besökaren förstå vilka typer av uppdrag som passar företaget.",
+        "Material och metoder ska presenteras sakligt och endast om företaget faktiskt arbetar med dem.",
+        "Produktionsprocess kan beskriva steg som ritning, prototyp, tillverkning, kontroll och leverans när underlag finns.",
+        "Leverans- och seriestorlekar ska hållas på en realistisk nivå och inte lova ledtider eller volymer utan stöd."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "om-oss-berattelse",
+        "team",
+        "fortroendesignaler"
+      ],
+      "optionalSections": [
+        "referenser",
+        "bildgalleri",
+        "karta"
+      ],
+      "sectionOrderRules": [
+        "Om oss-berättelsen ska vara specifik kring verksamhet, erfarenhet eller arbetssätt och undvika generiska fraser.",
+        "Teamsektionen visas när det finns verkliga personer eller roller att presentera.",
+        "Förtroendesignaler får inte innehålla påhittade certifieringar, volymer eller kundnamn."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "kontaktinformation",
+        "kontaktformular",
+        "karta"
+      ],
+      "optionalSections": [
+        "oppettider"
+      ],
+      "sectionOrderRules": [
+        "Kontaktinformationen ska innehålla verkliga kontaktvägar som telefon, e-post eller adress när de finns.",
+        "Kontaktformuläret ska tydligt uppmana till förfrågan om tillverkning, offert eller dialog.",
+        "Karta visas när besöksadress eller anläggningens läge är relevant för kunder eller leveranser."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Passar tillverkande metallföretag bättre än en generisk lokal tjänstescaffold.",
+      "Lyfter både erbjudande och produktionskapacitet som separata informationsbehov.",
+      "Har tydlig kontaktväg för offert eller förfrågan.",
+      "Använder svenska route paths och kebab-case ids enligt reglerna.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska rutter som inte speglar industrins behov, som meny eller bokning.",
+      "E-handelslogik med produkter och kassa.",
+      "Påståenden om certifieringar, kapacitet eller kundvolymer utan stöd.",
+      "För många marknadssektioner som tränger undan teknisk och praktisk information."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Metallvarutillverkning, legotillverkning, plåtbearbetning, svetsning, skärning, bockning, montering, industrikomponenter, stålkonstruktioner, kapacitet, material, seriestorlekar, offertförfrågan, kontakt.",
+    "semanticSignals": [
+      "metallvaror",
+      "legotillverkning",
+      "plat",
+      "stal",
+      "rostfritt",
+      "aluminium",
+      "svetsning",
+      "bearbetning",
+      "produktion",
+      "komponenter",
+      "industrikunder",
+      "ritningsunderlag",
+      "serietillverkning",
+      "prototyper"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "bokning-av-bord",
+      "webshop-kassa",
+      "frisor",
+      "fotograf-portfolj",
+      "meny",
+      "hotellrum",
+      "eventbiljetter"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten tillverkar eller bearbetar metallprodukter för kundorder eller egen produktion.",
+      "Särskilt relevant när sajten behöver beskriva material, metoder, kapacitet och offertkontakt.",
+      "Mindre lämplig för rena maskintillverkare, konsumentbutiker eller verksamheter där bokning är huvudflödet."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

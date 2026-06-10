@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "photographer-portfolio",
+  "version": "0.1.0",
+  "label": "Foto / Video",
+  "description": "Scaffold för fotografer och videografer med tydlig startsida, portfolio/case, galleri, om-sida och kontakt. Fokus ligger på visuellt arbete, förtroende, arbetsområden och enkel kontakt eller bokningsförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa portfolio och tidigare arbeten",
+    "förklara foto- och videotjänster",
+    "bygga förtroende genom personligt uttryck och recensioner",
+    "driva kontakt eller bokningsförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

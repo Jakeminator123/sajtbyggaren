@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera gården eller verksamheten, visa huvuderbjudandet och leda till kontakt eller besök."
+    },
+    {
+      "id": "products",
+      "path": "/gardsbutik",
+      "required": true,
+      "purpose": "Visa produkter, gårdsförsäljning eller andra erbjudanden med tydlig information om vad som finns och hur kunden handlar."
+    },
+    {
+      "id": "about-farm",
+      "path": "/om-garden",
+      "required": true,
+      "purpose": "Bygga förtroende genom att berätta om gården, driften, människorna och arbetssättet."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten och hitta till gården med adress, karta och öppettider."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "hunting",
+      "path": "/jakt",
+      "when": "verksamheten erbjuder jakt, viltrelaterade tjänster eller information kopplad till jaktupplägg"
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "when": "verksamheten säljer entreprenad, maskintjanster, skord, skotsel eller annan stödverksamhet utöver egna produkter"
+    }
+  ]
+}

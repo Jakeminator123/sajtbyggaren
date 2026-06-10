@@ -1,0 +1,29 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "home route with '/' is present",
+    "contact route is present",
+    "page set reflects agricultural business needs with farm shop, farm story, location and optional hunting or support services",
+    "all default routes have matching sectionsPerRoute entries",
+    "all route ids and section ids are kebab-case",
+    "all paths are Swedish, lowercase and without trailing slash",
+    "recommended dossiers use only allowed dossier ids",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic service-business structure without farm-specific content",
+    "invented product availability, certifications or production scale",
+    "overstating hunting offerings when the business does not provide them",
+    "forcing pricing when prices vary by season or availability",
+    "using team-heavy structure as the main trust device instead of place, production and practical information"
+  ]
+}

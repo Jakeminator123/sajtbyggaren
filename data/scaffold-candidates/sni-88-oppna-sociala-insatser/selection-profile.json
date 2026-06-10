@@ -1,0 +1,39 @@
+{
+  "id": "sni-88-oppna-sociala-insatser",
+  "embeddingText": "Ideell eller social verksamhet inom öppna sociala insatser. Webbplatsen ska förklara uppdrag, målgrupper, stödformer och aktiviteter, skapa förtroende genom transparens, visa team och arbetssätt, samla kontaktförfrågningar, erbjuda nyhetsbrev och driva registrering eller engagemang via en tydlig engagera-dig-sida.",
+  "semanticSignals": [
+    "oppna-sociala-insatser",
+    "ideell-organisation",
+    "stodverksamhet",
+    "malgrupper",
+    "radgivning",
+    "aktiviteter",
+    "engagera-dig",
+    "volontar",
+    "medlemskap",
+    "registrering",
+    "nyhetsbrev",
+    "arsredovisning",
+    "scaffold-90-konto",
+    "organisationsnummer",
+    "socialt-stod"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "produktkatalog",
+    "e-handel",
+    "prislista-for-behandlingar",
+    "hotellbokning",
+    "fastighetsobjekt",
+    "klinisk-vard",
+    "myndighetsutovning"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the organisation's main goal is to explain social support, participation or community activities rather than sell commercial services.",
+    "Strong fit for nonprofits, associations and mission-driven organisations that need both trust and engagement pathways.",
+    "Presence of words like insatser, stöd, målgrupp, volontär, medlem, engagera dig or verksamhet indicates this scaffold.",
+    "If the brief emphasises transparency, annual reports, organisation number, 90-account, members or field activities, this scaffold is likely appropriate."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

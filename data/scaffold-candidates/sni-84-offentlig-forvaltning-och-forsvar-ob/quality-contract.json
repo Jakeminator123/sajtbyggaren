@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Include a clear home route and contact route suited to public-sector information needs.",
+    "Prioritize clarity, correct routing and public mission over sales-oriented conversion patterns.",
+    "Use Swedish route paths that match how visitors would expect to find civic information.",
+    "Ensure every required route has matching section grammar tailored to this industry.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "sales-heavy or promotional copy structure",
+    "invented performance claims, guarantees or satisfaction metrics",
+    "portfolio, menu, pricing or booking-first information architecture unless explicitly needed",
+    "private-sector framing that obscures public responsibility"
+  ]
+}

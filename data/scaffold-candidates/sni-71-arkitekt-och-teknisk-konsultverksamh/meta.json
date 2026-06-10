@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-71-arkitekt-och-teknisk-konsultverksamh",
+  "sniCode": "71",
+  "wizardCategoryId": "consulting",
+  "industryProfileId": "sni-71",
+  "referenceScaffoldId": "agency-studio",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:30:47Z",
+  "outputPath": "data/scaffold-candidates/sni-71-arkitekt-och-teknisk-konsultverksamh",
+  "operatorBriefHash": "sha256:23458c1b9195d52a8d3fdc7da31c4de284ab535667a28032cf0de3f4c1891f16",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

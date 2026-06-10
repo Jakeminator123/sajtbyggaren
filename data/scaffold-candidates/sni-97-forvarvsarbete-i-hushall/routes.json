@@ -1,0 +1,34 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Förklara verksamheten kort och tydligt, skapa förtroende och leda vidare till kontakt."
+    },
+    {
+      "id": "about",
+      "path": "/om-verksamheten",
+      "required": true,
+      "purpose": "Ge en tydligare bild av verksamheten, arbetssättet och den som står bakom."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt via formulär och tydliga kontaktuppgifter."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "when": "när verksamheten behöver beskriva flera tydliga arbetsuppgifter eller uppdragstyper var för sig"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när återkommande frågor om upplägg, tillgänglighet eller kontaktvägar behöver besvaras separat"
+    }
+  ]
+}

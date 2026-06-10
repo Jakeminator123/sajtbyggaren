@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-64-finansiell-verksamhet-utom-forsakrin",
+  "sniCode": "64",
+  "wizardCategoryId": "accounting",
+  "industryProfileId": "sni-64",
+  "referenceScaffoldId": "professional-services",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:55Z",
+  "outputPath": "data/scaffold-candidates/sni-64-finansiell-verksamhet-utom-forsakrin",
+  "operatorBriefHash": "sha256:e49098229385893488f4e036e0efa22ddd81b8e84739eb44a9696023a31f9962",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

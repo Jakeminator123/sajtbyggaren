@@ -1,0 +1,58 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera butiken, lyfta utvalda produkter eller kategorier och leda besökaren vidare till köp eller sortiment."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa sortimentet med konkreta produkter, priser när de finns och tydlig väg vidare till köp."
+    },
+    {
+      "id": "store",
+      "path": "/butik-oppettider",
+      "required": true,
+      "purpose": "Hjälpa kunder som vill besöka den fysiska butiken med adress, öppettider och praktisk information."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Fånga upp frågor före köp eller efter köp via kontaktuppgifter och kontaktformulär."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att förklara butikens inriktning, bakgrund och vad som gör utbudet relevant."
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "required": false,
+      "purpose": "Besvara vanliga frågor om köp, betalning, leverans, byten, returer och butiksinformation."
+    },
+    {
+      "id": "reviews",
+      "path": "/kundrecensioner",
+      "required": false,
+      "purpose": "Visa kundomdömen som stärker trygghet och köplust utan att överdriva eller hitta på social proof."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "lookbook",
+      "path": "/inspiration",
+      "when": "när butiken säljer visuellt drivna produkter och behöver en inspirationsyta utöver vanlig produktlista"
+    },
+    {
+      "id": "categories",
+      "path": "/kategorier",
+      "when": "när sortimentet är brett nog att behöva en separat översikt över produktkategorier"
+    }
+  ]
+}

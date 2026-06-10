@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-97-forvarvsarbete-i-hushall",
+  "sniCode": "97",
+  "wizardCategoryId": "other",
+  "industryProfileId": "sni-97",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:33:19Z",
+  "outputPath": "data/scaffold-candidates/sni-97-forvarvsarbete-i-hushall",
+  "operatorBriefHash": "sha256:761fc5599668236cb5f9526feb83732f067b6122e2c518cb4bbb19980ab8a280",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

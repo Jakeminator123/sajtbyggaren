@@ -1,0 +1,266 @@
+{
+  "id": "sni-69-juridisk-och-ekonomisk-konsultverksa",
+  "label": "Juridisk och ekonomisk konsultverksamhet",
+  "description": "Scaffold för juridiska byråer, redovisningskonsulter, skatterådgivare och närliggande konsultverksamheter inom SNI 69. Fokuserar på specialisering, förtroende, sekretess, tydliga rätts- och rådgivningsområden samt enkel kontakt till rätt person.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara rättsområden och rådgivningstjänster tydligt",
+    "bygga förtroende genom specialisering, auktorisation och arbetsmetod",
+    "presentera team och ansvariga rådgivare",
+    "få in kvalificerade kontaktförfrågningar"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Etablera förtroende direkt med saklig introduktion, tydliga specialistområden, relevanta förtroendesignaler och en lågtröskelväg till första kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/rattsomraden",
+      "required": true,
+      "purpose": "Beskriva byråns rättsområden, ekonomiska rådgivningstjänster eller specialistkompetenser så att besökaren snabbt kan avgöra om verksamheten passar ärendet."
+    },
+    {
+      "id": "team",
+      "path": "/vart-team",
+      "required": true,
+      "purpose": "Presentera jurister, ekonomiska rådgivare eller konsulter med namn, roll, specialisering och kontaktvägar så att förfrågningar kan riktas rätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter, adress och kontaktformulär på en tydlig sida som inger seriositet och gör det enkelt att ta nästa steg."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser-och-paket",
+      "optional": true,
+      "when": "verksamheten arbetar med fasta priser, rådgivningspaket, abonnemang eller vill förklara hur debitering fungerar utan att lova standardpris för alla ärenden"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "många återkommande frågor behöver besvaras om process, sekretess, första mötet, debitering eller vilka underlag kunden bör förbereda"
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "byrån vill utveckla sin historia, arbetsmetod, värderingar eller förklara skillnaden mellan olika kompetenser och uppdragstyper"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "specialist-areas",
+        "trust-signals",
+        "team-preview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq-preview",
+        "reviews-proof",
+        "process-overview"
+      ],
+      "sectionOrderRules": [
+        "Hero ska kommunicera specialisering, trygghet och sekretess med saklig ton; undvik säljig eller dramatisk formulering.",
+        "Specialistområden ska presenteras som tydliga områden eller tjänstekategorier, inte som en lös och osorterad lista.",
+        "Förtroendesignaler ska endast nämna faktiska medlemskap, auktorisationer eller arbetssätt som verksamheten verkligen har.",
+        "Kontakt-CTA ska vara återhållsam och professionell, till exempel 'Kontakta oss' eller 'Boka ett första samtal'."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "service-taxonomy",
+        "who-we-help",
+        "process-overview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-summary",
+        "faq-preview",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "Tjänsteöversikten ska gruppera erbjudandet i begripliga kategorier som exempelvis familjerätt, affärsjuridik, redovisning, skatt eller löpande rådgivning beroende på verksamhetens inriktning.",
+        "Varje område ska ha en kort, konkret beskrivning av vad hjälpen omfattar så att besökaren kan självsortera sitt ärende.",
+        "Om både juridiska och ekonomiska tjänster erbjuds ska skillnaden mellan dem framgå tydligt för att minska felaktiga förfrågningar."
+      ]
+    },
+    "team": {
+      "requiredSections": [
+        "team-roster",
+        "credentials",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "about-method",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "Teamsektionen ska visa namn, roll och specialisering för varje person som lyfts fram.",
+        "Meriter och medlemskap ska anges korrekt och utan överdrifter; om titel eller auktorisation nämns ska den vara faktisk.",
+        "Det ska vara lätt att förstå vem som bör kontaktas för olika typer av frågor."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "map-or-location",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "team-contact-shortlist"
+      ],
+      "sectionOrderRules": [
+        "Telefonnummer och e-post ska vara klickbara när sådana visas.",
+        "Kontaktformuläret ska inge förtroende och gärna upplysa om att känsliga personuppgifter eller konfidentiella handlingar inte bör skickas innan vidare instruktion ges.",
+        "Om fysisk mottagning eller kontor finns ska adressen presenteras tydligt och sakligt."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "ha en tydlig sida för rättsområden eller specialisttjänster",
+      "stödja teampresentation eftersom namn och specialisering ofta påverkar förtroendet",
+      "stödja kontaktformulär och tydliga direktkontaktvägar",
+      "kunna uttrycka sekretess, seriositet och korrekt kompetens utan överdrifter",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generiska marknadsföringslöften utan substans",
+      "påhittade certifieringar, medlemskap eller mängdangivelser",
+      "aggressiva CTA-formuleringar eller sensationell tonalitet",
+      "att behandla juridiska eller ekonomiska ärenden som impulsköp"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "team-roster",
+      "trust-guarantees",
+      "pricing-table",
+      "map-embed"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Juridisk och ekonomisk konsultverksamhet, advokatbyrå, juristbyrå, redovisningsbyrå, skatterådgivning, bokföring, familjerätt, affärsjuridik, avtal, tvist, årsredovisning, deklaration, lön, revisionnärliggande rådgivning, specialisering, sekretess, auktorisation, kontaktformulär, team, FAQ.",
+    "semanticSignals": [
+      "juridik",
+      "advokat",
+      "jurist",
+      "redovisning",
+      "ekonomisk-radgivning",
+      "skatt",
+      "bokforing",
+      "arsredovisning",
+      "avtal",
+      "tvist",
+      "familjeratt",
+      "affarsjuridik",
+      "sekretess",
+      "auktorisation",
+      "specialisering"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "produktkatalog",
+      "webbshop",
+      "bokningskalender-for-behandlingar",
+      "eventschema",
+      "portfoljgalleri-som-huvudstruktur"
+    ],
+    "llmClassificationHints": [
+      "Verksamheter i denna scaffold säljer förtroendebaserad rådgivning snarare än fysiska produkter.",
+      "Besökaren vill förstå kompetensområde, ansvarig person, kontaktväg och hur första dialogen går till.",
+      "Team, specialistområden, FAQ och kontakt är starka signaler för denna bransch."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fbf8f1",
+          "foreground": "#0d1c2c",
+          "muted": "#5a6678",
+          "border": "#dccfb6",
+          "primary": "#0d1c2c",
+          "primaryForeground": "#fbf8f1",
+          "accent": "#9b7a3b",
+          "accentForeground": "#0d1c2c"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.25rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "authoritative",
+          "discreet",
+          "institutional",
+          "traditional",
+          "professional",
+          "measured"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Includes home and contact routes.",
+    "Routes reflect industry needs by covering products, manufacturing services and references.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "All route ids, section ids and paths use kebab-case conventions where applicable.",
+    "Purposes and rules stay honest and avoid invented certifications or unsupported claims.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the business like a generic local service company only.",
+    "Do not omit products or references, since buyers often need to evaluate manufacturing fit and finish.",
+    "Do not rely on generic quality claims without showing materials, process, references or reviews.",
+    "Do not add ecommerce checkout assumptions unless the dossier clearly supports it."
+  ]
+}

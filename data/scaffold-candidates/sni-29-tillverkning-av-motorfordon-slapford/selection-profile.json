@@ -1,0 +1,32 @@
+{
+  "id": "sni-29-tillverkning-av-motorfordon-slapford",
+  "embeddingText": "Tillverkning av motorfordon, släpfordon och påhängsvagnar. B2B-orienterad tillverkningswebb med startsida, produkter, tillverkning, om oss och kontakt. Sektioner för produktöversikt, tillverkningsprocess, teknisk kapacitet, förtroendeskapande fakta, team och kontakt. Optionala sidor för kvalitet och referenser.",
+  "semanticSignals": [
+    "vehicle-manufacturing",
+    "trailer-manufacturing",
+    "semi-trailer-manufacturing",
+    "product-range",
+    "industrial-production",
+    "technical-capability",
+    "custom-manufacturing",
+    "b2b-sales-contact",
+    "quality-process",
+    "factory-trust-signals"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "online-booking-primary",
+    "beauty-treatment-services",
+    "event-schedule",
+    "consumer-ecommerce-checkout",
+    "game-loop-primary",
+    "table-booking"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company manufactures motor vehicles, trailers, body solutions or semi-trailers.",
+    "Prefer this over a generic service-company scaffold when product models and production capability are central to the offer.",
+    "Suitable for industrial firms selling through inquiry, sales contact or quote dialogue rather than instant online purchase."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

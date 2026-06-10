@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-94-intressebevakning-religios-verksamhe",
+  "sniCode": "94",
+  "wizardCategoryId": "nonprofit",
+  "industryProfileId": "sni-94",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:33:06Z",
+  "outputPath": "data/scaffold-candidates/sni-94-intressebevakning-religios-verksamhe",
+  "operatorBriefHash": "sha256:b9837c29cd122fb185ecb3953b127d9a308e61c778a1204405d86e8e7dfde658",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

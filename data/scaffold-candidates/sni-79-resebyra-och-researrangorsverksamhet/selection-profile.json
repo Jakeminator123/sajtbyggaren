@@ -1,0 +1,34 @@
+{
+  "id": "sni-79-resebyra-och-researrangorsverksamhet",
+  "embeddingText": "Scaffold for Swedish travel agencies and tour operators with homepage, trips, pricing and packages, booking and contact pages. Optimized for inspirational travel marketing, destination presentation, package comparison, booking inquiry flow, FAQ, gallery and trust signals like resegaranti and clear travel terms.",
+  "semanticSignals": [
+    "resebyra",
+    "researrangor",
+    "paketresor",
+    "destinationer",
+    "upplevelser",
+    "bokning",
+    "bokningsforfragan",
+    "priser-och-paket",
+    "resvillkor",
+    "resegaranti",
+    "paketreselagen",
+    "resenarsomdomen",
+    "bildgalleri",
+    "faq"
+  ],
+  "negativeSignals": [
+    "lokal-hantverkstjanst-utan-bokningsflode",
+    "restaurangmeny",
+    "produktkatalog-for-e-handel",
+    "medicinsk-klinikbokning",
+    "fastighetsmaklare"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the business sells, arranges or brokers trips, travel packages, tours or travel-related bookings.",
+    "Prefer this scaffold when inspirational imagery, destination overviews, package pricing and booking inquiry are central to the site.",
+    "Use even for smaller travel businesses if they need to present experiences or destinations rather than generic services only."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

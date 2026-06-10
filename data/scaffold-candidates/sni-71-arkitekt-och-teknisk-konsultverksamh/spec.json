@@ -1,0 +1,287 @@
+{
+  "id": "sni-71-arkitekt-och-teknisk-konsultverksamh",
+  "label": "Arkitekt- och teknisk konsultverksamhet; teknisk provning och analys",
+  "description": "Scaffold för arkitektkontor, tekniska konsulter och provnings-/analysverksamheter som säljer på tydliga tjänster, referensprojekt, behörigheter, process och enkel offertkontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänster och kompetens",
+    "visa referensprojekt och uppdragstyper",
+    "bygga förtroende med behörigheter, ansvar och arbetssätt",
+    "få in offertförfrågningar och kontaktförfrågningar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Översiktssida som snabbt förklarar verksamhetens inriktning, viktigaste tjänster, relevanta referensprojekt, arbetsprocess och tydlig väg till offertförfrågan. För denna bransch behöver besökaren förstå både teknisk kompetens och hur uppdrag genomförs."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samlad tjänstesida för arkitektur, projektering, teknisk rådgivning, provning eller analys. Ska hjälpa beställare att förstå vad företaget gör, vilka typer av uppdrag som passar och hur leveransen brukar avgränsas."
+    },
+    {
+      "id": "projects",
+      "path": "/referensprojekt",
+      "required": true,
+      "purpose": "Referenssida med utvalda projekt, uppdrag eller analyser. I denna bransch är tidigare uppdrag centrala för trovärdighet, särskilt när kunder vill bedöma erfarenhet inom bygg, teknik, mätning, provning eller utredning."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Sida om företaget, teamet, behörigheter, arbetssätt och ansvar. Besökaren behöver kunna bedöma kompetens, roller och vilken typ av expertis som finns internt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Kontakt- och offertsida med tydliga kontaktuppgifter, kontaktformulär och praktisk information så att beställare snabbt kan initiera dialog om projekt, utredning eller provningsbehov."
+    },
+    {
+      "id": "process",
+      "path": "/process",
+      "optional": true,
+      "when": "när företaget säljer på en tydligt definierad arbetsmodell, till exempel förstudie, projektering, granskning, provning, rapportering och uppföljning"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när kunder ofta behöver vägledning om leveransomfattning, underlag, tidsplaner, platsbesök, rapporter eller hur en offertförfrågan bör förberedas"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "services-overview",
+        "reference-project-preview",
+        "trust-signals",
+        "process-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team-preview",
+        "faq-accordion"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the firm's focus clearly in plain professional language, with a primary CTA for quote/contact rather than vague brand copy.",
+        "Services overview must appear before deeper company story so visitors can confirm relevance within a few seconds.",
+        "Reference project preview should come before long explanatory text because this industry earns trust through concrete assignments.",
+        "Trust signals must be factual, such as roles, certifications, insurance, sectors or documented experience, never inflated claims."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-list",
+        "service-scope-block",
+        "process-steps",
+        "faq-accordion",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "trust-signals",
+        "reference-project-preview"
+      ],
+      "sectionOrderRules": [
+        "Services list must use real client-facing service categories, for example projektering, bygglovsritningar, kontroll, provning, analys or teknisk utredning where relevant.",
+        "Service scope block should clarify what is typically included, required input from client and expected output, avoiding legal or technical overpromises.",
+        "FAQ should answer practical buying questions and reduce friction before contact."
+      ]
+    },
+    "projects": {
+      "requiredSections": [
+        "reference-project-grid",
+        "project-types-or-sectors",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews-or-testimonials"
+      ],
+      "sectionOrderRules": [
+        "Reference project grid must lead the page and each item should identify project type, scope or assignment nature without requiring exaggerated marketing language.",
+        "If confidentiality limits detail, cards may stay concise but should still communicate enough context to show relevant experience.",
+        "Trust signals on this page support the project evidence and should not overshadow the projects themselves."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story-block",
+        "team-block",
+        "credentials-and-responsibility",
+        "process-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "trust-signals",
+        "faq-accordion"
+      ],
+      "sectionOrderRules": [
+        "About story must explain what the company does, who it serves and how it works, not rely on generic consultancy clichés.",
+        "Team block should make roles legible, such as arkitekt, konstruktör, projektledare, provningsingenjör or specialist.",
+        "Credentials and responsibility section may include certifications, authorisations, insurance or quality approach only when actually applicable."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "quote-request-helper",
+        "map-or-location",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq-accordion",
+        "opening-hours-or-availability"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include direct actionable details such as phone, email and address when available.",
+        "Contact form should support project or assignment enquiries and can prompt for type of service, location, timeline or existing underlag.",
+        "If map or location is shown, it should support visiting or service-area clarity rather than decorative filler."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har startsida och kontaktsida.",
+      "Sidtstrukturen speglar branschens behov av tjänster, referensprojekt, kompetens och offertkontakt.",
+      "Alla standardsidor har matchande sectionsPerRoute.",
+      "Referensprojekt prioriteras som förtroendeskapare för tekniska och arkitektrelaterade uppdrag.",
+      "FAQ och kontaktform stöds eftersom kategorin efterfrågar detta.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generisk byråstruktur där endast varumärkesmanifest och kreativ ton prioriteras över teknisk tydlighet.",
+      "Prislistor som antyder fasta standardpriser för komplexa konsult- eller provningsuppdrag utan kontext.",
+      "Påhittade certifieringar, antal projekt eller kundomdömen.",
+      "För mycket allmän företagscopy före tjänster, referenser och praktisk kontaktväg."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "team-roster",
+      "trust-guarantees",
+      "map-embed",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Arkitekt- och teknisk konsultverksamhet samt teknisk provning och analys behöver en webbstruktur som visar tjänster, referensprojekt, team, behörigheter, process och kontakt för offert. Besökaren vill snabbt förstå kompetensområde, uppdragstyper, hur arbetet går till och hur man initierar ett projekt eller en utredning.",
+    "semanticSignals": [
+      "arkitekt",
+      "teknisk-konsult",
+      "projektering",
+      "bygglov",
+      "konstruktionsunderlag",
+      "provning",
+      "analys",
+      "teknisk-utredning",
+      "referensprojekt",
+      "behorigheter",
+      "ansvarsforsakring",
+      "ingenjorer",
+      "team",
+      "offertforfragan"
+    ],
+    "negativeSignals": [
+      "e-handel",
+      "restaurangmeny",
+      "produktkatalog-med-kopknapp",
+      "bokningskalender-for-behandlingar",
+      "eventbiljetter",
+      "receptsajt"
+    ],
+    "llmClassificationHints": [
+      "Liknar konsult- och byråupplägg men måste vara mer tekniskt och sakligt än en kreativ byrå.",
+      "Referensprojekt är centralt och bör ofta få egen sida.",
+      "Tjänstesida är viktigare än ren varumärkesberättelse.",
+      "Team, kompetens, behörigheter och ansvar är starka förtroendesignaler i denna bransch."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#ffffff",
+          "foreground": "#0a0a0a",
+          "muted": "#5b5b5b",
+          "border": "#e0e0e0",
+          "primary": "#0a0a0a",
+          "primaryForeground": "#ffffff",
+          "accent": "#caa14a",
+          "accentForeground": "#0a0a0a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.125rem",
+          "md": "0.25rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "monochrome",
+          "modular",
+          "sharp",
+          "curated",
+          "confident",
+          "creative"
+        ]
+      }
+    }
+  ]
+}

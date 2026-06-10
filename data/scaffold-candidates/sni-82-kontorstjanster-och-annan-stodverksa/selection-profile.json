@@ -1,0 +1,31 @@
+{
+  "id": "sni-82-kontorstjanster-och-annan-stodverksa",
+  "embeddingText": "Kontorstjänster och annan stödverksamhet till företag. B2B-tjänsteföretag med fokus på administration, företagsstöd, kontorsservice, dokumenthantering, kundservice, backoffice, reception, supportfunktioner, referenser, team, kontaktformulär och tydlig tjänstepresentation.",
+  "semanticSignals": [
+    "kontorstjanster",
+    "administrativt-stod",
+    "foretagsservice",
+    "backoffice",
+    "dokumenthantering",
+    "kundservice",
+    "receptionstjanster",
+    "affarsstod",
+    "b2b-tjanster",
+    "offertforfragan"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "webshopprodukter",
+    "bordsbokning",
+    "patientbokning",
+    "fastighetsobjekt",
+    "evenemangsbiljetter"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold for businesses that sell office-related support or administrative services to other companies.",
+    "Prefer this scaffold when the key conversion is contact or quote request rather than ecommerce checkout or appointment booking.",
+    "Strong matches include firms describing administration, reception, customer service, document support, invoicing support or similar outsourced business support functions."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

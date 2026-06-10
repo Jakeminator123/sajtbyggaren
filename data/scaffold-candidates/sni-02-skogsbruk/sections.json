@@ -1,0 +1,74 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "gallery",
+      "reviews",
+      "service-area-summary",
+      "faq",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must include skogsbruk/skogliga tjänster, verksamhetsområde if known and a primary CTA.",
+      "Service summary must mention concrete skogsbrukstjänster such as avverkning, gallring, skogsvård or liknande only when supported by supplied data.",
+      "Trust proof must rely on real signals such as organisationsnummer, F-skattsedel, references or visible contact details.",
+      "Gallery and reviews may appear before trust-proof when dossier data exists.",
+      "Do not repeat the same service claims in both hero and service-summary."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Services intro must explain who tjänsterna passar for, such as markägare, företag or samfälligheter, when supported by input.",
+      "Service list items must be specific and operational, not generic quality claims.",
+      "If pricing-summary is shown, it must present honest pricing guidance or explain that offert lämnas efter bedömning rather than invented fixed prices."
+    ]
+  },
+  "service-area": {
+    "requiredSections": [
+      "service-area-intro",
+      "service-area-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "local-trust",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Service-area intro must describe where the company works without overstating coverage.",
+      "Area list should use real orter, kommuner or regioner only if supplied.",
+      "Map may be shown only when address or service geography data exists."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and not be lorem placeholders.",
+      "Contact CTA should support quote requests or general inquiries and stay simple.",
+      "Opening hours are optional because field work may make fixed drop-in times unclear."
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "erbjudande-oversikt",
+      "kundgrupper",
+      "trygghet-och-fortroende",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "process-oversikt",
+      "faq-preview",
+      "team-preview",
+      "insikter-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero ska snabbt förklara vilken typ av försäkrings-, återförsäkrings- eller pensionsverksamhet det gäller och vem erbjudandet riktar sig till.",
+      "Erbjudande-översikt ska ordnas i tydliga kategorier snarare än som en lös punktlista, så att besökaren kan självsortera till rätt område.",
+      "Trygghet-och-förtroende ska bygga på saklig information som bolagsprofil, arbetssätt, erfarenhetsområden eller tillsynsrelaterad tydlighet utan att påstå sådant som inte kan styrkas.",
+      "Kontakt-CTA ska använda lugn, handlingsinriktad formulering såsom 'Begär offert' eller 'Kontakta oss för rådgivning'."
+    ]
+  },
+  "erbjudande": {
+    "requiredSections": [
+      "tjansteomraden",
+      "malgrupper",
+      "villkors-och-processinfo",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq-preview",
+      "case-eller-exempel"
+    ],
+    "sectionOrderRules": [
+      "Tjänsteområden ska grupperas efter begripliga försäkrings- eller pensionskategorier och varje område ska ha en kort beskrivning av omfattning eller användning.",
+      "Målgrupper ska tydliggöra om erbjudandet riktar sig till privatpersoner, företag, institutioner, försäkringsförmedlare eller andra professionella motparter.",
+      "Villkors- och processinfo ska beskriva nivåer och steg på ett översiktligt sätt utan att ersätta fullständiga villkor eller individuell rådgivning."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "verksamhetsbeskrivning",
+      "arbetssatt",
+      "team-preview",
+      "trygghet-och-fortroende"
+    ],
+    "optionalSections": [
+      "historia",
+      "styrning-och-ansvar",
+      "partnerskap-eller-samarbeten"
+    ],
+    "sectionOrderRules": [
+      "Verksamhetsbeskrivning ska vara konkret om bolagets roll, fokus och erbjudande, inte allmänt hållen företagsprosa.",
+      "Arbetssätt ska förklara hur rådgivning, riskbedömning, förvaltning eller kunddialog går till på en nivå som skapar förståelse utan att lova utfall.",
+      "Trygghet-och-förtroende ska fokusera på transparens, ansvar och tillgänglighet snarare än marknadsföringssuperlativ."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "kontaktinfo",
+      "kontaktformular",
+      "faq-preview"
+    ],
+    "optionalSections": [
+      "map-or-location",
+      "oppettider",
+      "team-contact-points"
+    ],
+    "sectionOrderRules": [
+      "Kontaktinfo ska innehålla tydliga kontaktvägar för allmän fråga, offert eller rådgivning, med klickbara telefon- och e-postlänkar när sådana visas.",
+      "Kontaktformulär ska efterfråga endast den information som behövs för att kunna återkoppla och ska inte utformas som en full skadeanmälan om inte verksamheten uttryckligen stödjer det.",
+      "Om flera kontaktvägar finns ska det framgå vilken kanal som passar för exempelvis offert, kundservice eller pågående ärende."
+    ]
+  }
+}

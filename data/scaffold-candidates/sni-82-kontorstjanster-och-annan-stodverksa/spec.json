@@ -1,0 +1,259 @@
+{
+  "id": "sni-82-kontorstjanster-och-annan-stodverksa",
+  "label": "Kontorstjänster och annan stödverksamhet till företag",
+  "description": "Scaffold för företag inom kontorstjänster och annan stödverksamhet till företag, med fokus på tydliga tjänstebeskrivningar, förtroendeskapande information och enkel kontakt för offert eller förfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara administrativa och affärsstödjande tjänster tydligt",
+    "bygga förtroende genom referenser, team och företagsinformation",
+    "driva kontaktförfrågningar från företag som söker löpande eller punktvisa stödtjänster"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, förklara vilket administrativt stöd som erbjuds och leda besökaren till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Presentera tjänsteutbudet konkret, till exempel administration, kundservice, dokumenthantering eller annan företagsstödjande service."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Skapa förtroende genom att visa företagets arbetssätt, erfarenhet och vilka personer som utför uppdragen."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via formulär, telefon, e-post och adress."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "optional": true,
+      "when": "när verksamheten arbetar med fasta paket, timpris eller tydliga prisnivåer som underlättar offertförfrågan"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när kunder ofta behöver svar om arbetssätt, sekretess, uppstart eller upplägg innan de kontaktar företaget"
+    },
+    {
+      "id": "hitta-hit",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när företaget tar emot besök på kontor och behöver karta, adress och öppettider som egen sida"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "team",
+        "testimonials",
+        "faq",
+        "reviews",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must include what type of business support is offered and a primary contact CTA.",
+        "Service summary must describe concrete office or support services, not only broad promises.",
+        "Trust proof must appear before the final contact CTA and may include references, visible company details or clear working methods.",
+        "If testimonials or reviews are shown, trust-proof should avoid repeating the same evidence in another format.",
+        "Sections should stay concise and avoid repeating identical claims about reliability or service quality."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services intro must explain who the services are for and what kinds of administrative or business support are provided.",
+        "Service list items must be specific and outcome-oriented, for example invoice administration, reception support, scheduling or document management.",
+        "If pricing is shown, it must be clearly framed as example pricing, package pricing or starting prices when exact quotes vary.",
+        "Contact CTA should invite a request for quote or a first conversation about needs and scope."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "testimonials",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must explain the company's way of working, relevant experience and how assignments are handled in practice.",
+        "Team should only be shown when actual people, roles or responsibility areas are available.",
+        "Trust proof may include references, visible organisation details and practical qualities such as responsiveness or structured delivery, but must not invent credentials."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must contain real contact channels such as phone, email and address when available.",
+        "Contact CTA should support a business inquiry, callback request or quote request without unnecessary friction.",
+        "Map and opening hours should only be shown when the business has a relevant visit address or stated office hours."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "home route with path '/' is present",
+      "contact route is present",
+      "all default routes have matching sectionsPerRoute entries",
+      "route ids and section ids use kebab-case slugs",
+      "paths are Swedish, lowercase, start with '/', and have no trailing slash",
+      "page set fits companies selling office services and business support rather than consumer retail or hospitality",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic route sets that ignore the need to explain specific support services",
+      "vague service copy without examples of actual administrative or support tasks",
+      "invented certifications, customer counts or guarantees",
+      "forcing booking flows when the industry more often converts via inquiry or quote request"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees",
+      "opening-hours",
+      "map-embed",
+      "pricing-table"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Kontorstjänster och annan stödverksamhet till företag. B2B-tjänsteföretag med fokus på administration, företagsstöd, kontorsservice, dokumenthantering, kundservice, backoffice, reception, supportfunktioner, referenser, team, kontaktformulär och tydlig tjänstepresentation.",
+    "semanticSignals": [
+      "kontorstjanster",
+      "administrativt-stod",
+      "foretagsservice",
+      "backoffice",
+      "dokumenthantering",
+      "kundservice",
+      "receptionstjanster",
+      "affarsstod",
+      "b2b-tjanster",
+      "offertforfragan"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "webshopprodukter",
+      "bordsbokning",
+      "patientbokning",
+      "fastighetsobjekt",
+      "evenemangsbiljetter"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold for businesses that sell office-related support or administrative services to other companies.",
+      "Prefer this scaffold when the key conversion is contact or quote request rather than ecommerce checkout or appointment booking.",
+      "Strong matches include firms describing administration, reception, customer service, document support, invoicing support or similar outsourced business support functions."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

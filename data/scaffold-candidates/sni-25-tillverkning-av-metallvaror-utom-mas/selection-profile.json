@@ -1,0 +1,37 @@
+{
+  "id": "sni-25-tillverkning-av-metallvaror-utom-mas",
+  "embeddingText": "Metallvarutillverkning, legotillverkning, plåtbearbetning, svetsning, skärning, bockning, montering, industrikomponenter, stålkonstruktioner, kapacitet, material, seriestorlekar, offertförfrågan, kontakt.",
+  "semanticSignals": [
+    "metallvaror",
+    "legotillverkning",
+    "plat",
+    "stal",
+    "rostfritt",
+    "aluminium",
+    "svetsning",
+    "bearbetning",
+    "produktion",
+    "komponenter",
+    "industrikunder",
+    "ritningsunderlag",
+    "serietillverkning",
+    "prototyper"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "bokning-av-bord",
+    "webshop-kassa",
+    "frisor",
+    "fotograf-portfolj",
+    "meny",
+    "hotellrum",
+    "eventbiljetter"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten tillverkar eller bearbetar metallprodukter för kundorder eller egen produktion.",
+    "Särskilt relevant när sajten behöver beskriva material, metoder, kapacitet och offertkontakt.",
+    "Mindre lämplig för rena maskintillverkare, konsumentbutiker eller verksamheter där bokning är huvudflödet."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

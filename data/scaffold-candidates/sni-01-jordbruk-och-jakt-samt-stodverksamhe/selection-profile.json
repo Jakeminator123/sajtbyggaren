@@ -1,0 +1,36 @@
+{
+  "id": "sni-01-jordbruk-och-jakt-samt-stodverksamhe",
+  "embeddingText": "Branschscaffold för jordbruk, gård, gårdsbutik, odling, djurhållning, jakt och stödverksamhet inom lantbruk. Typiska behov är startsida med gårdens erbjudande, sida för gårdsbutik eller produkter, om gården med berättelse och människor, samt kontaktsida med karta, öppettider och kontaktformulär. Kan utökas med jakt eller tjänster för entreprenad och stödverksamhet.",
+  "semanticSignals": [
+    "gard",
+    "jordbruk",
+    "lantbruk",
+    "gardsbutik",
+    "odling",
+    "djurhallning",
+    "narproducerat",
+    "gardsforsaljning",
+    "oppen-gard",
+    "jakt",
+    "lantbrukstjanster",
+    "maskintjanster",
+    "skord",
+    "falt",
+    "stall",
+    "produkter-fran-garden"
+  ],
+  "negativeSignals": [
+    "ren-e-handel-med-stort-produktkatalogbehov",
+    "restaurangmeny",
+    "hotellbokning",
+    "ren-industriell-tillverkning",
+    "allman-konsultverksamhet-utan-platsbesok"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the business centers on a farm, agricultural production, farm shop, hunting-related activity or practical support services tied to land and farming.",
+    "Prefer this over a generic local-service scaffold when place, seasons, products from the farm and visiting information are core to the customer journey.",
+    "Use optional hunting or services routes only when clearly supported by the business description."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

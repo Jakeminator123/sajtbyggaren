@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-18-grafisk-produktion-och-reproduktion",
+  "sniCode": "18",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-18",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:25:31Z",
+  "outputPath": "data/scaffold-candidates/sni-18-grafisk-produktion-och-reproduktion",
+  "operatorBriefHash": "sha256:eda4eb520a3d9133d3915dd7a211c95c8fcdc45d29c14b974cdd43888559c1fe",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,308 @@
+{
+  "id": "sni-17-pappers-och-pappersvarutillverkning",
+  "label": "Pappers- och pappersvarutillverkning",
+  "description": "Scaffold för företag inom pappers- och pappersvarutillverkning med fokus på produktionskapacitet, produktområden, materialkvalitet, hållbarhetsarbete och tydlig kontakt för offert eller affärsdialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och tillverkningsinriktning",
+    "bygga förtroende genom kapacitet, kvalitet och affärsinformation",
+    "göra det enkelt att kontakta företaget för offert, förfrågan eller samarbete"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera pappers- eller pappersvaruföretaget, förklara vad som tillverkas och leda vidare till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktområden, material eller pappersvaror som företaget tillverkar och hjälpa besökaren förstå relevanta användningsområden."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Beskriva tillverkningsprocess, kapacitet, anläggning och arbetssätt för att skapa affärsförtroende hos inköpare och partners."
+    },
+    {
+      "id": "sustainability",
+      "path": "/hallbarhet",
+      "required": true,
+      "purpose": "Samla företagets arbete kring råvaror, resurshushållning, återvinning och miljöansvar utan överdrivna påståenden."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Ge en kort företagsbild med historia, team och grundläggande företagsuppgifter som stärker förtroendet."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, produktfrågor, leveransdialog eller besök med tydliga kontaktuppgifter."
+    },
+    {
+      "id": "quality",
+      "path": "/kvalitet",
+      "optional": true,
+      "when": "när företaget vill beskriva kvalitetsarbete, tester, spårbarhet eller interna rutiner mer utförligt"
+    },
+    {
+      "id": "applications",
+      "path": "/anvandningsomraden",
+      "optional": true,
+      "when": "när produktutbudet behöver förklaras utifrån kundsegment eller användningsområden snarare än enbart produkttyper"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-summary",
+        "production-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "sustainability-summary",
+        "image-gallery",
+        "reviews",
+        "faq",
+        "video-hero"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company manufactures and include a primary contact CTA.",
+        "Product summary should quickly group the main product areas or paper goods without becoming a full catalog.",
+        "Production summary must focus on real capabilities, materials or delivery-relevant facts when available.",
+        "Trust proof must use honest company facts such as organisation details, references, visible facilities or process competence.",
+        "Final CTA should invite contact for quote, product inquiry or business discussion."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-table",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Products intro must explain the scope of the offer in concrete terms.",
+        "Product list items must describe actual product categories, material variants or use cases, not vague marketing claims.",
+        "If pricing is shown, it should be indicative and clearly limited to what the company can honestly state.",
+        "Contact CTA should follow the product content and encourage an inquiry tied to needs or volume."
+      ]
+    },
+    "production": {
+      "requiredSections": [
+        "production-intro",
+        "process-steps",
+        "facility-overview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "trust-proof",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Production intro must connect the company's manufacturing setup to customer value such as consistency, scale or flexibility.",
+        "Process steps should be presented in a simple logical order and stay understandable for non-specialist visitors.",
+        "Facility overview may include machinery, lines, location or production environment only when information exists in the dossier.",
+        "Avoid repeating the same claims already used on the home page unless they are expanded with new specifics."
+      ]
+    },
+    "sustainability": {
+      "requiredSections": [
+        "sustainability-intro",
+        "materials-and-sourcing",
+        "resource-and-recycling",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Sustainability copy must stay factual and avoid unsupported environmental claims.",
+        "Materials and sourcing should describe raw materials, recycled content or procurement principles only when known.",
+        "Resource and recycling should focus on concrete practices such as waste reduction, recovery, reuse or process efficiency.",
+        "CTA should invite follow-up questions about materials, requirements or collaboration rather than repeat generic slogans."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific to the company, its background or role in the industry.",
+        "Team section should show real people or real functions when available, otherwise be omitted in single-page rendering if unsupported.",
+        "Trust proof should prioritise business legitimacy, references and operational credibility over generic adjectives."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map-embed",
+        "mailto-contact-form"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must be present when available and must not use placeholder data.",
+        "If opening hours are shown, they should reflect actual office, switchboard or visitor hours.",
+        "Map should only be shown when a visitable address or facility location is appropriate to publish.",
+        "Contact CTA may include a form and should be suitable for quote requests, purchasing questions or general inquiries."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "The scaffold must reflect manufacturing and B2B information needs rather than a generic local service layout.",
+      "Home, products, production, sustainability and contact together must give a credible overview of offer, capability and how to initiate dialogue.",
+      "All environmental or quality-related wording must remain cautious and factual unless the dossier explicitly supports stronger claims.",
+      "The contact route must support direct inquiry with clear business contact details and optional form.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the business like a restaurant, portfolio site or appointment-led consumer service.",
+      "Do not invent certifications, export claims, capacity figures, customer counts or sustainability achievements.",
+      "Do not rely on generic 'services' wording when the industry's core need is product and manufacturing presentation.",
+      "Do not create a webshop or shopping-cart structure unless the dossier explicitly indicates online retail."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "faq-accordion",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschscaffold för pappers- och pappersvarutillverkning. Passar tillverkare av papper, kartong eller pappersvaror som behöver presentera produktområden, produktion, hållbarhetsarbete, företagsfakta och kontaktvägar för offert eller affärsdialog. Prioriterar produktsidor, tillverkningsbeskrivning, hållbarhetsinformation och tydlig B2B-kontakt.",
+    "semanticSignals": [
+      "paper-manufacturing",
+      "paper-goods-manufacturer",
+      "kartong-och-papper",
+      "produktion",
+      "tillverkningsprocess",
+      "produktomraden",
+      "material",
+      "forpackning",
+      "hygienpapper",
+      "specialpapper",
+      "hallbarhet",
+      "atervinning",
+      "b2b",
+      "offertforfragan"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "online-booking-focus",
+      "beauty-salon-treatments",
+      "photography-portfolio",
+      "event-ticketing",
+      "consumer-appointment-flow",
+      "table-reservation"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the company primarily manufactures paper, cardboard or paper-based products.",
+      "Prefer this scaffold when visitors need to understand products, production capability and sustainability work before contacting the business.",
+      "Do not choose this scaffold for generic service firms with no manufacturing or product structure."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

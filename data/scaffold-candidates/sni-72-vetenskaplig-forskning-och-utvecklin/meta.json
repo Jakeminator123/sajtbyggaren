@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-72-vetenskaplig-forskning-och-utvecklin",
+  "sniCode": "72",
+  "wizardCategoryId": "consulting",
+  "industryProfileId": "sni-72",
+  "referenceScaffoldId": "agency-studio",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:30:52Z",
+  "outputPath": "data/scaffold-candidates/sni-72-vetenskaplig-forskning-och-utvecklin",
+  "operatorBriefHash": "sha256:945f7e37b3136d7f40c35513d45c5bda06416b49b0e3b2c5c709a2c698846a27",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

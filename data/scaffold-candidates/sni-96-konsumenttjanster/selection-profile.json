@@ -1,0 +1,34 @@
+{
+  "id": "sni-96-konsumenttjanster",
+  "embeddingText": "Salong och skönhet inom konsumenttjänster med fokus på behandlingar, prislista, bildgalleri, bokning online, om oss, kontakt, öppettider och hitta hit. Scaffolden passar verksamheter där resultat, stämning och enkel bokning driver konvertering.",
+  "semanticSignals": [
+    "salong",
+    "skonhet",
+    "behandlingar",
+    "fransar",
+    "naglar",
+    "hudvard",
+    "massage",
+    "prislista",
+    "boka-tid",
+    "galleri",
+    "hitta-hit",
+    "oppettider",
+    "omdomen",
+    "hygienrutiner"
+  ],
+  "negativeSignals": [
+    "byggtjanster",
+    "restaurangmeny",
+    "produktkatalog-for-e-handel",
+    "industriell-b2b-tjanst",
+    "fastighetsformedling"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold for salons, beauty studios and similar appointment-based personal care businesses.",
+    "Prefer this when the site needs booking, prices, visual proof and local contact information.",
+    "Do not choose this for clinics requiring medical compliance-first structure or for retail-first ecommerce sites."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

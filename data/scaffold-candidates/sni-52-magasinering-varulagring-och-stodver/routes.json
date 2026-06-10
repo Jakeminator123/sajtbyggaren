@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara kärntjänsterna inom magasinering och transportstöd samt leda till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets tjänster inom lagring, gods- och terminalhantering, omlastning och relaterat stöd med konkret information."
+    },
+    {
+      "id": "facilities",
+      "path": "/anlaggning",
+      "required": true,
+      "purpose": "Visa anläggning, lagringsmiljö, åtkomst, kapacitetstyper och praktiska förutsättningar för kunder som behöver förstå hur hanteringen fungerar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via telefon, e-post, adress och kontaktformulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget vill stärka förtroendet med historia, arbetssätt, ägare eller team"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när verksamheten ofta behöver besvara frågor om tillgång, hantering, avtal, öppettider eller godsflöde"
+    },
+    {
+      "id": "location",
+      "path": "/hitta-hit",
+      "when": "när fysisk anläggning, infart eller karta är viktig för besök, leveranser eller upphämtning"
+    }
+  ]
+}

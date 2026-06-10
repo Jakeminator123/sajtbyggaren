@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-16-tillverkning-av-tra-och-varor-av-tra",
+  "sniCode": "16",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-16",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:25:19Z",
+  "outputPath": "data/scaffold-candidates/sni-16-tillverkning-av-tra-och-varor-av-tra",
+  "operatorBriefHash": "sha256:b5473e276bfef8e3351a447332731952e96466b0f8814456738077439debed49",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

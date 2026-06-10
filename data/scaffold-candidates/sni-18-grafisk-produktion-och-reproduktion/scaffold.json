@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-18-grafisk-produktion-och-reproduktion",
+  "version": "0.1.0",
+  "label": "Grafisk produktion och reproduktion av inspelningar",
+  "description": "Scaffold för tryckerier, grafisk produktion, prepress och reproduktion av inspelningar. Fokus på att beskriva produktionstjänster, visa exempel på trycksaker och leda besökaren till kontakt eller offertförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara produktionstjänster och kapacitet",
+    "bygga förtroende kring kvalitet, leveranstider och arbetsflöde",
+    "visa exempel på trycksaker eller reproduktionsuppdrag",
+    "driva kontakt och offertförfrågningar"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

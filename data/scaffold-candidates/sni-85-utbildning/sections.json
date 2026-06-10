@@ -1,0 +1,79 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "course-summary",
+      "pedagogy-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "testimonials",
+      "faq",
+      "newsletter-signup",
+      "team-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must describe the education offering and include a primary CTA to registration or contact.",
+      "Course summary must present concrete course or program categories, not vague promises.",
+      "Pedagogy summary should explain how teaching is delivered and who the training is for.",
+      "Trust proof must rely on real teacher qualifications, course structure, reviews or other supplied evidence.",
+      "FAQ and testimonials may appear before the final contact CTA when data exists.",
+      "Sections should guide the visitor from understanding the offer to taking the next step without repeating the same claims."
+    ]
+  },
+  "courses": {
+    "requiredSections": [
+      "courses-intro",
+      "course-list",
+      "registration-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Courses intro must explain who the courses are for and how the offering is organized.",
+      "Course list items must be specific and include clear differentiators such as level, focus, format or duration when available.",
+      "Registration CTA must appear after the course list and point toward application, registration or contact."
+    ]
+  },
+  "admission": {
+    "requiredSections": [
+      "admission-intro",
+      "application-steps",
+      "eligibility-and-practicalities",
+      "registration-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "pricing-summary",
+      "contact-info"
+    ],
+    "sectionOrderRules": [
+      "Admission intro must explain what the visitor can do on this page and who the application process applies to.",
+      "Application steps should be presented in chronological order.",
+      "Eligibility and practicalities should cover relevant requirements, schedule or materials only when such data exists.",
+      "The final CTA should make the next action explicit, such as registering interest, contacting the school or starting an application."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real contact channels supplied by the business.",
+      "Contact form should be framed for course questions, registration interest or general inquiries.",
+      "Map and opening hours should only render when relevant data exists."
+    ]
+  }
+}

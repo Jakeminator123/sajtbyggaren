@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-46-parti-och-provisionshandel",
+  "version": "0.1.0",
+  "label": "Parti- och provisionshandel",
+  "description": "Scaffold för grossister, distributörer och provisionshandelsföretag som säljer till företagskunder. Fokus ligger på sortiment, leveranskapacitet, inköpsflöde och tydliga kontaktvägar för nya och befintliga kunder.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera sortiment och produktområden för företagskunder",
+    "bygga förtroende kring leveranssäkerhet, logistik och affärsupplägg",
+    "göra det enkelt att bli kund eller skicka inköpsförfrågan",
+    "visa kontaktvägar, adress, öppettider och geografisk närvaro"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

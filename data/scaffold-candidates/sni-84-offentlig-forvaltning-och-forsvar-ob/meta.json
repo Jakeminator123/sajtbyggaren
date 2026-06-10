@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-84-offentlig-forvaltning-och-forsvar-ob",
+  "sniCode": "84",
+  "wizardCategoryId": "other",
+  "industryProfileId": "sni-84",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:31:54Z",
+  "outputPath": "data/scaffold-candidates/sni-84-offentlig-forvaltning-och-forsvar-ob",
+  "operatorBriefHash": "sha256:c7c90d6a0a3ce51aa1357fb7f4ae4999c60f99db0d5f50d03843bde44dda4528",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

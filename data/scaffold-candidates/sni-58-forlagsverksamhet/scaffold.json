@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-58-forlagsverksamhet",
+  "version": "0.1.0",
+  "label": "Förlagsverksamhet",
+  "description": "Scaffold för förlag och annan utgivningsverksamhet med fokus på titlar, författare, nyheter, prenumeration och kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa utgivning och titlar",
+    "bygga förtroende kring förlagets profil och redaktionella inriktning",
+    "driva registrering till nyhetsbrev",
+    "göra det enkelt att kontakta förlaget"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

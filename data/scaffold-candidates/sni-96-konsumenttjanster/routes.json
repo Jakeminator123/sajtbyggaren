@@ -1,0 +1,53 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera salongen, visa känsla och resultat, och leda besökaren vidare till bokning."
+    },
+    {
+      "id": "services",
+      "path": "/behandlingar",
+      "required": true,
+      "purpose": "Förklara behandlingar och inriktningar så att besökaren förstår vad som erbjuds och kan välja rätt."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Visa prislista och eventuella paket på ett tydligt sätt inför bokning."
+    },
+    {
+      "id": "booking",
+      "path": "/boka",
+      "required": true,
+      "purpose": "Samla bokningsvägar och göra det enkelt att boka tid online eller ta kontakt."
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "required": false,
+      "purpose": "Visa bilder från behandlingar, resultat och salongsmiljö för att stärka förtroendet."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga trygghet genom att presentera behandlare, arbetssätt och salongens profil."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge besökaren kontaktuppgifter, öppettider och hitta-hit-information."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "when the business has recurring pre-booking questions about behandling, förberedelser, betalning eller avbokning"
+    }
+  ]
+}

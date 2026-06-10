@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad företaget tillverkar och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa vilka typer av kläder eller kollektioner företaget tillverkar och för vilka behov."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Förklara tillverkningsprocess, kapacitet och arbetssätt så att kunder kan bedöma om företaget passar deras uppdrag."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom företagets bakgrund, team och arbetssätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan om tillverkning, samarbete eller kontakt genom tydliga kontaktuppgifter och formulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "when": "när bildmaterial från produkter, sömnad, prover eller produktionsmiljö håller tillräcklig kvalitet för att bära en egen sida"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när verksamheten ofta behöver besvara frågor om minimumvolymer, ledtider, material eller arbetsprocess"
+    }
+  ]
+}

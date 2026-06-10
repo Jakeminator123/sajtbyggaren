@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-52-magasinering-varulagring-och-stodver",
+  "version": "0.1.0",
+  "label": "Magasinering, varulagring och stödverksamhet avseende transport",
+  "description": "Branschspecifik scaffold för företag inom magasinering, varulagring och transportstöd. Fokuserar på tydliga tjänstebeskrivningar, kapacitet och praktisk kontakt för offert eller förfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara lagrings- och logistiktjänster",
+    "bygga förtroende kring hantering, tillgänglighet och driftsäkerhet",
+    "driva kontakt för offert, upplägg eller platsförfrågan"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,27 @@
+{
+  "id": "sni-16-tillverkning-av-tra-och-varor-av-tra",
+  "embeddingText": "Tillverkning av trävaror, träförädling, snickerikomponenter, trädetaljer, kork, rotting, halmprodukter, specialtillverkning, legotillverkning, bearbetning, referensprojekt, materialfokus, offertförfrågan.",
+  "semanticSignals": [
+    "manufacturer-of-wood-products",
+    "custom-wood-fabrication",
+    "wood-components-and-finished-goods",
+    "materials-and-production-process-matter",
+    "reference-projects-support-trust",
+    "quote-driven-contact-flow"
+  ],
+  "negativeSignals": [
+    "restaurant-menu-structure",
+    "booking-first-service-business",
+    "medical-clinic-pages",
+    "course-catalog",
+    "full-webshop-checkout-assumption",
+    "event-driven-layout"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for companies that make, process or supply wood-based goods rather than primarily installing them on site.",
+    "Prefer this scaffold when products, materials, dimensions, finishing or manufacturing capacity are central to the offer.",
+    "References should emphasize delivered products or projects rather than only team presentation."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-27-tillverkning-av-elapparatur",
+  "version": "0.1.0",
+  "label": "Tillverkning av elapparatur",
+  "description": "Scaffold för företag som tillverkar elapparatur och behöver presentera produktområden, tillverkningskapacitet, kvalitet/förtroende och en tydlig väg till kontakt för offert eller teknisk dialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktomraden och erbjudande",
+    "bygga fortroende kring tillverkningskapacitet och kvalitet",
+    "gora det enkelt att ta kontakt for offert eller teknisk forfragan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

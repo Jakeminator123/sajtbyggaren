@@ -1,0 +1,39 @@
+{
+  "id": "sni-11-framstallning-av-drycker",
+  "embeddingText": "Scaffold for beverage manufacturers and drink producers. Includes homepage, products, production/about and contact. Emphasizes beverage range, flavor or product details, ingredients, origin, production process, quality routines, reseller or quote inquiries, gallery and optional visits or tastings.",
+  "semanticSignals": [
+    "dryckesproducent",
+    "bryggeri",
+    "musteri",
+    "mikrobryggeri",
+    "destilleri",
+    "saft",
+    "juice",
+    "lask",
+    "kombucha",
+    "cider",
+    "sortiment",
+    "ravaror",
+    "ursprung",
+    "framstallning",
+    "smakprofil",
+    "aterforsaljare",
+    "offertforfragan"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "bordsbokning",
+    "cateringbuffe",
+    "frisorbehandlingar",
+    "konsulttjanster",
+    "ren-detaljhandel-utan-egen-produktion"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the business primarily manufactures beverages rather than mainly serving food on site.",
+    "Prefer this scaffold when products, ingredients and production method are central trust drivers.",
+    "Use inquiry-led CTAs if ecommerce capability is uncertain, even if products are prominently displayed.",
+    "Optional reseller and tasting routes are relevant only when clearly supported by the business model."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

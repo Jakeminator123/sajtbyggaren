@@ -1,0 +1,24 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar företag som hämtar, sorterar, återvinner eller bortskaffar avfall för företag, fastigheter eller privatpersoner.",
+    "Sätter tydligt fokus på avfallsslag, hämtning/beställning och regelefterlevnad som centrala informationsbehov.",
+    "Kontaktvägar och förfrågan om hämtning eller offert är tydliga på flera sidor.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generisk lokal tjänstestruktur utan sida för avfallsslag eller hämtning.",
+    "E-handelsmönster som produktkatalog eller varukorg.",
+    "Påståenden om miljönytta, tillstånd eller farligt avfall som inte stöds av underlag.",
+    "Restaurang-, portfölj- eller bokningsupplägg som inte passar branschen."
+  ]
+}

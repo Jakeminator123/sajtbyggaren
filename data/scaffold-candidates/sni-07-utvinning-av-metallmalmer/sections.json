@@ -1,0 +1,92 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "verksamhetsoversikt",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map-location",
+      "gallery",
+      "reviews",
+      "faq",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the company's business area and include a primary contact CTA.",
+      "Verksamhetsoversikt should summarise actual operations such as extraction focus, sites or processing scope without using vague marketing copy.",
+      "Trust proof must rely on real facts such as organisation details, references or established operating context and must appear before the final CTA.",
+      "Map or gallery may appear between overview and trust proof when they add concrete context.",
+      "Sections should avoid repeating the same operational claims."
+    ]
+  },
+  "verksamhet": {
+    "requiredSections": [
+      "verksamhet-intro",
+      "malm-eller-produktionsfokus",
+      "drift-och-process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Verksamhet intro must connect the company identity to what is actually extracted or handled.",
+      "Malm-eller-produktionsfokus should be concrete, for example ore types, mine phases or processing steps, and must not promise volumes unless supplied by source data.",
+      "Drift-och-process should explain operations in plain language for external visitors.",
+      "Contact CTA should invite relevant business contact without overstating capabilities."
+    ]
+  },
+  "sakerhet-miljo": {
+    "requiredSections": [
+      "sakerhet-intro",
+      "sakerhetsarbete",
+      "miljoansvar",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Safety and environmental sections must be factual and must not invent certifications, permits or compliance statuses.",
+      "If trust proof is shown here, it should complement rather than repeat the same points used on the home page.",
+      "Copy should balance responsibility and clarity without making unverifiable claims."
+    ]
+  },
+  "anlaggningar-projekt": {
+    "requiredSections": [
+      "anlaggningar-intro",
+      "site-or-project-list",
+      "gallery",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map-location",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Site or project list items must identify actual places, facilities or project stages when data exists.",
+      "Gallery should show real operational environments, equipment or site imagery when available.",
+      "Map may be used when location context helps visitors understand where the business operates.",
+      "Do not present speculative future projects as completed operations."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "map-location"
+    ],
+    "optionalSections": [
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and must not be placeholders.",
+      "Contact form should support straightforward business enquiries.",
+      "Map location should match the stated address or visitor location information."
+    ]
+  }
+}

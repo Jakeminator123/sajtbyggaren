@@ -1,0 +1,32 @@
+{
+  "id": "sni-31-tillverkning-av-mobler",
+  "embeddingText": "Möbeltillverkare, snickeri och företag inom tillverkning av möbler som behöver visa sortiment, material, måttanpassning, referensbilder, arbetsprocess och tydlig kontaktväg för offert eller beställning.",
+  "semanticSignals": [
+    "mobeltillverkning",
+    "snickeri",
+    "bord",
+    "stolar",
+    "forvaring",
+    "specialbestallning",
+    "mattanpassning",
+    "traslag",
+    "ytbehandling",
+    "verkstad",
+    "referensbilder",
+    "offertforfragan"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "bokningskalender-for-behandlingar",
+    "e-handel-med-varukorg",
+    "fastighetsmaklare",
+    "fotografportfolio-utan-produktbeskrivningar"
+  ],
+  "llmClassificationHints": [
+    "Använd denna scaffold när verksamheten tillverkar möbler eller kundanpassade inredningsprodukter.",
+    "Välj denna även för mindre snickerier om huvudfokus är färdiga möbler snarare än bred byggservice.",
+    "Prioritera produkt-/sortimentspresentation framför generell tjänstelista när underlaget handlar om möbeltyper och materialval."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

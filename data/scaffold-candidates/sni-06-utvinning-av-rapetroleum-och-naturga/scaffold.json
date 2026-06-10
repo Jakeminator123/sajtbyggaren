@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-06-utvinning-av-rapetroleum-och-naturga",
+  "version": "0.1.0",
+  "label": "Utvinning av råpetroleum och naturgas",
+  "description": "Scaffold för företag inom utvinning av råpetroleum och naturgas med fokus på verksamhetsöversikt, drift- och säkerhetsarbete, projekt/tillgångar, bolagsförtroende och tydlig kontaktväg för affärsdialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Presentera verksamhetens inriktning och tillgångar",
+    "Bygga förtroende genom säkerhets-, hållbarhets- och bolagsinformation",
+    "Ge en tydlig väg till kontakt för partners, leverantörer, markägare, myndigheter och investerarrelaterade förfrågningar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

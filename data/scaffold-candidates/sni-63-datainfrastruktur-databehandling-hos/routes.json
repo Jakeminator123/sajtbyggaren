@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera erbjudandet, visa produktnytta direkt och driva registrering eller kontakt."
+    },
+    {
+      "id": "platform",
+      "path": "/plattform",
+      "required": true,
+      "purpose": "Förklara plattformen eller infrastrukturen, dess huvudfunktioner och typiska användningsfall."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Visa paket, prismodell och vad som ingår så att besökaren kan välja nästa steg."
+    },
+    {
+      "id": "security",
+      "path": "/sakerhet",
+      "required": true,
+      "purpose": "Beskriva säkerhet, dataskydd, drift och support på ett tydligt och trovärdigt sätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för demo, offert, supportfrågor eller partnerskap."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när team, bakgrund eller bolagets arbetssätt behöver stärka förtroendet"
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "when": "när företaget publicerar produktnyheter, driftinformation eller insikter regelbundet"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "när köpprocessen kräver svar på återkommande frågor om teknik, avtal, onboarding eller support"
+    }
+  ]
+}

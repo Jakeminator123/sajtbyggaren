@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-14-tillverkning-av-klader",
+  "sniCode": "14",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-14",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:25:16Z",
+  "outputPath": "data/scaffold-candidates/sni-14-tillverkning-av-klader",
+  "operatorBriefHash": "sha256:104c88f06dbc873dffe5c9e9aadf1e82d3bb54129d4bd320e2979c7391c524e1",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

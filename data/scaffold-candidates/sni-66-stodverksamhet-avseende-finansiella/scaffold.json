@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-66-stodverksamhet-avseende-finansiella",
+  "version": "0.1.0",
+  "label": "Stödverksamhet avseende finansiella tjänster och försäkringsverksamhet",
+  "description": "Branschspecifik scaffold för företag inom SNI 66 som stödjer finansiella tjänster och försäkringsverksamhet, med fokus på rådgivning, förmedling, administration, analys och kundkontakt där trygghet, tydlighet och korrekt processkommunikation är central.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänster inom finansiell och försäkringsnära stödverksamhet",
+    "bygga förtroende genom tydlig process, kompetens och arbetssätt",
+    "låta besökaren förstå målgrupper, erbjudande och hur kontakt eller offertförfrågan går till",
+    "besvara vanliga frågor om upplägg, ansvar, ersättningsmodell och kontaktvägar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

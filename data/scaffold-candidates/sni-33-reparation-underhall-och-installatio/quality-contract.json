@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "ha en startsida med tydlig serviceinriktning mot maskiner och utrustning",
+    "ha en kontaktsida som stödjer snabb kontakt för serviceärenden",
+    "innehålla en dedikerad sida för serviceavtal eftersom det är centralt i branschen",
+    "beskriva tjänster konkret utifrån reparation, underhåll och installation",
+    "bygga förtroende med verkliga kompetens- och tillgänglighetssignaler",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generiska tjänstebeskrivningar utan koppling till maskiner eller utrustning",
+    "påhittade certifieringar, responstider eller jourlöften",
+    "e-handelsupplägg eller produktkatalog som huvudstruktur",
+    "restaurang-, portfolio- eller bokningsflöden som inte passar branschen",
+    "överdrivna prislöften när pris beror på felsökning eller uppdragets omfattning"
+  ]
+}

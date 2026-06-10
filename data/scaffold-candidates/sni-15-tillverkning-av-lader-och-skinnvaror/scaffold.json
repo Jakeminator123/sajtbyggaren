@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-15-tillverkning-av-lader-och-skinnvaror",
+  "version": "0.1.0",
+  "label": "Tillverkning av läder- och skinnvaror och liknande varor av andra material",
+  "description": "Branschspecifik scaffold för tillverkare av läder- och skinnvaror samt liknande produkter i andra material. Strukturen betonar produktområden, tillverkningskompetens, material och tydlig kontaktväg för offert, återförsäljardialog eller specialbeställningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och tillverkningskapacitet",
+    "bygga förtroende genom materialkunskap och arbetsprocess",
+    "driva kontakt för offert, beställning eller företagsförfrågan"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

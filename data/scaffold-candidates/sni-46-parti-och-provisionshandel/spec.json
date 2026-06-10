@@ -1,0 +1,280 @@
+{
+  "id": "sni-46-parti-och-provisionshandel",
+  "label": "Parti- och provisionshandel",
+  "description": "Scaffold för grossister, distributörer och provisionshandelsföretag som säljer till företagskunder. Fokus ligger på sortiment, leveranskapacitet, inköpsflöde och tydliga kontaktvägar för nya och befintliga kunder.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera sortiment och produktområden för företagskunder",
+    "bygga förtroende kring leveranssäkerhet, logistik och affärsupplägg",
+    "göra det enkelt att bli kund eller skicka inköpsförfrågan",
+    "visa kontaktvägar, adress, öppettider och geografisk närvaro"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget för B2B-kunder, lyfta sortiment och leveransförmåga samt leda vidare till kontakt eller kundförfrågan."
+    },
+    {
+      "id": "sortiment",
+      "path": "/sortiment",
+      "required": true,
+      "purpose": "Ge en tydlig överblick över produktområden, varugrupper och hur företaget hjälper återförsäljare, installatörer eller andra företagskunder att hitta rätt produkter."
+    },
+    {
+      "id": "bli-kund",
+      "path": "/bli-kund",
+      "required": true,
+      "purpose": "Förklara hur nya företagskunder kommer igång, vilka uppgifter som behövs och hur beställnings- eller samarbetsprocessen fungerar."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva företagets inriktning, arbetssätt, team och relationen till leverantörer och kunder."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att kontakta företaget för offert, produktfrågor, orderärenden eller partnerskap via formulär, telefon, e-post och adress."
+    },
+    {
+      "id": "varumarken",
+      "path": "/varumarken",
+      "optional": true,
+      "when": "when the company represents multiple suppliers, brands or agency relationships that need their own trust-building surface"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "when the sales process involves recurring questions about orderminimum, leverans, kontoansökan, priser or support"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "sortiment-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "logistics-capabilities",
+        "customer-types",
+        "reviews",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what kinds of products or trade categories the company works with and include a primary contact CTA.",
+        "Sortiment summary must describe concrete product areas or buyer needs, not vague claims about having everything.",
+        "Trust proof should focus on real signals such as delivery reliability, assortment breadth, supplier relationships or practical experience.",
+        "If customer-types is present, it should clarify which business customers the company serves, such as retailers, installers, resellers or industrial buyers.",
+        "Final CTA should invite contact or customer onboarding without implying instant online checkout unless that capability actually exists."
+      ]
+    },
+    "sortiment": {
+      "requiredSections": [
+        "sortiment-intro",
+        "category-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-table",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Sortiment intro must explain how the assortment is structured and who it is intended for.",
+        "Category list items must be concrete product groups, brands or supply areas rather than generic marketing labels.",
+        "Pricing content, if shown, must describe price models, minimum orders or quote logic honestly and should not mimic consumer retail pricing unless applicable.",
+        "A contact CTA should appear after the product overview to support quote requests or assortment inquiries."
+      ]
+    },
+    "bli-kund": {
+      "requiredSections": [
+        "customer-onboarding-intro",
+        "process-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-guarantees"
+      ],
+      "sectionOrderRules": [
+        "Customer onboarding intro must explain how a company starts the relationship, for example by sending an inquiry, sharing company details or discussing needs.",
+        "Process steps must describe a realistic B2B flow such as contact, needs review, account setup, ordering and delivery.",
+        "If trust-guarantees is present, it must communicate real service commitments or support principles and not invent formal guarantees.",
+        "The page should reduce friction and answer practical questions rather than repeat general brand copy from the home page."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company's focus, market role or way of working in specific terms relevant to wholesale or agency trade.",
+        "Team should be included when real people or functions can be presented; otherwise the renderer may keep this section compact.",
+        "Trust proof should emphasize business credibility, continuity, supplier relationships and customer support without repeating every claim from the home page."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real contact channels relevant for business inquiries, such as phone, email and visiting or warehouse address when available.",
+        "If opening-hours is shown, it should reflect actual phone, office or warehouse availability.",
+        "Contact CTA should support quote requests, product questions and new customer inquiries through a clear form or direct contact method."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "The scaffold must support B2B sales journeys rather than consumer checkout assumptions.",
+      "Home, sortiment, bli-kund and contact must work together to explain what is sold, to whom and how a business relationship starts.",
+      "Copy structure must make room for logistics, assortment breadth, supplier relationships and practical purchasing information.",
+      "Contact conversion must support inquiry-led sales, not only generic brand awareness.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the business like a restaurant, portfolio site or appointment-led local service.",
+      "Do not assume consumer prices, add-to-cart flows or webshop behavior unless explicitly available.",
+      "Do not overuse generic trust language that says little about assortment, delivery or business customers.",
+      "Do not invent certifications, warehouse size, delivery times, brand partnerships or customer counts."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik scaffold för parti- och provisionshandel, grossist, distributör och agenturföretag inom B2B. Webbplatsen behöver startsida, sortiment, bli kund, om oss och kontakt. Innehållet ska betona produktkategorier, leveranssäkerhet, logistik, leverantörsrelationer, företagskunder, kontoansökan, offertförfrågan och tydliga kontaktvägar snarare än konsumentköp.",
+    "semanticSignals": [
+      "grossist",
+      "partihandel",
+      "provisionshandel",
+      "agentur",
+      "distributor",
+      "aterforsaljare",
+      "foretagskunder",
+      "sortiment",
+      "produktkategorier",
+      "leverans",
+      "logistik",
+      "lager",
+      "inkopsforfragan",
+      "kontoansokan",
+      "offert",
+      "varumarken",
+      "leverantorer"
+    ],
+    "negativeSignals": [
+      "onlinebutik-for-konsumenter",
+      "restaurangmeny",
+      "tidsbokning-som-huvudflode",
+      "portfoljgalleri-som-primar-affarsyta",
+      "eventbokning",
+      "patientbesok"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the company primarily sells goods B2B as a wholesaler, distributor, trading company or sales agent.",
+      "Prefer this scaffold when assortment, supply, brands, resellers, industrial buyers or customer onboarding are core themes.",
+      "Do not choose this scaffold for pure manufacturing, consumer retail ecommerce or local household services unless wholesale trade is the dominant offer."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

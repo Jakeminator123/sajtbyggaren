@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-56-restaurang-catering-och-barverksamhe",
+  "version": "0.1.0",
+  "label": "Restaurang-, catering- och barverksamhet",
+  "description": "Scaffold för restauranger, caféer, barer och cateringverksamheter där meny, bokning, öppettider och hitta-hit är centrala konverteringspunkter. Strukturen prioriterar att visa atmosfär, aktuellt erbjudande och praktisk information snabbt, med stöd för catering och event vid behov.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa meny och priser",
+    "driva bordsbokningar eller bokningsförfrågningar",
+    "visa öppettider och hitta-hit-information",
+    "bygga förtroende med bilder, recensioner och allergiinformation",
+    "stödja catering- eller eventförfrågningar vid behov"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

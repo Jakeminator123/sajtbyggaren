@@ -1,0 +1,112 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "production-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "sustainability-summary",
+      "image-gallery",
+      "reviews",
+      "faq",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company manufactures and include a primary contact CTA.",
+      "Product summary should quickly group the main product areas or paper goods without becoming a full catalog.",
+      "Production summary must focus on real capabilities, materials or delivery-relevant facts when available.",
+      "Trust proof must use honest company facts such as organisation details, references, visible facilities or process competence.",
+      "Final CTA should invite contact for quote, product inquiry or business discussion."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-table",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain the scope of the offer in concrete terms.",
+      "Product list items must describe actual product categories, material variants or use cases, not vague marketing claims.",
+      "If pricing is shown, it should be indicative and clearly limited to what the company can honestly state.",
+      "Contact CTA should follow the product content and encourage an inquiry tied to needs or volume."
+    ]
+  },
+  "production": {
+    "requiredSections": [
+      "production-intro",
+      "process-steps",
+      "facility-overview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Production intro must connect the company's manufacturing setup to customer value such as consistency, scale or flexibility.",
+      "Process steps should be presented in a simple logical order and stay understandable for non-specialist visitors.",
+      "Facility overview may include machinery, lines, location or production environment only when information exists in the dossier.",
+      "Avoid repeating the same claims already used on the home page unless they are expanded with new specifics."
+    ]
+  },
+  "sustainability": {
+    "requiredSections": [
+      "sustainability-intro",
+      "materials-and-sourcing",
+      "resource-and-recycling",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Sustainability copy must stay factual and avoid unsupported environmental claims.",
+      "Materials and sourcing should describe raw materials, recycled content or procurement principles only when known.",
+      "Resource and recycling should focus on concrete practices such as waste reduction, recovery, reuse or process efficiency.",
+      "CTA should invite follow-up questions about materials, requirements or collaboration rather than repeat generic slogans."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific to the company, its background or role in the industry.",
+      "Team section should show real people or real functions when available, otherwise be omitted in single-page rendering if unsupported.",
+      "Trust proof should prioritise business legitimacy, references and operational credibility over generic adjectives."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed",
+      "mailto-contact-form"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must be present when available and must not use placeholder data.",
+      "If opening hours are shown, they should reflect actual office, switchboard or visitor hours.",
+      "Map should only be shown when a visitable address or facility location is appropriate to publish.",
+      "Contact CTA may include a form and should be suitable for quote requests, purchasing questions or general inquiries."
+    ]
+  }
+}

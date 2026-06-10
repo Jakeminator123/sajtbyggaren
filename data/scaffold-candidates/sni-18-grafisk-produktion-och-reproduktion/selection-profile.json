@@ -1,0 +1,37 @@
+{
+  "id": "sni-18-grafisk-produktion-och-reproduktion",
+  "embeddingText": "Tryckeri, grafisk produktion och reproduktion med fokus på trycksaker, prepress, efterbehandling, upplagor, materialval, provtryck, kvalitet, leveranstider, portfolio, offert och kontakt.",
+  "semanticSignals": [
+    "tryckeri",
+    "grafisk-produktion",
+    "reproduktion-av-inspelningar",
+    "prepress",
+    "efterbehandling",
+    "offset",
+    "digitaltryck",
+    "storformat",
+    "etiketter",
+    "forpackningar",
+    "trycksaker",
+    "provtryck",
+    "upplagor",
+    "leveranstid",
+    "original",
+    "filformat"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "bordsbokning",
+    "produktkassa",
+    "medlemsportal",
+    "fastighetsmaklare",
+    "tandvardsklinik"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold for businesses that produce printed matter, labels, packaging, prepress work or media reproduction.",
+    "A portfolio/examples route is important because buyers want to assess output quality and application fit.",
+    "Contact and quote intent are central even when exact pricing depends on format, quantity, material and finishing."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

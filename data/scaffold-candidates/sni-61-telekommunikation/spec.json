@@ -1,0 +1,284 @@
+{
+  "id": "sni-61-telekommunikation",
+  "label": "Telekommunikation",
+  "description": "Scaffold för telekommunikationsbolag med fokus på produktnytta, teknisk trovärdighet, priser, support och leadgenerering.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara erbjudandet tydligt",
+    "bygga förtroende kring säkerhet, driftsäkerhet och support",
+    "driva registrering eller kontakt",
+    "presentera abonnemang, paket eller företagslösningar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera telekombolaget, förklara erbjudandet snabbt och driva registrering eller kontakt."
+    },
+    {
+      "id": "solutions",
+      "path": "/losningar",
+      "required": true,
+      "purpose": "Presentera tjänster, abonnemang eller kommunikationslösningar för privatpersoner eller företag med tydliga användningsfall."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Visa paket, abonnemang eller prisnivåer så att besökaren kan jämföra alternativ och ta nästa steg."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att visa team, arbetssätt och företagets inriktning på service, teknik och kundnytta."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Fånga upp registreringar, säljsamtal och supportrelaterade förfrågningar via tydliga kontaktvägar."
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "när erbjudandet kräver svar på vanliga frågor om täckning, drift, säkerhet, avtal eller onboarding"
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "optional": true,
+      "when": "när bolaget publicerar produktnyheter, driftinformation eller branschuppdateringar"
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "optional": true,
+      "when": "när bolaget aktivt samlar prenumeranter för produktnyheter eller driftrelaterad information"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "value-props",
+        "solutions-summary",
+        "trust-proof",
+        "primary-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "product-screenshots",
+        "testimonials",
+        "faq-preview",
+        "newsletter-cta"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company offers and include a primary CTA tied to registration or contact.",
+        "Value propositions should come before deeper trust material so the visitor first understands the product benefit.",
+        "Solutions summary must describe concrete telecom offers such as connectivity, telephony, messaging or business communication solutions.",
+        "Trust proof must reference real signals such as support availability, security practices, uptime commitments or named reference customers when provided.",
+        "Final CTA should not repeat the exact same wording used in every previous section."
+      ]
+    },
+    "solutions": {
+      "requiredSections": [
+        "solutions-intro",
+        "solution-list",
+        "use-cases",
+        "primary-cta"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "faq",
+        "pricing-summary"
+      ],
+      "sectionOrderRules": [
+        "Solutions intro must connect the company identity to the actual telecom services offered.",
+        "Solution list items must be specific and understandable, not vague claims about innovation.",
+        "Use cases should show who each solution is for, such as small businesses, teams with mobile staff or customers needing stable connectivity.",
+        "If pricing summary is shown here, it should stay high-level and defer detailed comparison to the pricing page."
+      ]
+    },
+    "pricing": {
+      "requiredSections": [
+        "pricing-intro",
+        "pricing-table",
+        "plan-comparison-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Pricing intro must explain what the visitor is comparing, for example subscriptions, packages or enterprise plans.",
+        "Pricing table must present honest plan differences and avoid implying features or guarantees that are not supplied in content.",
+        "CTA after pricing should guide the visitor to register, request contact or choose a plan."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "company-values",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about the company's focus, customers or way of working, not generic brand filler.",
+        "Team section should only show real people or roles provided by the dossier.",
+        "Trust proof should reinforce reliability and service quality without inventing certifications, customer counts or coverage claims."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Contact page must provide real contact paths relevant to sales or support.",
+        "If a form is present, it should make the next step clear, such as registration interest, demo request or general inquiry.",
+        "Map should only be shown when a real visitable address exists."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has home route '/' and contact route.",
+      "Reflects telecom buying journey with solutions and pricing as core pages.",
+      "Supports trust signals around security, support and reliability without making unverifiable claims.",
+      "Uses Swedish lowercase paths with leading slash and no trailing slash.",
+      "Provides sectionsPerRoute for every default route.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic local-service structure without telecom-specific solution and pricing pages",
+      "invented certifications, uptime figures, customer counts or coverage claims",
+      "overloading the site with technical jargon before explaining customer benefit",
+      "mixing support promises and commercial CTAs in a confusing way"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "pricing-table",
+      "faq-accordion",
+      "mailto-contact-form",
+      "team-roster",
+      "trust-guarantees",
+      "video-hero",
+      "reviews-display"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Telekommunikation, mobiltelefoni, bredband, företagsväxel, kommunikationslösningar, abonnemang, priser, support, säkerhet, drift, onboarding, registrera dig, FAQ, nyheter, kontakt.",
+    "semanticSignals": [
+      "telekom",
+      "kommunikationslosningar",
+      "mobilabonnemang",
+      "bredband",
+      "foretagsvaxel",
+      "uppkoppling",
+      "driftsakerhet",
+      "support",
+      "sakerhet",
+      "gdpr",
+      "prissida",
+      "faq",
+      "nyhetsbrev"
+    ],
+    "negativeSignals": [
+      "lokal-hantverkstjanst",
+      "restaurangmeny",
+      "bokningskalender",
+      "e-handel-med-produktkatalog",
+      "medicinsk-klinik"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the company sells telecom, connectivity, telephony or communication services.",
+      "Strong fit when pricing, plans, uptime, security, support and product benefit are central to the purchase journey.",
+      "Prefer this over a generic SaaS scaffold when the offer is clearly telecom or operator-like rather than broad software only."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "team",
+      "testimonials",
+      "faq",
+      "reviews",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must include what type of business support is offered and a primary contact CTA.",
+      "Service summary must describe concrete office or support services, not only broad promises.",
+      "Trust proof must appear before the final contact CTA and may include references, visible company details or clear working methods.",
+      "If testimonials or reviews are shown, trust-proof should avoid repeating the same evidence in another format.",
+      "Sections should stay concise and avoid repeating identical claims about reliability or service quality."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must explain who the services are for and what kinds of administrative or business support are provided.",
+      "Service list items must be specific and outcome-oriented, for example invoice administration, reception support, scheduling or document management.",
+      "If pricing is shown, it must be clearly framed as example pricing, package pricing or starting prices when exact quotes vary.",
+      "Contact CTA should invite a request for quote or a first conversation about needs and scope."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "testimonials",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must explain the company's way of working, relevant experience and how assignments are handled in practice.",
+      "Team should only be shown when actual people, roles or responsibility areas are available.",
+      "Trust proof may include references, visible organisation details and practical qualities such as responsiveness or structured delivery, but must not invent credentials."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must contain real contact channels such as phone, email and address when available.",
+      "Contact CTA should support a business inquiry, callback request or quote request without unnecessary friction.",
+      "Map and opening hours should only be shown when the business has a relevant visit address or stated office hours."
+    ]
+  }
+}

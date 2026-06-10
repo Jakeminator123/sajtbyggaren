@@ -1,0 +1,28 @@
+{
+  "id": "sni-90-konstnarligt-skapande-och-scenkonst",
+  "embeddingText": "Konstnärligt skapande och scenkonst, portfolio, verk, föreställningar, utställningar, produktioner, roller, scenbilder, press, recensioner, stipendier, aktuella datum, bokning, kontakt.",
+  "semanticSignals": [
+    "artist-portfolio",
+    "performing-arts-website",
+    "theatre-or-dance-production-showcase",
+    "visual-artist-gallery",
+    "upcoming-performances-or-exhibitions",
+    "press-and-reviews-for-cultural-practice",
+    "booking-inquiries-for-artistic-work"
+  ],
+  "negativeSignals": [
+    "plumber-or-electrician-service-pages",
+    "restaurant-menu-or-food-ordering",
+    "full-ecommerce-product-catalog",
+    "generic-consulting-services",
+    "local-tradesperson-service-area-seo"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily presents artistic works, performances, productions or a creative practice.",
+    "Prefer this scaffold for solo artists, ensembles, theatre groups, dancers, musicians, performers and exhibition-focused creators.",
+    "A dedicated works or portfolio page is central; services should not be the primary information architecture.",
+    "Optional aktuellt route fits recurring public dates, while optional press route fits media-facing material."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

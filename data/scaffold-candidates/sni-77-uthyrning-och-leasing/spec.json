@@ -1,0 +1,294 @@
+{
+  "id": "sni-77-uthyrning-och-leasing",
+  "label": "Uthyrning och leasing",
+  "description": "Scaffold för företag inom uthyrning och leasing med fokus på tydligt utbud, villkor, förtroendeskapande information och enkel kontakt eller förfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa uthyrnings- och leasingutbud tydligt",
+    "förklara hur bokning eller förfrågan går till",
+    "bygga förtroende med företagsuppgifter, referenser och praktisk information",
+    "driva kontaktförfrågningar för hyra eller leasing"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad som hyrs ut eller leasas och leda besökaren vidare till kontakt eller förfrågan."
+    },
+    {
+      "id": "rental-offer",
+      "path": "/utbud",
+      "required": true,
+      "purpose": "Presentera vilka objekt, maskiner, fordon eller produkter som går att hyra eller leasa, med tydlig beskrivning av användningsområden."
+    },
+    {
+      "id": "how-it-works",
+      "path": "/sa-fungerar-det",
+      "required": true,
+      "purpose": "Förklara processen från förfrågan till utlämning, leverans eller avtalsstart samt vilka grundvillkor som gäller."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, arbetssätt, lokalkännedom och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för prisförfrågan, tillgänglighet, leveransfrågor eller bokning."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "optional": true,
+      "when": "när verksamheten arbetar med öppna standardpriser, hyresnivåer eller tydliga paket som kan visas offentligt"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när kunder ofta behöver svar om deposition, försäkring, leverans, bindningstid, återlämning eller skador"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när besökare behöver fysisk adress, karta, upphämtning eller inlämning på plats"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "offer-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "how-it-works-summary",
+        "reviews",
+        "image-gallery",
+        "faq",
+        "opening-hours",
+        "map-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what is rented or leased, mention location if known, and include a primary contact CTA.",
+        "Offer summary should highlight concrete categories or object types, not vague claims about serving all needs.",
+        "How-it-works summary may appear before trust-proof when the business relies on explaining the rental or leasing process early.",
+        "Trust proof must use real company facts, references or practical assurances and must appear before the final contact CTA.",
+        "Sections should avoid repeating the same promise in hero, trust-proof and CTA."
+      ]
+    },
+    "rental-offer": {
+      "requiredSections": [
+        "offer-intro",
+        "offer-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "image-gallery",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Offer intro must connect the business identity to the kinds of items or agreements offered.",
+        "Offer list items must be concrete categories, models, use cases or rental types relevant to the business.",
+        "If pricing-overview is shown, it must be framed as indicative or standard pricing only when that is true.",
+        "Contact CTA should invite the visitor to ask about availability, lease setup or a quote."
+      ]
+    },
+    "how-it-works": {
+      "requiredSections": [
+        "process-steps",
+        "terms-summary",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Process steps must explain the real customer journey such as inquiry, approval, pickup or delivery, usage period and return or contract follow-up.",
+        "Terms summary should cover practical basics like availability, rental period, leasing length, deposit, insurance or responsibility only when applicable.",
+        "This page should reduce uncertainty and avoid legal overclaiming or invented guarantees."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about the company, its focus and how it works with customers.",
+        "Team should only be shown when real people or roles are available from the dossier.",
+        "Trust proof may include organisation details, references and practical experience but must not invent certifications or fleet size."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must be present when supplied and must not be placeholders.",
+        "Contact form CTA should be framed for rental or leasing inquiries, for example availability, quote or booking request.",
+        "Opening hours and map should appear after the primary contact details when available."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "passes small-business rental and leasing intent better than a generic local service scaffold",
+      "includes a dedicated route for the offer or inventory categories",
+      "includes a dedicated route that explains process or terms because customers need clarity before contacting",
+      "supports both rental-style and leasing-style businesses without assuming one specific asset class",
+      "keeps contact and inquiry conversion prominent across the site",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "portfolio-style scaffold focused on completed projects",
+      "restaurant, menu, event or booking-table patterns",
+      "product checkout or webshop assumptions",
+      "legal or financial claims that require specific regulatory support",
+      "invented trust signals such as certifications, customer counts or nationwide coverage"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "pricing-table",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "image-gallery",
+      "booking-cta"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik scaffold för uthyrning och leasing, SNI 77. Passar företag som hyr ut eller leasar fordon, maskiner, utrustning, verktyg, lokaler eller andra objekt. Viktiga sidor är startsida, utbud, så fungerar det, kontakt och ibland priser, vanliga frågor och hitta hit. Fokuserar på tydligt erbjudande, tillgänglighet, villkor, process, referenser och enkel kontaktförfrågan.",
+    "semanticSignals": [
+      "uthyrning",
+      "leasing",
+      "hyresperiod",
+      "leasingavtal",
+      "objekt",
+      "utrustning",
+      "maskiner",
+      "fordon",
+      "verktyg",
+      "tillganglighet",
+      "prisforfragan",
+      "offert",
+      "leverans",
+      "upphamtning",
+      "aterlamning",
+      "deposition",
+      "forsakring",
+      "villkor"
+    ],
+    "negativeSignals": [
+      "webshop",
+      "produktkassa",
+      "meny",
+      "bordsbokning",
+      "fotogalleri-som-huvudsyfte",
+      "projektportfolio",
+      "patientbokning",
+      "fastighetsformedling"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the company primarily earns from renting out assets or offering leasing agreements.",
+      "Prefer this scaffold when visitors need to understand available categories, rental or leasing process, and practical terms before contacting.",
+      "Do not classify as generic local service if the core offer is access to rented or leased objects rather than labor-only services."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

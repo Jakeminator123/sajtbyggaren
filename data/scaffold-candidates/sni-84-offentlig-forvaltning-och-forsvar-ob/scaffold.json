@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-84-offentlig-forvaltning-och-forsvar-ob",
+  "version": "0.1.0",
+  "label": "Offentlig förvaltning och försvar; obligatorisk socialförsäkring",
+  "description": "Scaffold för offentlig verksamhet inom SNI 84 med fokus på tydlig samhällsinformation, uppdrag, tjänster till invånare/företag och korrekt kontaktvägledning.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara verksamhetens uppdrag",
+    "leda besökare till rätt information och kontaktväg",
+    "presentera tjänster, ärenden eller samhällsuppgifter på ett tydligt sätt",
+    "bygga förtroende genom transparens, ansvar och korrekt avsändare"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-90-konstnarligt-skapande-och-scenkonst",
+  "sniCode": "90",
+  "wizardCategoryId": "portfolio",
+  "industryProfileId": "sni-90",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:32:36Z",
+  "outputPath": "data/scaffold-candidates/sni-90-konstnarligt-skapande-och-scenkonst",
+  "operatorBriefHash": "sha256:13ef7b0cf56606cc76139b0e6852adcfea0265e2811c044bae564984b463d39e",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

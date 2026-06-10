@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-74-annan-verksamhet-inom-juridik-ekonom",
+  "version": "0.1.0",
+  "label": "Annan verksamhet inom juridik, ekonomi, vetenskap och teknik",
+  "description": "Scaffold för fristående konsult- och specialistverksamheter inom SNI 74 där försäljningen bygger på expertis, tydliga uppdragstyper, kundcase och enkel offertväg snarare än fysisk butik eller bokningsflöde.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara expertis och erbjudande tydligt",
+    "bygga förtroende med kundcase och referenssignaler",
+    "presentera team eller specialistprofil",
+    "visa arbetssätt för komplexa uppdrag",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

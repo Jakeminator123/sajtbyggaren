@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-28-tillverkning-av-ovriga-maskiner",
+  "version": "0.1.0",
+  "label": "Tillverkning av övriga maskiner",
+  "description": "Scaffold för företag inom tillverkning av övriga maskiner med fokus på maskintyper, kundanpassning, produktionskapacitet, service och tydlig kontaktväg för offert eller teknisk dialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera maskiner och lösningar",
+    "bygga förtroende genom kapacitet, referenser och arbetssätt",
+    "leda besökare till kontakt för offert, teknisk dialog eller förfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

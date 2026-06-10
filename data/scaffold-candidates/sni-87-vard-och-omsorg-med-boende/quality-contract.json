@@ -1,0 +1,28 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Har en startsida och en kontaktsida.",
+    "Återspeglar branschens faktiska behov: boendeform, omsorgsinnehåll, målgrupp, praktisk information och kontakt för inflyttning eller placering.",
+    "Varje standardrutt har en motsvarande sectionsPerRoute-post.",
+    "Route-id:n, section-id:n och scaffold-id är kebab-case.",
+    "Svenska sökvägar är lowercase, börjar med '/' och saknar avslutande snedstreck.",
+    "Visitor-facing text håller sig till ärliga, verifierbara påståenden.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Utforma sajten som en vanlig klinik med fokus på behandlingar eller tidsbokning om kärnbehovet i stället är boende och omsorg över tid.",
+    "Aggressiv säljkopia eller språk som förminskar den boendes integritet och självbestämmande.",
+    "Påhittade kvalitetsmärkningar, certifieringar, platsantal eller medicinska löften.",
+    "För tekniskt myndighetsspråk utan förklaring för närstående och boendesökande.",
+    "Bildspråk eller formuleringar som känns institutionella, kalla eller skrämmande."
+  ]
+}

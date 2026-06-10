@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-43-specialiserad-bygg-och-anlaggningsve",
+  "version": "0.1.0",
+  "label": "Specialiserad bygg- och anläggningsverksamhet",
+  "description": "Scaffold för specialiserade bygg- och anläggningsföretag inom SNI 43, med fokus på tjänster, referensjobb, behörigheter och offertförfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera tjanster",
+    "visa referensjobb",
+    "bygga fortroende med behorigheter och garantier",
+    "driva offertforfragningar",
+    "gora kontaktvagar tydliga"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

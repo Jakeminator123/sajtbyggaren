@@ -1,0 +1,33 @@
+{
+  "id": "sni-37-avloppsrening",
+  "embeddingText": "Branschspecifik scaffold för avloppsrening och närliggande verksamhet inom rening, drift, underhåll, provtagning och anläggningsinformation. Sajten ska prioritera tydlig tjänstepresentation, process- och anläggningsförklaring, förtroendeskapande fakta samt enkel kontakt via formulär, telefon, e-post och karta.",
+  "semanticSignals": [
+    "avloppsrening",
+    "reningsverk",
+    "spillvatten",
+    "processvatten",
+    "drift-och-underhall",
+    "provtagning",
+    "slamhantering",
+    "anlaggning",
+    "reningsprocess",
+    "miljoteknik",
+    "vattenrening",
+    "service-och-tillsyn"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "restaurangmeny",
+    "bordsbokning",
+    "fotogalleri-som-huvudsyfte",
+    "produktkatalog-for-konsumentvaror",
+    "medlemsportal"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for businesses whose main offer is avloppsrening, drift av reningsanläggningar, behandling av avloppsvatten or closely related service work.",
+    "Prefer this scaffold when the site needs to explain technical services and process context, not just generic local business information.",
+    "Do not classify as plumbing, restaurant, ecommerce or pure consulting unless avloppsrening is the core business."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

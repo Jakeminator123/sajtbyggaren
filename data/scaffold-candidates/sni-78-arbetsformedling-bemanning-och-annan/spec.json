@@ -1,0 +1,302 @@
+{
+  "id": "sni-78-arbetsformedling-bemanning-och-annan",
+  "label": "Arbetsförmedling, bemanning och annan personalrelaterad verksamhet",
+  "description": "Scaffold för bemanningsföretag, rekryteringsbyråer och personalrelaterade verksamheter inom SNI 78. Strukturen prioriterar snabb förståelse av erbjudandet, tydliga tjänstespår för arbetsgivare och kandidater, förtroendeskapande process och enkel offert- eller kontaktväg.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "vinna förfrågningar från arbetsgivare",
+    "förklara bemannings- och rekryteringstjänster",
+    "bygga förtroende genom process, case och team",
+    "göra det enkelt för kandidater och kunder att ta kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en snabb överblick av verksamheten: vilka personalbehov företaget löser, för vilka kunder, hur processen fungerar och varför en arbetsgivare eller kandidat ska ta nästa steg direkt."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samla kärnerbjudandet inom bemanning, rekrytering och närliggande personaltjänster i en tydlig översikt så besökaren snabbt kan avgöra om företaget matchar behovet."
+    },
+    {
+      "id": "for-arbetsgivare",
+      "path": "/for-arbetsgivare",
+      "required": true,
+      "purpose": "Rikta sig till företag som behöver hyra in, rekrytera eller hitta kompetens. Sidan ska tydliggöra behovsbild, arbetssätt, leveransmodell och hur man begär offert eller startar dialog."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Bygga förtroende genom att presentera företagets inriktning, erfarenhet, team och arbetssätt på ett konkret och professionellt sätt."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en rak väg till kontakt med formulär, kontaktuppgifter och nästa steg för både arbetsgivare och kandidater."
+    },
+    {
+      "id": "lediga-jobb",
+      "path": "/lediga-jobb",
+      "optional": true,
+      "when": "när verksamheten aktivt publicerar annonser eller vill ge kandidater en separat ingång till aktuella uppdrag och tjänster"
+    },
+    {
+      "id": "case",
+      "path": "/case",
+      "optional": true,
+      "when": "när företaget kan visa kunduppdrag, rekryteringscase eller exempel på tillsatta roller utan att lämna ut känslig information"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "när många frågor återkommer om process, kandidathantering, svarstider, upplägg eller avtal"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "trust-signals",
+        "services-overview",
+        "audience-split",
+        "process-steps",
+        "case-preview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team-preview",
+        "faq-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business focus in plain language such as bemanning, rekrytering or personalstöd, not vague consulting copy.",
+        "Trust signals should appear early and be grounded in real indicators like industries served, named case examples or clear experience areas.",
+        "Audience split should help visitors self-select between arbetsgivare and kandidater when both audiences are relevant.",
+        "Process steps must show how the company works from behov till tillsättning or matchning, using concrete step names.",
+        "Contact CTA should appear after enough proof and clarity for an employer to request an offer without hunting for the next action."
+      ]
+    },
+    "tjanster": {
+      "requiredSections": [
+        "services-list",
+        "service-detail-blocks",
+        "process-steps",
+        "faq-accordion",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-expectations",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "Services list must reflect actual personnel services offered, such as bemanning, rekrytering, search or interim, rather than generic business advice.",
+        "Service detail blocks should explain when each service fits, what the customer gets and how the collaboration starts.",
+        "If pricing expectations are used, they must stay high-level and honest, never implying fixed fees that the business cannot stand behind.",
+        "FAQ should answer practical service questions before the final CTA."
+      ]
+    },
+    "for-arbetsgivare": {
+      "requiredSections": [
+        "hero",
+        "employer-needs",
+        "service-fit",
+        "process-steps",
+        "case-preview",
+        "faq-accordion",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team-preview",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "This page must speak primarily to employers and hiring managers, not mix candidate messaging into the main narrative.",
+        "Employer needs section should frame real situations like snabb förstärkning, svårrekryterad kompetens or tillfälliga toppar.",
+        "Service fit should map needs to solutions clearly so the reader understands whether bemanning, rekrytering or another setup is appropriate.",
+        "Case preview should focus on solved staffing or hiring problems and outcomes described honestly without inflated claims."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "about-story",
+        "specialisation-areas",
+        "team-roster",
+        "process-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "case-preview",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "About story must explain what the company does, who it helps and how it approaches matching or recruitment, without generic mission filler.",
+        "Team roster should support credibility with roles and areas of responsibility relevant to staffing and recruitment.",
+        "Specialisation areas should name industries, roles or competence niches only when they are real focus areas of the business."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "contact-info",
+        "mailto-contact-form",
+        "audience-contact-options",
+        "faq-preview"
+      ],
+      "optionalSections": [
+        "map-embed",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include direct and usable contact paths such as phone and email.",
+        "The form should make it easy to state whether the enquiry concerns bemanning, rekrytering, kandidatfråga or other contact reason.",
+        "If audience contact options are used, they should separate employers from candidates clearly to reduce friction.",
+        "Map and opening hours are optional and should only be shown when they add practical value."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Home and contact routes are always present.",
+      "The scaffold must support both sales to employers and trust-building for a people-focused service business.",
+      "Service and process explanation must be central because the industry sells fit, speed and reliability rather than products.",
+      "Sections and routes must allow case, team and FAQ content because they are common proof and conversion tools in this industry.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Portfolio-first structure that hides the actual staffing or recruitment offer.",
+      "E-commerce patterns such as product grids or checkout-oriented flows.",
+      "Restaurant, clinic or booking-led route logic that does not fit staffing and recruitment services.",
+      "Claims about guaranteed hires, exact delivery speed or certifications unless the business can verify them.",
+      "Overweight candidate content on core sales pages aimed at employers."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Bemanningsföretag, rekryteringsbyrå och personalrelaterad verksamhet med behov av tydlig startsida, tjänstesida, arbetsgivarsida, om oss, kontakt samt ibland lediga jobb, case och FAQ. Fokus på arbetsgivare som vill hyra in eller rekrytera personal, men även kandidater som söker väg in. Viktiga innehållsmönster är process, tjänsteförklaring, team, förtroendeskapande signaler, kundcase och enkel offert- eller kontaktväg.",
+    "semanticSignals": [
+      "bemanning",
+      "rekrytering",
+      "search",
+      "interim",
+      "personaluthyrning",
+      "kompetensforsorjning",
+      "arbetsgivare",
+      "kandidater",
+      "tillsattning",
+      "matchning",
+      "lediga-jobb",
+      "rekryteringsprocess",
+      "bemanningslosningar",
+      "hr-stod"
+    ],
+    "negativeSignals": [
+      "webshop",
+      "meny",
+      "bordsbokning",
+      "produktkatalog",
+      "varukorg",
+      "behandlingar",
+      "fastighetsobjekt",
+      "recept",
+      "evenemangsbiljetter"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for staffing agencies, recruitment firms and related personnel service businesses under SNI 78.",
+      "Prefer this when the business sells hiring support, temporary staffing or candidate matching rather than a tangible product.",
+      "A dedicated employer-facing route is often more important than a generic portfolio page.",
+      "Optional lediga-jobb route is appropriate only if the business actually markets open roles or assignments."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#ffffff",
+          "foreground": "#0a0a0a",
+          "muted": "#5b5b5b",
+          "border": "#e0e0e0",
+          "primary": "#0a0a0a",
+          "primaryForeground": "#ffffff",
+          "accent": "#caa14a",
+          "accentForeground": "#0a0a0a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.125rem",
+          "md": "0.25rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "monochrome",
+          "modular",
+          "sharp",
+          "curated",
+          "confident",
+          "creative"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "sni-10-livsmedelsframstallning",
+  "embeddingText": "Livsmedelsframställning, matproducent, småskalig produktion, råvaror, förädling, produkter, sortiment, återförsäljare, offert, kontakt, tillverkning, lokala råvaror, kvalitet, leverans.",
+  "semanticSignals": [
+    "food-manufacturer",
+    "producer-brand",
+    "packaged-food-products",
+    "retailers-or-stockists",
+    "production-story",
+    "ingredients-and-sourcing",
+    "wholesale-or-reseller-inquiry",
+    "product-catalogue"
+  ],
+  "negativeSignals": [
+    "restaurant-table-booking",
+    "service-only-business-without-physical-products",
+    "generic-fashion-retail",
+    "pure-event-catering-flow-as-primary-structure",
+    "placeholder-webshop-without-real-products"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily makes or processes food products rather than serving restaurant meals on site.",
+    "Prefer this scaffold when reseller information, production trust and product assortment are more important than booking tables.",
+    "Suitable for bakeries, jam makers, beverage producers without alcohol-specific regulatory pages, charcuterie producers, confectionery makers and other packaged food brands."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

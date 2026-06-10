@@ -1,0 +1,309 @@
+{
+  "id": "sni-60-planering-radio-och-tv-sandning-nyhe",
+  "label": "Planering, radio- och tv-sändning, nyhetsbyråer och annan distribution av medieinnehåll",
+  "description": "Scaffold för redaktionell verksamhet inom radio, tv, nyhetsbyrå och annan mediedistribution där aktuellt innehåll, program/format, prenumeration och redaktionell trovärdighet står i centrum.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera aktuellt innehåll och publiceringar",
+    "driva registrering till nyhetsbrev",
+    "förklara program, format eller bevakningsområden",
+    "bygga förtroende genom redaktion, publiceringsprinciper och kontaktvägar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera redaktionen eller medieverksamheten, lyfta aktuellt innehåll och driva registrering till nyhetsbrev eller vidare läsning/lyssning/tittning."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": true,
+      "purpose": "Samla artiklar, sändningar, inslag eller uppdateringar i ett tydligt redaktionellt flöde."
+    },
+    {
+      "id": "program",
+      "path": "/program",
+      "required": true,
+      "purpose": "Presentera återkommande program, format, bevakningsområden eller innehållskategorier så att besökaren snabbt hittar rätt innehåll."
+    },
+    {
+      "id": "about",
+      "path": "/om-redaktionen",
+      "required": true,
+      "purpose": "Bygga förtroende genom att beskriva redaktionen, uppdraget, arbetssättet och personerna bakom innehållet."
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "required": true,
+      "purpose": "Konvertera återkommande besökare till prenumeranter med tydlig förklaring av vad utskicken innehåller och hur ofta de skickas."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge tydliga kontaktvägar för tips, redaktionsfrågor, presskontakt eller allmänna förfrågningar."
+    },
+    {
+      "id": "archive",
+      "path": "/arkiv",
+      "optional": true,
+      "when": "när verksamheten publicerar ett större innehållsbibliotek och behöver en separat yta för äldre material eller ämnesvis översikt"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när återkommande frågor om publicering, tips, rättelser eller prenumeration behöver besvaras samlat"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "featured-content",
+        "newsletter-signup",
+        "editorial-trust",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "latest-feed",
+        "program-teaser",
+        "about-summary",
+        "video-hero",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the editorial offering or media focus and include a primary CTA tied to subscription or latest content.",
+        "Featured-content must appear above the fold or immediately after hero and highlight real current items, not placeholder stories.",
+        "Newsletter-signup should appear before the final contact CTA.",
+        "Editorial-trust should reference concrete trust signals such as publication rhythm, editorial identity or named team members when available.",
+        "Sections must avoid repeating the same headline story or CTA wording multiple times."
+      ]
+    },
+    "news": {
+      "requiredSections": [
+        "news-intro",
+        "content-feed",
+        "newsletter-signup"
+      ],
+      "optionalSections": [
+        "featured-content",
+        "topic-filter",
+        "video-hero",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "News-intro must explain what kind of updates, reports or broadcasts are published here.",
+        "Content-feed must prioritize clarity and chronology or editorial selection over decorative layout.",
+        "If featured-content is present it should lead into, not duplicate, the main feed.",
+        "Newsletter-signup should be placed after meaningful content context, not before the visitor understands the offer."
+      ]
+    },
+    "program": {
+      "requiredSections": [
+        "program-intro",
+        "program-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "schedule-note",
+        "featured-content",
+        "video-hero",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Program-intro must explain the types of programs, formats or coverage areas offered.",
+        "Program-list items must be concrete and distinguishable, for example by theme, audience or publication format.",
+        "If schedule-note is used it must only describe actual publication or broadcast rhythm when known.",
+        "Contact-cta should invite tips, editorial contact or collaboration enquiries without overstating availability."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "editorial-principles"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "About-story must describe the editorial mission, focus or history in specific terms.",
+        "Team should show real people or roles when available and be omitted rather than filled with generic placeholders.",
+        "Editorial-principles should cover how the outlet works, such as sourcing, corrections or scope, without making unsupported claims.",
+        "Trust-proof may reinforce but must not duplicate the same team or mission content."
+      ]
+    },
+    "newsletter": {
+      "requiredSections": [
+        "newsletter-intro",
+        "newsletter-signup",
+        "newsletter-benefits"
+      ],
+      "optionalSections": [
+        "faq",
+        "featured-content",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Newsletter-intro must clearly state what subscribers receive and the expected sending rhythm when known.",
+        "Newsletter-signup must be the primary action on the page.",
+        "Newsletter-benefits should stay specific to the publication, such as alerts, curated analysis or weekly summaries, and avoid vague marketing copy.",
+        "If trust-proof is used it should support the value of subscribing, for example by referencing editorial focus or consistency."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team",
+        "faq",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must provide real contact channels relevant to editorial operations, such as email and other available channels.",
+        "Contact-form should clarify the type of enquiries it is for, for example tips, questions or general contact.",
+        "Map-embed should only be shown when a public visiting address is actually relevant.",
+        "The page should not imply guaranteed response times unless supplied by source data."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "The scaffold must support a content-first editorial website with clear surfaces for latest material and subscription.",
+      "News and program surfaces must be distinct: one for ongoing publications, one for recurring formats or coverage areas.",
+      "The structure must build trust through identifiable editorial information rather than sales-style claims.",
+      "Contact and newsletter conversion must both be supported without overwhelming the reading experience.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the business like a local service company with service lists as the core offer.",
+      "Do not require ecommerce, booking or pricing flows.",
+      "Do not invent awards, reach figures, accreditations or newsroom scale.",
+      "Do not make broadcast schedules mandatory when the business may publish on-demand or irregularly.",
+      "Do not overuse promotional CTA blocks that interrupt editorial browsing."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "team-roster",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Redaktionell verksamhet inom radio, tv, nyhetsbyrå eller mediedistribution. Sajten behöver startsida med aktuellt innehåll, nyhetssida med publiceringsflöde, programsida eller formatöversikt, sida om redaktionen, nyhetsbrevssida och kontaktsida. Fokus på läsbarhet, publiceringsrytm, redaktionell trovärdighet, team, prenumeration och tydliga kontaktvägar för tips och frågor.",
+    "semanticSignals": [
+      "redaktion",
+      "nyheter",
+      "artiklar",
+      "program",
+      "sandning",
+      "inslag",
+      "bevakning",
+      "nyhetsbrev",
+      "redaktionella-principer",
+      "tipsa-oss",
+      "aktuellt",
+      "arkiv",
+      "format",
+      "publicering"
+    ],
+    "negativeSignals": [
+      "bokning",
+      "prislista",
+      "webbutik",
+      "produktkatalog",
+      "meny",
+      "offertforfragan",
+      "behandlingar",
+      "hantverkstjanster"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for media publishers, editorial sites, radio or tv content brands, local newsrooms, niche news outlets and agencies distributing ongoing media content.",
+      "Prefer this over a generic blog when the site needs both an editorial feed and a separate program/format overview.",
+      "Prefer newsletter and editorial trust structures over commercial conversion patterns."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

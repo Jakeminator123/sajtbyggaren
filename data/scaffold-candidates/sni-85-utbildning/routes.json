@@ -1,0 +1,50 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera utbildningsverksamheten, lyfta kursutbudet och leda besökaren vidare till anmälan eller kontakt."
+    },
+    {
+      "id": "courses",
+      "path": "/kurser",
+      "required": true,
+      "purpose": "Visa kurser eller program med målgrupp, innehåll, upplägg och tydlig väg till anmälan."
+    },
+    {
+      "id": "admission",
+      "path": "/anmalan",
+      "required": true,
+      "purpose": "Samla information om hur anmälan går till, viktiga steg och nästa handling för den som vill registrera sig."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten för frågor om kurser, nivå, schema eller anmälan."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när verksamheten vill förklara pedagogik, bakgrund och arbetssätt mer utförligt"
+    },
+    {
+      "id": "team",
+      "path": "/larare",
+      "when": "när lärarprofiler och kompetenser är viktiga för förtroendet"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "när kursavgifter, paket eller finansieringsupplägg behöver presenteras separat"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "när det finns många återkommande frågor om nivå, tider, anmälan eller praktiskt upplägg"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara erbjudandet och leda vidare till kontakt eller produktöversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa företagets fordons-, släp- eller påhängsvagnsmodeller och deras användningsområden."
+    },
+    {
+      "id": "manufacturing",
+      "path": "/tillverkning",
+      "required": true,
+      "purpose": "Beskriva produktion, anpassningsmöjligheter och teknisk kapacitet för att stötta affärsdialog."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, arbetssätt och team eller nyckelkompetenser."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, försäljningsfrågor eller samarbete."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "quality",
+      "path": "/kvalitet",
+      "when": "när verksamheten har tydligt kvalitetsarbete, testprocesser, spårbarhet eller efterlevnad som behöver förklaras separat"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "när företaget kan visa kundcase, leveransprojekt eller branscherfarenhet utan att bryta mot sekretess"
+    }
+  ]
+}

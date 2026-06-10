@@ -1,0 +1,274 @@
+{
+  "id": "sni-39-sanering-efterbehandling-av-jord-och",
+  "label": "Sanering, efterbehandling av jord och vatten samt annan verksamhet för föroreningsbekämpning",
+  "description": "Branschspecifik scaffold för företag inom sanering och föroreningsbekämpning med fokus på tjänsteöversikt, arbetsprocess, förtroendeskapande information och tydlig kontaktväg.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara saneringstjänster tydligt",
+    "bygga förtroende kring säkerhet, arbetssätt och erfarenhet",
+    "göra det enkelt att ta kontakt för offert eller rådgivning"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, förklara vad företaget sanerar och leda besökaren vidare till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Visa företagets sanerings- och efterbehandlingstjänster med konkreta beskrivningar av vad som erbjuds."
+    },
+    {
+      "id": "process",
+      "path": "/arbetsprocess",
+      "required": true,
+      "purpose": "Förklara hur uppdrag genomförs från bedömning till åtgärd och uppföljning för att skapa trygghet inför kontakt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva företaget, teamet och hur man arbetar i praktiken."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att kontakta företaget via formulär och tydliga kontaktuppgifter."
+    },
+    {
+      "id": "projects",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när företaget har verkliga uppdrag, projektbeskrivningar eller kundreferenser som kan visas utan sekretessproblem"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "när företaget arbetar i flera orter eller regioner och behöver tydlig lokal närvaro"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "process-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "gallery",
+        "reviews",
+        "faq",
+        "service-area"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and primary service focus in clear language, with a primary contact CTA.",
+        "Service summary must mention actual sanitation or remediation work offered, not generic environmental claims.",
+        "Process summary should appear before the final contact CTA to reduce uncertainty about how work starts.",
+        "Trust proof must stay factual, such as visible company details, references or practical experience, and must not invent certifications.",
+        "Sections should avoid repeating the same promise in multiple blocks."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "pricing-overview"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company to remediation, contamination control or related field work.",
+        "Service list items must be concrete examples such as marksanering, vattensanering, provtagning support or efterbehandling where relevant.",
+        "If pricing-overview is shown, it must stay high-level and avoid misleading fixed prices for work that normally requires assessment."
+      ]
+    },
+    "process": {
+      "requiredSections": [
+        "process-intro",
+        "process-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Process intro must explain why the work is assessed and planned before execution.",
+        "Process steps should follow a realistic sequence such as initial contact, site assessment, action, handling and follow-up.",
+        "The page should reduce uncertainty without making promises about outcomes that depend on site conditions or authority requirements."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "gallery",
+        "service-area"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about the company's work, customers or operating context, not generic brand language.",
+        "Team should only be shown when real people or roles are available.",
+        "Trust proof should focus on verifiable business details, references and practical competence."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real ways to get in touch and must not use placeholder content.",
+        "If map is shown, it should match the stated address or service base.",
+        "Contact CTA should support quote requests, questions or urgent contact in plain language."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Tydlig kontaktväg med kontaktformulär eller motsvarande CTA.",
+      "Tjänstesidan ska beskriva faktiska sanerings- eller efterbehandlingstjänster, inte bara allmän miljökonsulting.",
+      "Scaffolden ska bygga förtroende genom konkret arbetssätt, företagsuppgifter och referensmöjligheter.",
+      "Hem och kontakt måste fungera även för företag som verkar lokalt eller regionalt snarare än från publik besöksadress.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Överdrivna eller obestyrkta miljölöften.",
+      "Påhittade certifieringar, tillstånd eller myndighetssamarbeten.",
+      "Detaljerade prislöften för uppdrag som normalt kräver platsbedömning.",
+      "Generiska serviceblock utan koppling till sanering, efterbehandling eller föroreningsbekämpning."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "trust-guarantees",
+      "team-roster",
+      "reviews-display",
+      "image-gallery",
+      "faq-accordion",
+      "map-embed",
+      "opening-hours"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Saneringsföretag, marksanering, vattensanering, efterbehandling av förorenad mark och vatten, föroreningsbekämpning, miljöåtgärder, saneringstjänster, arbetsprocess, referenser, kontakt och offert.",
+    "semanticSignals": [
+      "sanering",
+      "efterbehandling",
+      "fororenad-mark",
+      "fororenat-vatten",
+      "miljoatgarder",
+      "provtagning",
+      "atgardsarbete",
+      "riskreducering",
+      "entreprenad",
+      "referenser",
+      "kontaktformular"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "e-handel",
+      "fotograf",
+      "frisor",
+      "bokningskalender",
+      "meny",
+      "produktkatalog"
+    ],
+    "llmClassificationHints": [
+      "This scaffold is for remediation and contamination-control businesses, not generic consultants.",
+      "Prioritize service clarity, process explanation and trust-building for technically sensitive field work.",
+      "Contact conversion is central, but the site should first reduce uncertainty about what the company actually does."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

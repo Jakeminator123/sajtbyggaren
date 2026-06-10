@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget för B2B-kunder, lyfta sortiment och leveransförmåga samt leda vidare till kontakt eller kundförfrågan."
+    },
+    {
+      "id": "sortiment",
+      "path": "/sortiment",
+      "required": true,
+      "purpose": "Ge en tydlig överblick över produktområden, varugrupper och hur företaget hjälper återförsäljare, installatörer eller andra företagskunder att hitta rätt produkter."
+    },
+    {
+      "id": "bli-kund",
+      "path": "/bli-kund",
+      "required": true,
+      "purpose": "Förklara hur nya företagskunder kommer igång, vilka uppgifter som behövs och hur beställnings- eller samarbetsprocessen fungerar."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva företagets inriktning, arbetssätt, team och relationen till leverantörer och kunder."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att kontakta företaget för offert, produktfrågor, orderärenden eller partnerskap via formulär, telefon, e-post och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "varumarken",
+      "path": "/varumarken",
+      "when": "when the company represents multiple suppliers, brands or agency relationships that need their own trust-building surface"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "when the sales process involves recurring questions about orderminimum, leverans, kontoansökan, priser or support"
+    }
+  ]
+}

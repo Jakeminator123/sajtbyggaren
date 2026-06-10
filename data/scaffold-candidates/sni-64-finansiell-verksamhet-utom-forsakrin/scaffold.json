@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-64-finansiell-verksamhet-utom-forsakrin",
+  "version": "0.1.0",
+  "label": "Finansiell verksamhet utom försäkrings- och pensionsfondsverksamhet",
+  "description": "Scaffold för finansbolag och andra verksamheter inom SNI 64 som behöver signalera tillstånd, process, riskmedvetenhet och personlig rådgivning. Strukturen prioriterar tydliga tjänsteområden, prisinformation där det är relevant, vanliga frågor och en kontaktväg som känns trygg för en kund som delar känslig ekonomisk information.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara finansiella tjänster och upplägg",
+    "bygga förtroende genom tillstånd, process och sekretess",
+    "låta besökaren självkvalificera sig via tjänster, målgrupper och vanliga frågor",
+    "driva kontakt för offert eller rådgivningsmöte"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

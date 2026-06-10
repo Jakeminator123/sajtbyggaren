@@ -1,0 +1,38 @@
+{
+  "id": "sni-85-utbildning",
+  "embeddingText": "Utbildning, skola, kursverksamhet och program med fokus på pedagogik, kursutbud, anmälan, lärare, frågor och tydlig väg till registrering. Passar utbildare, kursföretag, skolor och träningsverksamheter där besökaren behöver förstå upplägg, nivå, schema och nästa steg.",
+  "semanticSignals": [
+    "kurser",
+    "program",
+    "utbildning",
+    "anmalan",
+    "registrera-dig",
+    "pedagogik",
+    "larare",
+    "kursplan",
+    "niva",
+    "schema",
+    "deltagare",
+    "lektioner",
+    "upplagg",
+    "behorighet",
+    "studier"
+  ],
+  "negativeSignals": [
+    "meny",
+    "bokbord",
+    "webshop",
+    "produktkatalog",
+    "serviceomrade-for-hantverk",
+    "akut-jour",
+    "varukorg",
+    "lagerstatus"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten säljer eller erbjuder utbildningar, kurser, program eller undervisning.",
+    "Prioritera denna scaffold när primär CTA är att registrera sig, anmäla sig eller lämna intresseanmälan.",
+    "Särskilj från konsult- eller coachsajter genom att leta efter kursutbud, nivåer, schema och lärarprofiler."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

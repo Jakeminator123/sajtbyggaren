@@ -1,0 +1,37 @@
+{
+  "id": "sni-41-byggande-av-bostadshus-och-andra-byg",
+  "embeddingText": "Byggföretag inom SNI 41 behöver en webbstruktur som säljer in större byggprojekt genom tydliga tjänster, referensprojekt, trygg process och enkel offertförfrågan. Sajten bör passa nybyggnation av bostadshus och andra byggnader, tillbyggnader och entreprenaduppdrag, med stark tonvikt på förtroende, garantier, försäkring, ID06 och verkliga referenser.",
+  "semanticSignals": [
+    "byggforetag",
+    "nybyggnation",
+    "bostadshus",
+    "andra-byggnader",
+    "totalentreprenad",
+    "generalentreprenad",
+    "tillbyggnad",
+    "referensprojekt",
+    "offertforfragan",
+    "byggprocess",
+    "projektledning",
+    "grund-till-nyckel",
+    "fardiga-hus",
+    "pagaende-byggen"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "webshop",
+    "fotograf",
+    "meny",
+    "bordsbokning",
+    "produktkatalog",
+    "e-handel",
+    "frisorsalong"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company primarily builds houses or larger buildings rather than only doing minor repairs.",
+    "Prioritize projects/cases and quote request flow over appointment booking.",
+    "Treat trust content as construction-specific proof, not generic lifestyle branding."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

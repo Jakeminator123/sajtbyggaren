@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Skapa förtroende direkt med lugn och tydlig information om kliniken, vilka djur som tas emot, vanliga behandlingar och hur djurägaren bokar tid eller får hjälp snabbt."
+    },
+    {
+      "id": "behandlingar",
+      "path": "/behandlingar",
+      "required": true,
+      "purpose": "Visa klinikens behandlingar och tjänster i begripligt språk så att djurägaren kan avgöra om mottagningen passar deras djurs behov och nästa steg blir att boka tid."
+    },
+    {
+      "id": "akut-hjalp",
+      "path": "/akut-hjalp",
+      "required": true,
+      "purpose": "Ge snabb och tydlig vägledning för akuta situationer: när man ska ringa direkt, vad kliniken kan hjälpa med akut och hur djurägaren agerar utanför ordinarie öppettider."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla telefon, adress, öppettider, karta, kontaktvägar och bokningsväg så att djurägaren enkelt kan hitta kliniken och ta kontakt utan friktion."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "kliniken har flera namngivna veterinärer eller djursjukskötare vars kompetens och specialintressen hjälper besökaren att känna förtroende"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "kliniken ofta får återkommande frågor om försäkring, bokning, förberedelser inför besök, recept, vaccination eller vad man ska ta med"
+    },
+    {
+      "id": "priser",
+      "path": "/priser",
+      "when": "verksamheten aktivt publicerar prisexempel eller fasta priser som förtroendeskapande information"
+    }
+  ]
+}

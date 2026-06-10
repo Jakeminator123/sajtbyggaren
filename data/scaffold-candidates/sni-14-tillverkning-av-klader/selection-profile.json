@@ -1,0 +1,33 @@
+{
+  "id": "sni-14-tillverkning-av-klader",
+  "embeddingText": "Tillverkning av kläder, konfektion, sömnad, produktion av plagg, arbetskläder, profilkläder, modeplagg, kollektioner, provsömnad, tillverkningsprocess, produktionskapacitet, kvalitetsarbete, kontakt och offertförfrågan.",
+  "semanticSignals": [
+    "clothing-manufacturing",
+    "garment-production",
+    "sewing",
+    "apparel-factory",
+    "textile-production",
+    "workwear",
+    "profile-clothing",
+    "fashion-production",
+    "sampling",
+    "private-label",
+    "cut-make-trim",
+    "production-process"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "online-shop-checkout",
+    "photography-portfolio",
+    "medical-clinic-booking",
+    "real-estate-listings",
+    "software-saas-pricing"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily manufactures clothing or sewn garments rather than only selling finished products.",
+    "Prefer this scaffold when visitors need to understand both what garments are produced and how production works.",
+    "Strong indicators include mentions of konfektion, sömnad, produktion, kollektioner, provplagg, arbetskläder or profilkläder."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

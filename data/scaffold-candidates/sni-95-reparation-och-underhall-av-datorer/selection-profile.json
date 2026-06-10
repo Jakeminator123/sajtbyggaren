@@ -1,0 +1,38 @@
+{
+  "id": "sni-95-reparation-och-underhall-av-datorer",
+  "embeddingText": "Scaffold for Swedish repair and maintenance businesses in SNI 95. Suitable for computer repair, phone repair, appliance repair, bicycle repair, shoe repair, watch service and similar workshops that need a trustworthy local business website with home, services, pricing and contact pages. Emphasizes diagnosis, repair categories, pricing transparency, guarantees, opening hours, workshop location and practical FAQ.",
+  "semanticSignals": [
+    "reparation",
+    "underhall",
+    "felsokning",
+    "verkstad",
+    "service",
+    "reservdelar",
+    "garanti",
+    "inlamning",
+    "prislista",
+    "oppettider",
+    "kontakt",
+    "datorreparation",
+    "mobilreparation",
+    "hushallsapparater",
+    "cykelservice",
+    "skoreparation"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "e-commerce-checkout",
+    "real-estate-listings",
+    "hotel-booking",
+    "medical-clinic-treatments",
+    "software-saas-product-marketing",
+    "creative-portfolio-first-structure"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily repairs, services or restores physical consumer items, electronics, household goods, bicycles, watches, shoes or similar goods.",
+    "Use this scaffold when customers need to understand what can be repaired, how the process works, what pricing looks like and how to contact the workshop.",
+    "Prefer this scaffold over a generic local service scaffold when pricing transparency and repair-process explanation are central to conversion."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

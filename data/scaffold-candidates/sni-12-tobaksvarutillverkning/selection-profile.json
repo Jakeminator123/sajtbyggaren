@@ -1,0 +1,31 @@
+{
+  "id": "sni-12-tobaksvarutillverkning",
+  "embeddingText": "Branschspecifik scaffold for tobaksvarutillverkning. Webbplatsen bor prioritera startsida, produktsida, produktionssida och kontakt. Innehall ska bygga fortroende genom konkret foretagsinformation, produktkategorier, tillverkningsprocess, kvalitet och tydliga affarskontaktvagar snarare an generell tjanstekopia.",
+  "semanticSignals": [
+    "tillverkare",
+    "produktion",
+    "fabrik",
+    "produktkategorier",
+    "sortiment",
+    "kvalitetssakring",
+    "foretagskontakt",
+    "aterforsaljare",
+    "partnerforfragan",
+    "verksamhetsbeskrivning"
+  ],
+  "negativeSignals": [
+    "salong",
+    "konsulttjanster",
+    "restaurangmeny",
+    "fotografportfolio",
+    "e-handel-kassa",
+    "bokningsflode-for-privatkunder"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business is a manufacturer of tobacco products or related tobacco manufacturing operation.",
+    "Prefer product-category and production-oriented information architecture over service-list architecture.",
+    "Tone should be rak och fortroendeingivande with emphasis on company facts and business contact."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

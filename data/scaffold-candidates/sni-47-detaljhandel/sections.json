@@ -1,0 +1,119 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "featured-products",
+      "value-props",
+      "shop-cta"
+    ],
+    "optionalSections": [
+      "category-teaser",
+      "trust-proof",
+      "reviews-preview",
+      "newsletter-signup"
+    ],
+    "sectionOrderRules": [
+      "Hero måste innehålla butikens namn eller tydlig avsändare, ett konkret köplöfte och en primär CTA till /produkter.",
+      "Featured-products måste visa faktiska produkter eller verkliga produktgrupper, inte generiska platshållare.",
+      "Value-props ska vara kopplade till verkliga styrkor som trygg betalning, öppet köp, byten eller personlig service - undvik tomma standardpåståenden.",
+      "Om trust-proof används ska innehållet vara verifierbart och relevant för köpbeslutet."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-grid",
+      "shop-cta"
+    ],
+    "optionalSections": [
+      "filter-bar",
+      "category-links",
+      "trust-proof",
+      "faq-preview"
+    ],
+    "sectionOrderRules": [
+      "Products-intro ska förklara sortimentets inriktning eller urval, inte bara säga att kunden är välkommen.",
+      "Product-grid måste bestå av konkreta produkter eller tydliga produktkort med namn, bild och pris när pris finns tillgängligt.",
+      "Filter-bar får bara användas om filtren speglar verkliga attribut som kategori, storlek, färg, material eller varumärke.",
+      "Shop-cta ska leda vidare till köp, produktförfrågan eller kontakt beroende på butikens faktiska säljflöde."
+    ]
+  },
+  "store": {
+    "requiredSections": [
+      "store-info",
+      "opening-hours",
+      "map-section"
+    ],
+    "optionalSections": [
+      "parking-info",
+      "store-gallery",
+      "contact-quick"
+    ],
+    "sectionOrderRules": [
+      "Store-info måste innehålla fysisk adress och kort praktisk beskrivning av butiksbesöket.",
+      "Opening-hours ska presenteras tydligt och får inte fyllas med antagna tider om underlag saknas.",
+      "Map-section används bara när en riktig adress finns att visa."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "shop-cta"
+    ],
+    "optionalSections": [
+      "faq-preview",
+      "store-info"
+    ],
+    "sectionOrderRules": [
+      "Contact-info måste innehålla verkliga kontaktvägar som e-post, telefon eller adress beroende på vad verksamheten faktiskt erbjuder.",
+      "Contact-form ska vara avsedd för frågor om produkter, beställning, butik eller support och inte lova svarstider som inte är bekräftade.",
+      "Om store-info visas här får det inte ersätta tydliga direkta kontaktvägar."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "values"
+    ],
+    "optionalSections": [
+      "team",
+      "sourcing",
+      "store-gallery"
+    ],
+    "sectionOrderRules": [
+      "About-story ska beskriva butikens verkliga inriktning, bakgrund eller urvalstanke utan generisk varumärkesprosa.",
+      "Values måste vara konkreta och kopplade till hur butiken väljer sortiment, bemöter kunder eller arbetar med kvalitet.",
+      "Team används bara om det finns personer eller roller som faktiskt ska presenteras."
+    ]
+  },
+  "faq": {
+    "requiredSections": [
+      "faq"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "contact-quick"
+    ],
+    "sectionOrderRules": [
+      "FAQ ska fokusera på verkliga frågor om betalning, köp, leverans, byten, returer, lagerstatus eller butik.",
+      "Svar får inte lova villkor som inte stöds av verksamheten.",
+      "Frågor om fysisk butik ska bara finnas med när butiken faktiskt tar emot besök."
+    ]
+  },
+  "reviews": {
+    "requiredSections": [
+      "reviews-list",
+      "shop-cta"
+    ],
+    "optionalSections": [
+      "rating-summary",
+      "review-policy"
+    ],
+    "sectionOrderRules": [
+      "Reviews-list får bara innehålla äkta omdömen eller verifierade citat som verksamheten faktiskt kan stå för.",
+      "Rating-summary ska utelämnas om underlag för sammanvägt betyg saknas.",
+      "Shop-cta ska stödja köpbeslutet utan att överdriva recensionernas omfattning eller effekt."
+    ]
+  }
+}

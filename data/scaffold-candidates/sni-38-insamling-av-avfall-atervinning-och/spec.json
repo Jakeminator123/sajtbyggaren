@@ -1,0 +1,304 @@
+{
+  "id": "sni-38-insamling-av-avfall-atervinning-och",
+  "label": "Insamling av avfall, återvinning och bortskaffande",
+  "description": "Scaffold för företag inom avfallsinsamling, återvinning och bortskaffande med fokus på tjänster, avfallsslag, hämtning/beställning, regelefterlevnad och kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara avfallstjänster och avfallsslag",
+    "bygga förtroende kring miljötillstånd, spårbarhet och säkra flöden",
+    "driva förfrågningar om hämtning, containrar eller återvinningstjänster",
+    "visa kontaktvägar, öppettider och anläggningsinformation"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad som hämtas eller tas emot och leda besökaren till kontakt eller beställningsförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets insamlings-, återvinnings- och bortskaffandetjänster på ett konkret sätt för olika kundbehov."
+    },
+    {
+      "id": "waste-types",
+      "path": "/avfallsslag",
+      "required": true,
+      "purpose": "Visa vilka avfallsslag som hanteras, hur sortering går till och vad kunden behöver förbereda före hämtning eller inlämning."
+    },
+    {
+      "id": "collection-order",
+      "path": "/hamtning-bestallning",
+      "required": true,
+      "purpose": "Samla information om hur hämtning, container, löpande uppdrag eller offertförfrågan går till och driva kontakt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att beskriva verksamheten, arbetssättet och personalens ansvar inom återvinning och avfallshantering."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för hämtning, frågor, vägbeskrivning eller öppettider."
+    },
+    {
+      "id": "facilities",
+      "path": "/anlaggning",
+      "optional": true,
+      "when": "när företaget tar emot avfall på en fysisk anläggning och behöver visa platsinformation, öppettider eller besöksvillkor"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "när företaget verkar i flera kommuner eller orter och behöver tydlig lokal täckning"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "waste-types-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "process-overview",
+        "reviews",
+        "faq",
+        "facility-summary",
+        "service-area",
+        "video-hero"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and a clear primary CTA for contact or collection request.",
+        "Service summary must describe concrete services such as collection, container solutions, recycling or disposal.",
+        "Waste-types summary should clarify what can be handled without replacing the dedicated waste-types page.",
+        "Trust proof must appear before the final CTA and may mention permits, traceability and safe handling only when supported by supplied data.",
+        "Sections must avoid repeating the same environmental claim in multiple places."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "process-overview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq",
+        "service-area"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company identity to practical waste and recycling services.",
+        "Service list items must be concrete and grouped by customer need or service type, not generic promises.",
+        "Process overview should explain the flow from inquiry to collection, sorting, transport or handover in plain language."
+      ]
+    },
+    "waste-types": {
+      "requiredSections": [
+        "waste-types-intro",
+        "waste-types-list",
+        "sorting-guidance",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Waste-types list must distinguish accepted materials, restricted materials and cases that require prior contact when such data exists.",
+        "Sorting guidance should help visitors prepare waste correctly and reduce misunderstandings before delivery or collection.",
+        "The page must not imply handling of regulated waste categories unless provided in the source material."
+      ]
+    },
+    "collection-order": {
+      "requiredSections": [
+        "order-intro",
+        "booking-cta",
+        "requirements-checklist",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "pricing-overview",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Order intro must explain what the visitor can request, such as pickup, container, recurring service or quote.",
+        "Booking CTA should collect or direct to the information needed for a contact-based order flow.",
+        "Requirements checklist must state what the customer should prepare before pickup or site visit, such as access, volume or waste type details."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "process-overview",
+        "facility-summary"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about the business and its way of working, not generic brand language.",
+        "Trust proof should focus on real operating practices, permits, traceability or safety routines when available."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "opening-hours"
+      ],
+      "optionalSections": [
+        "map",
+        "facility-summary"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real phone, email and address details when available.",
+        "Contact form should support inquiries about pickup, recycling services or general questions.",
+        "Opening hours should be shown when the business has staffed phone times, office hours or drop-off times."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Passar företag som hämtar, sorterar, återvinner eller bortskaffar avfall för företag, fastigheter eller privatpersoner.",
+      "Sätter tydligt fokus på avfallsslag, hämtning/beställning och regelefterlevnad som centrala informationsbehov.",
+      "Kontaktvägar och förfrågan om hämtning eller offert är tydliga på flera sidor.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generisk lokal tjänstestruktur utan sida för avfallsslag eller hämtning.",
+      "E-handelsmönster som produktkatalog eller varukorg.",
+      "Påståenden om miljönytta, tillstånd eller farligt avfall som inte stöds av underlag.",
+      "Restaurang-, portfölj- eller bokningsupplägg som inte passar branschen."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "booking-cta",
+      "faq-accordion",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschscaffold för avfallsinsamling, återvinning och bortskaffande. Innehåller startsida, tjänster, avfallsslag, hämtning eller beställning, om oss och kontakt. Prioriterar tydliga tjänstebeskrivningar, sorteringsvägledning, spårbarhet, miljötillstånd, praktiska flöden för hämtning och kontaktformulär.",
+    "semanticSignals": [
+      "avfallsinsamling",
+      "atervinning",
+      "bortskaffande",
+      "container",
+      "hamtning",
+      "sortering",
+      "avfallsslag",
+      "atervinningsanlaggning",
+      "miljotillstand",
+      "sparbarhet",
+      "avfallshantering",
+      "insamlingstjanster"
+    ],
+    "negativeSignals": [
+      "meny",
+      "produktkatalog",
+      "webbshop",
+      "bordsbokning",
+      "portfoljgalleri-som-huvudsyfte",
+      "recept",
+      "evenemangsbiljetter"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten hämtar, tar emot, sorterar, återvinner eller bortskaffar avfall.",
+      "Särskilt relevant när sajten behöver förklara avfallsslag, hämtflöden, containrar, sorteringskrav eller anläggningsinformation.",
+      "Använd inte denna scaffold för vanliga flytt-, städ- eller transportföretag utan tydlig avfalls- eller återvinningsverksamhet."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

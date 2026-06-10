@@ -1,0 +1,292 @@
+{
+  "id": "sni-94-intressebevakning-religios-verksamhe",
+  "label": "Intressebevakning och religiös verksamhet",
+  "description": "Scaffold för föreningar, samfund och andra idéburna organisationer inom SNI 94 med fokus på uppdrag, gemenskap, medlemskap, aktiviteter, nyheter och transparent kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara uppdrag och värdegrund",
+    "visa verksamheter och aktiviteter",
+    "driva medlemskap eller deltagande",
+    "samla intresseanmälningar och kontaktförfrågningar",
+    "kommunicera nyheter och information transparent"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera organisationens uppdrag, verksamhet och viktigaste nästa steg för besökaren."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Förklara organisationens bakgrund, värdegrund, styrning och vilka människor som bär verksamheten."
+    },
+    {
+      "id": "membership",
+      "path": "/bli-medlem",
+      "required": true,
+      "purpose": "Beskriva vad medlemskap eller engagemang innebär och leda vidare till registrering eller kontakt."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": true,
+      "purpose": "Samla aktuella nyheter, uppdateringar och information om organisationens arbete och aktiviteter."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta organisationen för frågor, besök, engagemang eller samverkan."
+    },
+    {
+      "id": "activities",
+      "path": "/verksamhet",
+      "optional": true,
+      "when": "när organisationen har återkommande aktiviteter, gudstjänster, möten, stödinsatser eller program som behöver beskrivas samlat"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "optional": true,
+      "when": "när ledare, styrelse, anställda eller volontärsamordnare behöver presenteras mer utförligt än på om-sidan"
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "optional": true,
+      "when": "när organisationen aktivt samlar prenumeranter till utskick och vill ge detta en egen landningssida"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "mission-summary",
+        "activity-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "news-highlight",
+        "membership-cta",
+        "faq",
+        "newsletter-signup"
+      ],
+      "sectionOrderRules": [
+        "Hero måste tydligt ange organisationstyp eller sammanhang, vad verksamheten vill uppnå och en primär CTA för registrering eller kontakt.",
+        "Mission-summary ska beskriva uppdraget konkret och människonära, inte med vaga allmänord.",
+        "Activity-summary ska visa vad organisationen faktiskt gör i praktiken, till exempel möten, stöd, undervisning, gemenskap eller opinionsarbete.",
+        "Trust-proof ska lyfta transparenta och verifierbara uppgifter som organisationsnummer, demokratisk styrning eller årsredovisning när sådant finns.",
+        "Den sista CTA-sektionen ska leda till medlemskap, nyhetsbrev eller kontakt utan att upprepa exakt samma formulering som i hero."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "values",
+        "governance",
+        "team"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "About-story måste förklara bakgrund, inriktning och varför organisationen finns på ett konkret sätt.",
+        "Values ska beskriva värdegrund eller trosmässig/idéburen inriktning sakligt och respektfullt.",
+        "Governance ska förklara hur organisationen leds, till exempel styrelse, församling eller annan demokratisk struktur, utan att hitta på formella titlar.",
+        "Team kan visa styrelse, ledare, anställda eller nyckelpersoner beroende på organisationens form."
+      ]
+    },
+    "membership": {
+      "requiredSections": [
+        "membership-intro",
+        "member-benefits",
+        "how-to-join",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof",
+        "newsletter-signup"
+      ],
+      "sectionOrderRules": [
+        "Membership-intro måste förklara vem sidan riktar sig till och vad medlemskap eller engagemang betyder i just denna organisation.",
+        "Member-benefits ska vara realistiska och fokusera på delaktighet, information, gemenskap eller möjlighet att bidra, inte kommersiella löften.",
+        "How-to-join ska beskriva processen tydligt, exempelvis registrering, intresseanmälan, kontakt eller deltagande i introduktion.",
+        "Avslutande CTA ska peka vidare till registrering eller kontaktformulär beroende på vilket underlag som finns."
+      ]
+    },
+    "news": {
+      "requiredSections": [
+        "news-intro",
+        "news-list",
+        "newsletter-signup"
+      ],
+      "optionalSections": [
+        "faq",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "News-intro ska förklara vilken typ av uppdateringar som publiceras här.",
+        "News-list ska prioritera aktuella och daterbara nyheter eller informationsposter, inte generisk marknadsföringstext.",
+        "Newsletter-signup ska erbjuda prenumeration på kommande information när den förmågan finns aktiverad."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "visit-info"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Kontaktvägar ska vara verkliga och användbara, till exempel e-post, telefon, adress eller annan tydlig kontaktkanal.",
+        "Contact-form ska användas för frågor, intresseanmälan eller engagemang och får inte ersätta all grundläggande kontaktinformation.",
+        "Visit-info ska förklara hur besök, möten eller deltagande fungerar om organisationen tar emot besökare."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Scaffolden måste spegla idéburen eller religiös verksamhet med fokus på uppdrag, delaktighet och transparent information.",
+      "Startsida och kontaktsida måste alltid finnas och ha sektioner definierade.",
+      "Medlemskap eller engagemang ska ha en tydlig väg i strukturen eftersom primär CTA är registrering.",
+      "Nyheter eller informationsyta ska finnas eftersom organisationer i denna bransch ofta behöver återkommande kommunikation.",
+      "Språk och struktur ska fungera både för föreningar och religiösa sammanhang utan att anta en specifik trosinriktning.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "E-handelsflöden, produktkatalog eller kommersiell prislogik som huvudstruktur.",
+      "Tjänstesidor som om organisationen vore ett vanligt serviceföretag.",
+      "Påhittade vittnesmål, medlemsantal, certifieringar eller sociala bevis.",
+      "Överdrivet säljig ton som skymmer uppdrag, värdegrund och samhälls- eller församlingsnytta."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "team-roster",
+      "trust-guarantees",
+      "faq-accordion",
+      "map-embed",
+      "opening-hours"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Ideell organisation, förening, samfund eller religiös verksamhet med behov av startsida, om oss, bli medlem, nyheter och kontakt. Fokus på uppdrag, värdegrund, demokratisk styrning, aktiviteter, engagemang, nyhetsbrev och transparent kontakt.",
+    "semanticSignals": [
+      "ideell-organisation",
+      "forening",
+      "samfund",
+      "religios-verksamhet",
+      "medlemskap",
+      "engagemang",
+      "vardegrund",
+      "demokratisk-styrning",
+      "styrelse",
+      "forsamling",
+      "nyheter",
+      "aktiviteter",
+      "gemenskap",
+      "kontaktformular",
+      "nyhetsbrev"
+    ],
+    "negativeSignals": [
+      "webshop",
+      "produktkatalog",
+      "bokningskalender-for-kommersiella-tjanster",
+      "restaurangmeny",
+      "fastighetsannonser",
+      "medicinsk-klinik",
+      "hantverkartjanster"
+    ],
+    "llmClassificationHints": [
+      "Använd denna scaffold när verksamheten främst vill samla medlemmar, deltagare eller engagerade personer snarare än sälja kommersiella tjänster.",
+      "Passar både allmän intressebevakning och religiösa aktörer inom SNI 94, särskilt när uppdrag, styrning och återkommande information är centralt.",
+      "Välj inte denna scaffold om webbplatsens huvudsyfte är e-handel, bokning eller lokal serviceleverans."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

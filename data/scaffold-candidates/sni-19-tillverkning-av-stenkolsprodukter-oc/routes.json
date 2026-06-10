@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara produktinriktningen och leda besökaren vidare till kontakt eller produktöversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera företagets huvudsakliga produktområden, användningsområden och hur kunder går vidare med förfrågan."
+    },
+    {
+      "id": "applications",
+      "path": "/anvandningsomraden",
+      "required": true,
+      "purpose": "Visa vilka branscher, processer eller användningsfall produkterna är avsedda för och hjälpa besökaren hitta rätt lösning."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, verksamhetsmiljö, team och arbetssätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt om produkter, leveranser, samarbeten eller anläggningsbesök."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "facility",
+      "path": "/anlaggning",
+      "when": "när företaget vill beskriva produktionsanläggning, logistikläge, säkerhetsarbete eller mottagningsrutiner mer utförligt"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när återkommande frågor om leverans, specifikationer, kontaktvägar eller samarbeten behöver besvaras separat"
+    }
+  ]
+}

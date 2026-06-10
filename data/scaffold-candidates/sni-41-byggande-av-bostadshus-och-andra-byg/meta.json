@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-41-byggande-av-bostadshus-och-andra-byg",
+  "sniCode": "41",
+  "wizardCategoryId": "construction",
+  "industryProfileId": "sni-41",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:27:55Z",
+  "outputPath": "data/scaffold-candidates/sni-41-byggande-av-bostadshus-och-andra-byg",
+  "operatorBriefHash": "sha256:7d0c90692d18a9a962021ff9732ca99daef2c6678f3ad060fc894973d0097cdb",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,31 @@
+{
+  "id": "sni-02-skogsbruk",
+  "embeddingText": "Skogsbruk, skogliga tjänster, avverkning, gallring, skogsvård, markägare, arbetsområden, offertförfrågan, lokal tjänsteverksamhet, kontaktfokuserad företagswebbplats.",
+  "semanticSignals": [
+    "skogliga-tjanster",
+    "avverkning",
+    "gallring",
+    "skogsvard",
+    "markberedning",
+    "arbetsomrade",
+    "markagare",
+    "kontakt-for-offert",
+    "referenser",
+    "f-skattsedel"
+  ],
+  "negativeSignals": [
+    "webshop",
+    "produktkatalog",
+    "restaurangmeny",
+    "bordsbokning",
+    "fotogalleri-som-huvudsyfte",
+    "digital-saas-tjanst"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for forestry and forest service companies where the main website goal is to explain services and drive contact.",
+    "Prioritize concrete service descriptions and geography over broad brand storytelling.",
+    "A dedicated service-area route is more relevant here than a generic team or testimonials page."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

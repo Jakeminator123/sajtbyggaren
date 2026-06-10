@@ -1,0 +1,39 @@
+{
+  "id": "sni-24-stal-och-metallframstallning",
+  "embeddingText": "Industriscaffold för stål- och metallframställning som prioriterar produktöversikt, processbeskrivning, anläggningsförtroende, kvalitetsarbete och kontakt för offert eller samarbete.",
+  "semanticSignals": [
+    "stal",
+    "metall",
+    "framstallning",
+    "valsning",
+    "gjutning",
+    "bearbetning",
+    "legeringar",
+    "ramaterial",
+    "halvfabrikat",
+    "produktion",
+    "industri",
+    "anlaggning",
+    "kvalitet",
+    "leverans",
+    "offert",
+    "materialspecifikation"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "meny",
+    "bokning-av-bord",
+    "e-handel",
+    "produktkassa",
+    "fotogalleri-som-huvudsyfte",
+    "salong",
+    "klinik"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company primarily manufactures, processes or supplies steel and metal products in an industrial B2B context.",
+    "Prefer this over a generic service-business scaffold when product categories, material types, production processes or plant capabilities are central to the offering.",
+    "Quality and process transparency matter more than lifestyle branding for this industry."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

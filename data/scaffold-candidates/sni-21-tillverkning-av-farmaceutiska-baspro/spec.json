@@ -1,0 +1,279 @@
+{
+  "id": "sni-21-tillverkning-av-farmaceutiska-baspro",
+  "label": "Tillverkning av farmaceutiska basprodukter och läkemedel",
+  "description": "Scaffold för företag inom tillverkning av farmaceutiska basprodukter och läkemedel, med fokus på förtroende, produktionskapacitet, kvalitet, regulatorisk tydlighet och enkel kontakt för affärs- och partnerförfrågningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara verksamhetens inriktning och kapacitet",
+    "bygga förtroende kring kvalitet, process och ansvar",
+    "presentera produktions- och utvecklingsområden",
+    "leda besökare till kontakt för affärsdialog, partnerskap eller förfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara erbjudandet på hög nivå och leda vidare till kontakt eller relevanta undersidor."
+    },
+    {
+      "id": "capabilities",
+      "path": "/kapacitet",
+      "required": true,
+      "purpose": "Beskriva företagets tillverknings-, utvecklings- eller produktionskapacitet på ett konkret och förtroendeingivande sätt."
+    },
+    {
+      "id": "quality-and-compliance",
+      "path": "/kvalitet-och-efterlevnad",
+      "required": true,
+      "purpose": "Redovisa företagets arbete med kvalitet, processkontroll och regulatorisk efterlevnad utan att överdriva eller hitta på meriter."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att presentera verksamheten, teamet och hur företaget arbetar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för affärsfrågor, samarbeten eller allmänna förfrågningar."
+    },
+    {
+      "id": "products",
+      "path": "/produktomraden",
+      "optional": true,
+      "when": "när företaget behöver beskriva produktområden, molekyltyper, läkemedelsformer eller andra tydliga erbjudandekategorier utan full e-handel"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när verksamheten ofta får återkommande frågor om process, kontaktvägar, kvalitet eller samarbeten"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när fysisk plats, anläggning eller besöksadress behöver beskrivas mer utförligt än på kontaktsidan"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "capability-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "quality-summary",
+        "about-summary",
+        "reviews",
+        "faq",
+        "video-hero"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and a realistic primary CTA.",
+        "Capability summary must describe actual manufacturing or development areas in concrete terms, not vague innovation claims.",
+        "Trust proof must appear before the final contact CTA.",
+        "Quality summary may highlight processes, controls or ways of working but must not imply certifications or approvals that are not provided in the content.",
+        "Sections should avoid repeating the same claims across hero, capability summary and trust proof."
+      ]
+    },
+    "capabilities": {
+      "requiredSections": [
+        "capabilities-intro",
+        "capability-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Capabilities intro must connect the company's role to the kinds of pharmaceutical production or development work it actually performs.",
+        "Capability list items must be specific, such as formulation, production support, packaging, quality support or related areas when supplied by the dossier.",
+        "Do not present products or services as patient-directed if the company is primarily B2B or manufacturing-focused unless the content explicitly supports it."
+      ]
+    },
+    "quality-and-compliance": {
+      "requiredSections": [
+        "quality-intro",
+        "quality-principles",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Quality intro must explain the company's approach to quality and compliance in plain language.",
+        "Quality principles must describe routines, controls, documentation or responsibility areas honestly and without legal or regulatory overclaiming.",
+        "Trust proof on this page should favor visible business facts, references or supplied guarantees rather than duplicating generic statements."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company in specific operational terms, not generic mission language.",
+        "Team section should focus on relevant functions or leadership when people data exists, and may be omitted by the renderer only if no team data is available despite being required in the scaffold grammar.",
+        "Trust proof should reinforce seriousness and transparency, for example visible organisation details or references when supplied."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include available real contact methods and should not use placeholder content.",
+        "If address data exists, it should be shown clearly.",
+        "The CTA should fit business inquiries, partnerships or general contact rather than consumer checkout language."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Industry fit is pharmaceutical manufacturing rather than generic local services.",
+      "Home and contact routes are included.",
+      "Default routes each have matching sectionsPerRoute entries.",
+      "Route paths are Swedish, lowercase and slash-prefixed.",
+      "Copy remains factual and avoids invented certifications, approvals or production claims.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic local-service framing focused on household jobs",
+      "consumer webshop structure",
+      "medical advice content",
+      "claims about regulatory approval, GMP status, export rights or certifications unless explicitly provided",
+      "fake counts, invented customer logos or unsupported testimonials"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees",
+      "map-embed",
+      "opening-hours",
+      "faq-accordion",
+      "image-gallery",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tillverkning av farmaceutiska basprodukter och läkemedel. Företagswebb med startsida, kapacitet, kvalitet och efterlevnad, om oss och kontakt. Fokus på produktionskapacitet, kvalitetssystem, regulatorisk tydlighet, team, referenser och enkel kontakt för affärsförfrågningar.",
+    "semanticSignals": [
+      "pharmaceutical-manufacturing",
+      "farmaceutiska-basprodukter",
+      "lakemedelstillverkning",
+      "produktion-och-kapacitet",
+      "kvalitet-och-efterlevnad",
+      "b2b",
+      "anlaggning",
+      "processkontroll",
+      "dokumentation",
+      "kontakt-for-samarbeten"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "online-store-checkout",
+      "consumer-appointment-booking",
+      "portfolio-heavy-creative-studio",
+      "local-emergency-home-repair"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the company manufactures pharmaceutical substances, medicines or closely related regulated products.",
+      "Prefer this scaffold when trust, quality, process and compliance are central to the buying decision.",
+      "Do not classify as generic service business if the content emphasizes production facilities, quality systems, formulation, batch work or regulated manufacturing contexts."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

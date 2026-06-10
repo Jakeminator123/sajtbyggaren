@@ -1,0 +1,89 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "sortiment-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "logistics-capabilities",
+      "customer-types",
+      "reviews",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what kinds of products or trade categories the company works with and include a primary contact CTA.",
+      "Sortiment summary must describe concrete product areas or buyer needs, not vague claims about having everything.",
+      "Trust proof should focus on real signals such as delivery reliability, assortment breadth, supplier relationships or practical experience.",
+      "If customer-types is present, it should clarify which business customers the company serves, such as retailers, installers, resellers or industrial buyers.",
+      "Final CTA should invite contact or customer onboarding without implying instant online checkout unless that capability actually exists."
+    ]
+  },
+  "sortiment": {
+    "requiredSections": [
+      "sortiment-intro",
+      "category-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-table",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Sortiment intro must explain how the assortment is structured and who it is intended for.",
+      "Category list items must be concrete product groups, brands or supply areas rather than generic marketing labels.",
+      "Pricing content, if shown, must describe price models, minimum orders or quote logic honestly and should not mimic consumer retail pricing unless applicable.",
+      "A contact CTA should appear after the product overview to support quote requests or assortment inquiries."
+    ]
+  },
+  "bli-kund": {
+    "requiredSections": [
+      "customer-onboarding-intro",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-guarantees"
+    ],
+    "sectionOrderRules": [
+      "Customer onboarding intro must explain how a company starts the relationship, for example by sending an inquiry, sharing company details or discussing needs.",
+      "Process steps must describe a realistic B2B flow such as contact, needs review, account setup, ordering and delivery.",
+      "If trust-guarantees is present, it must communicate real service commitments or support principles and not invent formal guarantees.",
+      "The page should reduce friction and answer practical questions rather than repeat general brand copy from the home page."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company's focus, market role or way of working in specific terms relevant to wholesale or agency trade.",
+      "Team should be included when real people or functions can be presented; otherwise the renderer may keep this section compact.",
+      "Trust proof should emphasize business credibility, continuity, supplier relationships and customer support without repeating every claim from the home page."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real contact channels relevant for business inquiries, such as phone, email and visiting or warehouse address when available.",
+      "If opening-hours is shown, it should reflect actual phone, office or warehouse availability.",
+      "Contact CTA should support quote requests, product questions and new customer inquiries through a clear form or direct contact method."
+    ]
+  }
+}

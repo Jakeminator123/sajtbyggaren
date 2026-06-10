@@ -1,0 +1,35 @@
+{
+  "id": "sni-65-forsakrings-aterforsakrings-och-pens",
+  "embeddingText": "Försäkrings-, återförsäkrings- och pensionsfondsverksamhet behöver en saklig, förtroendeskapande webbstruktur med startsida, erbjudandesida, om-oss-sida och kontaktsida. Fokus ligger på att förklara produktområden, målgrupper, processer, villkor på översiktlig nivå, rådgivning och tydliga kontaktvägar för offert eller frågor. Vanliga kompletterande sidor är FAQ, team, priser för standardiserade upplägg, skade- eller ärendeinformation och insikter.",
+  "semanticSignals": [
+    "forsakring",
+    "aterforsakring",
+    "pensionsfond",
+    "tjanstepension",
+    "livforsakring",
+    "sakforsakring",
+    "riskbedomning",
+    "villkor",
+    "ersattning",
+    "kapitalforvaltning",
+    "kundservice",
+    "radgivning",
+    "offert",
+    "skadeanmalan"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "webshop",
+    "produktkorg",
+    "bokningskalender-for-behandlingar",
+    "fastighetsobjekt",
+    "fotogalleri-som-huvudlogik"
+  ],
+  "llmClassificationHints": [
+    "Denna scaffold passar verksamheter inom försäkring, återförsäkring och pension där besökaren behöver förstå erbjudande, villkor på hög nivå och kontaktvägar.",
+    "Om verksamheten säljer komplexa finansiella eller riskrelaterade produkter är strukturerade tjänsteområden viktigare än allmän prislista.",
+    "FAQ och kontaktformulär är centrala eftersom besökare ofta har process- och villkorsfrågor innan de tar kontakt."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

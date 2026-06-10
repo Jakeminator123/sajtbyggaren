@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera butiken, lyft utvalda produkter och led besökaren vidare till produktsortimentet eller direkt köp."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera sortimentet med konkreta produkter, priser när de finns och tydlig väg vidare till köp."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Hjälp kunder som har frågor om produkter, beställning, leverans, byten eller butikskontakt att nå företaget snabbt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva butiken, människorna bakom, urvalet och hur ni arbetar."
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "required": false,
+      "purpose": "Besvara vanliga frågor om köp, betalning, leverans, returer och storlekar för att minska tvekan inför beställning."
+    },
+    {
+      "id": "store-info",
+      "path": "/butik-oppettider",
+      "required": false,
+      "purpose": "Visa fysisk butik, adress och öppettider när verksamheten även har butik eller utlämning."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "reviews",
+      "path": "/kundrecensioner",
+      "when": "när butiken har riktiga kundomdömen som stärker köptryggheten"
+    },
+    {
+      "id": "lookbook",
+      "path": "/inspiration",
+      "when": "när varumärket behöver en mer visuell eller kuraterad yta utöver produktlistan"
+    }
+  ]
+}

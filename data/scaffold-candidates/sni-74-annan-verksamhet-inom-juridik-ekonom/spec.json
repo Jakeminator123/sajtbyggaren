@@ -1,0 +1,295 @@
+{
+  "id": "sni-74-annan-verksamhet-inom-juridik-ekonom",
+  "label": "Annan verksamhet inom juridik, ekonomi, vetenskap och teknik",
+  "description": "Scaffold för fristående konsult- och specialistverksamheter inom SNI 74 där försäljningen bygger på expertis, tydliga uppdragstyper, kundcase och enkel offertväg snarare än fysisk butik eller bokningsflöde.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara expertis och erbjudande tydligt",
+    "bygga förtroende med kundcase och referenssignaler",
+    "presentera team eller specialistprofil",
+    "visa arbetssätt för komplexa uppdrag",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Startsida som snabbt förklarar vilken specialistkompetens verksamheten erbjuder, för vilka kunder och vilken nytta uppdragen skapar. Ska leda vidare till case, om oss eller offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Översikt över tjänster, uppdragstyper eller kompetensområden. Besökaren ska snabbt förstå vad företaget hjälper till med och när det är relevant att ta kontakt."
+    },
+    {
+      "id": "cases",
+      "path": "/case",
+      "required": true,
+      "purpose": "Sida för utvalda kundcase, projekt eller uppdragsexempel som visar arbetsområde, utmaning, insats och resultat på ett trovärdigt sätt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presentera företaget, specialistbakgrund, arbetssätt och team. Ska stärka förtroendet genom erfarenhet, fokus och tydlig ansvarsfördelning."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Tydlig kontaktsida med kontaktuppgifter och formulär för offert eller första dialog. Ska göra det enkelt att beskriva behov och ta nästa steg."
+    },
+    {
+      "id": "process",
+      "path": "/process",
+      "optional": true,
+      "when": "när verksamheten säljer in ett tydligt upplägg för analys, genomförande och leverans som hjälper kunden att förstå hur samarbetet går till"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när kunder ofta behöver svar på vanliga frågor om upplägg, leverans, sekretess, offert eller samarbetsstart innan de kontaktar företaget"
+    },
+    {
+      "id": "team",
+      "path": "/vart-team",
+      "optional": true,
+      "when": "när verksamheten har flera konsulter eller specialister och teamets kompetens är ett viktigt säljargument"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "services-overview",
+        "selected-cases-preview",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "process-steps",
+        "team-preview",
+        "faq-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the firm's expertise, target client or problem area, and the primary CTA without vague management filler.",
+        "Services overview should appear before long company story so visitors can quickly confirm relevance.",
+        "Selected cases preview should come before deep about copy because this industry sells on proof as much as on credentials.",
+        "Trust signals must stay factual, such as case outcomes, client types, sectors or years of experience, without invented certifications or exaggerated counts.",
+        "Contact CTA should appear by the end of the page with a clear next step such as request a quote or start a conversation."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-list",
+        "ideal-client-fit",
+        "process-summary",
+        "faq-accordion",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-approach",
+        "selected-cases-preview",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "Services list must be grouped by real offer areas or assignment types, not abstract buzzwords.",
+        "Ideal client fit should clarify when the service is suitable and what kinds of needs the firm typically solves.",
+        "If pricing is mentioned, present it as approach, scope logic or starting point only when truthful; do not imply fixed packages unless they exist.",
+        "FAQ should answer practical purchase questions and reduce friction before contact."
+      ]
+    },
+    "cases": {
+      "requiredSections": [
+        "cases-grid",
+        "case-method-note",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "client-quotes",
+        "services-overview"
+      ],
+      "sectionOrderRules": [
+        "Each case card should name the assignment type or problem solved and summarise the delivered value in concrete language.",
+        "Do not overclaim measurable outcomes if exact figures are unavailable; describe improvements honestly.",
+        "Case method note can explain confidentiality limits when client work cannot be shown in full detail."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "expertise-highlights",
+        "team-block",
+        "process-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "values",
+        "selected-cases-preview",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "About story should explain background, specialisation and why the business exists in practical terms.",
+        "Expertise highlights should focus on domain knowledge, methods, sectors or problem areas rather than generic passion statements.",
+        "Team block may collapse to founder profile when the company is a solo specialist.",
+        "Process steps should describe the actual way of working from first dialogue to delivery and follow-up."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "inquiry-guidance"
+      ],
+      "optionalSections": [
+        "map",
+        "faq-accordion"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include direct and usable contact methods such as email and phone when available.",
+        "Contact form should ask for the essentials needed to understand the assignment without making the form unnecessarily long.",
+        "Inquiry guidance should help the visitor describe scope, timeline or challenge to improve lead quality."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Fits specialist consulting and agency-like firms within SNI 74 that sell expertise, analysis, creative or technical assignments.",
+      "Includes a clear route for services and a clear route for cases because buyers need both offer clarity and proof.",
+      "Supports both solo experts and small teams without forcing a large-company structure.",
+      "Provides a strong quote/contact path on home and contact pages.",
+      "Uses honest trust-building elements appropriate for expert services.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the scaffold like a restaurant, clinic, event venue or webshop.",
+      "Do not make pricing mandatory because many firms in this industry price by scope or quote.",
+      "Do not force booking flows as the main conversion path when the brief emphasises quote/request contact.",
+      "Do not rely on generic slogan-only pages without concrete services, cases or expertise.",
+      "Do not assume regulated legal credentials or authorisations unless explicitly provided."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik scaffold för SNI 74 annan verksamhet inom juridik, ekonomi, vetenskap och teknik: expertkonsulter, specialister och byråliknande verksamheter som behöver startsida, tjänstesida, casesida, om-sida och kontaktsida. Fokus på expertis, kundcase, team, process, FAQ och offertförfrågan.",
+    "semanticSignals": [
+      "konsulttjanster",
+      "specialistkompetens",
+      "uppdragstyper",
+      "kundcase",
+      "referenskunder",
+      "expertprofil",
+      "teamkompetens",
+      "arbetssatt",
+      "offertforfragan",
+      "professionell-byra",
+      "analys-och-radgivning"
+    ],
+    "negativeSignals": [
+      "e-handel",
+      "produktkatalog",
+      "restaurangmeny",
+      "bordsbokning",
+      "medicinsk-klinik",
+      "salongsbehandlingar",
+      "hotellbokning",
+      "evenemangsbiljetter"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold for SNI 74 businesses that primarily sell expertise or project-based services.",
+      "Strong fit when the company needs case studies, service descriptions, team credibility and a quote-oriented contact flow.",
+      "Also fits solo specialists where team content can reduce to founder profile and selected collaborators."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#ffffff",
+          "foreground": "#0a0a0a",
+          "muted": "#5b5b5b",
+          "border": "#e0e0e0",
+          "primary": "#0a0a0a",
+          "primaryForeground": "#ffffff",
+          "accent": "#caa14a",
+          "accentForeground": "#0a0a0a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.125rem",
+          "md": "0.25rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "monochrome",
+          "modular",
+          "sharp",
+          "curated",
+          "confident",
+          "creative"
+        ]
+      }
+    }
+  ]
+}

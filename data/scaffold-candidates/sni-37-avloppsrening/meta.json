@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-37-avloppsrening",
+  "sniCode": "37",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-37",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:27:31Z",
+  "outputPath": "data/scaffold-candidates/sni-37-avloppsrening",
+  "operatorBriefHash": "sha256:070c8795fd95fb1ff9556094c909be3d67fd1c69d6095229b737f1cb28dabd73",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

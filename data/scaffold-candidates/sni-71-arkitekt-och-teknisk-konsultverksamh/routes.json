@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Översiktssida som snabbt förklarar verksamhetens inriktning, viktigaste tjänster, relevanta referensprojekt, arbetsprocess och tydlig väg till offertförfrågan. För denna bransch behöver besökaren förstå både teknisk kompetens och hur uppdrag genomförs."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samlad tjänstesida för arkitektur, projektering, teknisk rådgivning, provning eller analys. Ska hjälpa beställare att förstå vad företaget gör, vilka typer av uppdrag som passar och hur leveransen brukar avgränsas."
+    },
+    {
+      "id": "projects",
+      "path": "/referensprojekt",
+      "required": true,
+      "purpose": "Referenssida med utvalda projekt, uppdrag eller analyser. I denna bransch är tidigare uppdrag centrala för trovärdighet, särskilt när kunder vill bedöma erfarenhet inom bygg, teknik, mätning, provning eller utredning."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Sida om företaget, teamet, behörigheter, arbetssätt och ansvar. Besökaren behöver kunna bedöma kompetens, roller och vilken typ av expertis som finns internt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Kontakt- och offertsida med tydliga kontaktuppgifter, kontaktformulär och praktisk information så att beställare snabbt kan initiera dialog om projekt, utredning eller provningsbehov."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "process",
+      "path": "/process",
+      "when": "när företaget säljer på en tydligt definierad arbetsmodell, till exempel förstudie, projektering, granskning, provning, rapportering och uppföljning"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när kunder ofta behöver vägledning om leveransomfattning, underlag, tidsplaner, platsbesök, rapporter eller hur en offertförfrågan bör förberedas"
+    }
+  ]
+}

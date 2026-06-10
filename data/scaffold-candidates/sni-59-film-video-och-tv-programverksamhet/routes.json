@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten med showreel, visuellt uttryck och tydlig väg till offertförfrågan."
+    },
+    {
+      "id": "portfolio",
+      "path": "/portfolio",
+      "required": true,
+      "purpose": "Visa utvalda produktioner, case eller verkprover så att besökaren snabbt förstår stil, nivå och inriktning."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Förklara vilka produktionstjänster som erbjuds och hur uppdrag kan genomföras."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan, boka ett första samtal eller kontakta verksamheten direkt."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när verksamheten har en tydlig berättelse, nyckelpersoner eller kreativ profil som stärker förtroendet"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "när fasta paket, startpriser eller tydliga prisexempel används i säljprocessen"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när återkommande frågor om process, leverans, rättigheter eller bokning behöver besvaras separat"
+    }
+  ]
+}

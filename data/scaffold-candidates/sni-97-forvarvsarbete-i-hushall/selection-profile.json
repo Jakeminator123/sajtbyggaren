@@ -1,0 +1,29 @@
+{
+  "id": "sni-97-forvarvsarbete-i-hushall",
+  "embeddingText": "Förvärvsarbete i hushåll, enkel informationswebbplats, tydlig verksamhetsbeskrivning, om verksamheten, kontaktformulär, kontaktuppgifter, organisationsnummer, småskalig tjänsteverksamhet, tydlighet före allt.",
+  "semanticSignals": [
+    "hushallsarbete",
+    "kontaktfokus",
+    "enkel-foretagswebbplats",
+    "tydlig-avsandare",
+    "om-verksamheten",
+    "praktisk-information",
+    "organisationsnummer",
+    "smaskalig-verksamhet"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "produktkatalog",
+    "restaurangmeny",
+    "onlinebokning-som-huvudflode",
+    "portfoljtung-showcase",
+    "stort-redaktionellt-innehall"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten inom SNI 97 främst behöver en enkel och trovärdig närvarowebb med startsida, om-sida och kontakt.",
+    "Prioritera tydlighet om vad som görs och hur kontakt sker framför säljdrivna eller funktionsrika sidtyper.",
+    "Lägg bara till separat tjanster-sida om underlaget faktiskt beskriver flera distinkta uppdragstyper."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

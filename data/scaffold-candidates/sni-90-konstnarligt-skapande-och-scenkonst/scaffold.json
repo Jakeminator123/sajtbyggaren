@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-90-konstnarligt-skapande-och-scenkonst",
+  "version": "0.1.0",
+  "label": "Konstnärligt skapande och scenkonst",
+  "description": "Scaffold för konstnärer, scenkonstnärer, fria grupper och kreatörer som behöver visa verk, föreställningar och aktuella datum samt ge en tydlig kontaktväg för bokning, press och samarbeten.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa verk, produktioner eller repertoar visuellt",
+    "presentera kommande föreställningar, utställningar eller datum",
+    "bygga förtroende med press, recensioner, stipendier och tidigare sammanhang",
+    "göra det enkelt att ta kontakt för bokning, press eller samarbeten"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

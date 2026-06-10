@@ -1,0 +1,100 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "machine-summary",
+      "industries-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "process-summary",
+      "image-gallery",
+      "reviews",
+      "faq",
+      "service-summary"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what kinds of machines or solutions the company manufactures and include a primary contact CTA.",
+      "Machine summary must describe concrete machine categories or solution types, not generic 'high quality solutions' copy.",
+      "Industries summary should name relevant customer segments or use cases when known.",
+      "Trust proof must rely on real references, visible company details or concrete production capabilities; do not invent certifications or delivery volumes.",
+      "Final contact CTA should invite quote request, technical discussion or project inquiry without repeating the same claims verbatim."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "customization",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Products intro must connect the company to its machine offering and typical customer needs.",
+      "Product list items must be concrete and grouped by machine type, function or application area.",
+      "Customization section should explain configurable options, adaptation to requirements or project-based delivery when applicable.",
+      "Avoid presenting machines as off-the-shelf products if the business mainly works with tailored manufacturing."
+    ]
+  },
+  "service": {
+    "requiredSections": [
+      "service-intro",
+      "service-list",
+      "support-process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "opening-hours",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Service intro must clarify what happens after delivery, such as maintenance, spare parts or technical support.",
+      "Service list must be specific about support types rather than generic promises of availability.",
+      "Support process should explain how customers initiate service or technical cases and what contact path to use.",
+      "Opening hours may appear when support times are actually provided in the dossier."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "production-capability",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "process-summary",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the company, its manufacturing focus and how it works with customers.",
+      "Production capability should cover workshop, design, assembly or testing capacity only when supported by provided data.",
+      "Team section should highlight relevant roles or expertise when available.",
+      "Do not use vague prestige language in place of concrete competence or facilities."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "map",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real phone, email and address details when available and must not use placeholders.",
+      "Contact form should support quote requests or technical inquiries in a straightforward way.",
+      "Map should be shown when location data exists.",
+      "Contact CTA should reinforce the next step without making unsupported response-time promises."
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-38-insamling-av-avfall-atervinning-och",
+  "sniCode": "38",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-38",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:27:49Z",
+  "outputPath": "data/scaffold-candidates/sni-38-insamling-av-avfall-atervinning-och",
+  "operatorBriefHash": "sha256:b79a319bbc763c8923599d512d0585b305be2f0f7e7541e8d3a765d438682b00",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

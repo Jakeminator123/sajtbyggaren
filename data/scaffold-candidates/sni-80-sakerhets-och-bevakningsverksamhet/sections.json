@@ -1,0 +1,98 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "jour-highlight",
+      "industries-served",
+      "testimonials",
+      "faq",
+      "certifications",
+      "team-preview",
+      "service-area",
+      "video-intro"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and primary offer clearly, and may mention location or availability only when known.",
+      "Service summary must cover concrete security services such as rondering, stationär bevakning, larmutryckning or ordningshållning when those services exist in the dossier.",
+      "Trust proof must rely on real signals like auktorisation, utbildad personal, jour or documented experience, and must not imply approvals that are not provided.",
+      "If testimonials or reviews are shown, trust-proof should avoid repeating the same claims verbatim.",
+      "The final contact CTA must make next step clear: contact, request quote or discuss a security solution."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "industries-served",
+      "process-overview",
+      "faq",
+      "service-area"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company's role in security and monitoring to the listed services.",
+      "Service list items must be specific, for example mobile patrols, reception security, event security, alarm response or camera monitoring support, rather than vague labels.",
+      "If a process overview is present, it should explain assessment, proposal, start-up and follow-up in plain language without promising outcomes the business cannot guarantee.",
+      "Contact CTA should invite a needs dialogue or quote request, not force exact pricing when services are custom."
+    ]
+  },
+  "agreements-pricing": {
+    "requiredSections": [
+      "pricing-intro",
+      "agreement-options",
+      "pricing-factors",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "This page must explain that pricing often depends on assignment scope, schedule, staffing, site conditions and service level.",
+      "Agreement options may describe examples such as ongoing contracts, scheduled rounds or event-based assignments, but must not present fabricated package names as if they are standard.",
+      "If prices are unavailable, the page should use transparent estimation language and steer to quote request rather than inventing numbers.",
+      "Trust proof on this page should support seriousness and professionalism, not replace pricing clarity."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "operating-principles",
+      "service-area",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "About story must be concrete about the company, customers served, working style or history, avoiding empty claims.",
+      "Team section should present roles or competence responsibly and must not expose sensitive personal details unnecessarily.",
+      "Trust proof may include authorisation, training focus, routines and availability only when supported by the dossier."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map",
+      "emergency-note"
+    ],
+    "sectionOrderRules": [
+      "Contact page must provide real phone, email and address details when available and should not use placeholders.",
+      "Contact form should fit quote requests and general inquiries with clear expectations for response.",
+      "If an emergency note is shown, it must not imply official emergency services; it should only clarify the company's own jour or urgent contact route when such service exists."
+    ]
+  }
+}

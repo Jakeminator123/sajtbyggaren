@@ -1,0 +1,90 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "research-areas-preview",
+      "selected-projects-preview",
+      "method-summary",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the research or development focus in plain language and pair it with a concrete CTA for contact or quote requests.",
+      "Research areas preview must appear before broad company background so visitors can assess subject-matter fit quickly.",
+      "Selected projects preview must come before extended trust copy; this industry often converts through demonstrated competence and applied outcomes.",
+      "Trust signals must stay factual, such as project types, sectors served, methods used or named reference customers when permission exists."
+    ]
+  },
+  "research-areas": {
+    "requiredSections": [
+      "research-areas-list",
+      "applications-block",
+      "method-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq-accordion",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "Research areas list must lead the page and use recognisable subject labels rather than vague marketing phrasing.",
+      "Applications block should connect each area to practical use cases, sectors or problem types so visitors understand relevance.",
+      "Method summary should describe how the organisation investigates, validates or develops, without implying guarantees that research cannot honestly promise."
+    ]
+  },
+  "projects": {
+    "requiredSections": [
+      "project-grid",
+      "case-method-result",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "research-areas-preview",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "Project grid must dominate the page with one card per project, case or assignment.",
+      "Each case should make room for problem, method and result or deliverable; avoid empty before-after claims where evidence is unavailable.",
+      "Trust signals should support the cases with reference customers, sectors or collaboration formats, not replace the cases themselves."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story-block",
+      "team-block",
+      "scientific-approach",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "About story must explain the organisation's background, focus and competence in specific terms rather than generic innovation language.",
+      "Team block should foreground relevant roles, disciplines or areas of expertise so visitors can see who they may work with.",
+      "Scientific approach must describe how rigor, validation and documentation are handled in practice.",
+      "Process steps should use the organisation's real stages, for example frågeställning, design, datainsamling, analys and rapportering, if applicable."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq-accordion",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Phone must be a tel: link and email must be a mailto: link.",
+      "Contact form should support quote, project and collaboration enquiries with a low-friction set of fields.",
+      "Any address must render as a readable block that can be copied into email or calendar tools."
+    ]
+  }
+}

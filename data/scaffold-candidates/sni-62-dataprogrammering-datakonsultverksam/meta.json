@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-62-dataprogrammering-datakonsultverksam",
+  "sniCode": "62",
+  "wizardCategoryId": "tech",
+  "industryProfileId": "sni-62",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:46Z",
+  "outputPath": "data/scaffold-candidates/sni-62-dataprogrammering-datakonsultverksam",
+  "operatorBriefHash": "sha256:9ae05a4e3635f5436cc70b6b3dad2047b02cdac8abb8a0f95917bfd714d8a87c",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

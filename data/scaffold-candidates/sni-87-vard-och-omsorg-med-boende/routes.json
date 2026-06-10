@@ -1,0 +1,50 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Skapa ett första intryck av trygghet, värdighet och professionalism, förklara vem boendet är till för och leda besökaren vidare till kontakt eller intresseanmälan utan att kräva att de tolkar fackspråk."
+    },
+    {
+      "id": "boende",
+      "path": "/boende",
+      "required": true,
+      "purpose": "Beskriva boendeformen, målgrupp, miljö, vardag och vilket stöd som ingår så att närstående och handläggare snabbt kan avgöra om verksamheten är relevant."
+    },
+    {
+      "id": "omsorg-och-stod",
+      "path": "/omsorg-och-stod",
+      "required": true,
+      "purpose": "Förklara vilken omsorg, omvårdnad, aktiviteter och individuellt stöd verksamheten erbjuder, med tydligt språk om vad man kan förvänta sig i vardagen."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla telefon, e-post, adress, öppettider och tydliga nästa steg för frågor, visning, inflyttning eller placeringsförfrågan."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "verksamheten har flera namngivna nyckelpersoner eller legitimerad personal som skapar extra förtroende för närstående och handläggare"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "verksamheten ofta får återkommande frågor om målgrupp, platstillgång, besökstider, avgifter, inflyttning eller hur kontaktvägar fungerar"
+    },
+    {
+      "id": "bilder",
+      "path": "/bilder",
+      "when": "lokaler, gemensamma utrymmen och utemiljö är viktiga för att skapa trygghet och verksamheten har egna, representativa bilder att visa"
+    },
+    {
+      "id": "for-narstaende",
+      "path": "/for-narstaende",
+      "when": "närstående behöver särskild information om besök, samverkan, kontaktpersoner och hur de kan vara delaktiga"
+    }
+  ]
+}

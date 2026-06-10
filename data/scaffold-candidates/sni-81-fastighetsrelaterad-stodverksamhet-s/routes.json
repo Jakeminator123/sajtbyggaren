@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera företaget, visa huvudtjänsterna och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva tjänster inom fastighetsskötsel, lokalvård, grönyteskötsel eller närliggande uppdrag på ett konkret sätt."
+    },
+    {
+      "id": "contracts",
+      "path": "/avtal",
+      "required": true,
+      "purpose": "Förklara hur löpande skötsel, fasta intervall och upplägg för återkommande uppdrag fungerar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan, ringa eller hitta företaget."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget har en tydlig historia, lokalt team eller arbetssätt som stärker förtroendet"
+    },
+    {
+      "id": "reviews",
+      "path": "/referenser",
+      "when": "när det finns kundomdömen eller referensuppdrag att visa utan att upprepa samma bevis på flera sidor"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "när företaget arbetar i flera orter eller stadsdelar och behöver en tydlig lokal närvarosida"
+    }
+  ]
+}

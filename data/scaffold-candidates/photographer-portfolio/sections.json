@@ -1,0 +1,91 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "portfolio-preview",
+      "specialties",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "reviews",
+      "about-intro",
+      "process-summary",
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Hero must show the business type or creator role and a clear primary CTA to view work or make contact.",
+      "Portfolio preview must appear early on the page and use real project imagery rather than generic stock-like filler.",
+      "Specialties should name concrete assignment types or niches, such as portraits, weddings, commercial photo or brand video.",
+      "Trust elements like reviews or process summary should support the visual work, not overshadow it.",
+      "The final CTA should invite a booking inquiry or project conversation without promising availability that is not confirmed."
+    ]
+  },
+  "portfolio": {
+    "requiredSections": [
+      "portfolio-intro",
+      "case-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "reviews",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Case list items must be concrete and grouped by project, shoot or production rather than shown as unexplained random images.",
+      "Each case should help the visitor understand style, context, or assignment type.",
+      "If reviews are shown, they should appear after enough work samples have established visual credibility.",
+      "Contact CTA should invite the visitor to ask about a similar assignment or discuss their own brief."
+    ]
+  },
+  "gallery": {
+    "requiredSections": [
+      "gallery-intro",
+      "image-gallery",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Gallery should prioritize image density and visual flow over long paragraphs.",
+      "Images should be relevant to the offered work and not duplicate the same selection too heavily from the portfolio page.",
+      "Intro copy should explain what kind of material the visitor is seeing, for example portraits, weddings, products or video stills."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "working-style",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must be personal, specific and grounded in the creator's actual background or way of working.",
+      "Working style should explain collaboration, preparation or delivery in practical terms.",
+      "If a team section is used, it should only present real collaborators or crew roles."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-intro",
+      "contact-info",
+      "contact-form"
+    ],
+    "optionalSections": [
+      "map",
+      "faq",
+      "booking-cta"
+    ],
+    "sectionOrderRules": [
+      "Contact page must provide real contact details available in the dossier, without placeholder text.",
+      "Contact form should help the visitor describe date, type of assignment, location or desired deliverables when relevant.",
+      "Map should only be shown when location is meaningful for studio visits or local presence.",
+      "If booking CTA is present, it must support the form rather than compete with it."
+    ]
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "production-summary",
+      "application-areas",
+      "image-gallery",
+      "reviews",
+      "faq",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company manufactures and include a primary contact CTA.",
+      "Product-summary must highlight concrete product families or material categories, not vague claims.",
+      "Trust-proof must use real business facts such as organisation details, references or clear process information.",
+      "If production-summary is present, it should appear before trust-proof.",
+      "Final CTA should invite contact for quote, specification dialogue or delivery questions without promising unavailable services."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-category-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "application-areas",
+      "pricing-overview",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Products-intro must explain the scope of the offering in plain language.",
+      "Product-category-list items must be concrete and describe product type, common use or ordering basis when known.",
+      "Do not present products as an ecommerce checkout if the business primarily sells via enquiry.",
+      "Pricing-overview may only show honest price examples, ranges or request-for-quote messaging when exact pricing is not available."
+    ]
+  },
+  "production": {
+    "requiredSections": [
+      "production-intro",
+      "materials-and-process",
+      "capacity-and-delivery",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "quality-approach",
+      "image-gallery",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Production-intro must connect the manufacturing setup to customer needs such as series, dimensions, finish or delivery.",
+      "Materials-and-process should describe actual materials or process steps at a high level without inventing technical certifications.",
+      "Capacity-and-delivery should stay factual and avoid unsupported lead-time promises.",
+      "If quality-approach is shown, it should focus on controls, consistency, documentation or experience only when supported by input data."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map",
+      "pickup-or-delivery-info"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real phone, email and address details when available.",
+      "Contact-form should be framed for quote requests, product questions or delivery enquiries.",
+      "If pickup-or-delivery-info is shown, it should clarify practical logistics such as loading, collection or reception times.",
+      "Map should appear after core contact details unless the page is very short."
+    ]
+  }
+}

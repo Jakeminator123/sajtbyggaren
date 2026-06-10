@@ -1,0 +1,82 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "repair-process",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-highlight",
+      "reviews",
+      "faq",
+      "gallery",
+      "opening-hours",
+      "map",
+      "story"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the business repairs or services and include a primary contact CTA.",
+      "Service-summary should group concrete repair categories or common problem types rather than vague claims.",
+      "Repair-process should explain how inquiry, diagnosis, approval and handover work in clear steps.",
+      "Trust-proof must stay factual and may mention guarantees, original parts when actually used, and fast response when supported by the business data.",
+      "Opening-hours and map should appear near the lower part of the page unless contact details are central to the conversion goal.",
+      "Sections must avoid promising exact repair times or outcomes unless the business data supports it."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "device-or-item-coverage",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "repair-process",
+      "faq",
+      "pricing-highlight"
+    ],
+    "sectionOrderRules": [
+      "Services-intro must connect the business type to the specific repair work offered.",
+      "Service-list items must be concrete, for example screen replacement, battery change, diagnostics, sewing machine service, bicycle repair or appliance troubleshooting where relevant to the business.",
+      "Device-or-item-coverage should clarify which brands, product types, vehicles or item categories are accepted when such scope exists.",
+      "If both repair-process and pricing-highlight are shown, process should come before pricing to explain what is included in the work."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-intro",
+      "pricing-table",
+      "pricing-notes",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Pricing-intro must explain whether prices are fixed examples, starting prices, hourly rates or diagnosis fees.",
+      "Pricing-table must avoid invented package names and should use plain service labels customers recognize.",
+      "Pricing-notes must clarify what can affect final price, such as parts, fault complexity or customer approval after diagnosis.",
+      "Trust-proof on this page should support clarity and reassurance, not repeat the entire home page."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "opening-hours",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real phone, email and address when available in the business data.",
+      "Opening-hours should be shown when provided and must not be replaced with placeholder text.",
+      "If map is present, it should follow contact-info or opening-hours and support visits or inlämning.",
+      "Contact-cta should support service inquiry, booking request or question submission without making unsupported promises."
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-77-uthyrning-och-leasing",
+  "version": "0.1.0",
+  "label": "Uthyrning och leasing",
+  "description": "Scaffold för företag inom uthyrning och leasing med fokus på tydligt utbud, villkor, förtroendeskapande information och enkel kontakt eller förfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa uthyrnings- och leasingutbud tydligt",
+    "förklara hur bokning eller förfrågan går till",
+    "bygga förtroende med företagsuppgifter, referenser och praktisk information",
+    "driva kontaktförfrågningar för hyra eller leasing"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

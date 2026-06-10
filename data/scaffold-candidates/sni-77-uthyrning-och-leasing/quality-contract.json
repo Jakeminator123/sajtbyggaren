@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "passes small-business rental and leasing intent better than a generic local service scaffold",
+    "includes a dedicated route for the offer or inventory categories",
+    "includes a dedicated route that explains process or terms because customers need clarity before contacting",
+    "supports both rental-style and leasing-style businesses without assuming one specific asset class",
+    "keeps contact and inquiry conversion prominent across the site",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "portfolio-style scaffold focused on completed projects",
+    "restaurant, menu, event or booking-table patterns",
+    "product checkout or webshop assumptions",
+    "legal or financial claims that require specific regulatory support",
+    "invented trust signals such as certifications, customer counts or nationwide coverage"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-97-forvarvsarbete-i-hushall",
+  "version": "0.1.0",
+  "label": "Förvärvsarbete i hushåll",
+  "description": "Scaffold för verksamheter inom förvärvsarbete i hushåll där webbplatsens huvuduppgift är att tydligt förklara vad arbetet avser, vem som står bakom verksamheten och hur kontakt tas på ett enkelt och förtroendeskapande sätt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Förklara vilken typ av arbete i hushåll som erbjuds eller utförs",
+    "Skapa grundläggande förtroende genom tydlig avsändare och verksamhetsbeskrivning",
+    "Driva kontakt via kontaktformulär eller direkta kontaktuppgifter"
+  ],
+  "defaultPageCount": 3,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

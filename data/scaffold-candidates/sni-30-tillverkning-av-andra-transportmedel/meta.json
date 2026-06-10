@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-30-tillverkning-av-andra-transportmedel",
+  "sniCode": "30",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-30",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:27:02Z",
+  "outputPath": "data/scaffold-candidates/sni-30-tillverkning-av-andra-transportmedel",
+  "operatorBriefHash": "sha256:597b51bec08c45876aa96e76ff61646ab0203b88465876c7ddc9b2a05f00b886",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

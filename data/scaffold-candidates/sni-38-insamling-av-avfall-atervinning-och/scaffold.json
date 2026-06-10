@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-38-insamling-av-avfall-atervinning-och",
+  "version": "0.1.0",
+  "label": "Insamling av avfall, återvinning och bortskaffande",
+  "description": "Scaffold för företag inom avfallsinsamling, återvinning och bortskaffande med fokus på tjänster, avfallsslag, hämtning/beställning, regelefterlevnad och kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara avfallstjänster och avfallsslag",
+    "bygga förtroende kring miljötillstånd, spårbarhet och säkra flöden",
+    "driva förfrågningar om hämtning, containrar eller återvinningstjänster",
+    "visa kontaktvägar, öppettider och anläggningsinformation"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

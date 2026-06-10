@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-82-kontorstjanster-och-annan-stodverksa",
+  "version": "0.1.0",
+  "label": "Kontorstjänster och annan stödverksamhet till företag",
+  "description": "Scaffold för företag inom kontorstjänster och annan stödverksamhet till företag, med fokus på tydliga tjänstebeskrivningar, förtroendeskapande information och enkel kontakt för offert eller förfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara administrativa och affärsstödjande tjänster tydligt",
+    "bygga förtroende genom referenser, team och företagsinformation",
+    "driva kontaktförfrågningar från företag som söker löpande eller punktvisa stödtjänster"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,284 @@
+{
+  "id": "sni-86-halso-och-sjukvard",
+  "label": "Hälso- och sjukvård",
+  "description": "Scaffold för vårdverksamheter och kliniker där trygghet, legitimation, praktisk information och enkel bokning står i centrum. Strukturen stödjer både allmän klinikpresentation och tydliga vägar till behandlingar, priser, FAQ och kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "skapa trygghet direkt",
+    "göra det enkelt att boka tid",
+    "förklara behandlingar i klarspråk",
+    "visa legitimation, patientsäkerhet och praktisk information",
+    "besvara vanliga patientfrågor innan kontakt"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Skapa förtroende snabbt med tydlig vårdprofil, legitimerad personal, översikt av behandlingar och en enkel väg till att boka tid."
+    },
+    {
+      "id": "treatments",
+      "path": "/behandlingar",
+      "required": true,
+      "purpose": "Presentera mottagningens behandlingar eller vårdtjänster i klarspråk så att besökaren förstår vad som erbjuds, när det passar och hur nästa steg ser ut."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser-och-frikort",
+      "required": true,
+      "purpose": "Ge transparent information om priser, patientavgifter, frikort eller vad som ingår, så att besökaren kan planera sitt besök och känna sig trygg med kostnadsbilden."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter, öppettider, adress, karta och tydlig bokningsväg så att patienten snabbt hittar rätt utan att leta."
+    },
+    {
+      "id": "team",
+      "path": "/vart-team",
+      "optional": true,
+      "when": "verksamheten har flera namngivna behandlare eller läkare där personernas legitimation, roller och inriktningar påverkar förtroendet"
+    },
+    {
+      "id": "booking",
+      "path": "/boka-tid",
+      "optional": true,
+      "when": "verksamheten vill ge bokning en egen sida med tydliga instruktioner, bokningsknapp och information inför besöket"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "kliniken ofta får återkommande frågor om remiss, frikort, avbokning, sekretess, förberedelser eller vad patienten ska ta med sig"
+    },
+    {
+      "id": "about",
+      "path": "/om-kliniken",
+      "optional": true,
+      "when": "verksamheten vill berätta mer om arbetssätt, vårdfilosofi, mottagningens bakgrund och hur patientmötet går till"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "care-overview",
+        "credentials",
+        "trust-proof",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "team-preview",
+        "faq",
+        "reviews",
+        "practical-info"
+      ],
+      "sectionOrderRules": [
+        "Hero ska direkt signalera lugn, tillgänglighet och vilken typ av vård eller behandling som erbjuds.",
+        "Credentials ska ligga tidigt på sidan så att legitimerad personal och patientsäkerhet blir synligt innan besökaren behöver leta.",
+        "Booking-cta ska använda ett tydligt nästa steg som 'Boka tid' eller motsvarande bokningsväg, inte en vag allmän uppmaning.",
+        "Care-overview ska använda begripligt språk och undvika onödig medicinsk jargong på första scrollen."
+      ]
+    },
+    "treatments": {
+      "requiredSections": [
+        "treatment-list",
+        "treatment-process",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "pricing-summary",
+        "faq",
+        "trust-proof",
+        "contact-short"
+      ],
+      "sectionOrderRules": [
+        "Treatment-list ska beskriva behandlingar eller vårdtjänster i klarspråk med fokus på vad patienten söker hjälp för.",
+        "Varje behandling ska hjälpa besökaren förstå när den är relevant, hur ett besök brukar gå till och om mer information ges vid bokning eller kontakt.",
+        "Om priser nämns här ska de stämma med sidan för priser och inte skapa motstridig information.",
+        "Booking-cta ska komma efter att besökaren fått tillräcklig information för att kunna ta nästa steg."
+      ]
+    },
+    "pricing": {
+      "requiredSections": [
+        "pricing-table",
+        "price-notes",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof",
+        "contact-short"
+      ],
+      "sectionOrderRules": [
+        "Prisinformation ska vara tydlig med vad som är patientavgift, fast pris, frånpris eller om kostnad bedöms individuellt.",
+        "Om frikort, högkostnadsskydd eller remiss påverkar kostnaden ska det förklaras sakligt utan att lova mer än verksamheten faktiskt kan erbjuda.",
+        "Prisnoter ska placeras nära prisöversikten så att villkor och undantag inte göms längst ner.",
+        "Booking-cta ska koppla prisinformationen till ett enkelt nästa steg för bokning eller kontakt."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "opening-hours",
+        "map",
+        "contact-form",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "access-info"
+      ],
+      "sectionOrderRules": [
+        "Telefonnummer ska vara klickbart som tel:-länk och e-post som mailto:-länk där e-post visas.",
+        "Öppettider ska visa alla veckodagar och tydligt markera stängt när mottagningen inte är öppen.",
+        "Adress ska presenteras som en komplett kopierbar postadress och kompletteras med karta när möjligt.",
+        "Kontaktformulär ska vara enkelt och lämpat för första kontakt, inte uppmana till att skicka känsliga personuppgifter i fritext om det inte hanteras säkert.",
+        "Booking-cta får gärna upprepas på kontaktsidan för besökare som egentligen vill boka snarare än skriva ett meddelande."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "hemrouten ska snabbt bygga kliniskt förtroende och leda mot bokning",
+      "kontaktvägar, öppettider och adress ska vara enkla att hitta",
+      "behandlingar ska beskrivas i begripligt språk för patienter",
+      "strukturen ska stödja både bokning och vanliga frågor",
+      "tonen ska vara lugn, omhändertagande och saklig",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "aggressiv säljton eller kampanjretorik som minskar förtroendet",
+      "medicinska påståenden som inte kan styrkas",
+      "opersonlig företagscopy utan tydlig vårdkontext",
+      "skrämande eller grafiska vårdbilder i förstaintrycket",
+      "dolda villkor kring pris, bokning eller tillgänglighet"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "booking-cta",
+      "faq-accordion",
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "pricing-table",
+      "team-roster",
+      "trust-guarantees",
+      "reviews-display"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Webbplatsstruktur för hälso- och sjukvård, klinik och mottagning. Fokus på trygghet, legitimerad personal, patientsäkerhet, sekretess, vårdgaranti, bokning online, behandlingar, priser och frikort, FAQ, öppettider, karta och kontakt. Passar vårdcentral, specialistmottagning, rehab, privat klinik och annan patientnära vårdverksamhet.",
+    "semanticSignals": [
+      "klinik",
+      "mottagning",
+      "patient",
+      "boka-tid",
+      "behandlingar",
+      "legitimerad-personal",
+      "patientsakerhet",
+      "sekretess",
+      "oppettider",
+      "hitta-hit",
+      "frikort",
+      "patientavgift",
+      "vardgaranti",
+      "faq",
+      "kontaktformular"
+    ],
+    "negativeSignals": [
+      "e-handel-med-produktkatalog",
+      "restaurangmeny",
+      "eventbokning",
+      "fastighetsannonser",
+      "portfoljgalleri-som-huvudsyfte",
+      "spelifierat-innehall"
+    ],
+    "llmClassificationHints": [
+      "Använd denna scaffold när verksamheten erbjuder vård, behandling, mottagningsbesök eller patientnära hälsotjänster.",
+      "Prioritera bokning, praktisk information och förtroendeskapande innehåll framför varumärkesbyggande storytelling.",
+      "Team-sida är viktig när individuella behandlares legitimation och kompetens påverkar valet.",
+      "Prissida är särskilt relevant när patientavgifter, frånpriser eller frikort behöver förklaras tydligt."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fbfdfe",
+          "foreground": "#0e2030",
+          "muted": "#5b6f80",
+          "border": "#dfe9f0",
+          "primary": "#1f6f8b",
+          "primaryForeground": "#fbfdfe",
+          "accent": "#a8d8c5",
+          "accentForeground": "#0e2030"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.5rem",
+          "md": "0.75rem",
+          "lg": "1.25rem"
+        },
+        "spacing": {
+          "section": "5.5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "clinical",
+          "trustworthy",
+          "spacious",
+          "modern",
+          "professional"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-01-jordbruk-och-jakt-samt-stodverksamhe",
+  "sniCode": "01",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-01",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:23:51Z",
+  "outputPath": "data/scaffold-candidates/sni-01-jordbruk-och-jakt-samt-stodverksamhe",
+  "operatorBriefHash": "sha256:45b6acb48af23908d73b83460771e2f35ab1bab63912ff06c4ca619b5cb064ac",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vilken stödverksamhet som erbjuds inom utvinning och leda vidare till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets tjänster konkret, inklusive typiska uppdrag och vad leveransen omfattar."
+    },
+    {
+      "id": "capacity",
+      "path": "/kapacitet",
+      "required": true,
+      "purpose": "Visa resurser, arbetssätt, geografisk räckvidd och praktiska förutsättningar som är viktiga vid upphandling eller förfrågan."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via telefon, e-post, adress och formulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "when the business has a clear company story, leadership team or ownership background that strengthens trust"
+    },
+    {
+      "id": "projects",
+      "path": "/uppdrag",
+      "when": "when the business can describe representative assignments, work types or case-like examples without revealing confidential customer details"
+    },
+    {
+      "id": "locations",
+      "path": "/verksamhetsomraden",
+      "when": "when the company serves multiple sites, regions or operational areas and needs a dedicated page for geography and logistics"
+    }
+  ]
+}

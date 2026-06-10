@@ -1,0 +1,80 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "industry-focus",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "operations-overview",
+      "gallery",
+      "reviews",
+      "faq",
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and that the company works with support services for extraction-related operations, and include a primary contact CTA.",
+      "Service-summary must highlight concrete service categories rather than broad claims.",
+      "Industry-focus should clarify the types of environments, clients or operational contexts served without implying unsupported certifications or approvals.",
+      "Trust-proof must appear before the final contact-cta.",
+      "Do not repeat the same promise in hero, service-summary and trust-proof."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "work-process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Services-intro must connect the company's role in extraction support to the listed services.",
+      "Service-list items must be concrete and operationally relevant, for example field support, maintenance support, site logistics support or technical assistance where applicable.",
+      "Work-process should explain how inquiries, planning, on-site execution and follow-up are handled.",
+      "If pricing-overview is shown, it must describe pricing model principles or quote-based setup honestly rather than invented fixed prices."
+    ]
+  },
+  "capacity": {
+    "requiredSections": [
+      "capacity-intro",
+      "equipment-and-resources",
+      "coverage-area",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team",
+      "operations-readiness",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Capacity-intro must explain why capacity matters for the buyer, such as staffing, equipment access, readiness or geographic reach.",
+      "Equipment-and-resources must stay factual and only mention assets, competencies or support functions actually provided by the business.",
+      "Coverage-area should describe where the company can operate and any practical limitations in clear terms.",
+      "Trust-proof on this page should emphasize organisational reliability, experience indicators or references, not duplicate long service descriptions."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "map"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and not be placeholders.",
+      "Contact-form must be suitable for business inquiries and allow the visitor to describe the requested assignment.",
+      "Map should only be shown when a real visitable address or operational office location is available."
+    ]
+  }
+}

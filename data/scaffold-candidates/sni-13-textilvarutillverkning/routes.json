@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera textiltillverkaren, förklara erbjudandet och leda vidare till kontakt eller produktöversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa företagets produktområden eller textila kategorier med tydlig beskrivning av vad som tillverkas."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Beskriva tillverkningsprocess, material, kapacitet och arbetssätt för att hjälpa kunder bedöma om företaget passar deras behov."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, team, arbetssätt och synliga företagsuppgifter."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via formulär, e-post, telefon och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "references",
+      "path": "/referenser",
+      "when": "när företaget har kundcase, bildmaterial eller omdömen som stärker trovärdigheten"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när återkommande frågor om material, minsta order, ledtider eller specialanpassning behöver besvaras separat"
+    }
+  ]
+}

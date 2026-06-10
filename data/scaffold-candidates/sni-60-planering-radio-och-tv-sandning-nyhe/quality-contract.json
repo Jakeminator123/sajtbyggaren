@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "The scaffold must support a content-first editorial website with clear surfaces for latest material and subscription.",
+    "News and program surfaces must be distinct: one for ongoing publications, one for recurring formats or coverage areas.",
+    "The structure must build trust through identifiable editorial information rather than sales-style claims.",
+    "Contact and newsletter conversion must both be supported without overwhelming the reading experience.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the business like a local service company with service lists as the core offer.",
+    "Do not require ecommerce, booking or pricing flows.",
+    "Do not invent awards, reach figures, accreditations or newsroom scale.",
+    "Do not make broadcast schedules mandatory when the business may publish on-demand or irregularly.",
+    "Do not overuse promotional CTA blocks that interrupt editorial browsing."
+  ]
+}

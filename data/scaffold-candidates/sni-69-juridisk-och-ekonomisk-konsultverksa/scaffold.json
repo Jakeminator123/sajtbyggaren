@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-69-juridisk-och-ekonomisk-konsultverksa",
+  "version": "0.1.0",
+  "label": "Juridisk och ekonomisk konsultverksamhet",
+  "description": "Scaffold för juridiska byråer, redovisningskonsulter, skatterådgivare och närliggande konsultverksamheter inom SNI 69. Fokuserar på specialisering, förtroende, sekretess, tydliga rätts- och rådgivningsområden samt enkel kontakt till rätt person.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara rättsområden och rådgivningstjänster tydligt",
+    "bygga förtroende genom specialisering, auktorisation och arbetsmetod",
+    "presentera team och ansvariga rådgivare",
+    "få in kvalificerade kontaktförfrågningar"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-25-tillverkning-av-metallvaror-utom-mas",
+  "version": "0.1.0",
+  "label": "Tillverkning av metallvaror utom maskiner och apparater",
+  "description": "Scaffold för företag inom metallvarutillverkning som behöver visa tillverkningskapacitet, produktionsområden, materialkompetens och en tydlig väg till offert eller kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara vad företaget tillverkar",
+    "visa produktionskapacitet och materialkompetens",
+    "bygga förtroende med referenser, process och företagsfakta",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

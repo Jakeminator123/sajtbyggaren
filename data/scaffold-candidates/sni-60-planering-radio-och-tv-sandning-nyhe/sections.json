@@ -1,0 +1,116 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "featured-content",
+      "newsletter-signup",
+      "editorial-trust",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "latest-feed",
+      "program-teaser",
+      "about-summary",
+      "video-hero",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the editorial offering or media focus and include a primary CTA tied to subscription or latest content.",
+      "Featured-content must appear above the fold or immediately after hero and highlight real current items, not placeholder stories.",
+      "Newsletter-signup should appear before the final contact CTA.",
+      "Editorial-trust should reference concrete trust signals such as publication rhythm, editorial identity or named team members when available.",
+      "Sections must avoid repeating the same headline story or CTA wording multiple times."
+    ]
+  },
+  "news": {
+    "requiredSections": [
+      "news-intro",
+      "content-feed",
+      "newsletter-signup"
+    ],
+    "optionalSections": [
+      "featured-content",
+      "topic-filter",
+      "video-hero",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "News-intro must explain what kind of updates, reports or broadcasts are published here.",
+      "Content-feed must prioritize clarity and chronology or editorial selection over decorative layout.",
+      "If featured-content is present it should lead into, not duplicate, the main feed.",
+      "Newsletter-signup should be placed after meaningful content context, not before the visitor understands the offer."
+    ]
+  },
+  "program": {
+    "requiredSections": [
+      "program-intro",
+      "program-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "schedule-note",
+      "featured-content",
+      "video-hero",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Program-intro must explain the types of programs, formats or coverage areas offered.",
+      "Program-list items must be concrete and distinguishable, for example by theme, audience or publication format.",
+      "If schedule-note is used it must only describe actual publication or broadcast rhythm when known.",
+      "Contact-cta should invite tips, editorial contact or collaboration enquiries without overstating availability."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "editorial-principles"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "About-story must describe the editorial mission, focus or history in specific terms.",
+      "Team should show real people or roles when available and be omitted rather than filled with generic placeholders.",
+      "Editorial-principles should cover how the outlet works, such as sourcing, corrections or scope, without making unsupported claims.",
+      "Trust-proof may reinforce but must not duplicate the same team or mission content."
+    ]
+  },
+  "newsletter": {
+    "requiredSections": [
+      "newsletter-intro",
+      "newsletter-signup",
+      "newsletter-benefits"
+    ],
+    "optionalSections": [
+      "faq",
+      "featured-content",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Newsletter-intro must clearly state what subscribers receive and the expected sending rhythm when known.",
+      "Newsletter-signup must be the primary action on the page.",
+      "Newsletter-benefits should stay specific to the publication, such as alerts, curated analysis or weekly summaries, and avoid vague marketing copy.",
+      "If trust-proof is used it should support the value of subscribing, for example by referencing editorial focus or consistency."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team",
+      "faq",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must provide real contact channels relevant to editorial operations, such as email and other available channels.",
+      "Contact-form should clarify the type of enquiries it is for, for example tips, questions or general contact.",
+      "Map-embed should only be shown when a public visiting address is actually relevant.",
+      "The page should not imply guaranteed response times unless supplied by source data."
+    ]
+  }
+}

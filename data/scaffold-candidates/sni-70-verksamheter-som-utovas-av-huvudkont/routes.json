@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Överblick för beslutsfattare som snabbt vill förstå erbjudande, målgrupper, affärsnytta, utvalda case och nästa steg till dialog."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samlad sida för rådgivningstjänster, exempelvis strategi, verksamhetsutveckling, organisationsfrågor, styrning eller förändringsledning, formulerat utifrån kundens affärsproblem."
+    },
+    {
+      "id": "cases",
+      "path": "/kundcase",
+      "required": true,
+      "purpose": "Bevisföring genom kundcase med uppdrag, angreppssätt och konkreta resultat eller utfall när sådana kan beskrivas sakligt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Bakgrund, inriktning, arbetssätt och teamets kompetens för att stärka trovärdighet i en people-business där köparen ofta väljer både metod och personer."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Tydlig kontaktväg för offertförfrågan eller inledande möte, med kontaktuppgifter och formulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "process",
+      "path": "/process",
+      "when": "när byrån eller konsultverksamheten säljer mycket på sin metodik, t.ex. analys, rekommendation, implementering och uppföljning"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när säljprocessen ofta innehåller återkommande frågor om upplägg, uppstart, sekretess, team, arbetssätt eller leveranser"
+    },
+    {
+      "id": "team",
+      "path": "/vart-team",
+      "when": "när flera seniora konsulter eller partnerprofiler är en central del av erbjudandet och behöver mer utrymme än på om-sidan"
+    }
+  ]
+}

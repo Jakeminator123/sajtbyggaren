@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-92-spel-och-vadhallningsverksamhet",
+  "version": "0.1.0",
+  "label": "Spel- och vadhållningsverksamhet",
+  "description": "Branschspecifik scaffold för spel- och vadhållningsverksamhet med fokus på tydligt erbjudande, ansvarsfull information, praktiska besöksuppgifter och kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara spel- eller vadhållningserbjudandet",
+    "bygga förtroende genom tydlig verksamhetsinformation",
+    "leda besökaren till kontakt eller besök på plats"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-22-tillverkning-av-gummi-och-plastvaror",
+  "sniCode": "22",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-22",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:26:04Z",
+  "outputPath": "data/scaffold-candidates/sni-22-tillverkning-av-gummi-och-plastvaror",
+  "operatorBriefHash": "sha256:6bebd2e42cc0ee44e263614e20216e129b4f14977efcdd1913326c06cd1b40cf",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,37 @@
+{
+  "id": "sni-20-tillverkning-av-kemikalier-och-kemis",
+  "embeddingText": "Branschspecifik webbplatsstruktur för tillverkare av kemikalier och kemiska produkter. Sajten bör ha startsida, produktområden, produktion och kvalitet, om oss samt kontakt. Innehållet ska hjälpa inköpare och företagskunder att förstå vad som tillverkas, typiska användningsområden, hur företaget arbetar med kvalitet och säkerhet samt hur kontakt tas för offert eller tekniska frågor. Tonen ska vara rak, förtroendeingivande och saklig. Undvik påhittade certifieringar eller osanna prestandapåståenden.",
+  "semanticSignals": [
+    "kemikalietillverkning",
+    "kemiska-produkter",
+    "produktomraden",
+    "formulering",
+    "blandning",
+    "produktion",
+    "kvalitet",
+    "sakerhet",
+    "industriella-kunder",
+    "anvandningsomraden",
+    "offertforfragan",
+    "teknisk-dialog",
+    "leverans",
+    "anlaggning"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "meny",
+    "bokning-av-bord",
+    "fotografportfolj",
+    "e-handel",
+    "varukorg",
+    "privat-blogg",
+    "eventbiljetter"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company manufactures chemical products or chemical formulations for business customers.",
+    "Prefer product areas and production/quality pages over generic services pages.",
+    "Emphasize trust, process, quality and contact rather than consumer-style shopping flows."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

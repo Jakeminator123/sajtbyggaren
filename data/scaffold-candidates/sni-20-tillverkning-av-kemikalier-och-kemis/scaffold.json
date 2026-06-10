@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-20-tillverkning-av-kemikalier-och-kemis",
+  "version": "0.1.0",
+  "label": "Tillverkning av kemikalier och kemiska produkter",
+  "description": "Scaffold för företag inom tillverkning av kemikalier och kemiska produkter. Fokuserar på tydlig presentation av produktområden, användningsområden, kvalitet/säkerhet och enkel väg till kontakt för offert, teknisk dialog eller leveransförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och tillverkningskapacitet",
+    "bygga förtroende kring kvalitet, säkerhet och leveransförmåga",
+    "göra det enkelt att kontakta företaget för offert eller tekniska frågor"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

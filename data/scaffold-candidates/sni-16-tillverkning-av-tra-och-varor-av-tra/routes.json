@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad som tillverkas och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktkategorier, specialtillverkning och exempel på trävaror eller komponenter som företaget levererar."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Förklara tjänster som kapning, bearbetning, ytbehandling, montering eller legotillverkning på ett konkret sätt."
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "required": true,
+      "purpose": "Visa tidigare projekt, leveranser eller kundcase som hjälper besökaren att bedöma kvalitet, utförande och lämplighet."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva företagets bakgrund, arbetssätt, materialfokus och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan med kontaktuppgifter, formulär, adress och praktisk information."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "materials",
+      "path": "/material",
+      "when": "när företaget behöver förklara träslag, skivmaterial, kork, rotting eller andra materialval mer utförligt"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när många frågor återkommer om mått, leveranstider, specialbeställningar eller materialval"
+    }
+  ]
+}

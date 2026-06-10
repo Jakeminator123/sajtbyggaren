@@ -1,0 +1,34 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Förklara verksamheten kort och tydligt, visa vad som produceras eller utförs och leda vidare till kontakt."
+    },
+    {
+      "id": "about",
+      "path": "/om",
+      "required": false,
+      "purpose": "Ge sammanhang om hushållet eller verksamheten, arbetssättet och bakgrunden till produktionen eller tjänsterna."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter och kontaktformulär så att besökaren enkelt kan höra av sig."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "services",
+      "path": "/verksamhet",
+      "when": "när verksamheten behöver beskriva flera typer av egenproducerade varor eller tjänster mer utförligt"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när besökare ofta behöver förklaring kring omfattning, arbetssätt, tillgänglighet eller kontaktvägar"
+    }
+  ]
+}

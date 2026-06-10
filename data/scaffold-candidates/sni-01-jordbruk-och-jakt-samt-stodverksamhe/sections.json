@@ -1,0 +1,77 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "offering-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "image-gallery",
+      "reviews",
+      "opening-hours",
+      "map-preview",
+      "seasonal-info"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the farm or business offers and include a primary CTA.",
+      "Offering summary must describe actual products, farm sales or services, not generic marketing claims.",
+      "Trust proof should use real signals such as farm shop, organic labeling if provided, local presence or open farm activities.",
+      "Opening hours and map preview may appear before the final contact CTA when visit traffic is important.",
+      "Sections should reflect seasonality when the dossier includes relevant information and must not promise availability that is unknown."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing",
+      "opening-hours",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain what visitors can buy or book and how purchasing works.",
+      "Product list must be concrete, for example vegetables, eggs, meat, plants, fodder or farm-related offers, and should avoid vague labels.",
+      "Pricing is optional and should only be shown when real prices or price examples exist.",
+      "If the page represents farm shop sales, opening hours should be visible on the page when available."
+    ]
+  },
+  "about-farm": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "animal-or-crop-overview",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific to the farm, land, production, hunting context or support operations.",
+      "Team section may represent family, owners or staff and should stay concise for smaller operations.",
+      "Trust proof must rely on factual credentials, labels or local practices supplied in the dossier and must not invent certifications."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map-embed",
+      "opening-hours",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include available real contact methods and a physical location when relevant for visits or deliveries.",
+      "Map and opening hours should be shown when the business receives visitors on site, runs a farm shop or expects pickup.",
+      "Contact CTA should support simple enquiries about products, visits, availability or services."
+    ]
+  }
+}

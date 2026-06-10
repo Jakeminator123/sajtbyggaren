@@ -1,0 +1,39 @@
+{
+  "id": "sni-05-kolutvinning",
+  "embeddingText": "Industriscaffold för kolutvinning och närliggande verksamhet inom gruvdrift. Fokus på startsida, tjänster, verksamhet, säkerhet och miljö samt kontakt. Passar företag som vill beskriva utvinning, hantering, logistik, anläggningar och affärskontakt på ett sakligt och förtroendeingivande sätt.",
+  "semanticSignals": [
+    "kolutvinning",
+    "gruvdrift",
+    "utvinning",
+    "anlaggning",
+    "drift",
+    "ravara",
+    "hantering",
+    "lagring",
+    "logistik",
+    "sakerhet",
+    "arbetsmiljo",
+    "miljoarbete",
+    "leverans",
+    "industrikund",
+    "verksamhetsplats"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "e-handel",
+    "fotograf",
+    "salong",
+    "klinik",
+    "hotell",
+    "portfolio",
+    "meny",
+    "bokning-av-bord"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the company primarily operates in coal extraction or adjacent mining-site operations.",
+    "Prefer this scaffold when safety, environmental practice, facility overview and industrial contact are more important than retail sales flows.",
+    "Do not choose this scaffold for consumer services or businesses whose core need is catalog, booking or menu presentation."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

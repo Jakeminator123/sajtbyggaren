@@ -1,0 +1,88 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "trip-highlights",
+      "trust-proof",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "gallery-preview",
+      "pricing-preview",
+      "reviews",
+      "faq",
+      "story"
+    ],
+    "sectionOrderRules": [
+      "Hero must communicate the type of travel or experiences offered and include a primary booking or contact CTA.",
+      "Trip-highlights should show concrete destinations, themes or packages rather than vague promises.",
+      "Trust-proof must reference only real trust signals such as resegaranti, applicable travel law, clear booking terms or authentic customer reviews when available.",
+      "Gallery-preview, pricing-preview and reviews may appear between trip-highlights and trust-proof when data exists.",
+      "Avoid repeating the same destination or sales argument across multiple adjacent sections."
+    ]
+  },
+  "trips": {
+    "requiredSections": [
+      "trips-intro",
+      "trip-list",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "gallery",
+      "faq",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Trips intro must explain what kinds of resor, destinationer or upplägg the business actually offers.",
+      "Trip-list items must be concrete and may include destination, duration, target audience, season, included highlights or travel style when known.",
+      "If reviews are shown, they should support the listed trips without inventing outcomes or quantities."
+    ]
+  },
+  "pricing-packages": {
+    "requiredSections": [
+      "pricing-intro",
+      "pricing-table",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Pricing intro must clarify whether prices are examples, starting prices or fixed package prices when that information is available.",
+      "Pricing-table must focus on packages, tiers or inclusions relevant to travel booking and avoid unclear placeholder pricing.",
+      "If trust-proof is shown here, it should reinforce clarity around what is included, payment terms or traveler protections without duplicating the exact same block from the home page."
+    ]
+  },
+  "booking": {
+    "requiredSections": [
+      "booking-intro",
+      "booking-options",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Booking-intro must explain how booking works, for example request flow, consultation, confirmation or online booking step.",
+      "Booking-options should present the actual available booking path such as form, phone, email or scheduled consultation.",
+      "Do not imply instant booking confirmation unless the business actually supports it."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real available contact methods and must not use placeholder details.",
+      "If opening hours are shown, they should reflect customer contact or advisory availability rather than implying staffed travel support around the clock.",
+      "Map is optional and should be shown only when a visitable address is relevant."
+    ]
+  }
+}

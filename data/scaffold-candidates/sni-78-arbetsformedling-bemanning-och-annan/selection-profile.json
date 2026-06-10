@@ -1,0 +1,39 @@
+{
+  "id": "sni-78-arbetsformedling-bemanning-och-annan",
+  "embeddingText": "Bemanningsföretag, rekryteringsbyrå och personalrelaterad verksamhet med behov av tydlig startsida, tjänstesida, arbetsgivarsida, om oss, kontakt samt ibland lediga jobb, case och FAQ. Fokus på arbetsgivare som vill hyra in eller rekrytera personal, men även kandidater som söker väg in. Viktiga innehållsmönster är process, tjänsteförklaring, team, förtroendeskapande signaler, kundcase och enkel offert- eller kontaktväg.",
+  "semanticSignals": [
+    "bemanning",
+    "rekrytering",
+    "search",
+    "interim",
+    "personaluthyrning",
+    "kompetensforsorjning",
+    "arbetsgivare",
+    "kandidater",
+    "tillsattning",
+    "matchning",
+    "lediga-jobb",
+    "rekryteringsprocess",
+    "bemanningslosningar",
+    "hr-stod"
+  ],
+  "negativeSignals": [
+    "webshop",
+    "meny",
+    "bordsbokning",
+    "produktkatalog",
+    "varukorg",
+    "behandlingar",
+    "fastighetsobjekt",
+    "recept",
+    "evenemangsbiljetter"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for staffing agencies, recruitment firms and related personnel service businesses under SNI 78.",
+    "Prefer this when the business sells hiring support, temporary staffing or candidate matching rather than a tangible product.",
+    "A dedicated employer-facing route is often more important than a generic portfolio page.",
+    "Optional lediga-jobb route is appropriate only if the business actually markets open roles or assignments."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

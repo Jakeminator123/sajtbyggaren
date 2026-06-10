@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera organisationens uppdrag, verksamhet och viktigaste nästa steg för besökaren."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Förklara organisationens bakgrund, värdegrund, styrning och vilka människor som bär verksamheten."
+    },
+    {
+      "id": "membership",
+      "path": "/bli-medlem",
+      "required": true,
+      "purpose": "Beskriva vad medlemskap eller engagemang innebär och leda vidare till registrering eller kontakt."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": true,
+      "purpose": "Samla aktuella nyheter, uppdateringar och information om organisationens arbete och aktiviteter."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta organisationen för frågor, besök, engagemang eller samverkan."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "activities",
+      "path": "/verksamhet",
+      "when": "när organisationen har återkommande aktiviteter, gudstjänster, möten, stödinsatser eller program som behöver beskrivas samlat"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "när ledare, styrelse, anställda eller volontärsamordnare behöver presenteras mer utförligt än på om-sidan"
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "when": "när organisationen aktivt samlar prenumeranter till utskick och vill ge detta en egen landningssida"
+    }
+  ]
+}

@@ -1,0 +1,309 @@
+{
+  "id": "sni-88-oppna-sociala-insatser",
+  "label": "Öppna sociala insatser",
+  "description": "Scaffold för verksamheter inom öppna sociala insatser och ideella stödverksamheter. Strukturen prioriterar uppdrag, målgrupper, hur stödet fungerar, möjligheter att engagera sig samt transparent kontakt och förtroendeskapande information.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara verksamhetens uppdrag och målgrupper",
+    "göra det tydligt hur stödinsatserna fungerar",
+    "driva registrering, intresseanmälan eller engagemang",
+    "bygga förtroende genom transparens och verksamhetsnära information",
+    "samla kontaktförfrågningar och nyhetsbrevsanmälningar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara uppdraget och leda besökaren vidare till registrering, kontakt eller engagemang."
+    },
+    {
+      "id": "insatser",
+      "path": "/insatser",
+      "required": true,
+      "purpose": "Beskriva de öppna sociala insatserna konkret, vilka de riktar sig till och hur man tar del av stödet."
+    },
+    {
+      "id": "engagera-dig",
+      "path": "/engagera-dig",
+      "required": true,
+      "purpose": "Visa hur besökare kan engagera sig genom deltagande, volontärskap, medlemskap, gåvor eller andra insatser."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Bygga förtroende genom att beskriva organisationens bakgrund, arbetssätt, team och transparens."
+    },
+    {
+      "id": "nyheter",
+      "path": "/nyheter",
+      "required": false,
+      "purpose": "Publicera uppdateringar om verksamheten, aktiviteter, berättelser från arbetet och viktiga datum."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att komma i kontakt med verksamheten för frågor, samverkan eller stödbehov."
+    },
+    {
+      "id": "nyhetsbrev",
+      "path": "/nyhetsbrev",
+      "optional": true,
+      "when": "when the organisation actively works with recurring updates and wants a dedicated subscription page"
+    },
+    {
+      "id": "fragor-och-svar",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "when many visitors need practical clarification before registering, participating or contacting the organisation"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "uppdragsintroduktion",
+        "insatsoversikt",
+        "fortroende",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "malgrupper",
+        "engagemangsoversikt",
+        "nyheter-preview",
+        "faq",
+        "bildgalleri",
+        "nyhetsbrev"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the mission in plain language and include a primary CTA such as registrering, kontakt or engagemang.",
+        "Uppdragsintroduktion should explain who the organisation exists for and what kind of support or activity it offers.",
+        "Insatsoversikt must be concrete and visitor-oriented, not abstract value statements.",
+        "Förtroende should rely on transparent facts such as organisationsnummer, 90-konto or årsredovisning when available, and must appear before the final CTA.",
+        "Sections must avoid repeating the same appeal for support or engagement in multiple blocks."
+      ]
+    },
+    "insatser": {
+      "requiredSections": [
+        "insatser-intro",
+        "insatslista",
+        "hur-det-fungerar",
+        "kontakt-cta"
+      ],
+      "optionalSections": [
+        "malgrupper",
+        "faq",
+        "fortroende"
+      ],
+      "sectionOrderRules": [
+        "Insatser intro must connect the mission to the actual support, activities or counselling offered.",
+        "Insatslista items must describe real forms of support, participation or guidance in specific terms.",
+        "Hur-det-fungerar should explain practical next steps such as registration, eligibility, schedule or contact pathway without implying guaranteed outcomes.",
+        "If present, målgrupper should clarify who each offer is for and any important limitations."
+      ]
+    },
+    "engagera-dig": {
+      "requiredSections": [
+        "engagera-intro",
+        "engagemangsformer",
+        "registrering-cta"
+      ],
+      "optionalSections": [
+        "volontarprocess",
+        "faq",
+        "nyhetsbrev",
+        "fortroende"
+      ],
+      "sectionOrderRules": [
+        "Engagera intro must explain why engagement matters for the mission and what kinds of participation are possible.",
+        "Engagemangsformer must list concrete options such as bli medlem, volontär, delta i aktivitet or stöd verksamheten, depending on the dossier.",
+        "Registrering CTA should be the main conversion point on this route and may point to form, email or another clear next step.",
+        "The page must not pressure vulnerable visitors; wording should remain supportive and informative."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "om-oss-berattelse",
+        "arbetssatt",
+        "team",
+        "fortroende"
+      ],
+      "optionalSections": [
+        "bildgalleri",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Om oss berättelse must be specific to the organisation's background, local context or social mission.",
+        "Arbetssätt should describe how the organisation works in practice, including collaboration, accessibility or participation where relevant.",
+        "Team may show staff, board or key volunteers depending on the organisation's structure.",
+        "Förtroende should prioritise transparent organisational facts over generic claims."
+      ]
+    },
+    "nyheter": {
+      "requiredSections": [
+        "hero",
+        "contact-cta"
+      ],
+      "optionalSections": [],
+      "sectionOrderRules": []
+    },
+    "kontakt": {
+      "requiredSections": [
+        "kontaktinfo",
+        "kontaktformular",
+        "besok-och-tider"
+      ],
+      "optionalSections": [
+        "karta",
+        "faq",
+        "nyhetsbrev"
+      ],
+      "sectionOrderRules": [
+        "Kontaktinfo must include real contact ways such as email, phone, address or equivalent organisational contact points.",
+        "Kontaktformular should be suitable for general inquiries and must not promise immediate social support unless the organisation actually offers it.",
+        "Besök och tider should clarify opening hours, drop-in times or how to get in touch when staffed hours vary.",
+        "If a map is shown, it should support the contact information rather than replace full written address details."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Have a dedicated route for the organisation's support/services offering because visitors need to understand what help or activities exist.",
+      "Have a dedicated route for engagement because this industry often depends on participation, volunteering, membership or other involvement.",
+      "Use transparent trust elements appropriate for nonprofit/social work contexts, such as organisationsnummer, 90-konto and årsredovisning when available.",
+      "Keep calls to action aligned with the brief's primary CTA around registrering or interest/engagement, while still supporting contact.",
+      "Support both contact-form and newsletter-subscribe capabilities in the information architecture.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the site like a generic local service business selling bookable appointments.",
+      "Do not use donation-first structure as the only conversion path; participation and support access are equally important.",
+      "Do not imply clinical treatment, official authority decisions or guaranteed personal outcomes unless explicitly provided by the organisation.",
+      "Do not rely on vague mission language without explaining actual insatser, målgrupper and next steps.",
+      "Do not invent partner logos, certifications, member counts or impact numbers."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "team-roster",
+      "trust-guarantees",
+      "faq-accordion",
+      "image-gallery",
+      "map-embed",
+      "opening-hours"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Ideell eller social verksamhet inom öppna sociala insatser. Webbplatsen ska förklara uppdrag, målgrupper, stödformer och aktiviteter, skapa förtroende genom transparens, visa team och arbetssätt, samla kontaktförfrågningar, erbjuda nyhetsbrev och driva registrering eller engagemang via en tydlig engagera-dig-sida.",
+    "semanticSignals": [
+      "oppna-sociala-insatser",
+      "ideell-organisation",
+      "stodverksamhet",
+      "malgrupper",
+      "radgivning",
+      "aktiviteter",
+      "engagera-dig",
+      "volontar",
+      "medlemskap",
+      "registrering",
+      "nyhetsbrev",
+      "arsredovisning",
+      "scaffold-90-konto",
+      "organisationsnummer",
+      "socialt-stod"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "produktkatalog",
+      "e-handel",
+      "prislista-for-behandlingar",
+      "hotellbokning",
+      "fastighetsobjekt",
+      "klinisk-vard",
+      "myndighetsutovning"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the organisation's main goal is to explain social support, participation or community activities rather than sell commercial services.",
+      "Strong fit for nonprofits, associations and mission-driven organisations that need both trust and engagement pathways.",
+      "Presence of words like insatser, stöd, målgrupp, volontär, medlem, engagera dig or verksamhet indicates this scaffold.",
+      "If the brief emphasises transparency, annual reports, organisation number, 90-account, members or field activities, this scaffold is likely appropriate."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

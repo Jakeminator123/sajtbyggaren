@@ -1,0 +1,235 @@
+{
+  "id": "sni-99-verksamhet-vid-internationella-organ",
+  "label": "Verksamhet vid internationella organisationer, utländska ambassader o.d.",
+  "description": "Scaffold för internationella organisationer, ambassader och liknande verksamheter där besökaren snabbt behöver förstå uppdrag, konsulär eller administrativ service, praktisk kontaktinformation och eventuella öppettider eller besöksvillkor.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Förklara organisationens eller beskickningens uppdrag",
+    "Visa tillgängliga tjänster eller ärenden för besökare",
+    "Göra det enkelt att hitta kontaktvägar, adress och öppettider"
+  ],
+  "defaultPageCount": 3,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Förklara verksamhetens uppdrag, viktiga besöksärenden och leda vidare till kontakt eller rätt informationssida."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samla information om konsulära, administrativa eller informationsrelaterade tjänster och hur besökare går vidare."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Visa kontaktuppgifter, adress, eventuella öppettider och kontaktformulär för frågor eller ärenden."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när verksamheten behöver beskriva uppdrag, organisation, representation eller team mer utförligt"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när återkommande praktiska frågor om ärenden, besök eller kontakt behöver besvaras tydligt"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "mission-summary",
+        "service-summary",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "opening-hours",
+        "faq",
+        "map",
+        "team-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the organisation or mission clearly and include a primary contact CTA.",
+        "Mission summary should explain what the organisation, embassy or office does in concrete terms without diplomatic jargon when simpler language works.",
+        "Service summary must focus on visitor-relevant matters such as consular, administrative or informational support.",
+        "Trust proof, when present, should rely on factual identifiers such as organisation name, address or visible organisation details and must not invent accreditations.",
+        "Opening hours or map may appear before the final CTA when practical visit information is important."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Services intro must explain who the services are for and what kinds of matters can be handled.",
+        "Service list items must be specific, for example passport matters, document information, visitor enquiries or representation-related contact, if those are actually offered.",
+        "If some matters require prior contact or cannot be handled digitally, that limitation should be stated plainly.",
+        "Final CTA should direct visitors to the correct contact path rather than promise instant handling."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real available channels such as email, phone, address or office location when provided.",
+        "Contact form should be framed for enquiries and general contact, not sensitive submissions unless the operator explicitly supports that.",
+        "Opening hours and visiting information should be shown near contact details when available.",
+        "Map should only be shown when a public visit address is appropriate to publish."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has a home route and a contact route.",
+      "Routes and section ids use kebab-case slugs.",
+      "Paths are Swedish, lowercase, start with / and have no trailing slash.",
+      "Page set reflects this industry's need for mission clarity, practical services information and direct contact.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Recommended dossiers are limited to the allowed dossier ids.",
+      "Copy avoids invented credentials, counts or unverifiable claims.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Tourism-style destination copy that hides the organisation's actual role.",
+      "Sales language that implies commercial offers when the entity mainly provides public, diplomatic or administrative functions.",
+      "Generic service descriptions with no guidance on what visitors can actually contact the organisation about.",
+      "Publishing sensitive or inappropriate submission prompts through the contact form.",
+      "Invented accreditations, embassy status details or operational claims not supported by source content."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "faq-accordion",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Internationell organisation, ambassad eller liknande beskickning med behov av tydlig startsida, tjänstesida för konsulära eller administrativa ärenden, och kontaktsida med formulär, adress och öppettider. Fokus på uppdrag, praktisk information, kontaktvägar och saklig förtroendeskapande presentation.",
+    "semanticSignals": [
+      "ambassad",
+      "beskickning",
+      "internationell-organisation",
+      "konsular-service",
+      "visering",
+      "passarenden",
+      "kontaktuppgifter",
+      "oppettider",
+      "besoksadress",
+      "representation",
+      "arenden",
+      "fragor-och-svar"
+    ],
+    "negativeSignals": [
+      "webbshop",
+      "produktkatalog",
+      "bokningsbar-restaurangmeny",
+      "fastighetsobjekt",
+      "portfoljgalleri-som-huvudsyfte",
+      "e-handel",
+      "kampanjsidor-for-detaljhandel"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the site represents an embassy, consulate, international office or similar non-retail organisation.",
+      "Prefer service and contact clarity over marketing-heavy layouts.",
+      "About and FAQ should be optional, while services and contact are core surfaces."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

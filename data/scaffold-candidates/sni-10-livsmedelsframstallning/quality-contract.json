@@ -1,0 +1,28 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Home route with '/' is present.",
+    "Contact route is present.",
+    "Routes and section ids use kebab-case slugs.",
+    "Page set reflects food production needs with products and reseller discovery, not restaurant booking logic.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "Copy stays factual and avoids invented certifications, volumes or retailer counts.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "restaurant-specific booking flow as a default for manufacturers",
+    "generic e-commerce filler without concrete product context",
+    "placeholder reseller entries or fake stockists",
+    "claims about certifications, allergens, origin or sustainability that the business has not provided",
+    "overstating direct online checkout if the site mainly supports inquiries or retailer-led sales"
+  ]
+}

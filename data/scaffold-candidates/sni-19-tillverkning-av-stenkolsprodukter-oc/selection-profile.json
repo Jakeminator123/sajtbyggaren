@@ -1,0 +1,33 @@
+{
+  "id": "sni-19-tillverkning-av-stenkolsprodukter-oc",
+  "embeddingText": "Industriscaffold för tillverkare av stenkolsprodukter och raffinerade petroleumprodukter. Har startsida, produktsida, sida för användningsområden, om oss och kontakt. Stödjer B2B-presentation av produktkategorier, industriella tillämpningar, anläggning, logistiknära information och kontaktförfrågningar.",
+  "semanticSignals": [
+    "raffinerade-petroleumprodukter",
+    "stenkolsprodukter",
+    "bransle",
+    "smorjmedel",
+    "bitumen",
+    "industriella-produkter",
+    "b2b",
+    "produktion",
+    "raffinering",
+    "anlaggning",
+    "leverans",
+    "anvandningsomraden"
+  ],
+  "negativeSignals": [
+    "fotograf",
+    "restaurangmeny",
+    "e-handel-med-varukorg",
+    "salongsbokning",
+    "privatkundstjanster",
+    "portfoliotung-kreativ-verksamhet"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company manufactures, refines or supplies petroleum-based, coal-based or closely related industrial products.",
+    "Prefer this scaffold when product categories and industrial applications are more important than local service coverage.",
+    "Do not classify as a generic service business when the core offer is manufacturing, refining, supply or industrial product handling."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

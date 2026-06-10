@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-70-verksamheter-som-utovas-av-huvudkont",
+  "version": "0.1.0",
+  "label": "Huvudkontor & företagskonsult",
+  "description": "Scaffold för huvudkontorsfunktioner och konsultverksamhet riktad till företag. Strukturen prioriterar strategisk positionering, tjänsteområden, kundcase med resultat, teamets senioritet, arbetssätt och tydlig kontaktväg för offertförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "bygga förtroende för strategisk rådgivning",
+    "visa tjänsteområden och affärsnytta",
+    "bevisa förmåga genom kundcase",
+    "presentera seniora konsulter och team",
+    "driva offertförfrågan eller första kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

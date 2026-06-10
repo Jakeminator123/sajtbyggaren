@@ -1,0 +1,92 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "property-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "area-summary",
+      "team-preview",
+      "reviews",
+      "image-gallery",
+      "faq",
+      "map",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must include business type, local market or area if known, and a primary CTA.",
+      "Property summary should appear early on the page and highlight actual categories or examples of available object types without implying inventory that is not provided.",
+      "Area summary may render after property-summary to reinforce local expertise.",
+      "Trust proof must appear before the final contact-cta.",
+      "Sections should not repeat the same trust claim or CTA wording."
+    ]
+  },
+  "properties": {
+    "requiredSections": [
+      "properties-intro",
+      "property-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Properties intro must explain what kinds of objects the business works with, such as bostäder, lokaler or tomter, when such data exists.",
+      "Property list items must be concrete and based on supplied content, not fabricated listings.",
+      "If map is shown, it should support orientation and area context rather than replace the property list."
+    ]
+  },
+  "areas": {
+    "requiredSections": [
+      "areas-intro",
+      "area-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "reviews",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Areas intro must connect the business to local market knowledge in a factual way.",
+      "Area list should describe relevant neighborhoods, municipalities or markets that are actually served or covered.",
+      "Do not repeat identical area descriptions across multiple entries."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "reviews",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about local presence, experience or working style and avoid generic claims.",
+      "Team section should only show real people or roles provided in the dossier.",
+      "Trust proof should use available signals such as registration, reviews or market knowledge without inventing awards or totals."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include the real contact methods supplied in the dossier.",
+      "Contact form should support general enquiries such as värdering, visning or object questions when appropriate.",
+      "Map should appear after primary contact details when address data exists."
+    ]
+  }
+}

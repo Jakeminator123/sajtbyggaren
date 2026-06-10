@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "home route with path '/' is present",
+    "contact route is present",
+    "all default routes have matching sectionsPerRoute entries",
+    "route ids and section ids use kebab-case slugs",
+    "paths are Swedish, lowercase, start with '/', and have no trailing slash",
+    "page set fits companies selling office services and business support rather than consumer retail or hospitality",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic route sets that ignore the need to explain specific support services",
+    "vague service copy without examples of actual administrative or support tasks",
+    "invented certifications, customer counts or guarantees",
+    "forcing booking flows when the industry more often converts via inquiry or quote request"
+  ]
+}

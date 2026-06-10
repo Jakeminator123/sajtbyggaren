@@ -1,0 +1,33 @@
+{
+  "id": "sni-70-verksamheter-som-utovas-av-huvudkont",
+  "embeddingText": "B2B-konsultverksamhet inom SNI 70: huvudkontor, managementkonsult, företagsrådgivning, strategi, verksamhetsutveckling, organisationsutveckling, förändringsledning, styrning, ledning, affärsutveckling. Webbstruktur med startsida, tjänster, kundcase, om oss, team, process och kontakt. Fokus på mätbara eller sakligt beskrivna resultat, seniora konsulter, branschexpertis, kontaktformulär och FAQ.",
+  "semanticSignals": [
+    "management-consulting",
+    "business-advisory",
+    "strategic-consulting",
+    "kundcase",
+    "verksamhetsutveckling",
+    "forandringsledning",
+    "seniora-konsulter",
+    "b2b-tjanster",
+    "offertforfragan",
+    "team-och-process"
+  ],
+  "negativeSignals": [
+    "webshop",
+    "produktkatalog",
+    "meny",
+    "bordsbokning",
+    "oppettider-som-primart-innehall",
+    "privatkundstung-salongslogik",
+    "eventbiljetter",
+    "lagerstatus"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten säljer rådgivning eller huvudkontorsnära företagsstöd till andra företag.",
+    "Särskilt relevant när case, senior kompetens och arbetssätt är viktigare än prislista.",
+    "Inte rätt val för ren reklambyrå/creative studio om portfolio och manifesto helt dominerar över konsultupplägg."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

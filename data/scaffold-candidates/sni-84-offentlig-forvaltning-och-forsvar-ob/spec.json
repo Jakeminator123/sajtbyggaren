@@ -1,0 +1,248 @@
+{
+  "id": "sni-84-offentlig-forvaltning-och-forsvar-ob",
+  "label": "Offentlig förvaltning och försvar; obligatorisk socialförsäkring",
+  "description": "Scaffold för offentlig verksamhet inom SNI 84 med fokus på tydlig samhällsinformation, uppdrag, tjänster till invånare/företag och korrekt kontaktvägledning.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara verksamhetens uppdrag",
+    "leda besökare till rätt information och kontaktväg",
+    "presentera tjänster, ärenden eller samhällsuppgifter på ett tydligt sätt",
+    "bygga förtroende genom transparens, ansvar och korrekt avsändare"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en tydlig överblick av myndighetens eller verksamhetens uppdrag, viktiga ingångar och hur besökaren går vidare eller kontaktar rätt funktion."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samla och förklara verksamhetens huvudsakliga tjänster, uppdrag, ärendetyper eller samhällsfunktioner på ett strukturerat sätt."
+    },
+    {
+      "id": "about",
+      "path": "/om-verksamheten",
+      "required": true,
+      "purpose": "Beskriva verksamhetens uppdrag, ansvar, organisation och hur den arbetar, för att skapa förståelse och förtroende."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge korrekta kontaktvägar, adressuppgifter och formulär så att besökaren kan nå rätt funktion."
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "when the verksamhet repeatedly answers common citizen, employer or policy questions and needs a dedicated clarification page"
+    },
+    {
+      "id": "news",
+      "path": "/aktuellt",
+      "optional": true,
+      "when": "when the verksamhet needs to publish updates, driftinformation or current notices"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "mission-summary",
+        "service-summary",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "faq",
+        "news-summary"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the verksamhetstyp or myndighetsroll in clear language and include a primary contact CTA.",
+        "Mission summary must explain public purpose or responsibility without marketing exaggeration.",
+        "Service summary must present concrete service areas, ärenden or responsibilities, not generic claims.",
+        "Trust proof, when used, should rely on transparent facts such as organisation identity, responsibility or official contact details rather than promotional language.",
+        "Sections must help visitors find the right next step quickly and must not repeat the same summary text verbatim."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the verksamhetens uppdrag to the listed services, functions or case types.",
+        "Service list items must be concrete and understandable to the public, for example permits, benefits administration, preparedness information or citizen support.",
+        "If FAQ is present, it should answer practical questions that arise from the listed services and not replace the service descriptions."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "organization-overview",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "team"
+      ],
+      "sectionOrderRules": [
+        "About story must explain mandate, role or public mission in specific terms, not generic brand language.",
+        "Organization overview should clarify responsibility, target groups or how the verksamhet is structured when such information is relevant.",
+        "Team is optional and should only be shown when named functions or leadership can be presented appropriately and accurately."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real contact channels and physical address when available, with no placeholder data.",
+        "Contact CTA may use form or mailto flow, but it should help the visitor reach the right unit or function.",
+        "Opening hours should only be shown when they are known and relevant for reception, office or phone service.",
+        "Map should only be shown when a visitor address is relevant for the public."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Include a clear home route and contact route suited to public-sector information needs.",
+      "Prioritize clarity, correct routing and public mission over sales-oriented conversion patterns.",
+      "Use Swedish route paths that match how visitors would expect to find civic information.",
+      "Ensure every required route has matching section grammar tailored to this industry.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "sales-heavy or promotional copy structure",
+      "invented performance claims, guarantees or satisfaction metrics",
+      "portfolio, menu, pricing or booking-first information architecture unless explicitly needed",
+      "private-sector framing that obscures public responsibility"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "map-embed",
+      "opening-hours",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Offentlig förvaltning och försvar samt obligatorisk socialförsäkring. Webbplatsstruktur för myndighet, offentlig verksamhet eller samhällsfunktion med startsida, tjänster eller ärenden, om verksamheten och kontakt. Fokus på uppdrag, ansvar, tydlig information, rätt kontaktväg och förtroendeskapande offentlig avsändare.",
+    "semanticSignals": [
+      "myndighet",
+      "offentlig-verksamhet",
+      "samhallsuppdrag",
+      "socialforsakring",
+      "forsvar",
+      "forvaltning",
+      "medborgare",
+      "arenden",
+      "kontaktvagar",
+      "ansvar",
+      "organisation",
+      "officiell-information"
+    ],
+    "negativeSignals": [
+      "e-handel",
+      "restaurang",
+      "portfolj",
+      "bokning-som-huvudflode",
+      "prislista",
+      "produktkatalog",
+      "kampanjsida"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the organization is a public authority, municipal/state function, defense-related public body or social insurance administration.",
+      "Prefer this scaffold when trust comes from clarity, mandate and official contact details rather than testimonials or commercial proof.",
+      "Use service and mission framing rather than sales and offers."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

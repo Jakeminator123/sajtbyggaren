@@ -1,0 +1,30 @@
+{
+  "id": "sni-21-tillverkning-av-farmaceutiska-baspro",
+  "embeddingText": "Tillverkning av farmaceutiska basprodukter och läkemedel. Företagswebb med startsida, kapacitet, kvalitet och efterlevnad, om oss och kontakt. Fokus på produktionskapacitet, kvalitetssystem, regulatorisk tydlighet, team, referenser och enkel kontakt för affärsförfrågningar.",
+  "semanticSignals": [
+    "pharmaceutical-manufacturing",
+    "farmaceutiska-basprodukter",
+    "lakemedelstillverkning",
+    "produktion-och-kapacitet",
+    "kvalitet-och-efterlevnad",
+    "b2b",
+    "anlaggning",
+    "processkontroll",
+    "dokumentation",
+    "kontakt-for-samarbeten"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "online-store-checkout",
+    "consumer-appointment-booking",
+    "portfolio-heavy-creative-studio",
+    "local-emergency-home-repair"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company manufactures pharmaceutical substances, medicines or closely related regulated products.",
+    "Prefer this scaffold when trust, quality, process and compliance are central to the buying decision.",
+    "Do not classify as generic service business if the content emphasizes production facilities, quality systems, formulation, batch work or regulated manufacturing contexts."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

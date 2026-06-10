@@ -1,0 +1,93 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "business-summary",
+      "product-category-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "production-summary",
+      "reviews",
+      "faq",
+      "team-teaser"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the company's business type and primary CTA.",
+      "Business summary must explain what the company manufactures in concrete terms without vague marketing claims.",
+      "Product-category-summary should appear before the final CTA.",
+      "Trust proof must rely on real company facts such as organisation details, established processes or visible contact information.",
+      "Sections should avoid repeating the same claim in multiple blocks."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-category-list",
+      "inquiry-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Products intro must describe the sortiment or manufacturing focus clearly and factually.",
+      "Product-category-list items must be specific categories or offerings, not generic placeholders.",
+      "If pricing-overview is shown, it should present honest indicative information only when such data exists.",
+      "Inquiry CTA should follow the main product listing."
+    ]
+  },
+  "production": {
+    "requiredSections": [
+      "production-intro",
+      "process-overview",
+      "quality-and-compliance",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "gallery",
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Production intro must explain the manufacturing operation in plain language.",
+      "Process overview should describe steps, capabilities or workflows without disclosing unsupported technical claims.",
+      "Quality-and-compliance must stay factual and mention only real standards, controls or internal routines if provided.",
+      "Contact CTA must invite business inquiries after the operational information."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "company-facts"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific to the company and avoid generic brand language.",
+      "Team should only render when actual people or roles are available.",
+      "Company facts should include concrete business information such as organisation details or location when supplied."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact info must contain real available contact methods and no placeholders.",
+      "Contact form should be positioned after or beside the primary contact details.",
+      "Map and opening hours should only render when verified address and schedule data exist."
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "id": "sni-06-utvinning-av-rapetroleum-och-naturga",
+  "embeddingText": "Företagswebb för utvinning av råpetroleum och naturgas. Typiska sidor är startsida, verksamhet, säkerhet och hållbarhet, tillgångar och projekt, om bolaget samt kontakt. Innehållet ska vara sakligt, förtroendeingivande och tydligt för affärskontakter, leverantörer, myndigheter och andra intressenter. Viktiga signaler är driftöversikt, geografiska tillgångar, säkerhetsarbete, miljöansvar, bolagsfakta, ledning och kontaktvägar.",
+  "semanticSignals": [
+    "upstream-energy-company",
+    "petroleum-extraction",
+    "natural-gas-extraction",
+    "production-fields",
+    "licenses-and-concessions",
+    "operations-and-production-overview",
+    "safety-and-environmental-management",
+    "industrial-site-location",
+    "company-facts-and-leadership",
+    "business-contact-for-partners-and-suppliers"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "consumer-webshop",
+    "appointment-booking",
+    "beauty-salon-treatments",
+    "local-home-repair-services",
+    "retail-product-catalog",
+    "event-ticket-sales",
+    "medical-clinic-booking"
+  ],
+  "llmClassificationHints": [
+    "Classify as industrial extraction business within petroleum and natural gas, not as utility retailer.",
+    "Prefer routes for operations, assets/projects and safety/sustainability over generic services pages.",
+    "Use formal business-trust content rather than consumer testimonials as the main credibility pattern."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

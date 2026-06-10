@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Include a dedicated reference-projects route because this industry relies on showing completed builds.",
+    "Include a quote-focused conversion route in addition to contact because larger building projects typically start with an offer request.",
+    "Reflect trust and risk-reduction signals relevant to construction, such as insurance, guarantees, ID06 and reference projects when data exists.",
+    "Support both single-page and multi-page setups without losing projects, services or contact clarity.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not structure the site like a simple household repair service when the company works with larger building projects.",
+    "Do not promise fixed prices, exact timelines or permits unless the business has supplied that information.",
+    "Do not invent certifications, warranty lengths, project counts or customer ratings.",
+    "Do not make the portfolio purely decorative; it should help explain scope and type of completed work."
+  ]
+}

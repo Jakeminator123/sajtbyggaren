@@ -1,0 +1,310 @@
+{
+  "id": "sni-30-tillverkning-av-andra-transportmedel",
+  "label": "Tillverkning av andra transportmedel",
+  "description": "Scaffold för företag inom tillverkning av andra transportmedel, med fokus på produktionskapacitet, erbjudande, referensprojekt och enkel kontakt för offert- eller dialogförfrågningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera erbjudande och tillverkningskapacitet",
+    "bygga förtroende genom referenser, process och företagsfakta",
+    "driva kontakt för offert, förfrågan eller affärsdialog"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, tydliggöra vad som tillverkas och leda vidare till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "solutions",
+      "path": "/erbjudande",
+      "required": true,
+      "purpose": "Beskriva produktområden, tillverkningsuppdrag eller tekniska lösningar på ett konkret sätt."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Visa produktionsprocess, kapacitet, arbetssätt och kvalitetsfokus för att stärka förtroendet."
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "required": true,
+      "purpose": "Lyfta exempel på leveranser, projekt eller kunduppdrag utan att överdriva omfattning eller resultat."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, team och verksamhetsmiljö."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, samarbete eller teknisk dialog via formulär och kontaktuppgifter."
+    },
+    {
+      "id": "careers",
+      "path": "/karriar",
+      "optional": true,
+      "when": "när företaget vill rekrytera och visa arbetsplats, roller eller kompetensbehov"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när vanliga frågor om ledtider, upplägg, material eller samarbetssätt behöver besvaras tydligt"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "offering-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "production-summary",
+        "reference-highlights",
+        "image-gallery",
+        "reviews",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company manufactures or develops and include a primary contact CTA.",
+        "Offering summary must be concrete and describe product areas, manufacturing assignments or customer needs served.",
+        "Production summary and reference highlights may appear between offering-summary and trust-proof when supported by real content.",
+        "Trust proof must rely on truthful company facts, visible business details, references or documented working methods.",
+        "Sections must avoid repeating the same claims across hero, offering-summary and trust-proof."
+      ]
+    },
+    "solutions": {
+      "requiredSections": [
+        "solutions-intro",
+        "solution-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-table",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Solutions intro must connect the company's manufacturing focus to the listed offerings.",
+        "Solution list items must describe real product categories, manufacturing services or project types in specific language.",
+        "Pricing information is optional and should only be shown when the company has clear standardized packages or indicative models.",
+        "The page should end with a clear CTA to contact the company for dialogue or quotation."
+      ]
+    },
+    "production": {
+      "requiredSections": [
+        "production-intro",
+        "process-steps",
+        "capabilities",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "video-hero",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Production intro must explain how the company works without making unverifiable quality or capacity claims.",
+        "Process steps should follow a logical sequence such as design, prototyping, production, assembly, testing or delivery when applicable.",
+        "Capabilities must describe facilities, methods, materials or competence areas only when the dossier supplies that information.",
+        "Trust proof should come after capabilities and before the final CTA."
+      ]
+    },
+    "references": {
+      "requiredSections": [
+        "references-intro",
+        "reference-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "reviews",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "References intro must explain the type of projects, deliveries or customer segments shown.",
+        "Reference list must contain concrete examples and must not invent customer names, quantities or outcomes.",
+        "Reviews should only be shown when authentic testimonial content exists and should not replace the reference list entirely."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company in specific terms and avoid generic filler about passion or excellence.",
+        "Team should only show named roles or functions that actually exist in the provided content.",
+        "Trust proof may include business facts, references and visible company details, but must not claim certifications unless explicitly provided."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include available real contact channels such as phone, email, address or location details.",
+        "Contact form should be easy to use and clearly framed around quotation, project dialogue or general inquiries.",
+        "Opening hours and map may appear after the main contact methods when the business receives visits or has a public location."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has a dedicated route for the company's offer and a dedicated route for production/process, since this industry needs more than generic service-business pages.",
+      "Includes home route with path '/' and a contact route.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Purposes and rules stay honest and avoid invented certifications, customer volumes or technical claims.",
+      "Routes and sections support both trust-building and lead generation for B2B manufacturing contexts.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the company like a generic local handyman or consultant business.",
+      "Do not rely only on team/about content; the scaffold must foreground offering, production and references.",
+      "Do not invent export markets, defense approvals, certifications or fleet counts.",
+      "Do not force pricing where projects are typically custom and quote-based.",
+      "Do not use vague section logic that hides what is actually manufactured or delivered."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "video-hero",
+      "faq-accordion"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik scaffold för tillverkning av andra transportmedel. Sajten ska passa företag som utvecklar, bygger, monterar eller levererar transportrelaterade produkter, komponenter, specialfordon, farkoster eller andra tekniska lösningar inom området. Informationsarkitekturen ska tydligt visa erbjudande, produktionsprocess, kapacitet, referenser och kontaktvägar för offert eller affärsdialog.",
+    "semanticSignals": [
+      "tillverkning",
+      "produktion",
+      "montering",
+      "utveckling",
+      "konstruktion",
+      "specialfordon",
+      "farkoster",
+      "komponenter",
+      "serieproduktion",
+      "prototyper",
+      "leveranser",
+      "referensprojekt",
+      "kapacitet",
+      "verkstad",
+      "industriell-tillverkning"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "fotograf",
+      "frisor",
+      "e-handel-med-kundvagn",
+      "meny",
+      "bordsbokning",
+      "behandlingsmeny",
+      "privat-blogg"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the company primarily manufactures transport-related products or systems rather than selling generic consulting.",
+      "Prefer this scaffold when production capability, technical process and reference deliveries are central to buyer trust.",
+      "Do not classify as a generic local-service business if the site needs dedicated pages for offering, production and references."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

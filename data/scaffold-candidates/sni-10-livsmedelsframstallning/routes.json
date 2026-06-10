@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera varumärket, produktkategorierna och det viktigaste erbjudandet med tydlig väg till produkter eller offert."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktutbudet med konkreta produkter, användningsområden, förpackningar och information som hjälper återförsäljare eller kunder vidare."
+    },
+    {
+      "id": "resellers",
+      "path": "/aterforsaljare",
+      "required": true,
+      "purpose": "Hjälpa besökare att hitta butiker, återförsäljare eller försäljningsställen där produkterna finns."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att berätta om verksamheten, råvarorna, hantverket och hur produktionen går till."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Fånga upp offertförfrågningar, återförsäljarkontakter och allmänna frågor via tydliga kontaktvägar."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "production",
+      "path": "/produktion",
+      "when": "när företaget vill fördjupa information om tillverkningsprocess, råvaruhantering eller kvalitetssätt utöver om-sidan"
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "when": "när starkt bildmaterial från produktion, råvaror eller färdiga produkter behöver en egen visuell sida"
+    }
+  ]
+}

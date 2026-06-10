@@ -1,0 +1,104 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "services-overview",
+      "value-proposition",
+      "process-steps",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq-preview",
+      "team-preview",
+      "reviews",
+      "industries-served"
+    ],
+    "sectionOrderRules": [
+      "Hero ska snabbt förklara vilken typ av finansiell eller försäkringsnära stödverksamhet företaget erbjuder och för vem, med ett sakligt huvudbudskap och tydlig primär CTA.",
+      "Services overview ska gruppera erbjudandet i begripliga tjänsteområden istället för en osorterad lista, så att besökaren snabbt kan självsortera.",
+      "Process-steps ska minska osäkerhet genom att visa hur en förfrågan, genomgång eller löpande hantering går till steg för steg.",
+      "Trust-signals ska bygga trygghet med verkliga arbetsmetoder, medlemskap eller arbetssätt som företaget faktiskt använder, utan överdrivna påståenden.",
+      "Contact CTA ska komma efter att besökaren förstått erbjudande och arbetssätt och använda återhållsam formulering som 'Begär offert' eller 'Kontakta oss'."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "service-categories",
+      "service-details",
+      "who-it-is-for",
+      "process-steps",
+      "faq-preview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "trust-signals",
+      "industries-served"
+    ],
+    "sectionOrderRules": [
+      "Service-categories ska delas upp i tydliga områden med kort beskrivning av vad som ingår och vilken typ av kundbehov varje område möter.",
+      "Service-details ska förklara omfattning, avgränsningar och praktiskt upplägg utan juridiskt eller finansiellt otydligt säljspråk.",
+      "Who-it-is-for ska hjälpa besökaren att förstå om tjänsten främst passar företag, privatpersoner eller andra målgrupper.",
+      "FAQ-preview ska fånga de vanligaste invändningarna eller oklarheterna kopplade till ansvar, ersättning, dokumentation eller startprocess."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-models",
+      "pricing-table",
+      "what-affects-price",
+      "faq-preview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "service-categories",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "Pricing-models ska först förklara om verksamheten arbetar med fasta paket, löpande arvode, provision, individuell offert eller kombinationer av dessa.",
+      "Pricing-table får bara användas för sådant som verkligen kan prissättas publikt; annars ska tabellen visa exempelpaket eller nivåer och tydligt ange att slutlig offert kan variera.",
+      "What-affects-price ska konkret beskriva vilka faktorer som påverkar kostnaden, exempelvis omfattning, ärendets komplexitet, antal objekt eller rådgivningsnivå.",
+      "Sidan ska minska osäkerhet kring kostnad utan att lova exakt pris där individuell bedömning krävs."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story-block",
+      "working-method",
+      "team-preview",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "values",
+      "industries-served",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About-story-block ska beskriva verksamhetens inriktning, erfarenhet och hur man arbetar med ordning, tillgänglighet och uppföljning, utan generiska floskler.",
+      "Working-method ska visa hur företaget skapar struktur för kunden, exempelvis genom tydliga kontaktvägar, digital hantering eller löpande återkoppling.",
+      "Team-preview ska innehålla namngivna personer eller roller om sådana används publikt; annars kan sektionen beskriva funktioner och ansvarsfördelning.",
+      "Trust-signals ska använda verifierbara signaler som medlemskap, digitala arbetssätt eller tydliga processer, men aldrig påstå auktorisationer som inte kan styrkas."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "faq-preview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours",
+      "team-preview"
+    ],
+    "sectionOrderRules": [
+      "Contact-info ska göra det enkelt att välja rätt kontaktväg med telefon, e-post och eventuell besöksadress i läsbara block.",
+      "Contact-form ska vara kort och tydligt, anpassat för offertförfrågan eller första kontakt snarare än långa fritextfält.",
+      "FAQ-preview på kontaktsidan ska avlasta vanliga frågor om svarstid, vad som bör skickas in och vad nästa steg blir efter kontakt.",
+      "Om adress eller öppettider anges ska dessa vara praktiska och aktuella, inte dekorativa utfyllnadssektioner."
+    ]
+  }
+}

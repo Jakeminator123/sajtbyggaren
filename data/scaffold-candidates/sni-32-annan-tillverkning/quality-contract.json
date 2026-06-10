@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar tillverkande företag som behöver visa produkter, produktionskapacitet eller specialtillverkning.",
+    "Har alltid startsida och kontaktsida.",
+    "Har en branschanpassad sida för produkter eller tillverkningsområden.",
+    "Har en branschanpassad sida som förklarar produktion, material eller kvalitet.",
+    "Stödjer förtroendeskapande innehåll som referenser, team, bilder från verksamheten och tydliga kontaktvägar.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Ren konsult- eller byråstruktur utan plats för produkter eller tillverkning.",
+    "E-handelsflöde med kundvagn och checkout som standard.",
+    "Påhittade certifieringar, produktvolymer eller kundantal.",
+    "Generiska tjänstebeskrivningar som inte passar fysisk tillverkning.",
+    "Sektioner som upprepar samma värdeerbjudande flera gånger utan ny information."
+  ]
+}

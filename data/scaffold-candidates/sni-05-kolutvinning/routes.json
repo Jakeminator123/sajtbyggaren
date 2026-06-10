@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara erbjudandet inom kolutvinning och leda vidare till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets tjänster inom utvinning, hantering, logistik och relaterade uppdrag på ett konkret sätt."
+    },
+    {
+      "id": "operations",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Ge en tydlig översikt av drift, anläggning, kapacitet och hur verksamheten genomförs i praktiken."
+    },
+    {
+      "id": "safety-environment",
+      "path": "/sakerhet-och-miljo",
+      "required": true,
+      "purpose": "Visa hur företaget arbetar med säkerhet, arbetsmiljö och miljöhänsyn utan att överdriva eller utlova sådant som inte kan styrkas."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter, adress, karta och kontaktformulär för affärsförfrågningar och praktisk kontakt."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget vill lyfta historia, ägare, organisation eller nyckelpersoner"
+    },
+    {
+      "id": "locations",
+      "path": "/anlaggningar",
+      "when": "när företaget har flera gruvor, terminaler eller driftplatser som behöver beskrivas var för sig"
+    }
+  ]
+}

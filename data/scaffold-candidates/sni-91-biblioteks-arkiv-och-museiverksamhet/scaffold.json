@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-91-biblioteks-arkiv-och-museiverksamhet",
+  "version": "0.1.0",
+  "label": "Biblioteks-, arkiv- och museiverksamhet",
+  "description": "Scaffold för bibliotek, arkiv, museer och liknande verksamheter med fokus på besöksinformation, samlingar/program, uppdrag och kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "informera om verksamhetens uppdrag och erbjudande",
+    "hjälpa besökare planera besök med öppettider och kontaktvägar",
+    "lyfta program, utställningar, samlingar eller tjänster",
+    "bygga förtroende genom transparens, organisation och ansvar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

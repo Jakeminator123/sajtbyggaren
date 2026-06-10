@@ -1,0 +1,91 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "value-props",
+      "solutions-summary",
+      "trust-proof",
+      "primary-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "product-screenshots",
+      "testimonials",
+      "faq-preview",
+      "newsletter-cta"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company offers and include a primary CTA tied to registration or contact.",
+      "Value propositions should come before deeper trust material so the visitor first understands the product benefit.",
+      "Solutions summary must describe concrete telecom offers such as connectivity, telephony, messaging or business communication solutions.",
+      "Trust proof must reference real signals such as support availability, security practices, uptime commitments or named reference customers when provided.",
+      "Final CTA should not repeat the exact same wording used in every previous section."
+    ]
+  },
+  "solutions": {
+    "requiredSections": [
+      "solutions-intro",
+      "solution-list",
+      "use-cases",
+      "primary-cta"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "faq",
+      "pricing-summary"
+    ],
+    "sectionOrderRules": [
+      "Solutions intro must connect the company identity to the actual telecom services offered.",
+      "Solution list items must be specific and understandable, not vague claims about innovation.",
+      "Use cases should show who each solution is for, such as small businesses, teams with mobile staff or customers needing stable connectivity.",
+      "If pricing summary is shown here, it should stay high-level and defer detailed comparison to the pricing page."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-intro",
+      "pricing-table",
+      "plan-comparison-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Pricing intro must explain what the visitor is comparing, for example subscriptions, packages or enterprise plans.",
+      "Pricing table must present honest plan differences and avoid implying features or guarantees that are not supplied in content.",
+      "CTA after pricing should guide the visitor to register, request contact or choose a plan."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "company-values",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the company's focus, customers or way of working, not generic brand filler.",
+      "Team section should only show real people or roles provided by the dossier.",
+      "Trust proof should reinforce reliability and service quality without inventing certifications, customer counts or coverage claims."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact page must provide real contact paths relevant to sales or support.",
+      "If a form is present, it should make the next step clear, such as registration interest, demo request or general inquiry.",
+      "Map should only be shown when a real visitable address exists."
+    ]
+  }
+}

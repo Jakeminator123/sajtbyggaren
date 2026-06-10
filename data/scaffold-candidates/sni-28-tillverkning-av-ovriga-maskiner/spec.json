@@ -1,0 +1,293 @@
+{
+  "id": "sni-28-tillverkning-av-ovriga-maskiner",
+  "label": "Tillverkning av övriga maskiner",
+  "description": "Scaffold för företag inom tillverkning av övriga maskiner med fokus på maskintyper, kundanpassning, produktionskapacitet, service och tydlig kontaktväg för offert eller teknisk dialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera maskiner och lösningar",
+    "bygga förtroende genom kapacitet, referenser och arbetssätt",
+    "leda besökare till kontakt för offert, teknisk dialog eller förfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, visa maskinerbjudandet och driva kontakt för offert eller teknisk dialog."
+    },
+    {
+      "id": "products",
+      "path": "/maskiner",
+      "required": true,
+      "purpose": "Presentera maskintyper, användningsområden och kundanpassade lösningar på ett konkret sätt."
+    },
+    {
+      "id": "service",
+      "path": "/service-och-support",
+      "required": true,
+      "purpose": "Beskriva service, underhåll, reservdelar och teknisk support efter leverans."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets kompetens, arbetssätt, produktion och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan, boka möte eller hitta kontaktuppgifter och adress."
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när företaget har namngivna kundcase, leveranser eller branschreferenser som kan visas öppet"
+    },
+    {
+      "id": "custom-manufacturing",
+      "path": "/kundanpassad-tillverkning",
+      "optional": true,
+      "when": "när stor del av erbjudandet bygger på specialmaskiner, konstruktion efter kravspecifikation eller projekttillverkning"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "machine-summary",
+        "industries-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "process-summary",
+        "image-gallery",
+        "reviews",
+        "faq",
+        "service-summary"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what kinds of machines or solutions the company manufactures and include a primary contact CTA.",
+        "Machine summary must describe concrete machine categories or solution types, not generic 'high quality solutions' copy.",
+        "Industries summary should name relevant customer segments or use cases when known.",
+        "Trust proof must rely on real references, visible company details or concrete production capabilities; do not invent certifications or delivery volumes.",
+        "Final contact CTA should invite quote request, technical discussion or project inquiry without repeating the same claims verbatim."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-list",
+        "customization",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Products intro must connect the company to its machine offering and typical customer needs.",
+        "Product list items must be concrete and grouped by machine type, function or application area.",
+        "Customization section should explain configurable options, adaptation to requirements or project-based delivery when applicable.",
+        "Avoid presenting machines as off-the-shelf products if the business mainly works with tailored manufacturing."
+      ]
+    },
+    "service": {
+      "requiredSections": [
+        "service-intro",
+        "service-list",
+        "support-process",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "opening-hours",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Service intro must clarify what happens after delivery, such as maintenance, spare parts or technical support.",
+        "Service list must be specific about support types rather than generic promises of availability.",
+        "Support process should explain how customers initiate service or technical cases and what contact path to use.",
+        "Opening hours may appear when support times are actually provided in the dossier."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "production-capability",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "process-summary",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about the company, its manufacturing focus and how it works with customers.",
+        "Production capability should cover workshop, design, assembly or testing capacity only when supported by provided data.",
+        "Team section should highlight relevant roles or expertise when available.",
+        "Do not use vague prestige language in place of concrete competence or facilities."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "map",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real phone, email and address details when available and must not use placeholders.",
+        "Contact form should support quote requests or technical inquiries in a straightforward way.",
+        "Map should be shown when location data exists.",
+        "Contact CTA should reinforce the next step without making unsupported response-time promises."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har alltid startsida och kontaktsida.",
+      "Lyfter maskiner, lösningar eller kundanpassad tillverkning som kärnerbjudande.",
+      "Ger utrymme för service och support efter leverans.",
+      "Bygger förtroende med konkreta uppgifter som referenser, organisationsuppgifter, team eller produktionskapacitet.",
+      "Kontaktvägen fungerar för offert eller teknisk förfrågan.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generisk konsultstruktur utan plats för maskiner eller tillverkningskapacitet.",
+      "E-handelsupplägg med varukorg eller prislista som standard.",
+      "Påhittade certifieringar, produktionsvolymer eller kundantal.",
+      "Överdrivet livsstilsspråk som inte passar industriell B2B-kommunikation.",
+      "Dubbelvisning av samma förtroendesignaler i flera sektioner utan nytt innehåll."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "team-roster",
+      "reviews-display",
+      "image-gallery",
+      "trust-guarantees",
+      "faq-accordion",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik webbplatsstruktur för tillverkare av övriga maskiner inom SNI 28. Sajten bör ha startsida, maskinsida, service och support, om oss och kontakt. Innehållet ska lyfta maskintyper, användningsområden, kundanpassning, produktion och teknisk kompetens. Tydlig CTA till offert eller teknisk dialog. Förtroende byggs genom referenser, synliga företagsuppgifter, team och konkret kapacitet snarare än generiska löften.",
+    "semanticSignals": [
+      "maskintillverkare",
+      "specialmaskiner",
+      "industrimaskiner",
+      "kundanpassad-tillverkning",
+      "konstruktion-och-tillverkning",
+      "produktion-och-montering",
+      "service-och-support",
+      "reservdelar",
+      "teknisk-forfragan",
+      "offertforfragan",
+      "verkstad",
+      "industriella-losningar"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "meny",
+      "bordsbokning",
+      "webshop",
+      "varukorg",
+      "fotografportfolj",
+      "fastighetsmaklare",
+      "frisorbokning",
+      "kurskatalog",
+      "patientbokning"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten tillverkar maskiner, maskinutrustning eller industriella lösningar för företag.",
+      "Passar även företag som bygger specialmaskiner eller anpassade produktionslösningar och behöver visa både erbjudande och eftermarknad.",
+      "Nedprioritera denna scaffold om verksamheten främst säljer standardprodukter online utan service- eller projektinslag."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

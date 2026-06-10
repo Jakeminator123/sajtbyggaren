@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-35-el-gas-och-angforsorjning-samt-luftk",
+  "sniCode": "35",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-35",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:27:18Z",
+  "outputPath": "data/scaffold-candidates/sni-35-el-gas-och-angforsorjning-samt-luftk",
+  "operatorBriefHash": "sha256:46eb7e8fea827aa0fddf341ec23e07d5bb3d134363d47c79473a67d48a1cc1d1",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

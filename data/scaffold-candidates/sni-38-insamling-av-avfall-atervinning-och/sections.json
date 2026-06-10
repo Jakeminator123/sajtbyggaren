@@ -1,0 +1,110 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "waste-types-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "process-overview",
+      "reviews",
+      "faq",
+      "facility-summary",
+      "service-area",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and a clear primary CTA for contact or collection request.",
+      "Service summary must describe concrete services such as collection, container solutions, recycling or disposal.",
+      "Waste-types summary should clarify what can be handled without replacing the dedicated waste-types page.",
+      "Trust proof must appear before the final CTA and may mention permits, traceability and safe handling only when supported by supplied data.",
+      "Sections must avoid repeating the same environmental claim in multiple places."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "process-overview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "service-area"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company identity to practical waste and recycling services.",
+      "Service list items must be concrete and grouped by customer need or service type, not generic promises.",
+      "Process overview should explain the flow from inquiry to collection, sorting, transport or handover in plain language."
+    ]
+  },
+  "waste-types": {
+    "requiredSections": [
+      "waste-types-intro",
+      "waste-types-list",
+      "sorting-guidance",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Waste-types list must distinguish accepted materials, restricted materials and cases that require prior contact when such data exists.",
+      "Sorting guidance should help visitors prepare waste correctly and reduce misunderstandings before delivery or collection.",
+      "The page must not imply handling of regulated waste categories unless provided in the source material."
+    ]
+  },
+  "collection-order": {
+    "requiredSections": [
+      "order-intro",
+      "booking-cta",
+      "requirements-checklist",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "pricing-overview",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Order intro must explain what the visitor can request, such as pickup, container, recurring service or quote.",
+      "Booking CTA should collect or direct to the information needed for a contact-based order flow.",
+      "Requirements checklist must state what the customer should prepare before pickup or site visit, such as access, volume or waste type details."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "process-overview",
+      "facility-summary"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the business and its way of working, not generic brand language.",
+      "Trust proof should focus on real operating practices, permits, traceability or safety routines when available."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "opening-hours"
+    ],
+    "optionalSections": [
+      "map",
+      "facility-summary"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real phone, email and address details when available.",
+      "Contact form should support inquiries about pickup, recycling services or general questions.",
+      "Opening hours should be shown when the business has staffed phone times, office hours or drop-off times."
+    ]
+  }
+}

@@ -1,0 +1,292 @@
+{
+  "id": "sni-16-tillverkning-av-tra-och-varor-av-tra",
+  "label": "Träförädling och tillverkning av trävaror",
+  "description": "Scaffold för företag inom SNI 16 som tillverkar och bearbetar trä, kork, halm, rotting eller liknande material. Strukturen lyfter produkter, material, tillverkningskapacitet, referensprojekt och tydlig kontakt för offertförfrågningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produkter och tillverkningsinriktning",
+    "bygga förtroende med material- och processinformation",
+    "visa referensprojekt och exempelarbeten",
+    "driva kontakt och offertförfrågningar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad som tillverkas och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktkategorier, specialtillverkning och exempel på trävaror eller komponenter som företaget levererar."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Förklara tjänster som kapning, bearbetning, ytbehandling, montering eller legotillverkning på ett konkret sätt."
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "required": true,
+      "purpose": "Visa tidigare projekt, leveranser eller kundcase som hjälper besökaren att bedöma kvalitet, utförande och lämplighet."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva företagets bakgrund, arbetssätt, materialfokus och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan med kontaktuppgifter, formulär, adress och praktisk information."
+    },
+    {
+      "id": "materials",
+      "path": "/material",
+      "optional": true,
+      "when": "när företaget behöver förklara träslag, skivmaterial, kork, rotting eller andra materialval mer utförligt"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när många frågor återkommer om mått, leveranstider, specialbeställningar eller materialval"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "process-summary",
+        "image-gallery",
+        "reviews",
+        "materials-summary",
+        "faq",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company manufactures and include a primary contact CTA.",
+        "Product summary should show concrete product types or manufacturing focus, not vague promises.",
+        "Trust proof must rely on real references, lead times, material information or customer reviews when available.",
+        "Avoid repeating the same examples in both product summary and gallery without adding new information."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "image-gallery",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Products intro must explain what kinds of goods, components or custom products are offered.",
+        "Product list items must be specific and grouped in a way that fits the business, such as panel, packaging, interior details, components or custom production.",
+        "If pricing information is shown, it must be indicative and clearly framed when variation depends on material, dimensions or volume."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "process-summary",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the production capability to customer needs such as custom dimensions, series production or finishing.",
+        "Service list should describe actual manufacturing or support services, not generic business statements.",
+        "Process summary should clarify how an order typically moves from inquiry to delivery."
+      ]
+    },
+    "references": {
+      "requiredSections": [
+        "references-intro",
+        "reference-gallery",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "reviews",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "References intro must explain what the examples represent, such as completed jobs, product examples or delivered series.",
+        "Reference gallery should use real project or product examples and may include short context like material, use case or scope.",
+        "Do not present speculative outcomes or unsupported claims about customer results."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "materials-summary",
+        "process-summary"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about the companys background, production focus or way of working.",
+        "Team should only be shown when actual people or roles are available.",
+        "Trust proof may include sourcing information, years of experience, production know-how or references, but must stay factual."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include the real contact channels that are available and should not use placeholder content.",
+        "Contact CTA should support quote requests, drawings, measurements or other useful inquiry details when relevant.",
+        "Map and opening hours are optional and should only appear when the business has public-facing visit information."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes home and contact routes.",
+      "Routes reflect industry needs by covering products, manufacturing services and references.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "All route ids, section ids and paths use kebab-case conventions where applicable.",
+      "Purposes and rules stay honest and avoid invented certifications or unsupported claims.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the business like a generic local service company only.",
+      "Do not omit products or references, since buyers often need to evaluate manufacturing fit and finish.",
+      "Do not rely on generic quality claims without showing materials, process, references or reviews.",
+      "Do not add ecommerce checkout assumptions unless the dossier clearly supports it."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "reviews-display",
+      "map-embed",
+      "opening-hours",
+      "trust-guarantees",
+      "pricing-table"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tillverkning av trävaror, träförädling, snickerikomponenter, trädetaljer, kork, rotting, halmprodukter, specialtillverkning, legotillverkning, bearbetning, referensprojekt, materialfokus, offertförfrågan.",
+    "semanticSignals": [
+      "manufacturer-of-wood-products",
+      "custom-wood-fabrication",
+      "wood-components-and-finished-goods",
+      "materials-and-production-process-matter",
+      "reference-projects-support-trust",
+      "quote-driven-contact-flow"
+    ],
+    "negativeSignals": [
+      "restaurant-menu-structure",
+      "booking-first-service-business",
+      "medical-clinic-pages",
+      "course-catalog",
+      "full-webshop-checkout-assumption",
+      "event-driven-layout"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for companies that make, process or supply wood-based goods rather than primarily installing them on site.",
+      "Prefer this scaffold when products, materials, dimensions, finishing or manufacturing capacity are central to the offer.",
+      "References should emphasize delivered products or projects rather than only team presentation."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

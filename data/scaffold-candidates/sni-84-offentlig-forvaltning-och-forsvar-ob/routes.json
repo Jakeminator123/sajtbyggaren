@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en tydlig överblick av myndighetens eller verksamhetens uppdrag, viktiga ingångar och hur besökaren går vidare eller kontaktar rätt funktion."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samla och förklara verksamhetens huvudsakliga tjänster, uppdrag, ärendetyper eller samhällsfunktioner på ett strukturerat sätt."
+    },
+    {
+      "id": "about",
+      "path": "/om-verksamheten",
+      "required": true,
+      "purpose": "Beskriva verksamhetens uppdrag, ansvar, organisation och hur den arbetar, för att skapa förståelse och förtroende."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge korrekta kontaktvägar, adressuppgifter och formulär så att besökaren kan nå rätt funktion."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "when the verksamhet repeatedly answers common citizen, employer or policy questions and needs a dedicated clarification page"
+    },
+    {
+      "id": "news",
+      "path": "/aktuellt",
+      "when": "when the verksamhet needs to publish updates, driftinformation or current notices"
+    }
+  ]
+}

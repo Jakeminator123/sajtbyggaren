@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Has a dedicated home route and contact route.",
+    "Routes reflect the industry's actual need to explain services and treatment/process context.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "Primary CTA is contact-focused and aligned with the operator brief.",
+    "All paths are Swedish, lowercase and slash-prefixed.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic portfolio or blog routes with no clear relevance to avloppsrening.",
+    "Invented environmental results, certifications, permits or treatment capacities.",
+    "Restaurant, webshop or appointment-booking patterns that do not fit the industry.",
+    "Overpromising emergency response or service coverage unless verified."
+  ]
+}

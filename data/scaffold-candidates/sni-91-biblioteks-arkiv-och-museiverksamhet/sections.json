@@ -1,0 +1,90 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "verksamhet-oversikt",
+      "aktuellt",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "oppettider",
+      "bildgalleri",
+      "fortroende",
+      "nyhetsbrev",
+      "besok-info"
+    ],
+    "sectionOrderRules": [
+      "Hero ska tydligt säga vilken typ av verksamhet det är och vad besökaren kan göra här, samt innehålla en primär CTA.",
+      "Verksamhet-oversikt ska sammanfatta centrala delar som samlingar, utställningar, lån, forskning eller program utan att lova mer än verksamheten faktiskt erbjuder.",
+      "Aktuellt bör placeras före slutlig kontakt-cta när nyheter eller kommande aktiviteter finns.",
+      "Öppettider och besök-info kan placeras högt på sidan när praktisk planering är ett huvudbehov.",
+      "Sektioner får inte upprepa samma budskap eller samma CTA i flera block."
+    ]
+  },
+  "verksamhet": {
+    "requiredSections": [
+      "verksamhet-intro",
+      "verksamhet-lista",
+      "praktisk-info-cta"
+    ],
+    "optionalSections": [
+      "bildgalleri",
+      "faq",
+      "priser-avgifter"
+    ],
+    "sectionOrderRules": [
+      "Verksamhet-intro ska koppla uppdraget till det faktiska erbjudandet, exempelvis utställningar, arkivtjänster, läsesal, program eller pedagogisk verksamhet.",
+      "Verksamhet-lista ska vara konkret och tydligt avgränsad, inte allmänt hållen marknadsföring.",
+      "Priser-avgifter används bara när verksamheten faktiskt har avgifter för exempelvis reproduktioner, biljetter eller särskilda tjänster.",
+      "Praktisk-info-cta ska leda vidare till kontakt eller besöksinformation beroende på innehåll."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "uppdrag-och-historia",
+      "organisation",
+      "fortroende"
+    ],
+    "optionalSections": [
+      "team",
+      "nyhetsbrev"
+    ],
+    "sectionOrderRules": [
+      "Uppdrag-och-historia ska vara saklig, specifik och förankrad i verksamhetens verkliga roll och utveckling.",
+      "Organisation ska kunna rymma förening, stiftelse, offentlig aktör eller annan relevant form utan att anta en viss struktur.",
+      "Fortroende ska bygga på verkliga uppgifter som organisationsnummer, årsredovisning eller tydlig ansvarsfördelning när sådant finns."
+    ]
+  },
+  "nyheter": {
+    "requiredSections": [
+      "nyheter-intro",
+      "nyhetslista",
+      "nyhetsbrev"
+    ],
+    "optionalSections": [
+      "kontakt-cta"
+    ],
+    "sectionOrderRules": [
+      "Nyhetslista ska prioritera aktuella och relevanta uppdateringar som program, utställningar, öppettidsändringar eller verksamhetsnyheter.",
+      "Nyhetsbrev ska bara uppmana till registrering om funktionen finns tillgänglig.",
+      "Kontakt-cta kan läggas sist för frågor om program eller innehåll."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "kontakt-info",
+      "oppettider",
+      "kontakt-cta"
+    ],
+    "optionalSections": [
+      "karta",
+      "team"
+    ],
+    "sectionOrderRules": [
+      "Kontakt-info ska innehålla verkliga kontaktvägar och inte tomma platshållare.",
+      "Öppettider ska visas när de finns och vara tydligt åtskilda från allmän kontaktinformation.",
+      "Karta används när fysisk besöksplats är relevant för verksamheten.",
+      "Om team visas här ska det vara ett litet urval av relevanta kontaktpersoner snarare än en full organisationspresentation."
+    ]
+  }
+}

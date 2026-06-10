@@ -1,0 +1,42 @@
+{
+  "id": "sni-63-datainfrastruktur-databehandling-hos",
+  "embeddingText": "Branschspec för SNI 63: datainfrastruktur, databehandling, hosting och annan informationsverksamhet. Sajter i denna kategori behöver snabbt förklara produkt eller plattform, visa funktioner och användningsfall, presentera priser eller offertlogik, samt bygga förtroende med säkerhet, GDPR, support och driftinformation. Typiska sidor är startsida, plattform, priser, säkerhet och kontakt, med valfria sidor för om oss, nyheter och FAQ.",
+  "semanticSignals": [
+    "hosting",
+    "databehandling",
+    "molntjanst",
+    "plattform",
+    "infrastruktur",
+    "serverdrift",
+    "datahantering",
+    "gdpr",
+    "sakerhet",
+    "support",
+    "uptime",
+    "api",
+    "integrationer",
+    "saas",
+    "produktfunktioner",
+    "prismodell",
+    "referenskunder"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "meny",
+    "boka-bord",
+    "fastighetsmaklare",
+    "frisor",
+    "fotograf",
+    "verkstad",
+    "behandlingsmeny",
+    "serviceomraden",
+    "lokal-jour"
+  ],
+  "llmClassificationHints": [
+    "Använd när verksamheten säljer en digital tjänst, dataplattform, hosting, analysnära infrastruktur eller informationsbaserad online-tjänst.",
+    "Prioritera struktur som förklarar produkt, funktioner, säkerhet och pris framför lokal fysisk närvaro.",
+    "Passar särskilt bra när primär CTA är registrering, demo eller kontakt med sälj/support."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

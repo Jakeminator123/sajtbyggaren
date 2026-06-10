@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-61-telekommunikation",
+  "sniCode": "61",
+  "wizardCategoryId": "tech",
+  "industryProfileId": "sni-61",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:25Z",
+  "outputPath": "data/scaffold-candidates/sni-61-telekommunikation",
+  "operatorBriefHash": "sha256:40d919527f91141586763a16a32ae86e05f4dc767afa0fc6dea47aaddb78b2da",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

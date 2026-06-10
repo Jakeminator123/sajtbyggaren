@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-06-utvinning-av-rapetroleum-och-naturga",
+  "sniCode": "06",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-06",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:24:21Z",
+  "outputPath": "data/scaffold-candidates/sni-06-utvinning-av-rapetroleum-och-naturga",
+  "operatorBriefHash": "sha256:8ce6c62db22110e8d1c5182248327fe7867f37204e0c7617dadff8ad7a0c9e10",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

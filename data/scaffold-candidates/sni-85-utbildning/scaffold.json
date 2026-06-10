@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-85-utbildning",
+  "version": "0.1.0",
+  "label": "Utbildning / Skola",
+  "description": "Scaffold för utbildningsverksamheter med fokus på kursutbud, pedagogik, tydlig anmälan och förtroendeskapande information för deltagare och vårdnadshavare.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera kurser och program tydligt",
+    "förklara pedagogik och upplägg",
+    "driva anmälan eller intresseanmälan",
+    "bygga förtroende med lärarkompetens, kursplan och omdömen",
+    "besvara vanliga frågor inför kursstart"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

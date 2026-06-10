@@ -1,0 +1,89 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "capabilities-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "image-gallery",
+      "reviews",
+      "faq",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company manufactures and include a primary contact CTA.",
+      "Product summary should group offerings by vehicle, trailer or application area rather than using vague labels.",
+      "Capabilities summary must highlight real production strengths such as customization, series production or technical support when supported by data.",
+      "Trust proof must appear before the final contact CTA and must only use verifiable claims.",
+      "Avoid repeating the same product claims across hero, product summary and trust proof."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain the scope of the product range in clear business language.",
+      "Product list items must be concrete and structured around model type, use case or configuration options.",
+      "If exact specifications are unavailable, copy should stay general and not invent dimensions, payloads or standards."
+    ]
+  },
+  "manufacturing": {
+    "requiredSections": [
+      "manufacturing-intro",
+      "process-overview",
+      "capabilities-detail",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Manufacturing intro must connect production capability to customer needs such as customization, quality consistency or delivery planning.",
+      "Process overview should describe real stages such as design, fabrication, assembly, testing or delivery preparation when known.",
+      "Capabilities detail must stay factual and avoid unsupported promises about capacity, lead times or certifications."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific to the company and its manufacturing focus, not generic brand copy.",
+      "Team may show leadership, engineering, production or sales roles when available.",
+      "Trust proof should emphasize visible company facts, references or documented ways of working."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact page must provide real contact paths such as phone, email, address or contact form.",
+      "If site visitors may need logistics or factory visits, map should appear after core contact details.",
+      "Do not include placeholder details or imply showroom or visiting hours unless supplied."
+    ]
+  }
+}

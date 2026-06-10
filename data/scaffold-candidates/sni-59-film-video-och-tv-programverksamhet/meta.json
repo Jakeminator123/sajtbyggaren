@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-59-film-video-och-tv-programverksamhet",
+  "sniCode": "59",
+  "wizardCategoryId": "photo",
+  "industryProfileId": "sni-59",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:19Z",
+  "outputPath": "data/scaffold-candidates/sni-59-film-video-och-tv-programverksamhet",
+  "operatorBriefHash": "sha256:3b88eb852b9d1a5fafcdae377a92350324f115abc4f6fe9ad57262dbff15ebf0",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

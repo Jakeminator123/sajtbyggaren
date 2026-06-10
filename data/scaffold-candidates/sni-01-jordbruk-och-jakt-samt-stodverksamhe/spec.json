@@ -1,0 +1,264 @@
+{
+  "id": "sni-01-jordbruk-och-jakt-samt-stodverksamhe",
+  "label": "Jordbruk och jakt samt stödverksamhet i anslutning härtill",
+  "description": "Scaffold för gårdar, jordbruksverksamheter, gårdsbutiker, odling, djurhållning, jaktverksamhet och närliggande stödverksamheter. Fokuserar på gårdens erbjudande, produkter eller tjänster, lokal förankring, öppettider och kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa gårdens produkter eller tjänster",
+    "bygga förtroende genom gårdens berättelse och plats",
+    "hjälpa besökare att hitta hit och ta kontakt",
+    "informera om öppettider, säsong och gårdsförsäljning"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera gården eller verksamheten, visa huvuderbjudandet och leda till kontakt eller besök."
+    },
+    {
+      "id": "products",
+      "path": "/gardsbutik",
+      "required": true,
+      "purpose": "Visa produkter, gårdsförsäljning eller andra erbjudanden med tydlig information om vad som finns och hur kunden handlar."
+    },
+    {
+      "id": "about-farm",
+      "path": "/om-garden",
+      "required": true,
+      "purpose": "Bygga förtroende genom att berätta om gården, driften, människorna och arbetssättet."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten och hitta till gården med adress, karta och öppettider."
+    },
+    {
+      "id": "hunting",
+      "path": "/jakt",
+      "optional": true,
+      "when": "verksamheten erbjuder jakt, viltrelaterade tjänster eller information kopplad till jaktupplägg"
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "optional": true,
+      "when": "verksamheten säljer entreprenad, maskintjanster, skord, skotsel eller annan stödverksamhet utöver egna produkter"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "offering-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "image-gallery",
+        "reviews",
+        "opening-hours",
+        "map-preview",
+        "seasonal-info"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the farm or business offers and include a primary CTA.",
+        "Offering summary must describe actual products, farm sales or services, not generic marketing claims.",
+        "Trust proof should use real signals such as farm shop, organic labeling if provided, local presence or open farm activities.",
+        "Opening hours and map preview may appear before the final contact CTA when visit traffic is important.",
+        "Sections should reflect seasonality when the dossier includes relevant information and must not promise availability that is unknown."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing",
+        "opening-hours",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Products intro must explain what visitors can buy or book and how purchasing works.",
+        "Product list must be concrete, for example vegetables, eggs, meat, plants, fodder or farm-related offers, and should avoid vague labels.",
+        "Pricing is optional and should only be shown when real prices or price examples exist.",
+        "If the page represents farm shop sales, opening hours should be visible on the page when available."
+      ]
+    },
+    "about-farm": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "animal-or-crop-overview",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific to the farm, land, production, hunting context or support operations.",
+        "Team section may represent family, owners or staff and should stay concise for smaller operations.",
+        "Trust proof must rely on factual credentials, labels or local practices supplied in the dossier and must not invent certifications."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map-embed",
+        "opening-hours",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include available real contact methods and a physical location when relevant for visits or deliveries.",
+        "Map and opening hours should be shown when the business receives visitors on site, runs a farm shop or expects pickup.",
+        "Contact CTA should support simple enquiries about products, visits, availability or services."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "home route with '/' is present",
+      "contact route is present",
+      "page set reflects agricultural business needs with farm shop, farm story, location and optional hunting or support services",
+      "all default routes have matching sectionsPerRoute entries",
+      "all route ids and section ids are kebab-case",
+      "all paths are Swedish, lowercase and without trailing slash",
+      "recommended dossiers use only allowed dossier ids",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic service-business structure without farm-specific content",
+      "invented product availability, certifications or production scale",
+      "overstating hunting offerings when the business does not provide them",
+      "forcing pricing when prices vary by season or availability",
+      "using team-heavy structure as the main trust device instead of place, production and practical information"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschscaffold för jordbruk, gård, gårdsbutik, odling, djurhållning, jakt och stödverksamhet inom lantbruk. Typiska behov är startsida med gårdens erbjudande, sida för gårdsbutik eller produkter, om gården med berättelse och människor, samt kontaktsida med karta, öppettider och kontaktformulär. Kan utökas med jakt eller tjänster för entreprenad och stödverksamhet.",
+    "semanticSignals": [
+      "gard",
+      "jordbruk",
+      "lantbruk",
+      "gardsbutik",
+      "odling",
+      "djurhallning",
+      "narproducerat",
+      "gardsforsaljning",
+      "oppen-gard",
+      "jakt",
+      "lantbrukstjanster",
+      "maskintjanster",
+      "skord",
+      "falt",
+      "stall",
+      "produkter-fran-garden"
+    ],
+    "negativeSignals": [
+      "ren-e-handel-med-stort-produktkatalogbehov",
+      "restaurangmeny",
+      "hotellbokning",
+      "ren-industriell-tillverkning",
+      "allman-konsultverksamhet-utan-platsbesok"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the business centers on a farm, agricultural production, farm shop, hunting-related activity or practical support services tied to land and farming.",
+      "Prefer this over a generic local-service scaffold when place, seasons, products from the farm and visiting information are core to the customer journey.",
+      "Use optional hunting or services routes only when clearly supported by the business description."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "production-capabilities",
+      "workflow-summary",
+      "gallery",
+      "testimonials",
+      "faq",
+      "opening-hours",
+      "location"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the production business clearly and include a primary contact CTA.",
+      "Service summary must mention concrete offer areas such as tryck, efterbehandling, prepress or reproduktion when supported by the content.",
+      "Trust proof should focus on real signals such as provtryck, miljömärkt tryck, leveranstider or practical experience, without inventing certifications.",
+      "Gallery or testimonials may appear before trust-proof when content exists.",
+      "Sections should avoid repeating the same promise in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "workflow-summary",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company's production capability to customer needs such as upplagor, materialval, originalhantering or leverans.",
+      "Service list items must be concrete and specific, not generic labels only.",
+      "If pricing-overview is shown, it should present orienting information only unless real prices are available."
+    ]
+  },
+  "portfolio": {
+    "requiredSections": [
+      "portfolio-intro",
+      "gallery",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "case-highlights",
+      "testimonials"
+    ],
+    "sectionOrderRules": [
+      "Portfolio intro must explain what kinds of jobs are shown and what they illustrate, such as material, finish or print quality.",
+      "Gallery items should represent real types of production and avoid exaggerated claims about scale or clients.",
+      "Contact CTA should invite a similar inquiry after the examples."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "location",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real contact channels available to the business.",
+      "If location or map is shown, it should match the stated address.",
+      "Contact CTA should support quote or production inquiries, not generic placeholder copy."
+    ]
+  }
+}

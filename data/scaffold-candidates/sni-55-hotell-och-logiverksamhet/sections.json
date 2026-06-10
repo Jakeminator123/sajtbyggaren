@@ -1,0 +1,118 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "accommodation-summary",
+      "room-highlights",
+      "trust-proof",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews",
+      "facilities",
+      "location-preview",
+      "faq",
+      "seasonal-offer"
+    ],
+    "sectionOrderRules": [
+      "Hero must communicate accommodation type, place or setting if known, and a primary booking CTA.",
+      "Accommodation-summary should quickly explain who the stay suits and what makes the property practically relevant, not only atmospheric copy.",
+      "Room-highlights should preview a small number of concrete room options or stay formats and link to rum-och-priser.",
+      "Trust-proof must appear before the final booking CTA and may use reviews, policies or included amenities without repeating identical claims.",
+      "Location-preview should only appear when there is meaningful nearby context such as city center, nature, beach, station or attractions.",
+      "Sections should balance inspiration with practical booking information."
+    ]
+  },
+  "rooms-and-prices": {
+    "requiredSections": [
+      "rooms-intro",
+      "room-list",
+      "pricing-table",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "facilities",
+      "faq",
+      "trust-proof",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Rooms-intro must explain how room categories, occupancy or pricing work in plain language.",
+      "Room-list items must be concrete and distinguish rooms by size, bed setup, amenities, view or suitability.",
+      "Pricing information must be honest: use actual prices, from-prices or clear price examples when exact live pricing is unavailable.",
+      "If policies such as breakfast, cancellation or check-in affect the offer, they should appear near pricing or CTA rather than being buried."
+    ]
+  },
+  "booking": {
+    "requiredSections": [
+      "booking-intro",
+      "booking-cta",
+      "booking-policies"
+    ],
+    "optionalSections": [
+      "pricing-table",
+      "faq",
+      "contact-cta",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Booking-intro must state whether the visitor books directly, requests availability or is redirected to an external booking flow.",
+      "Booking-cta must be the main interaction on the page and should not be visually buried below long text.",
+      "Booking-policies should cover the practical conditions supplied by the business, such as cancellation terms, check-in windows or breakfast inclusion, without inventing guarantees.",
+      "If a contact alternative is shown, it should support the booking flow rather than compete with it."
+    ]
+  },
+  "gallery": {
+    "requiredSections": [
+      "gallery-intro",
+      "image-gallery",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "room-highlights",
+      "location-preview",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Gallery images should be grouped or captioned so visitors understand whether they show rooms, common areas, food or surroundings.",
+      "The page should stay visually focused and avoid turning into a duplicate of the home page.",
+      "A booking CTA must appear after visitors have seen enough imagery to act."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "host-or-team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "location-story",
+      "reviews",
+      "booking-cta"
+    ],
+    "sectionOrderRules": [
+      "About-story must be specific to the property, host, building or local setting and avoid generic hospitality clichés.",
+      "Host-or-team should only be shown when real people or roles can be presented credibly.",
+      "Trust-proof may include guest reviews, practical standards or longstanding local presence, but must not imply unavailable awards or certifications."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "map",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "faq",
+      "location-details"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real phone, email and address details when available and must not use placeholders.",
+      "Map should support wayfinding to the property, not replace the written address.",
+      "If check-in times, reception times or arrival notes matter, they should be placed near the contact details."
+    ]
+  }
+}

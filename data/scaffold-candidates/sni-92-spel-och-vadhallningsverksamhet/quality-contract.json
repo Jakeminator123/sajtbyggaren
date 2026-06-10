@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Has a dedicated route for the actual industry offering, not only generic services.",
+    "Makes practical visit information easy to find because location and opening hours are often important in this industry.",
+    "Uses honest, factual wording and avoids promises about winnings, outcomes or guarantees.",
+    "Includes clear contact paths and supports the category capability contact-form.",
+    "Supports trust-building through real business information, team, reviews or FAQs when available.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic service-business structure that ignores games, betting or visitor experience.",
+    "Invented licences, certifications, player counts or win claims.",
+    "Overuse of promotional language that obscures what the business actually offers.",
+    "Duplicate sections across pages with the same message and no new information.",
+    "CTAs that pressure users with unrealistic urgency or outcome-based promises."
+  ]
+}

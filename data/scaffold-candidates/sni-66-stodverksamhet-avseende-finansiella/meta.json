@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-66-stodverksamhet-avseende-finansiella",
+  "sniCode": "66",
+  "wizardCategoryId": "accounting",
+  "industryProfileId": "sni-66",
+  "referenceScaffoldId": "professional-services",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:30:23Z",
+  "outputPath": "data/scaffold-candidates/sni-66-stodverksamhet-avseende-finansiella",
+  "operatorBriefHash": "sha256:cc831799f5ceef638daea6967dfea75c9e399695e2e82694fc5bd949435f623f",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

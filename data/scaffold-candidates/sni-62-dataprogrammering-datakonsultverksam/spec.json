@@ -1,0 +1,311 @@
+{
+  "id": "sni-62-dataprogrammering-datakonsultverksam",
+  "label": "Dataprogrammering, datakonsultverksamhet o.d.",
+  "description": "Branschspecifik scaffold för bolag inom dataprogrammering och datakonsultverksamhet. Strukturen prioriterar tydlig beskrivning av tjänster, teknikkompetens, case, prissättning/modeller och kontakt för uppdrag eller registrering.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara erbjudandet tydligt",
+    "bygga förtroende genom case, team och arbetssätt",
+    "driva kontakt, demo eller registrering",
+    "visa teknisk spets utan generiska konsultfloskler"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera bolaget, förklara vad ni bygger eller levererar och leda besökaren vidare till kontakt eller registrering."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva kärntjänster, teknikområden och typiska leveranser på ett konkret sätt."
+    },
+    {
+      "id": "cases",
+      "path": "/case",
+      "required": true,
+      "purpose": "Visa genomförda uppdrag, produktbyggen eller resultat som hjälper besökaren att förstå kompetens och arbetssätt."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": false,
+      "purpose": "Förklara prismodeller, paket eller hur offert och upplägg fungerar när fasta priser saknas."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom team, bakgrund, arbetssätt och syn på kvalitet, säkerhet och samarbete."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att starta dialog, boka möte, skicka förfrågan eller registrera sig."
+    },
+    {
+      "id": "blog",
+      "path": "/blogg",
+      "optional": true,
+      "when": "when the company publishes technical insights, product updates or news regularly"
+    },
+    {
+      "id": "careers",
+      "path": "/karriar",
+      "optional": true,
+      "when": "when the company is actively recruiting developers, consultants or product roles"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "when the sales process benefits from answering common questions about scope, pricing, security or delivery"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "problem-solution",
+        "case-highlights",
+        "process-overview",
+        "technology-focus",
+        "team-preview",
+        "pricing-summary",
+        "faq",
+        "newsletter-cta"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company builds or delivers, for whom, and include a primary CTA.",
+        "Service-summary must describe concrete offer areas such as system development, integrations, cloud, product development or consulting.",
+        "Case-highlights should appear before the final CTA when case material exists.",
+        "Trust-proof must use real signals such as named clients, certifications if actually held, security practices or testimonials; it must not invent numbers or badges.",
+        "Sections should avoid repeating the same technical claims without adding new information."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "process-overview",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "technology-focus",
+        "pricing-summary",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services-intro must connect the company's competence to real customer needs or business problems.",
+        "Service-list items must be specific about scope, examples or outcomes, not only broad labels like 'IT solutions'.",
+        "Process-overview should explain how projects, sprints, advisory work or maintenance are delivered.",
+        "If pricing-summary is shown here, it should explain pricing logic clearly without pretending fixed prices exist for custom development."
+      ]
+    },
+    "cases": {
+      "requiredSections": [
+        "cases-intro",
+        "case-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "testimonials",
+        "technology-focus",
+        "results-summary"
+      ],
+      "sectionOrderRules": [
+        "Each case should describe client type or context, the challenge, what was built or improved, and the outcome if known.",
+        "Case-list must not expose confidential details; anonymized cases are acceptable when needed.",
+        "Testimonials should support the cases and not duplicate the same proof statements verbatim."
+      ]
+    },
+    "pricing": {
+      "requiredSections": [
+        "pricing-intro",
+        "pricing-models",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "package-list",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Pricing-intro must explain whether the company works with fixed packages, retainers, hourly rates, discovery phases or custom quotes.",
+        "Pricing-models must be transparent about what affects scope and cost.",
+        "If package-list is used, packages must reflect realistic offerings such as audit, workshop, MVP sprint or support plan."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "working-method"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "values",
+        "technology-focus"
+      ],
+      "sectionOrderRules": [
+        "About-story must be specific about background, competence or focus areas, not generic passion statements.",
+        "Team should highlight relevant roles or expertise areas when available.",
+        "Working-method should describe collaboration, communication, documentation or quality practices in a concrete way."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must include real contact channels such as email and any available phone or office details.",
+        "Contact-form should fit lead capture for consulting or product inquiries, for example project type, timeline or message.",
+        "The page must make the next step clear, such as booking a meeting, sending a request or registering interest."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes home and contact routes.",
+      "Page set reflects software development and consulting needs with services, cases and optional pricing.",
+      "All default routes have matching sectionsPerRoute entries.",
+      "Purposes and rules avoid invented trust claims or fake metrics.",
+      "Swedish route paths are lowercase and start with '/'.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic local-service structure without space for case studies or technical competence.",
+      "Vague service copy that says little more than 'digital solutions'.",
+      "Pricing promises that imply fixed costs for undefined custom projects.",
+      "Made-up certifications, client logos or security claims.",
+      "Too many routes for very small firms that only need a compact presence."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "pricing-table",
+      "team-roster",
+      "trust-guarantees",
+      "reviews-display",
+      "faq-accordion",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Dataprogrammering, systemutveckling, mjukvarukonsult, teknikkonsult, SaaS, produktutveckling, integrationer, moln, apputveckling, webbutveckling, utvecklingsteam, techbolag, konsultbolag med tjänster, case, priser, team och kontakt.",
+    "semanticSignals": [
+      "software-development-services",
+      "it-consulting",
+      "custom-software",
+      "web-and-app-development",
+      "cloud-and-integrations",
+      "technical-case-studies",
+      "transparent-pricing-models",
+      "team-and-method",
+      "lead-capture-or-registration"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "ecommerce-product-catalog",
+      "medical-clinic-booking",
+      "beauty-treatment-list",
+      "real-estate-listings",
+      "event-ticketing"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for companies that build software, deliver development consulting, product engineering or technical advisory services.",
+      "Strong fit when the business needs to explain services, technologies, delivery model and cases.",
+      "Can serve both consultancy-led firms and product-oriented tech companies if contact or registration is the main conversion."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

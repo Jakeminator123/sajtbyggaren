@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förmedla trygghet och leda till kontakt för offert eller snabb hjälp."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva bevaknings- och säkerhetstjänster konkret så att besökaren snabbt ser vad företaget erbjuder."
+    },
+    {
+      "id": "agreements-pricing",
+      "path": "/avtal-och-priser",
+      "required": true,
+      "purpose": "Förklara hur avtal, upplägg och prisbild fungerar på en övergripande nivå och uppmuntra offertförfrågan."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att presentera företaget, arbetssätt, personal och relevanta tillstånd eller kompetenser."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget via formulär, telefon, e-post och besöksuppgifter."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "när företaget verkar i flera orter eller behöver en separat yta för geografisk täckning och lokal synlighet"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när verksamheten ofta behöver förklara skillnaden mellan bevakningstjänster, responstider, avtal eller uppstart"
+    }
+  ]
+}

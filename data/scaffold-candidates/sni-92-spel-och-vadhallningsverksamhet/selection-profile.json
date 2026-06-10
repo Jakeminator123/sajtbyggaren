@@ -1,0 +1,34 @@
+{
+  "id": "sni-92-spel-och-vadhallningsverksamhet",
+  "embeddingText": "Spel- och vadhållningsverksamhet scaffold för småföretagswebb med startsida, spel- och utbudssida, besökssida och kontaktsida. Fokuserar på konkret erbjudande, praktisk besöksinformation, öppettider, karta, kontaktformulär, förtroende och ansvarsfull tonalitet utan orealistiska löften.",
+  "semanticSignals": [
+    "spelhall",
+    "vadhallning",
+    "spelutbud",
+    "aktiviteter-pa-plats",
+    "oppettider",
+    "hitta-hit",
+    "kontaktformular",
+    "besoksinformation",
+    "team",
+    "referenser",
+    "faq",
+    "ansvarsfull-information"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "produktkatalog",
+    "restaurangmeny",
+    "fotogalleri-som-huvudsyfte",
+    "medicinsk-behandling",
+    "juridiska-tjanster",
+    "ren-portfoliowebb-utan-plats-eller-kontaktfokus"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the business primarily offers betting, gaming or on-site play activities and visitors need to understand the offering plus how to visit or contact the venue.",
+    "Prefer this over a generic local service scaffold when the core content is game formats, betting options, venue experience or visitor rules rather than traditional services.",
+    "A strong match includes need for opening hours, map, practical visit details and an offer page tailored to games or betting categories."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

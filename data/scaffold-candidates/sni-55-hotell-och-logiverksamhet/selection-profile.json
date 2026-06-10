@@ -1,0 +1,44 @@
+{
+  "id": "sni-55-hotell-och-logiverksamhet",
+  "embeddingText": "Hotell- och logiverksamhet scaffold med startsida, rum och priser, bokning, bildgalleri, om oss och kontakt. Fokuserar på visuella rumspresentationer, faciliteter, recensioner, bokningsvillkor, karta och enkel väg till bokning eller bokningsförfrågan för hotell, pensionat, vandrarhem, B&B och annan logi.",
+  "semanticSignals": [
+    "hotell",
+    "boende",
+    "logi",
+    "rum",
+    "dubbelrum",
+    "familjerum",
+    "svit",
+    "vandrarhem",
+    "pensionat",
+    "bed-and-breakfast",
+    "bokning",
+    "bokningsforfragan",
+    "priser",
+    "paket",
+    "frukost",
+    "incheckning",
+    "utcheckning",
+    "avbokning",
+    "faciliteter",
+    "galleri",
+    "hitta-hit",
+    "reception"
+  ],
+  "negativeSignals": [
+    "tjansteutforande-pa-plats-hos-kund",
+    "produktkatalog-for-fysisk-detaljhandel",
+    "restaurangmeny-som-huvudsaklig-affar",
+    "medicinska-behandlingar",
+    "hantverkartjanster",
+    "ren-e-handel-utan-vistelse-eller-boende"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily sells overnight stays or accommodation.",
+    "Strong indicators include rooms, booking, check-in, breakfast, guest reviews, amenities and directions to the property.",
+    "Applies to hotels, motels, hostels, guesthouses, inns, lodges, cabins with hosted accommodation and B&B-style businesses.",
+    "If the site needs to convert visitors into reservations, this scaffold is a better fit than a generic service scaffold."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-59-film-video-och-tv-programverksamhet",
+  "version": "0.1.0",
+  "label": "Film-, video- och tv-programverksamhet, ljudinspelning och musikutgivning",
+  "description": "Branschspecifik scaffold för produktionsbolag, videoproducenter, tv-projekt, ljudstudior och musikutgivare där showreel, utvalda produktioner, tjänsteerbjudande och enkel offertförfrågan är centralt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa showreel och utvalda produktioner",
+    "förklara tjänster och produktionsupplägg",
+    "bygga förtroende med produktionslista och samarbeten",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

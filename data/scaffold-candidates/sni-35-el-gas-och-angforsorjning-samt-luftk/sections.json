@@ -1,0 +1,74 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "operations-overview",
+      "story",
+      "reviews",
+      "faq",
+      "service-area",
+      "contact-info"
+    ],
+    "sectionOrderRules": [
+      "Hero must state business type and primary offer, and should mention location or service area when known.",
+      "Service summary must describe actual offered services or supply-related areas, not vague claims.",
+      "Trust proof must appear before the final contact CTA.",
+      "Operations overview may appear between service-summary and trust-proof when the dossier contains useful operational facts such as support flow, response context or how service is delivered.",
+      "Sections must avoid repeating the same promise in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "service-area"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company's role to the listed services in plain language.",
+      "Service list items must be concrete, such as installation, maintenance, ventilation service, cooling systems, district heating connections or similar relevant offers when supported by content.",
+      "Pricing overview is optional and should only be shown when the company can present transparent example pricing or pricing principles without misleading certainty."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "operations-overview",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific to the business and its work, not generic quality claims.",
+      "Team should only render when real people, roles or responsibilities are available.",
+      "Trust proof may include visible organisation details, references and practical experience, but must not imply approvals or certifications that are not provided."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must be present when available and must not use placeholder content.",
+      "Opening hours should appear before the final CTA when the business has stated customer service or office hours.",
+      "Map should only be shown when a real visit address exists."
+    ]
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "booking-cta",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery-preview",
+      "reviews",
+      "pricing-highlights",
+      "about-preview",
+      "faq",
+      "opening-hours",
+      "map-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must include service category, local context if known, and a primary booking CTA.",
+      "Service summary should highlight the main treatments or specialties without duplicating the full treatments page.",
+      "Visual proof such as gallery-preview or reviews may appear before trust-proof when data exists.",
+      "Trust-proof should focus on real signals such as hygienrutiner, certifieringar if provided, and kundomdömen without repeating the same claim across multiple sections.",
+      "The final conversion section should lead to booking or contact, not both equally."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "pricing-highlights",
+      "faq",
+      "gallery-preview",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must explain the salon's focus and who the treatments are for.",
+      "Service list items must be concrete and understandable, for example treatment type, result or session focus.",
+      "If pricing-highlights is shown here, it should remain summary-level and not replace the dedicated prices page.",
+      "Booking CTA should appear after the main service explanation."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-intro",
+      "pricing-table",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Pricing intro should set expectations clearly, such as from-prices, package logic or consultation note when supplied.",
+      "Pricing table must use real service names and avoid vague placeholder labels.",
+      "Booking CTA should follow the price content so the visitor can act after comparing options."
+    ]
+  },
+  "booking": {
+    "requiredSections": [
+      "booking-intro",
+      "booking-cta",
+      "contact-alternative"
+    ],
+    "optionalSections": [
+      "faq",
+      "opening-hours",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Booking intro must explain how to book and what the preferred booking path is.",
+      "Booking CTA should be the dominant element on the page.",
+      "Contact alternative must provide a fallback path such as phone, email or contact form for visitors who cannot complete online booking."
+    ]
+  },
+  "gallery": {
+    "requiredSections": [
+      "gallery-intro",
+      "image-gallery",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "reviews",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Gallery should prioritize authentic treatment, result and environment imagery over generic stock-like repetition.",
+      "Images should support service understanding and brand feel, not overwhelm the booking CTA.",
+      "Booking CTA should appear after or alongside the gallery content."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery-preview",
+      "reviews",
+      "booking-cta"
+    ],
+    "sectionOrderRules": [
+      "About story must be personal and specific to the practitioner or salon.",
+      "Team should present real people or roles when available; if solo, it may render as a single practitioner profile.",
+      "Trust-proof should stay factual and only include credentials or routines that are actually provided."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "opening-hours",
+      "map",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "booking-cta"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include the real contact methods provided by the business.",
+      "Opening hours should be shown when available and not invented.",
+      "Map should appear when an address exists.",
+      "Contact CTA may be a form or direct contact method, but should not hide phone or address when those exist."
+    ]
+  }
+}

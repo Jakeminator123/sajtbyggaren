@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, aktuella höjdpunkter och leda vidare till besök, program eller kontakt."
+    },
+    {
+      "id": "verksamhet",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Beskriva samlingar, tjänster, utställningar, program eller andra delar av verksamheten på ett tydligt sätt."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Förklara uppdrag, historia, organisation och människorna bakom verksamheten för att bygga förtroende."
+    },
+    {
+      "id": "nyheter",
+      "path": "/nyheter",
+      "required": false,
+      "purpose": "Visa nyheter, aktuella händelser och uppdateringar för återkommande besökare."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge tydliga kontaktvägar, adress, öppettider och praktisk information för besök och frågor."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "besok",
+      "path": "/besok",
+      "when": "när verksamheten har mycket praktisk besöksinformation som bör samlas på egen sida, till exempel öppettider, karta och tillgänglighet"
+    },
+    {
+      "id": "engagera-dig",
+      "path": "/engagera-dig",
+      "when": "när verksamheten vill samla medlemskap, volontärinsatser, stöd eller nyhetsbrevsanmälan på en egen sida"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "när personal, styrelse, intendenter eller kontaktpersoner behöver presenteras mer utförligt än på om-oss-sidan"
+    }
+  ]
+}

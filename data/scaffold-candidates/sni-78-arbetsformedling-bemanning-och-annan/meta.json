@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-78-arbetsformedling-bemanning-och-annan",
+  "sniCode": "78",
+  "wizardCategoryId": "consulting",
+  "industryProfileId": "sni-78",
+  "referenceScaffoldId": "agency-studio",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:31:28Z",
+  "outputPath": "data/scaffold-candidates/sni-78-arbetsformedling-bemanning-och-annan",
+  "operatorBriefHash": "sha256:4335fb7d72412faac4760faca6eb3bb9e8d02ad287ef300f9aae510f01315af4",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

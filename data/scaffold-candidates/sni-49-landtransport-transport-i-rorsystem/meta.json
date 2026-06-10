@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-49-landtransport-transport-i-rorsystem",
+  "sniCode": "49",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-49",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:28:21Z",
+  "outputPath": "data/scaffold-candidates/sni-49-landtransport-transport-i-rorsystem",
+  "operatorBriefHash": "sha256:f065599c1f9597220be75fbf42a9292704a03c9ecf84f687b0001add06654cb3",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

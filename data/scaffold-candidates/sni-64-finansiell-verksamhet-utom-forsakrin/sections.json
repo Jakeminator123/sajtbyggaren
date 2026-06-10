@@ -1,0 +1,95 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "services-overview",
+      "trust-signals",
+      "process-steps",
+      "faq-preview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "team-preview",
+      "reviews-proof"
+    ],
+    "sectionOrderRules": [
+      "Hero ska uttrycka trygghet, tydlighet och professionalism; undvik sensationsspråk och överdrivna löften om avkastning eller resultat.",
+      "Trust-signals ska bara innehålla sådant verksamheten faktiskt kan styrka, exempelvis tillstånd, ansvarsförsäkring eller sekretessrutiner.",
+      "Process-steps ska förklara hur en kundrelation eller rådgivningsprocess går till i konkreta steg, så att tröskeln för första kontakt blir lägre.",
+      "FAQ-preview bör ligga efter att erbjudande och förtroendesignaler har förklarats, så att frågorna fungerar som riskreducering inför kontakt."
+    ]
+  },
+  "tjanster": {
+    "requiredSections": [
+      "service-categories",
+      "audience-fit",
+      "process-steps",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq-accordion",
+      "team-preview"
+    ],
+    "sectionOrderRules": [
+      "Service-categories ska vara en strukturerad uppdelning av erbjudandet, inte en lös lista; varje tjänst ska ha kort beskrivning av omfattning och typisk kundnytta.",
+      "Audience-fit ska hjälpa besökaren att förstå om tjänsten passar privatpersoner, företag, investerare eller annan relevant målgrupp utan att lova lämplighet för alla.",
+      "Om produkter eller upplägg kräver individuell bedömning ska detta framgå tydligt i stället för att förenklas bort.",
+      "Contact-cta ska använda återhållsam och trovärdig formulering som Begär offert eller Boka rådgivning."
+    ]
+  },
+  "prislista": {
+    "requiredSections": [
+      "pricing-table",
+      "pricing-notes",
+      "faq-accordion",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "service-categories",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "Pricing-table får visa fasta priser, från-priser eller arvodesmodeller beroende på verksamheten, men ska inte ge sken av exakt pris om individuell prövning krävs.",
+      "Pricing-notes ska förklara vad som ingår, vad som kan påverka priset och när separat offert behövs.",
+      "Om priser inte kan standardiseras fullt ut ska sidan fortfarande ge vägledning genom exempelupplägg eller tydliga principer för prissättning."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "about-story-block",
+      "work-principles",
+      "credentials",
+      "team-preview",
+      "trust-signals"
+    ],
+    "optionalSections": [
+      "process-steps",
+      "reviews-proof"
+    ],
+    "sectionOrderRules": [
+      "About-story-block ska vara konkret om verksamhetens inriktning, bakgrund och arbetssätt; undvik generiska formuleringar utan informationsvärde.",
+      "Credentials ska ange verkliga tillstånd, registreringar eller medlemskap med ansvarig utfärdare när sådant finns och är relevant.",
+      "Team-preview ska presentera ansvariga personer eller kompetensområden på ett sätt som gör företaget personligt men fortfarande sakligt."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "mailto-contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map-embed",
+      "opening-hours",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "Kontaktuppgifter ska vara direkt användbara med klickbara telefon- och e-postlänkar.",
+      "Kontaktformuläret ska kännas tryggt och kortfattat; uppmana inte besökaren att skicka mer känslig information än nödvändigt i första steget.",
+      "Om fysiskt kontor eller besöksadress anges ska informationen vara tydlig och praktisk, särskilt om möten sker efter bokning."
+    ]
+  }
+}

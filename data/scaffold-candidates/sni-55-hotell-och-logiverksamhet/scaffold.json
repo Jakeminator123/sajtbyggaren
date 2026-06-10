@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-55-hotell-och-logiverksamhet",
+  "version": "0.1.0",
+  "label": "Hotell- och logiverksamhet",
+  "description": "Branschspecifik scaffold för hotell, pensionat, vandrarhem, bed & breakfast och annan logiverksamhet med fokus på rum, priser, bokning, läge och förtroendeskapande information inför vistelsen.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa boende och rumstyper visuellt",
+    "göra det enkelt att boka eller skicka bokningsförfrågan",
+    "förklara priser, paket och villkor",
+    "bygga trygghet med recensioner, faciliteter och praktisk information",
+    "hjälpa gäster att hitta till boendet"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

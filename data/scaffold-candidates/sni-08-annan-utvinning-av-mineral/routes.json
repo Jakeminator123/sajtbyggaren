@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, tydliggöra vilka mineral eller material som erbjuds och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "materials",
+      "path": "/material",
+      "required": true,
+      "purpose": "Visa vilka material eller fraktioner som finns, hur de används och ge en konkret väg till förfrågan."
+    },
+    {
+      "id": "operations",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Förklara hur verksamheten arbetar med utvinning, hantering, logistik och leverans på en tydlig och förtroendeingivande nivå."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, leveransfrågor, platsinformation och praktiska ärenden."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget har en tydlig historia, ägarbild, team eller lokal förankring som stärker förtroendet"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när många återkommande frågor finns om material, leverans, hämtning, tillstånd på området eller praktiska villkor"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "when": "när plats, infart, öppettider eller karta behöver beskrivas separat för besök, upphämtning eller leveranser"
+    }
+  ]
+}

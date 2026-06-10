@@ -1,0 +1,96 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "production-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews",
+      "about-story",
+      "faq",
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what kinds of textile products the company manufactures and include a primary CTA.",
+      "Product summary should show concrete product categories or manufacturing areas, not vague claims.",
+      "Production summary should appear before the final CTA and briefly explain materials, methods or customization possibilities.",
+      "Trust proof must rely on real references, visible company details or documented experience, never invented certifications or quantities.",
+      "Sections should avoid repeating the same claims about quality or flexibility."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "pricing-overview",
+      "faq",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Products intro must connect the company's manufacturing focus to the listed product areas.",
+      "Product list items must be specific textile product categories, uses or customer segments, not generic placeholders.",
+      "If pricing overview is shown, it should present honest starting points, examples or quotation logic rather than misleading fixed promises."
+    ]
+  },
+  "production": {
+    "requiredSections": [
+      "production-intro",
+      "process-steps",
+      "materials-capabilities",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Production intro must explain how the company works with manufacturing, customization or series production in concrete terms.",
+      "Process steps should follow a logical sequence such as inquiry, specification, production and delivery.",
+      "Materials and capabilities must describe actual fabrics, techniques, volumes or customization options only when supported by input data.",
+      "Trust proof, if present, should reinforce reliability without repeating the same evidence already shown in adjacent sections."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the business in specific, factual terms and may include history, niche or working philosophy.",
+      "Team should only be rendered when actual people or roles are available.",
+      "Trust proof should include visible company information such as organisation number, references or practical experience when available."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real contact paths available in the source data.",
+      "Contact form should support quote or inquiry intent relevant to textile manufacturing.",
+      "Map and opening hours should only render when valid location or hours data exists."
+    ]
+  }
+}

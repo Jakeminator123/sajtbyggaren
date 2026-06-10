@@ -1,0 +1,77 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "offering-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "visit-summary",
+      "reviews",
+      "faq",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and the primary next step such as contact or visit.",
+      "Offering summary must describe the main game, betting or entertainment offering in concrete terms without promising outcomes.",
+      "Trust proof must rely on real business facts such as organisation details, references, location or established routines, not invented claims.",
+      "Visit summary may appear before the final CTA when opening hours or location are important for conversion.",
+      "Sections must not encourage irresponsible play or make unrealistic value claims."
+    ]
+  },
+  "games": {
+    "requiredSections": [
+      "games-intro",
+      "game-list",
+      "practical-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "interactive-game-showcase"
+    ],
+    "sectionOrderRules": [
+      "Games intro must explain the offered categories clearly and in plain language.",
+      "Game list items must be specific, for example game types, betting formats or on-site activities, not vague marketing labels.",
+      "Practical info must clarify how participation works at a high level, including any relevant age or entry conditions when supplied by the dossier.",
+      "Pricing overview is only shown when the business has clear price, fee or participation information to present honestly."
+    ]
+  },
+  "visit": {
+    "requiredSections": [
+      "visit-intro",
+      "opening-hours",
+      "location-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "venue-gallery",
+      "team"
+    ],
+    "sectionOrderRules": [
+      "Opening hours and location info must be visible before the final CTA.",
+      "Location info must include real address or area details when available, never placeholders.",
+      "Map should only render when valid location data exists.",
+      "Venue gallery should show the actual environment and help visitors understand what to expect on site."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact info must contain the real channels provided by the business, such as phone, e-mail and address when available.",
+      "Contact form must offer a simple path to questions or visit enquiries.",
+      "Opening hours and map may be repeated here when they help conversion, but copy should stay concise and not duplicate entire sections from the visit page."
+    ]
+  }
+}

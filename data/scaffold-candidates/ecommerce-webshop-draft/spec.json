@@ -1,0 +1,312 @@
+{
+  "id": "ecommerce-webshop-draft",
+  "label": "Webshop / E-handel",
+  "description": "Branschspecifik scaffold för detaljhandel via webshop med fokus på produkter, köpkänsla, trygghet och kontakt inför köp.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produktsortiment",
+    "leda besökare till köp",
+    "bygga förtroende kring betalning, byten och kundservice",
+    "hjälpa kunder att kontakta butiken före köp"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera butiken, lyft utvalda produkter och led besökaren vidare till produktsortimentet eller direkt köp."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera sortimentet med konkreta produkter, priser när de finns och tydlig väg vidare till köp."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Hjälp kunder som har frågor om produkter, beställning, leverans, byten eller butikskontakt att nå företaget snabbt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva butiken, människorna bakom, urvalet och hur ni arbetar."
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "required": false,
+      "purpose": "Besvara vanliga frågor om köp, betalning, leverans, returer och storlekar för att minska tvekan inför beställning."
+    },
+    {
+      "id": "store-info",
+      "path": "/butik-oppettider",
+      "required": false,
+      "purpose": "Visa fysisk butik, adress och öppettider när verksamheten även har butik eller utlämning."
+    },
+    {
+      "id": "reviews",
+      "path": "/kundrecensioner",
+      "optional": true,
+      "when": "när butiken har riktiga kundomdömen som stärker köptryggheten"
+    },
+    {
+      "id": "lookbook",
+      "path": "/inspiration",
+      "optional": true,
+      "when": "när varumärket behöver en mer visuell eller kuraterad yta utöver produktlistan"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "featured-products",
+        "value-props",
+        "trust-proof",
+        "shop-cta"
+      ],
+      "optionalSections": [
+        "category-links",
+        "reviews-highlight",
+        "newsletter-signup",
+        "editorial-feature"
+      ],
+      "sectionOrderRules": [
+        "Hero ska innehålla butiksnamn, ett tydligt erbjudande eller sortimentslöfte och en primär CTA till /produkter.",
+        "Featured-products ska visa konkreta produkter eller produktkategorier, aldrig generiska platshållare.",
+        "Trust-proof ska vara ärlig och får bygga på faktisk betaltrygghet, returvillkor, recensioner eller kundservice — inte påhittade utmärkelser.",
+        "Shop-cta ska komma efter att utbud eller värde visats och tydligt leda vidare mot köp."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-grid",
+        "trust-proof",
+        "shop-cta"
+      ],
+      "optionalSections": [
+        "filter-bar",
+        "category-links",
+        "faq-snippet",
+        "reviews-highlight"
+      ],
+      "sectionOrderRules": [
+        "Products-intro ska förklara vad som förenar sortimentet eller hur kunden hittar rätt, inte bara säga 'välkommen'.",
+        "Product-grid ska innehålla konkreta produkter med namn, bild och pris när pris används.",
+        "Filter-bar är valfri men får bara använda verkliga attribut som kategori, storlek, färg eller material.",
+        "Trust-proof nära produkterna ska stödja köpbeslut med riktiga villkor som betalning, byten eller leveransinformation utan överdrifter."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "customer-service-topics"
+      ],
+      "optionalSections": [
+        "store-location",
+        "opening-hours",
+        "faq-snippet",
+        "shop-cta"
+      ],
+      "sectionOrderRules": [
+        "Kontaktuppgifter ska vara riktiga och relevanta för köpstöd, exempelvis e-post, telefon och adress när sådan finns.",
+        "Contact-form ska vara anpassat för handelsfrågor som orderfrågor, produktfrågor eller returärenden.",
+        "Store-location och opening-hours används bara när företaget faktiskt har fysisk butik, showroom eller utlämningsplats."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "values",
+        "brand-selection"
+      ],
+      "optionalSections": [
+        "team",
+        "sourcing",
+        "store-photos",
+        "reviews-highlight"
+      ],
+      "sectionOrderRules": [
+        "About-story ska vara specifik för butiken och förklara vad ni säljer och varför urvalet ser ut som det gör.",
+        "Values ska beskriva konkreta arbetssätt, till exempel kvalitet, urval, service eller materialfokus, inte tomma modeord.",
+        "Brand-selection ska hjälpa kunden förstå sortimentets inriktning eller kvalitetssyn."
+      ]
+    },
+    "faq": {
+      "requiredSections": [
+        "faq-intro",
+        "faq-categories",
+        "shop-cta"
+      ],
+      "optionalSections": [
+        "contact-shortcut",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "FAQ ska fokusera på verkliga köphinder som betalning, leverans, returer, byten, storlek eller lagerstatus.",
+        "Svar ska vara tydliga och sakliga och får inte lova villkor som inte faktiskt erbjuds.",
+        "Contact-shortcut ska finnas när vissa frågor behöver kundservice snarare än generella svar."
+      ]
+    },
+    "store-info": {
+      "requiredSections": [
+        "store-intro",
+        "store-location",
+        "opening-hours"
+      ],
+      "optionalSections": [
+        "parking-transit",
+        "pickup-info",
+        "store-gallery",
+        "contact-shortcut"
+      ],
+      "sectionOrderRules": [
+        "Sidan ska bara användas när verksamheten har en verklig fysisk plats eller utlämning.",
+        "Store-location ska visa faktisk adress eller tydlig platsbeskrivning.",
+        "Pickup-info är valfri men ska bara användas om upphämtning i butik eller utlämning faktiskt erbjuds."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har alltid startsida med tydlig väg till produkter och en separat kontaktsida.",
+      "Produktrelaterade sidor ska fokusera på konkreta varor eller verkliga kategorier, inte generisk företagscopy.",
+      "Scaffolden stödjer köpbeteende med signaler om betalning, byten, recensioner eller kundservice.",
+      "Kontaktvägar för frågor före köp måste vara tydliga och trovärdiga.",
+      "Valfria sidor ska spegla verkliga handelsbehov som FAQ, fysisk butik eller recensioner.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska tjänstesidor som inte passar detaljhandel.",
+      "Påhittade certifieringar, recensionstal eller leveranslöften.",
+      "Tomma produktkort utan verklig information.",
+      "Överdriven varumärkesstory som skymmer sortiment och köpväg.",
+      "Butikssida eller öppettider för verksamheter som bara säljer online."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "reviews-display",
+      "trust-guarantees",
+      "opening-hours",
+      "map-embed",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "auth-flow",
+      "dashboard-shell",
+      "pricing-table-saas"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Detaljhandel webshop e-handel onlinebutik produkter sortiment köpupplevelse betalning kundrecensioner returer byten kontakt kundservice fysisk butik öppettider inspiration produktgrid kategorier trygg betalning.",
+    "semanticSignals": [
+      "webshop",
+      "e-handel",
+      "produkter",
+      "produktgrid",
+      "sortiment",
+      "kategori",
+      "pris",
+      "kop-nu",
+      "kundrecensioner",
+      "trygg-betalning",
+      "returer",
+      "byten",
+      "kundservice",
+      "butik",
+      "oppettider",
+      "leverans",
+      "fysisk-butik"
+    ],
+    "negativeSignals": [
+      "bokning-som-huvudflode",
+      "menyservering",
+      "portfoljgalleri-utan-produkter",
+      "ren-konsulttjanst",
+      "offertflode-som-primart-mal",
+      "eventbiljetter-som-karnerbjudande"
+    ],
+    "llmClassificationHints": [
+      "Använd denna scaffold när verksamheten säljer fysiska eller tydligt paketerade varor till konsument.",
+      "Prioritera produkter, köpsignaler och kontakt inför köp framför servicebeskrivningar.",
+      "Om fysisk butik finns, komplettera med butik- och öppettidssida; annars håll fokus på onlineköp.",
+      "FAQ är särskilt relevant för villkor, leverans och returer i handelsflöden."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fbfaf7",
+          "foreground": "#1a1a1a",
+          "muted": "#6e6e68",
+          "border": "#e8e6e0",
+          "primary": "#1a1a1a",
+          "primaryForeground": "#fbfaf7",
+          "accent": "#c9a87c",
+          "accentForeground": "#1a1a1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.25rem",
+          "md": "0.375rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "editorial",
+          "premium-but-restrained",
+          "product-led",
+          "calm"
+        ]
+      }
+    }
+  ]
+}

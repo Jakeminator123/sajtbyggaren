@@ -1,0 +1,35 @@
+{
+  "id": "sni-93-sport-fritids-och-nojesverksamhet",
+  "embeddingText": "Sport-, fritids- och nöjesverksamhet scaffold för gym, tränare och liknande aktörer. Fokus på startsida med energi och gemenskap, schema eller pass-sida, priser eller medlemskap, om oss med team samt kontakt med karta, öppettider och formulär. Starkt stöd för bokning, registrering, prova-på och förtroendeskapande innehåll.",
+  "semanticSignals": [
+    "gym",
+    "traning",
+    "pass",
+    "schema",
+    "medlemskap",
+    "priser",
+    "bokning",
+    "registrering",
+    "personlig-tranare",
+    "instruktor",
+    "grupptraning",
+    "prova-pa",
+    "anlaggning",
+    "oppettider"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "produktkatalog",
+    "e-handel",
+    "fastighetsobjekt",
+    "juridiska-tjanster",
+    "fotografportfolio-som-primar-struktur"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten säljer träning, pass, medlemskap eller fritidsaktiviteter där besökaren behöver schema, priser och bokningsnära CTA.",
+    "Passar gym, studios, tränare och liknande SNI 93-verksamheter även när bokning sker via extern tjänst.",
+    "Nedprioritera om sajten främst handlar om varuförsäljning, restaurangbokning eller rena eventkalendrar utan löpande tränings- eller aktivitetsutbud."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

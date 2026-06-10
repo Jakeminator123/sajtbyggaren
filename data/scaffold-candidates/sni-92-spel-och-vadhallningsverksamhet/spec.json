@@ -1,0 +1,262 @@
+{
+  "id": "sni-92-spel-och-vadhallningsverksamhet",
+  "label": "Spel- och vadhållningsverksamhet",
+  "description": "Branschspecifik scaffold för spel- och vadhållningsverksamhet med fokus på tydligt erbjudande, ansvarsfull information, praktiska besöksuppgifter och kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara spel- eller vadhållningserbjudandet",
+    "bygga förtroende genom tydlig verksamhetsinformation",
+    "leda besökaren till kontakt eller besök på plats"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara erbjudandet på en tydlig nivå och leda vidare till kontakt eller besök."
+    },
+    {
+      "id": "games",
+      "path": "/spel-och-utbud",
+      "required": true,
+      "purpose": "Visa vilka spel, vadhållningsformer eller aktiviteter som erbjuds och hur besökaren tar nästa steg."
+    },
+    {
+      "id": "visit",
+      "path": "/besok-oss",
+      "required": true,
+      "purpose": "Ge praktisk information om plats, öppettider och hur ett besök går till."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten via formulär, telefon, e-post eller hitta rätt adress."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "when the business has a clear story, team presentation or ownership information that strengthens trust"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "when the business needs to answer common questions about rules, åldersgränser, öppettider or practical details"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "offering-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "visit-summary",
+        "reviews",
+        "faq",
+        "video-hero"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and the primary next step such as contact or visit.",
+        "Offering summary must describe the main game, betting or entertainment offering in concrete terms without promising outcomes.",
+        "Trust proof must rely on real business facts such as organisation details, references, location or established routines, not invented claims.",
+        "Visit summary may appear before the final CTA when opening hours or location are important for conversion.",
+        "Sections must not encourage irresponsible play or make unrealistic value claims."
+      ]
+    },
+    "games": {
+      "requiredSections": [
+        "games-intro",
+        "game-list",
+        "practical-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq",
+        "interactive-game-showcase"
+      ],
+      "sectionOrderRules": [
+        "Games intro must explain the offered categories clearly and in plain language.",
+        "Game list items must be specific, for example game types, betting formats or on-site activities, not vague marketing labels.",
+        "Practical info must clarify how participation works at a high level, including any relevant age or entry conditions when supplied by the dossier.",
+        "Pricing overview is only shown when the business has clear price, fee or participation information to present honestly."
+      ]
+    },
+    "visit": {
+      "requiredSections": [
+        "visit-intro",
+        "opening-hours",
+        "location-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "venue-gallery",
+        "team"
+      ],
+      "sectionOrderRules": [
+        "Opening hours and location info must be visible before the final CTA.",
+        "Location info must include real address or area details when available, never placeholders.",
+        "Map should only render when valid location data exists.",
+        "Venue gallery should show the actual environment and help visitors understand what to expect on site."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Contact info must contain the real channels provided by the business, such as phone, e-mail and address when available.",
+        "Contact form must offer a simple path to questions or visit enquiries.",
+        "Opening hours and map may be repeated here when they help conversion, but copy should stay concise and not duplicate entire sections from the visit page."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has a dedicated route for the actual industry offering, not only generic services.",
+      "Makes practical visit information easy to find because location and opening hours are often important in this industry.",
+      "Uses honest, factual wording and avoids promises about winnings, outcomes or guarantees.",
+      "Includes clear contact paths and supports the category capability contact-form.",
+      "Supports trust-building through real business information, team, reviews or FAQs when available.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic service-business structure that ignores games, betting or visitor experience.",
+      "Invented licences, certifications, player counts or win claims.",
+      "Overuse of promotional language that obscures what the business actually offers.",
+      "Duplicate sections across pages with the same message and no new information.",
+      "CTAs that pressure users with unrealistic urgency or outcome-based promises."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "reviews-display",
+      "interactive-game-loop",
+      "image-gallery",
+      "team-roster",
+      "faq-accordion",
+      "trust-guarantees",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Spel- och vadhållningsverksamhet scaffold för småföretagswebb med startsida, spel- och utbudssida, besökssida och kontaktsida. Fokuserar på konkret erbjudande, praktisk besöksinformation, öppettider, karta, kontaktformulär, förtroende och ansvarsfull tonalitet utan orealistiska löften.",
+    "semanticSignals": [
+      "spelhall",
+      "vadhallning",
+      "spelutbud",
+      "aktiviteter-pa-plats",
+      "oppettider",
+      "hitta-hit",
+      "kontaktformular",
+      "besoksinformation",
+      "team",
+      "referenser",
+      "faq",
+      "ansvarsfull-information"
+    ],
+    "negativeSignals": [
+      "e-handel",
+      "produktkatalog",
+      "restaurangmeny",
+      "fotogalleri-som-huvudsyfte",
+      "medicinsk-behandling",
+      "juridiska-tjanster",
+      "ren-portfoliowebb-utan-plats-eller-kontaktfokus"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the business primarily offers betting, gaming or on-site play activities and visitors need to understand the offering plus how to visit or contact the venue.",
+      "Prefer this over a generic local service scaffold when the core content is game formats, betting options, venue experience or visitor rules rather than traditional services.",
+      "A strong match includes need for opening hours, map, practical visit details and an offer page tailored to games or betting categories."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

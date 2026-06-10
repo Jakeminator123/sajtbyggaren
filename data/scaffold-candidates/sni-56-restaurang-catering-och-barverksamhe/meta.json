@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-56-restaurang-catering-och-barverksamhe",
+  "sniCode": "56",
+  "wizardCategoryId": "restaurant",
+  "industryProfileId": "sni-56",
+  "referenceScaffoldId": "restaurant-hospitality",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:04Z",
+  "outputPath": "data/scaffold-candidates/sni-56-restaurang-catering-och-barverksamhe",
+  "operatorBriefHash": "sha256:3819f2cc8e8184ab4203e4cfd5b162319ed474e3525b344f2c1aae5ee7765c47",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

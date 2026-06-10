@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Introducera konstnärskapet eller scenverksamheten, lyfta aktuellt arbete och leda vidare till verk, datum och kontakt."
+    },
+    {
+      "id": "portfolio",
+      "path": "/verk",
+      "required": true,
+      "purpose": "Visa utvalda verk, produktioner, roller eller projekt med bildmaterial och kort kontext."
+    },
+    {
+      "id": "about",
+      "path": "/om",
+      "required": true,
+      "purpose": "Ge bakgrund, konstnärlig inriktning och relevanta meriter på ett personligt och trovärdigt sätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten för bokning, pressförfrågningar, samarbeten eller allmänna frågor."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "events",
+      "path": "/aktuellt",
+      "when": "när verksamheten har kommande föreställningar, utställningar, spelningar eller andra publika datum"
+    },
+    {
+      "id": "press",
+      "path": "/press",
+      "when": "när det finns recensioner, presscitat, pressbilder eller behov av en tydlig sida för arrangörer och media"
+    }
+  ]
+}

@@ -1,0 +1,275 @@
+{
+  "id": "sni-50-sjotransport",
+  "label": "Sjötransport",
+  "description": "Scaffold för företag inom sjötransport med fokus på transporttjänster, trafikupplägg, destinationer och tydlig kontaktväg för förfrågningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera sjötransporttjänster tydligt",
+    "bygga förtroende genom operativ information och referenser",
+    "leda besökare till kontakt eller transportförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera sjötransportföretaget, förklara erbjudandet kort och leda till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva transporttjänster, lasttyper och upplägg på ett konkret sätt."
+    },
+    {
+      "id": "routes-destinations",
+      "path": "/rutter-och-destinationer",
+      "required": true,
+      "purpose": "Visa geografisk täckning, trafikupplägg eller vanliga destinationer så att kunder snabbt ser relevans."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, arbetssätt, erfarenhet och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta direktkontakt via telefon, e-post och adress."
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när verksamheten ofta behöver besvara återkommande frågor om bokning, gods, tider eller praktiska villkor"
+    },
+    {
+      "id": "fleet",
+      "path": "/fartyg-och-kapacitet",
+      "optional": true,
+      "when": "när företaget vill visa fartygstyper, kapacitet eller särskilda transportförutsättningar"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "routes-overview",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "reviews",
+        "faq",
+        "gallery"
+      ],
+      "sectionOrderRules": [
+        "Hero must include sjötransport som verksamhet, relevant geografisk kontext if available and a primary CTA.",
+        "Service-summary must describe the main transport offering concretely, such as gods, passagerare, charter or specialisttransport, without vague claims.",
+        "Routes-overview should appear before the final CTA when destination or traffic-area information exists.",
+        "Trust-proof must stay specific to visible facts such as organisation details, references or practical experience, and must not invent certifications or fleet size.",
+        "Sections should avoid repeating the same promise in hero, trust-proof and final CTA."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "pricing",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services-intro must connect the company identity to actual sjötransport services.",
+        "Service-list items must be concrete and describe what is transported, for whom or under what operating setup.",
+        "If pricing is shown, it should present starting models, examples or quote-based information honestly rather than fabricated fixed rates."
+      ]
+    },
+    "routes-destinations": {
+      "requiredSections": [
+        "routes-intro",
+        "coverage-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Routes-intro must explain whether the company serves fixed routes, destination areas, charter assignments or tailored transport solutions.",
+        "Coverage-list must use real place names or real operating areas when supplied, not generic nationwide claims unless supported.",
+        "Map may complement but not replace readable text about destination coverage."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "operations-overview",
+        "team"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "gallery",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About-story must be specific about the company and avoid generic quality slogans.",
+        "Operations-overview should explain how assignments are handled, such as planning, loading, coordination or customer communication, when such data exists.",
+        "Team is optional to render if no identifiable people are supplied, but the section slot remains part of the route grammar."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must all be present and must not be placeholders.",
+        "Contact-form-cta should invite transport or booking enquiries in plain language.",
+        "Opening-hours should only be shown when actual staffed times are known."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Scaffold must reflect sjötransport needs with service presentation and geographic or route coverage.",
+      "Home and contact routes must be present.",
+      "All default routes must have matching sectionsPerRoute entries.",
+      "Contact path must be Swedish and lowercase.",
+      "Recommended dossiers must only use allowed dossier ids.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic local-service structure without transport-specific route coverage.",
+      "Invented certifications, permits, vessel counts or destination claims.",
+      "Portfolio, menu, webshop or other routes unrelated to sjötransport.",
+      "Repeating identical CTA copy in every section without adding information."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "image-gallery",
+      "booking-cta",
+      "faq-accordion"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Sjötransport, frakt till sjöss, passagerartrafik, charter, gods, rutter, destinationer, hamnar, kusttrafik, transportförfrågan, kontakt, om oss, fartyg och kapacitet.",
+    "semanticSignals": [
+      "sjotransportforetag",
+      "maritim-transport",
+      "gods-till-sjoss",
+      "passagerartransport",
+      "chartertrafik",
+      "hamn-och-destination",
+      "rutter-och-tackning",
+      "transportforfragan",
+      "fartygskapacitet"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "e-handel",
+      "fotograf",
+      "tandlakare",
+      "bilverkstad",
+      "hotell",
+      "produktkatalog-for-fysisk-retail"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily transports goods or passengers via water.",
+      "Prefer this scaffold when route coverage, destinations, ports or vessel capacity are central buying questions.",
+      "Do not classify inland generic logistics brokers here unless sea transport is a clear core service."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

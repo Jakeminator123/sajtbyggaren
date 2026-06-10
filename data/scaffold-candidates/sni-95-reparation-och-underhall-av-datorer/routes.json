@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vilka produkter eller fordon som repareras och driva kontakt eller bokningsförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva reparationstjänster, serviceområden och vanliga fel som företaget hjälper kunder med."
+    },
+    {
+      "id": "pricing",
+      "path": "/prislista",
+      "required": true,
+      "purpose": "Ge tydlig prisinformation med exempel, startpriser eller felsökningsavgifter för att minska osäkerhet innan kontakt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Konvertera besökare till kontakt med telefon, e-post, adress, öppettider och formulär för ärenden eller frågor."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när företaget har en tydlig verkstadsprofil, historia, specialistkompetens eller team som stärker förtroendet"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när många kunder behöver praktisk information om inlämning, felsökning, garantier, reservdelar eller ledtider"
+    }
+  ]
+}

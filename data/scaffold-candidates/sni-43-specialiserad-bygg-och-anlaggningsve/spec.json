@@ -1,0 +1,273 @@
+{
+  "id": "sni-43-specialiserad-bygg-och-anlaggningsve",
+  "label": "Specialiserad bygg- och anläggningsverksamhet",
+  "description": "Scaffold för specialiserade bygg- och anläggningsföretag inom SNI 43, med fokus på tjänster, referensjobb, behörigheter och offertförfrågningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera tjanster",
+    "visa referensjobb",
+    "bygga fortroende med behorigheter och garantier",
+    "driva offertforfragningar",
+    "gora kontaktvagar tydliga"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera bygg- eller hantverksforetaget, visa huvudinriktning och leda besokaren till offert eller kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva de specialiserade tjansterna konkret sa att kunden forstar vad foretaget utfor."
+    },
+    {
+      "id": "portfolio",
+      "path": "/referenser",
+      "required": true,
+      "purpose": "Visa utvalda projekt, fore- och efterbilder samt vilken typ av arbete som har utforts."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gora det enkelt att begara offert eller ta kontakt via telefon, e-post och kontaktformular."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "nar foretaget vill lyfta erfarenhet, arbetsatt, team eller yrkesbakgrund"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "nar foretaget arbetar i flera orter och vill tydliggora verksamhetsomraden for lokala besokare"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "nar kunder ofta undrar om process, materialval, tidsplan, garantier eller ansvar"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "gallery",
+        "testimonials",
+        "guarantees",
+        "service-area",
+        "faq",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Hero must include company type or trade focus, service area if known, and a primary CTA to request a quote.",
+        "Service summary must mention actual work categories relevant to the business, not vague promises.",
+        "Trust proof should highlight real qualifications, industry rules, guarantees or work methods only when supported by the business data.",
+        "Gallery or testimonials may appear before trust-proof when project material exists.",
+        "Final contact-cta must appear near the bottom and should not repeat the exact same copy as the hero."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq",
+        "guarantees"
+      ],
+      "sectionOrderRules": [
+        "Services intro must explain what kinds of specialized construction or installation work the company performs.",
+        "Service list items must be concrete, for example renovation, tiling, painting, groundworks, electrical or plumbing work when applicable.",
+        "If pricing-overview is shown, it must describe pricing structure honestly and avoid fixed promises unless supplied by the business.",
+        "A contact CTA should follow the service details to capture quote intent."
+      ]
+    },
+    "portfolio": {
+      "requiredSections": [
+        "portfolio-intro",
+        "project-gallery",
+        "project-highlights",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "testimonials",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Portfolio intro must explain that the page shows examples of completed or ongoing work.",
+        "Project gallery should prioritize authentic project photos, especially before-and-after material when available.",
+        "Project highlights must describe the type of job, scope or outcome without inventing customer names or project facts.",
+        "Contact CTA should invite similar project inquiries after the showcased work."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form-section",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real phone, email and address details when available.",
+        "Contact-form-section should be oriented around quote requests and allow the visitor to describe the job.",
+        "Map may be shown when the business has a physical address or office worth displaying.",
+        "Opening hours should only be shown when the business has defined contact or office hours."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has a home route with path /.",
+      "Has a contact route.",
+      "Includes routes that match this industry's need to present services and reference jobs.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Paths are Swedish, lowercase and without trailing slash.",
+      "Recommended dossiers only use allowed ids.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic local-service structure without a project or references page.",
+      "Vague service descriptions that do not explain what work is performed.",
+      "Invented certifications, guarantees, customer counts or years of experience.",
+      "Duplicating the same trust claim in multiple sections without adding new information."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "trust-guarantees",
+      "reviews-display",
+      "map-embed",
+      "pricing-table"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Specialiserad bygg- och anlaggningsverksamhet inom SNI 43 behover en scaffold som lyfter konkreta tjanster, referensjobb, fore- och efterbilder, behorigheter, garantier och tydlig offertkontakt. Viktiga sidor ar startsida, tjanster, referenser och kontakt, med mojlighet att lagga till om oss, verksamhetsomraden och vanliga fragor.",
+    "semanticSignals": [
+      "bygg",
+      "hantverk",
+      "entreprenad",
+      "renovering",
+      "installation",
+      "anlaggning",
+      "markarbete",
+      "maleri",
+      "plattsattning",
+      "tak",
+      "el",
+      "vvs",
+      "referensjobb",
+      "offert",
+      "behorigheter",
+      "garantier",
+      "id06"
+    ],
+    "negativeSignals": [
+      "meny",
+      "bokning-av-bord",
+      "produktkatalog",
+      "webbshop",
+      "kurser",
+      "recept",
+      "spel",
+      "apptjanst"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold for tradespeople and specialized construction firms that perform practical on-site jobs.",
+      "Strong fit when the business needs both services and project references.",
+      "Trust content should center on real qualifications, industry rules, guarantees and workmanship rather than brand storytelling alone."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "sni-38-insamling-av-avfall-atervinning-och",
+  "embeddingText": "Branschscaffold för avfallsinsamling, återvinning och bortskaffande. Innehåller startsida, tjänster, avfallsslag, hämtning eller beställning, om oss och kontakt. Prioriterar tydliga tjänstebeskrivningar, sorteringsvägledning, spårbarhet, miljötillstånd, praktiska flöden för hämtning och kontaktformulär.",
+  "semanticSignals": [
+    "avfallsinsamling",
+    "atervinning",
+    "bortskaffande",
+    "container",
+    "hamtning",
+    "sortering",
+    "avfallsslag",
+    "atervinningsanlaggning",
+    "miljotillstand",
+    "sparbarhet",
+    "avfallshantering",
+    "insamlingstjanster"
+  ],
+  "negativeSignals": [
+    "meny",
+    "produktkatalog",
+    "webbshop",
+    "bordsbokning",
+    "portfoljgalleri-som-huvudsyfte",
+    "recept",
+    "evenemangsbiljetter"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten hämtar, tar emot, sorterar, återvinner eller bortskaffar avfall.",
+    "Särskilt relevant när sajten behöver förklara avfallsslag, hämtflöden, containrar, sorteringskrav eller anläggningsinformation.",
+    "Använd inte denna scaffold för vanliga flytt-, städ- eller transportföretag utan tydlig avfalls- eller återvinningsverksamhet."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

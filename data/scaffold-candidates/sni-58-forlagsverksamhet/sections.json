@@ -1,0 +1,115 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "featured-titles",
+      "newsletter-cta",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "editorial-intro",
+      "news-preview",
+      "authors-preview",
+      "reviews-proof",
+      "image-grid"
+    ],
+    "sectionOrderRules": [
+      "Hero ska tydligt beskriva förlagets eller utgivningens inriktning och innehålla en primär CTA till nyhetsbrev eller titlar.",
+      "Featured-titles ska komma tidigt på sidan och visa verkliga titlar eller tydliga platshållare som renderer kan utelämna om data saknas.",
+      "News-preview och authors-preview får placeras mellan featured-titles och newsletter-cta när underlag finns.",
+      "Förtroendeskapande innehåll som recensioner eller utmärkelser får bara visas om det finns verkligt underlag och ska inte upprepas i flera sektioner med samma budskap.",
+      "Sidan ska prioritera utgivning och registrering före allmän företagsinformation."
+    ]
+  },
+  "titles": {
+    "requiredSections": [
+      "titles-intro",
+      "titles-grid",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "series-filter",
+      "featured-title",
+      "reviews-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Titles-intro ska förklara hur besökaren kan utforska utgivningen, till exempel efter genre, serie eller format.",
+      "Titles-grid ska vara den dominerande sektionen och innehålla konkreta titlar eller publikationer, inte generiska exempeltexter.",
+      "Featured-title får ligga ovanför eller direkt under titles-grid när en ny eller särskilt viktig titel ska lyftas.",
+      "Kontakt-CTA ska vinklas mot frågor om titlar, rättigheter eller återförsäljning snarare än generell försäljning om sådant underlag saknas."
+    ]
+  },
+  "news": {
+    "requiredSections": [
+      "news-intro",
+      "post-list",
+      "newsletter-cta"
+    ],
+    "optionalSections": [
+      "featured-post",
+      "category-list",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "News-intro ska sätta en redaktionell ton och beskriva vilken typ av uppdateringar som publiceras.",
+      "Post-list ska bestå av artiklar, nyheter eller inlägg med tydliga rubriker och datum när sådana finns.",
+      "Featured-post får placeras före post-list när ett enskilt inlägg ska prioriteras.",
+      "Newsletter-cta ska komma efter att innehållet visat sitt värde, inte före huvudlistningen."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-intro",
+      "editorial-profile",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "timeline",
+      "authors-preview",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "About-intro ska vara specifik om förlagets inriktning, målgrupper eller utgivningsområden och undvika generiska formuleringar.",
+      "Editorial-profile ska beskriva hur förlaget arbetar med utgivning, urval eller redaktionell identitet utan att lova sådant som inte stöds av underlaget.",
+      "Team visas när personer finns i underlaget; annars kan renderer tona ned sektionen men inte ersätta den med påhittade namn.",
+      "Trust-proof får innehålla verkliga recensioner, priser eller andra belägg men ska utelämnas om verifierbart underlag saknas."
+    ]
+  },
+  "newsletter": {
+    "requiredSections": [
+      "newsletter-intro",
+      "newsletter-benefits",
+      "newsletter-signup"
+    ],
+    "optionalSections": [
+      "featured-titles",
+      "faq",
+      "privacy-note"
+    ],
+    "sectionOrderRules": [
+      "Newsletter-intro ska tydligt beskriva vad besökaren får genom att registrera sig, till exempel nyheter om kommande titlar och evenemang.",
+      "Newsletter-benefits ska vara konkreta och korta, utan överdrivna löften om frekvens eller exklusivitet om sådant inte är känt.",
+      "Newsletter-signup ska vara sidans huvudsakliga konverteringsyta och ligga ovanför eventuella sekundära sektioner."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "faq",
+      "submission-note"
+    ],
+    "sectionOrderRules": [
+      "Contact-info ska innehålla verkliga kontaktvägar som e-post och andra tillgängliga uppgifter från underlaget.",
+      "Contact-form ska vara tydligt märkt för allmän kontakt och får kompletteras med vägledning för press, rättigheter eller manus om sådana flöden nämns.",
+      "Submission-note får användas för att klargöra hur manus eller förfrågningar hanteras, men ska inte lova svarstider eller antagning om sådant inte är känt.",
+      "Kontakt-CTA ska avsluta sidan utan att upprepa exakt samma text som formuläret redan kommunicerar."
+    ]
+  }
+}

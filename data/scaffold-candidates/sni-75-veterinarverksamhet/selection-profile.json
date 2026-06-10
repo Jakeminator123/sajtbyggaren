@@ -1,0 +1,35 @@
+{
+  "id": "sni-75-veterinarverksamhet",
+  "embeddingText": "Veterinärverksamhet, veterinärklinik, djurklinik och djurmottagning med fokus på trygg djurvård, behandlingar, akuthjälp, bokning, kontakt, öppettider, karta, team och vanliga frågor för djurägare.",
+  "semanticSignals": [
+    "veterinar",
+    "djurklinik",
+    "djursjukvard",
+    "boka-tid",
+    "akut-hjalp",
+    "vaccination",
+    "undersokning",
+    "tandvard",
+    "kastration",
+    "oppettider",
+    "hitta-hit",
+    "forsakring",
+    "djuragare",
+    "legitimerad-veterinar"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "e-handel",
+    "produktkatalog",
+    "hotellbokning",
+    "fotogalleri-som-huvudsyfte",
+    "humanvard-utan-djurkontext"
+  ],
+  "llmClassificationHints": [
+    "Använd när verksamheten erbjuder veterinärvård eller kliniska tjänster för djur.",
+    "Prioritera behandlingar, akut information, bokning och kontakt framför allmän företagsstory.",
+    "Tolka målgruppen som djurägare som söker vård, rådgivande information och snabb kontaktväg."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

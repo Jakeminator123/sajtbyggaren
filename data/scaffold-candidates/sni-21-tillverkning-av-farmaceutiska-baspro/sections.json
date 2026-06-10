@@ -1,0 +1,86 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "capability-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "quality-summary",
+      "about-summary",
+      "reviews",
+      "faq",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and a realistic primary CTA.",
+      "Capability summary must describe actual manufacturing or development areas in concrete terms, not vague innovation claims.",
+      "Trust proof must appear before the final contact CTA.",
+      "Quality summary may highlight processes, controls or ways of working but must not imply certifications or approvals that are not provided in the content.",
+      "Sections should avoid repeating the same claims across hero, capability summary and trust proof."
+    ]
+  },
+  "capabilities": {
+    "requiredSections": [
+      "capabilities-intro",
+      "capability-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Capabilities intro must connect the company's role to the kinds of pharmaceutical production or development work it actually performs.",
+      "Capability list items must be specific, such as formulation, production support, packaging, quality support or related areas when supplied by the dossier.",
+      "Do not present products or services as patient-directed if the company is primarily B2B or manufacturing-focused unless the content explicitly supports it."
+    ]
+  },
+  "quality-and-compliance": {
+    "requiredSections": [
+      "quality-intro",
+      "quality-principles",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Quality intro must explain the company's approach to quality and compliance in plain language.",
+      "Quality principles must describe routines, controls, documentation or responsibility areas honestly and without legal or regulatory overclaiming.",
+      "Trust proof on this page should favor visible business facts, references or supplied guarantees rather than duplicating generic statements."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company in specific operational terms, not generic mission language.",
+      "Team section should focus on relevant functions or leadership when people data exists, and may be omitted by the renderer only if no team data is available despite being required in the scaffold grammar.",
+      "Trust proof should reinforce seriousness and transparency, for example visible organisation details or references when supplied."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include available real contact methods and should not use placeholder content.",
+      "If address data exists, it should be shown clearly.",
+      "The CTA should fit business inquiries, partnerships or general contact rather than consumer checkout language."
+    ]
+  }
+}

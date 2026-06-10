@@ -1,0 +1,98 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "menu-preview",
+      "booking-cta-strip",
+      "hours-location",
+      "reviews"
+    ],
+    "optionalSections": [
+      "atmosphere-gallery",
+      "signature-dishes",
+      "faq",
+      "catering-teaser",
+      "about-teaser"
+    ],
+    "sectionOrderRules": [
+      "Hero ska direkt visa mat, dryck eller lokalens atmosfär och tydligt nämna verksamhetstyp och ort.",
+      "En tydlig boknings- eller kontakt-cta ska finnas högt upp på sidan och återkomma nära sidans slut.",
+      "Öppettider och platsinformation ska gå att hitta utan att besökaren behöver leta på flera sidor.",
+      "Om meny-preview används ska den visa riktiga kategorier eller exempelrätter, inte enbart allmän marknadsföringstext."
+    ]
+  },
+  "menu": {
+    "requiredSections": [
+      "menu-intro",
+      "menu-categories",
+      "dietary-information"
+    ],
+    "optionalSections": [
+      "drinks-section",
+      "lunch-note",
+      "download-menu-cta",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Menyn ska vara grupperad i tydliga kategorier som förrätter, varmrätter, dessert, dryck eller motsvarande relevanta grupper.",
+      "Priser ska visas där det är relevant för gästens beslut.",
+      "Om symboler eller markeringar används för allergener eller specialkost ska en förklaring visas på samma sida.",
+      "Undvik att presentera hela menyn som ett enda långt ostrukturerat textblock."
+    ]
+  },
+  "booking": {
+    "requiredSections": [
+      "booking-intro",
+      "booking-form-or-embed",
+      "hours-summary",
+      "booking-contact-alternative"
+    ],
+    "optionalSections": [
+      "large-party-note",
+      "cancellation-policy",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Bokningsfunktionen eller bokningsformuläret ska ligga tidigt på sidan.",
+      "Det ska alltid finnas ett tydligt alternativ via telefon eller kontaktformulär om direktbokning inte passar alla sällskap eller tider.",
+      "Öppettider eller relevanta bokningstider ska visas även här, utan att förutsätta att besökaren redan sett startsidan.",
+      "Om sidan gäller bokningsförfrågan snarare än omedelbar bekräftelse ska det framgå tydligt."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "address-and-map",
+      "opening-hours",
+      "contact-info"
+    ],
+    "optionalSections": [
+      "parking-and-transit",
+      "accessibility-note",
+      "contact-form",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Adress och karta ska vara klickbara och fungera bra på mobil.",
+      "Öppettider ska visas dag för dag eller på annat tydligt sätt där stängda tider framgår utan tvekan.",
+      "Telefonnummer ska vara klickbart som tel:-länk och e-post som mailto:-länk när e-post visas.",
+      "Kontaktvägar för bokning, frågor och större sällskap ska vara enkla att förstå."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "story",
+      "team-or-founders",
+      "food-and-values"
+    ],
+    "optionalSections": [
+      "sourcing-focus",
+      "venue-story",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Berättelsen ska vara specifik för verksamheten och gärna nämna personer, plats, inriktning eller bakgrund.",
+      "Team- eller grundarsektionen ska helst innehålla riktiga namn eller roller.",
+      "Undvik vaga formuleringar utan konkret innehåll om vad som gör verksamheten särskild."
+    ]
+  }
+}

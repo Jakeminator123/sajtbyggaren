@@ -1,0 +1,40 @@
+{
+  "id": "sni-87-vard-och-omsorg-med-boende",
+  "embeddingText": "Branschspecifik scaffold för vård och omsorg med boende (SNI 87). Fokus på trygg startsida, sida om boendet, sida om omsorg och stöd samt tydlig kontaktsida. Valbara sidor för team, FAQ, bilder och information för närstående. Tonen ska vara lugn, omhändertagande och saklig, med praktisk information för närstående, handläggare och personer som söker boende eller placering.",
+  "semanticSignals": [
+    "vard-och-omsorg-med-boende",
+    "sarskilt-boende",
+    "omsorgsboende",
+    "gruppboende",
+    "boendeform",
+    "omvardnad",
+    "stod-i-vardagen",
+    "narstaende",
+    "placering",
+    "inflyttning",
+    "visning",
+    "trygghet",
+    "tillganglighet",
+    "kontaktperson",
+    "praktisk-information"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "produktkatalog",
+    "restaurangmeny",
+    "fotogalleri-som-huvudsyfte",
+    "eventbokning",
+    "kurskatalog",
+    "renodlad-klinikbehandling",
+    "akutvard",
+    "webshop",
+    "saas"
+  ],
+  "llmClassificationHints": [
+    "Välj detta scaffold när verksamheten erbjuder boende kombinerat med vård, omsorg eller stöd över tid.",
+    "Passar äldreboende, gruppboende, HVB och liknande boendeverksamheter där målgruppen behöver både miljöbeskrivning och omsorgsinformation.",
+    "Nedprioritera klassisk behandlingssida eller prislista om verksamheten inte säljer enskilda behandlingar som huvudprodukt."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

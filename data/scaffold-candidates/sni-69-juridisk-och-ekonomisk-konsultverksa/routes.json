@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Etablera förtroende direkt med saklig introduktion, tydliga specialistområden, relevanta förtroendesignaler och en lågtröskelväg till första kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/rattsomraden",
+      "required": true,
+      "purpose": "Beskriva byråns rättsområden, ekonomiska rådgivningstjänster eller specialistkompetenser så att besökaren snabbt kan avgöra om verksamheten passar ärendet."
+    },
+    {
+      "id": "team",
+      "path": "/vart-team",
+      "required": true,
+      "purpose": "Presentera jurister, ekonomiska rådgivare eller konsulter med namn, roll, specialisering och kontaktvägar så att förfrågningar kan riktas rätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter, adress och kontaktformulär på en tydlig sida som inger seriositet och gör det enkelt att ta nästa steg."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "pricing",
+      "path": "/priser-och-paket",
+      "when": "verksamheten arbetar med fasta priser, rådgivningspaket, abonnemang eller vill förklara hur debitering fungerar utan att lova standardpris för alla ärenden"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "många återkommande frågor behöver besvaras om process, sekretess, första mötet, debitering eller vilka underlag kunden bör förbereda"
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "byrån vill utveckla sin historia, arbetsmetod, värderingar eller förklara skillnaden mellan olika kompetenser och uppdragstyper"
+    }
+  ]
+}

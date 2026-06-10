@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Have a dedicated route for the organisation's support/services offering because visitors need to understand what help or activities exist.",
+    "Have a dedicated route for engagement because this industry often depends on participation, volunteering, membership or other involvement.",
+    "Use transparent trust elements appropriate for nonprofit/social work contexts, such as organisationsnummer, 90-konto and årsredovisning when available.",
+    "Keep calls to action aligned with the brief's primary CTA around registrering or interest/engagement, while still supporting contact.",
+    "Support both contact-form and newsletter-subscribe capabilities in the information architecture.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the site like a generic local service business selling bookable appointments.",
+    "Do not use donation-first structure as the only conversion path; participation and support access are equally important.",
+    "Do not imply clinical treatment, official authority decisions or guaranteed personal outcomes unless explicitly provided by the organisation.",
+    "Do not rely on vague mission language without explaining actual insatser, målgrupper and next steps.",
+    "Do not invent partner logos, certifications, member counts or impact numbers."
+  ]
+}

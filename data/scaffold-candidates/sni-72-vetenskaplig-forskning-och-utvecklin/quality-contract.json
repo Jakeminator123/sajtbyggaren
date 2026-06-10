@@ -1,0 +1,24 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Scaffold must prioritise research areas, projects/cases, methodology and team as core trust-building content.",
+    "Contact route must support both direct contact details and a form-based enquiry path.",
+    "Project/case presentation must fit both commissioned R&D work and broader research collaborations.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the business like a generic creative agency with only portfolio language and no methodological depth.",
+    "Do not make pricing a central route; this industry usually requires scoped dialogue rather than fixed package tables.",
+    "Do not use exaggerated certainty claims about scientific outcomes, impact or validation without evidence.",
+    "Do not rely on generic stock-business trust copy when concrete methods, domains and project examples can be shown."
+  ]
+}

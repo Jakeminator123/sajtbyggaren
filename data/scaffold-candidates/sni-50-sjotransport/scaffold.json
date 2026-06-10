@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-50-sjotransport",
+  "version": "0.1.0",
+  "label": "Sjötransport",
+  "description": "Scaffold för företag inom sjötransport med fokus på transporttjänster, trafikupplägg, destinationer och tydlig kontaktväg för förfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera sjötransporttjänster tydligt",
+    "bygga förtroende genom operativ information och referenser",
+    "leda besökare till kontakt eller transportförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,78 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "facility-highlights",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "reviews",
+      "image-gallery",
+      "faq",
+      "opening-hours",
+      "map-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and primary offer, and should mention location when known.",
+      "Service summary must cover concrete service categories such as magasinering, varulagring, terminal- eller transportstöd rather than generic business claims.",
+      "Facility highlights should appear before the final CTA so visitors understand practical conditions before contacting.",
+      "Trust proof must be factual, such as organisation details, references or clear operating information, and must not invent certifications or capacities.",
+      "Sections should avoid repeating the same operational benefit in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "handling-process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company's role in the logistics chain to the offered services.",
+      "Service list items must be concrete and operational, for example lagring, omlastning, orderhantering, terminaltjänster or distributionsstöd where relevant.",
+      "Handling process should explain how goods are received, stored, handled or released at a high level without making unverifiable promises.",
+      "If pricing summary is shown, it should present honest pricing structure cues or quote-based information, not fabricated fixed prices."
+    ]
+  },
+  "facilities": {
+    "requiredSections": [
+      "facility-intro",
+      "capacity-and-access",
+      "site-features",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "opening-hours",
+      "map-preview"
+    ],
+    "sectionOrderRules": [
+      "Facility intro must describe the site or storage environment in practical terms.",
+      "Capacity and access should focus on storage types, loading possibilities, opening arrangements or access conditions that are actually known.",
+      "Site features may include security-related or operational features only when supplied by real business data.",
+      "If map preview is shown here, contact details should still remain on the contact page as the main conversion surface."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present when available and must not be placeholders.",
+      "Contact form should be framed for offert, platsförfrågan or allmän fråga depending on the supplied business data.",
+      "If opening hours or map are shown, they must support contact and logistics planning rather than distract from the main CTA."
+    ]
+  }
+}

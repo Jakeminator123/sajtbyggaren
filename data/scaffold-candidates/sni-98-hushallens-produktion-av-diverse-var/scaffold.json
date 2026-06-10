@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-98-hushallens-produktion-av-diverse-var",
+  "version": "0.1.0",
+  "label": "Hushållens produktion av diverse varor och tjänster för eget bruk",
+  "description": "Scaffold för verksamheter inom SNI 98 där besökaren främst behöver förstå vad som görs, i vilken form det sker och hur kontakt tas. Upplägget prioriterar tydlig beskrivning av egenproduktion/eget bruk, enkel presentation och kontaktmöjlighet snarare än avancerade säljflöden.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Förklara verksamhetens inriktning tydligt",
+    "Beskriva vilka typer av varor eller tjänster som omfattas",
+    "Ge grundläggande förtroendesignaler och kontaktvägar",
+    "Göra det enkelt att skicka en förfrågan"
+  ],
+  "defaultPageCount": 3,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

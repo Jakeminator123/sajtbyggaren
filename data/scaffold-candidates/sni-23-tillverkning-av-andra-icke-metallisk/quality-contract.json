@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Scaffold must fit manufacturers of non-metallic mineral products rather than generic local services.",
+    "Products route must be a default route because the industry often needs a structured product presentation.",
+    "Production route must be a default route because manufacturing method, materials and capacity are central decision factors.",
+    "Contact route must support both direct contact details and form-based enquiries.",
+    "Copy structure must work for B2B-oriented manufacturers as well as mixed B2B/B2C operations.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the site like a restaurant, salon or appointment-led service business.",
+    "Do not require ecommerce checkout, cart or consumer booking flows.",
+    "Do not imply certifications, test standards or environmental claims unless provided by source data.",
+    "Do not rely on testimonials as the only trust mechanism; factual company information must also carry trust."
+  ]
+}

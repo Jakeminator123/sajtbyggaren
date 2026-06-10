@@ -1,0 +1,27 @@
+{
+  "id": "sni-15-tillverkning-av-lader-och-skinnvaror",
+  "embeddingText": "Tillverkning av läder- och skinnvaror, väskor, bälten, fodral, remmar, etuier och andra produkter i läder, skinn eller liknande material. Webbplatsen bör lyfta produktområden, tillverkningsprocess, materialkunskap, specialbeställningar, företagsförfrågningar och tydlig kontaktväg.",
+  "semanticSignals": [
+    "manufacturer-of-leather-goods",
+    "custom-leather-products",
+    "product-categories-instead-of-service-areas",
+    "workshop-craftsmanship",
+    "materials-and-production-process",
+    "b2b-or-custom-order-enquiries",
+    "gallery-worthy-physical-products"
+  ],
+  "negativeSignals": [
+    "generic-consultant-or-office-service-site",
+    "restaurant-menu-logic",
+    "appointment-first-clinic-structure",
+    "pure-ecommerce-checkout-assumption",
+    "location-area-pages-as-primary-structure"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily makes physical goods from leather, hide, skin or similar materials.",
+    "Prefer product and process presentation over generic services wording.",
+    "Include materials or gallery routes when the visual craft and material differences are important for conversion."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

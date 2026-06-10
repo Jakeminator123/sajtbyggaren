@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-24-stal-och-metallframstallning",
+  "version": "0.1.0",
+  "label": "Stål- och metallframställning",
+  "description": "Scaffold för företag inom stål- och metallframställning med fokus på produktionskapacitet, processer, kvalitet, leveransförmåga och tydlig kontaktväg för offert eller dialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera verksamhet och produktionsinriktning",
+    "bygga förtroende genom process-, kvalitets- och anläggningsinformation",
+    "göra det enkelt att ta kontakt för offert, materialförfrågan eller samarbete"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

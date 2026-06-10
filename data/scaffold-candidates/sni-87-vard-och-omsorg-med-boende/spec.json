@@ -1,0 +1,283 @@
+{
+  "id": "sni-87-vard-och-omsorg-med-boende",
+  "label": "Vård och omsorg med boende",
+  "description": "Scaffold för verksamheter inom vård och omsorg med boende, med fokus på trygghet, boendeformer, omsorgsinnehåll, praktisk information för närstående och tydliga kontaktvägar för inflyttning eller placering.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Skapa trygghet och förklara verksamhetens omsorg och boende",
+    "Hjälpa närstående, handläggare eller boendesökande att förstå målgrupp och erbjudande",
+    "Göra det enkelt att ta kontakt för frågor, visning eller placeringsförfrågan",
+    "Visa praktisk information som adress, tider, tillgänglighet och vanliga frågor"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Skapa ett första intryck av trygghet, värdighet och professionalism, förklara vem boendet är till för och leda besökaren vidare till kontakt eller intresseanmälan utan att kräva att de tolkar fackspråk."
+    },
+    {
+      "id": "boende",
+      "path": "/boende",
+      "required": true,
+      "purpose": "Beskriva boendeformen, målgrupp, miljö, vardag och vilket stöd som ingår så att närstående och handläggare snabbt kan avgöra om verksamheten är relevant."
+    },
+    {
+      "id": "omsorg-och-stod",
+      "path": "/omsorg-och-stod",
+      "required": true,
+      "purpose": "Förklara vilken omsorg, omvårdnad, aktiviteter och individuellt stöd verksamheten erbjuder, med tydligt språk om vad man kan förvänta sig i vardagen."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla telefon, e-post, adress, öppettider och tydliga nästa steg för frågor, visning, inflyttning eller placeringsförfrågan."
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "optional": true,
+      "when": "verksamheten har flera namngivna nyckelpersoner eller legitimerad personal som skapar extra förtroende för närstående och handläggare"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "verksamheten ofta får återkommande frågor om målgrupp, platstillgång, besökstider, avgifter, inflyttning eller hur kontaktvägar fungerar"
+    },
+    {
+      "id": "bilder",
+      "path": "/bilder",
+      "optional": true,
+      "when": "lokaler, gemensamma utrymmen och utemiljö är viktiga för att skapa trygghet och verksamheten har egna, representativa bilder att visa"
+    },
+    {
+      "id": "for-narstaende",
+      "path": "/for-narstaende",
+      "optional": true,
+      "when": "närstående behöver särskild information om besök, samverkan, kontaktpersoner och hur de kan vara delaktiga"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "target-group-summary",
+        "boende-summary",
+        "omsorg-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "reviews",
+        "practical-info-teaser"
+      ],
+      "sectionOrderRules": [
+        "Hero ska förmedla lugn, trygghet och mänsklig närvaro snarare än säljton eller klinisk distans.",
+        "Målgrupp och boendeform ska framgå tidigt på sidan så att besökaren snabbt förstår vem verksamheten är till för.",
+        "Kontaktvägen ska uttrycka låg tröskel, exempelvis för frågor, visning eller intresseanmälan, och inte låsas till 'Boka tid' om det inte faktiskt är relevant."
+      ]
+    },
+    "boende": {
+      "requiredSections": [
+        "boende-overview",
+        "environment-and-facilities",
+        "daily-life",
+        "admission-or-placement-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "faq",
+        "accessibility-info"
+      ],
+      "sectionOrderRules": [
+        "Sidan ska först klargöra vilken typ av boende det gäller och för vem det passar.",
+        "Miljö och lokaler ska beskrivas konkret och respektfullt utan att lova sådant verksamheten inte kan garantera individuellt.",
+        "Information om inflyttning eller placering ska vara översiktlig och tydligt hänvisa vidare till kontakt för bedömning av enskilda fall."
+      ]
+    },
+    "omsorg-och-stod": {
+      "requiredSections": [
+        "care-overview",
+        "support-services",
+        "activities-and-social-life",
+        "staff-and-approach",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "credentials",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Beskriv omsorg och stöd i vardagligt språk med fokus på vad den boende faktiskt får hjälp med.",
+        "Om legitimerad personal nämns ska det vara sant och beskrivas utan överdrift eller otydliga titlar.",
+        "Aktiviteter och socialt innehåll ska presenteras som exempel eller återkommande inslag, inte som löften om exakt samma upplägg för alla."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "contact-info",
+        "hours-summary",
+        "location",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "visit-info"
+      ],
+      "sectionOrderRules": [
+        "Telefonnummer ska vara klickbart med tel:-länk och e-post med mailto:-länk.",
+        "Adress ska visas som ett sammanhållet block och kompletteras med karta när det hjälper besökaren hitta rätt.",
+        "Nästa steg ska vara tydliga för både allmän fråga, visningsförfrågan och placeringskontakt om verksamheten tar emot sådana förfrågningar."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har en startsida och en kontaktsida.",
+      "Återspeglar branschens faktiska behov: boendeform, omsorgsinnehåll, målgrupp, praktisk information och kontakt för inflyttning eller placering.",
+      "Varje standardrutt har en motsvarande sectionsPerRoute-post.",
+      "Route-id:n, section-id:n och scaffold-id är kebab-case.",
+      "Svenska sökvägar är lowercase, börjar med '/' och saknar avslutande snedstreck.",
+      "Visitor-facing text håller sig till ärliga, verifierbara påståenden.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Utforma sajten som en vanlig klinik med fokus på behandlingar eller tidsbokning om kärnbehovet i stället är boende och omsorg över tid.",
+      "Aggressiv säljkopia eller språk som förminskar den boendes integritet och självbestämmande.",
+      "Påhittade kvalitetsmärkningar, certifieringar, platsantal eller medicinska löften.",
+      "För tekniskt myndighetsspråk utan förklaring för närstående och boendesökande.",
+      "Bildspråk eller formuleringar som känns institutionella, kalla eller skrämmande."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "booking-cta",
+      "faq-accordion",
+      "image-gallery",
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik scaffold för vård och omsorg med boende (SNI 87). Fokus på trygg startsida, sida om boendet, sida om omsorg och stöd samt tydlig kontaktsida. Valbara sidor för team, FAQ, bilder och information för närstående. Tonen ska vara lugn, omhändertagande och saklig, med praktisk information för närstående, handläggare och personer som söker boende eller placering.",
+    "semanticSignals": [
+      "vard-och-omsorg-med-boende",
+      "sarskilt-boende",
+      "omsorgsboende",
+      "gruppboende",
+      "boendeform",
+      "omvardnad",
+      "stod-i-vardagen",
+      "narstaende",
+      "placering",
+      "inflyttning",
+      "visning",
+      "trygghet",
+      "tillganglighet",
+      "kontaktperson",
+      "praktisk-information"
+    ],
+    "negativeSignals": [
+      "e-handel",
+      "produktkatalog",
+      "restaurangmeny",
+      "fotogalleri-som-huvudsyfte",
+      "eventbokning",
+      "kurskatalog",
+      "renodlad-klinikbehandling",
+      "akutvard",
+      "webshop",
+      "saas"
+    ],
+    "llmClassificationHints": [
+      "Välj detta scaffold när verksamheten erbjuder boende kombinerat med vård, omsorg eller stöd över tid.",
+      "Passar äldreboende, gruppboende, HVB och liknande boendeverksamheter där målgruppen behöver både miljöbeskrivning och omsorgsinformation.",
+      "Nedprioritera klassisk behandlingssida eller prislista om verksamheten inte säljer enskilda behandlingar som huvudprodukt."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fbfdfe",
+          "foreground": "#0e2030",
+          "muted": "#5b6f80",
+          "border": "#dfe9f0",
+          "primary": "#1f6f8b",
+          "primaryForeground": "#fbfdfe",
+          "accent": "#a8d8c5",
+          "accentForeground": "#0e2030"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.5rem",
+          "md": "0.75rem",
+          "lg": "1.25rem"
+        },
+        "spacing": {
+          "section": "5.5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "clinical",
+          "trustworthy",
+          "spacious",
+          "modern",
+          "professional"
+        ]
+      }
+    }
+  ]
+}

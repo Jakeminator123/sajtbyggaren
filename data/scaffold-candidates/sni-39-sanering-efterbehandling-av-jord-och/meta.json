@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-39-sanering-efterbehandling-av-jord-och",
+  "sniCode": "39",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-39",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:27:39Z",
+  "outputPath": "data/scaffold-candidates/sni-39-sanering-efterbehandling-av-jord-och",
+  "operatorBriefHash": "sha256:6007e468ebc37c46db5c84749aa7971c94aca384685adabcd77cfe15973c7350",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-72-vetenskaplig-forskning-och-utvecklin",
+  "version": "0.1.0",
+  "label": "Vetenskaplig forskning och utveckling",
+  "description": "Branschspecifik scaffold för verksamheter inom vetenskaplig forskning och utveckling som behöver visa forskningsområden, projekt/case, metodik, team och en tydlig kontaktväg för uppdrag, samarbeten eller offertförfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara forskningskompetens och specialistområden",
+    "visa projekt, uppdrag eller forskningscase med tydlig nytta",
+    "bygga förtroende genom metodik, team och referenser",
+    "ge en enkel väg till kontakt för offert, samarbete eller uppdragsdialog"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

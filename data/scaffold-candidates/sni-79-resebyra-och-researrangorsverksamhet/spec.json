@@ -1,0 +1,287 @@
+{
+  "id": "sni-79-resebyra-och-researrangorsverksamhet",
+  "label": "Resebyrå och researrangör",
+  "description": "Branschspecifik scaffold för resebyråer, researrangörer och annan boknings- och reserelaterad verksamhet. Fokuserar på inspiration, tydliga reseupplägg, priser och paket, bokningsvägar samt trygghet kring villkor och resegaranti.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "inspirera besökare till resa eller upplevelse",
+    "presentera resor, paket och upplägg tydligt",
+    "driva bokningsförfrågningar eller tidsbokning",
+    "bygga trygghet kring villkor, resegaranti och köpprocess",
+    "besvara vanliga frågor inför bokning"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Introducera reseerbjudandet, väcka reslust, bygga trygghet och leda vidare till bokning eller kontakt."
+    },
+    {
+      "id": "trips",
+      "path": "/resor",
+      "required": true,
+      "purpose": "Visa företagets resor, destinationer eller upplevelser med tydlig inriktning och CTA till bokning eller förfrågan."
+    },
+    {
+      "id": "pricing-packages",
+      "path": "/priser-och-paket",
+      "required": true,
+      "purpose": "Presentera priser, paket och vad som ingår så att besökaren kan jämföra alternativ och gå vidare till bokning."
+    },
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "required": true,
+      "purpose": "Samla bokningsvägar, bokningsförfrågan och praktisk information om hur kunden bokar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för frågor, rådgivning, offert eller bokningshjälp."
+    },
+    {
+      "id": "gallery",
+      "path": "/bildgalleri",
+      "optional": true,
+      "when": "when strong destination or experience imagery is available and visual inspiration is important for conversion"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "when the business needs to answer common questions about bokning, ombokning, betalning, resvillkor or what is included"
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "when founder story, specialist knowledge, team or company background materially strengthens trust"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "trip-highlights",
+        "trust-proof",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "gallery-preview",
+        "pricing-preview",
+        "reviews",
+        "faq",
+        "story"
+      ],
+      "sectionOrderRules": [
+        "Hero must communicate the type of travel or experiences offered and include a primary booking or contact CTA.",
+        "Trip-highlights should show concrete destinations, themes or packages rather than vague promises.",
+        "Trust-proof must reference only real trust signals such as resegaranti, applicable travel law, clear booking terms or authentic customer reviews when available.",
+        "Gallery-preview, pricing-preview and reviews may appear between trip-highlights and trust-proof when data exists.",
+        "Avoid repeating the same destination or sales argument across multiple adjacent sections."
+      ]
+    },
+    "trips": {
+      "requiredSections": [
+        "trips-intro",
+        "trip-list",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "gallery",
+        "faq",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Trips intro must explain what kinds of resor, destinationer or upplägg the business actually offers.",
+        "Trip-list items must be concrete and may include destination, duration, target audience, season, included highlights or travel style when known.",
+        "If reviews are shown, they should support the listed trips without inventing outcomes or quantities."
+      ]
+    },
+    "pricing-packages": {
+      "requiredSections": [
+        "pricing-intro",
+        "pricing-table",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Pricing intro must clarify whether prices are examples, starting prices or fixed package prices when that information is available.",
+        "Pricing-table must focus on packages, tiers or inclusions relevant to travel booking and avoid unclear placeholder pricing.",
+        "If trust-proof is shown here, it should reinforce clarity around what is included, payment terms or traveler protections without duplicating the exact same block from the home page."
+      ]
+    },
+    "booking": {
+      "requiredSections": [
+        "booking-intro",
+        "booking-options",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Booking-intro must explain how booking works, for example request flow, consultation, confirmation or online booking step.",
+        "Booking-options should present the actual available booking path such as form, phone, email or scheduled consultation.",
+        "Do not imply instant booking confirmation unless the business actually supports it."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must include real available contact methods and must not use placeholder details.",
+        "If opening hours are shown, they should reflect customer contact or advisory availability rather than implying staffed travel support around the clock.",
+        "Map is optional and should be shown only when a visitable address is relevant."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "include a dedicated trips route because this industry needs a clear surface for resor, destinationer or upplevelser",
+      "include a dedicated pricing or packages route because comparison of packages and inclusions is central to booking decisions",
+      "include a dedicated booking route because the industry often depends on structured booking or booking inquiry flows",
+      "use trust-oriented sections that can support resegaranti, villkor, paketreselagen and authentic reviews without inventing claims",
+      "support both inspirational browsing and practical conversion to booking or contact",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic service-business structure that lacks resor or paket pages",
+      "copy that promises destinations, departures or inclusions not supported by supplied data",
+      "fake urgency, fake review counts or invented certifications",
+      "treating booking as identical to a simple local-service contact request",
+      "overusing broad lifestyle claims instead of concrete travel information"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "booking-cta",
+      "pricing-table",
+      "image-gallery",
+      "faq-accordion",
+      "reviews-display",
+      "trust-guarantees",
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Scaffold for Swedish travel agencies and tour operators with homepage, trips, pricing and packages, booking and contact pages. Optimized for inspirational travel marketing, destination presentation, package comparison, booking inquiry flow, FAQ, gallery and trust signals like resegaranti and clear travel terms.",
+    "semanticSignals": [
+      "resebyra",
+      "researrangor",
+      "paketresor",
+      "destinationer",
+      "upplevelser",
+      "bokning",
+      "bokningsforfragan",
+      "priser-och-paket",
+      "resvillkor",
+      "resegaranti",
+      "paketreselagen",
+      "resenarsomdomen",
+      "bildgalleri",
+      "faq"
+    ],
+    "negativeSignals": [
+      "lokal-hantverkstjanst-utan-bokningsflode",
+      "restaurangmeny",
+      "produktkatalog-for-e-handel",
+      "medicinsk-klinikbokning",
+      "fastighetsmaklare"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the business sells, arranges or brokers trips, travel packages, tours or travel-related bookings.",
+      "Prefer this scaffold when inspirational imagery, destination overviews, package pricing and booking inquiry are central to the site.",
+      "Use even for smaller travel businesses if they need to present experiences or destinations rather than generic services only."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

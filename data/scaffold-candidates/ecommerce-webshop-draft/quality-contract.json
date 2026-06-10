@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Har alltid startsida med tydlig väg till produkter och en separat kontaktsida.",
+    "Produktrelaterade sidor ska fokusera på konkreta varor eller verkliga kategorier, inte generisk företagscopy.",
+    "Scaffolden stödjer köpbeteende med signaler om betalning, byten, recensioner eller kundservice.",
+    "Kontaktvägar för frågor före köp måste vara tydliga och trovärdiga.",
+    "Valfria sidor ska spegla verkliga handelsbehov som FAQ, fysisk butik eller recensioner.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generiska tjänstesidor som inte passar detaljhandel.",
+    "Påhittade certifieringar, recensionstal eller leveranslöften.",
+    "Tomma produktkort utan verklig information.",
+    "Överdriven varumärkesstory som skymmer sortiment och köpväg.",
+    "Butikssida eller öppettider för verksamheter som bara säljer online."
+  ]
+}

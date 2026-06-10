@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-22-tillverkning-av-gummi-och-plastvaror",
+  "version": "0.1.0",
+  "label": "Tillverkning av gummi- och plastvaror",
+  "description": "Scaffold för tillverkare av gummi- och plastvaror med fokus på produktionskapacitet, material/processer, branschlösningar och tydlig offert-/kontaktväg för B2B-kunder.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera tillverkningskapacitet och erbjudande",
+    "visa material, processer och produktområden",
+    "bygga förtroende genom kvalitet, referenser och arbetssätt",
+    "driva offertförfrågningar och teknisk kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

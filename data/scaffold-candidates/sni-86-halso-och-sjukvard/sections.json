@@ -1,0 +1,80 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "care-overview",
+      "credentials",
+      "trust-proof",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "faq",
+      "reviews",
+      "practical-info"
+    ],
+    "sectionOrderRules": [
+      "Hero ska direkt signalera lugn, tillgänglighet och vilken typ av vård eller behandling som erbjuds.",
+      "Credentials ska ligga tidigt på sidan så att legitimerad personal och patientsäkerhet blir synligt innan besökaren behöver leta.",
+      "Booking-cta ska använda ett tydligt nästa steg som 'Boka tid' eller motsvarande bokningsväg, inte en vag allmän uppmaning.",
+      "Care-overview ska använda begripligt språk och undvika onödig medicinsk jargong på första scrollen."
+    ]
+  },
+  "treatments": {
+    "requiredSections": [
+      "treatment-list",
+      "treatment-process",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq",
+      "trust-proof",
+      "contact-short"
+    ],
+    "sectionOrderRules": [
+      "Treatment-list ska beskriva behandlingar eller vårdtjänster i klarspråk med fokus på vad patienten söker hjälp för.",
+      "Varje behandling ska hjälpa besökaren förstå när den är relevant, hur ett besök brukar gå till och om mer information ges vid bokning eller kontakt.",
+      "Om priser nämns här ska de stämma med sidan för priser och inte skapa motstridig information.",
+      "Booking-cta ska komma efter att besökaren fått tillräcklig information för att kunna ta nästa steg."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-table",
+      "price-notes",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof",
+      "contact-short"
+    ],
+    "sectionOrderRules": [
+      "Prisinformation ska vara tydlig med vad som är patientavgift, fast pris, frånpris eller om kostnad bedöms individuellt.",
+      "Om frikort, högkostnadsskydd eller remiss påverkar kostnaden ska det förklaras sakligt utan att lova mer än verksamheten faktiskt kan erbjuda.",
+      "Prisnoter ska placeras nära prisöversikten så att villkor och undantag inte göms längst ner.",
+      "Booking-cta ska koppla prisinformationen till ett enkelt nästa steg för bokning eller kontakt."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "opening-hours",
+      "map",
+      "contact-form",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "access-info"
+    ],
+    "sectionOrderRules": [
+      "Telefonnummer ska vara klickbart som tel:-länk och e-post som mailto:-länk där e-post visas.",
+      "Öppettider ska visa alla veckodagar och tydligt markera stängt när mottagningen inte är öppen.",
+      "Adress ska presenteras som en komplett kopierbar postadress och kompletteras med karta när möjligt.",
+      "Kontaktformulär ska vara enkelt och lämpat för första kontakt, inte uppmana till att skicka känsliga personuppgifter i fritext om det inte hanteras säkert.",
+      "Booking-cta får gärna upprepas på kontaktsidan för besökare som egentligen vill boka snarare än skriva ett meddelande."
+    ]
+  }
+}

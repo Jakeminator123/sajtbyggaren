@@ -1,0 +1,95 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "production-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "facility-overview",
+      "product-highlights",
+      "process-highlights",
+      "industries-served",
+      "gallery",
+      "faq",
+      "reviews",
+      "location-summary"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and what is produced, processed or supplied, with a primary contact CTA.",
+      "Production summary must be concrete about materials, product types or manufacturing focus rather than generic industrial wording.",
+      "Trust proof must rely on real signals such as experience, facility information, delivery capability, visible company details or named references when available.",
+      "Facility overview, product highlights and process highlights may appear before trust proof when supported by source data.",
+      "Sections should avoid repeating the same claims about quality, precision or reliability."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain what categories, materials or formats the company offers.",
+      "Product list items must be specific, for example material groups, semi-finished products, dimensions, finishing options or customer-adapted production.",
+      "Do not imply stock levels, delivery times or standards unless such details are actually provided."
+    ]
+  },
+  "processes": {
+    "requiredSections": [
+      "processes-intro",
+      "process-list",
+      "workflow",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "facility-overview",
+      "quality-points",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Processes intro must connect the company's production setup to customer needs such as repeatability, volume, tolerance or further processing.",
+      "Process list must describe real manufacturing or processing steps and not generic business services.",
+      "Workflow should show a plausible sequence such as inquiry, specification, production, control and delivery without inventing guarantees."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "facility-overview",
+      "team"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "gallery",
+      "location-summary"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company, its production focus or history in specific terms.",
+      "Facility overview should focus on plant, equipment environment or way of working if data exists.",
+      "Team is optional in rendering if no staff data is available, but the route structure should support it."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map",
+      "facility-visit-notice"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real available contact paths such as phone, email, address or contact form.",
+      "If map or visit information is shown, it should help visitors find the site or understand how visits and goods reception work.",
+      "No placeholder contact details may be used."
+    ]
+  }
+}

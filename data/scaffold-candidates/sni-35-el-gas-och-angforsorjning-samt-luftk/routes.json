@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, vad den levererar eller installerar, och leda besökaren vidare till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets tjänster inom exempelvis installation, drift, service, underhåll eller energilösningar på ett konkret sätt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Skapa förtroende genom att visa verksamhetens bakgrund, arbetssätt, team och företagsuppgifter."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en enkel väg till kontakt med telefon, e-post, adress, öppettider och kontaktformulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "när verksamheten vill beskriva geografiska områden, nät eller orter där leverans, service eller installation erbjuds"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när många återkommande frågor finns om drift, installation, servicebesök, fakturafrågor eller kontaktvägar"
+    }
+  ]
+}

@@ -1,0 +1,307 @@
+{
+  "id": "sni-36-vattenforsorjning",
+  "label": "Vattenförsörjning",
+  "description": "Scaffold för företag inom vattenförsörjning med fokus på vattenleverans, dricksvattenkvalitet, driftinformation, anslutning och tydliga kontaktvägar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara vattenförsörjningens tjänster och ansvar",
+    "ge tydlig information om vattenkvalitet och leverans",
+    "visa hur kunder kontaktar verksamheten vid frågor, felanmälan eller anslutning"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, vad vattenförsörjningen omfattar och leda besökaren vidare till kontakt eller relevant information."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Förklara vilka tjänster som erbjuds, såsom vattenleverans, anslutning, mätarfrågor och praktisk kundinformation."
+    },
+    {
+      "id": "vattenkvalitet",
+      "path": "/vattenkvalitet",
+      "required": true,
+      "purpose": "Ge saklig information om dricksvattenkvalitet, provtagning och vad kunder kan behöva känna till."
+    },
+    {
+      "id": "driftinformation",
+      "path": "/driftinformation",
+      "required": true,
+      "purpose": "Samla information om planerade avbrott, störningar, underhåll och hur kunder får aktuell status."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att beskriva verksamheten, uppdraget, medarbetare och lokal förankring."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten via formulär, telefon, e-post, adress och öppettider."
+    },
+    {
+      "id": "anslutning",
+      "path": "/anslutning",
+      "optional": true,
+      "when": "när verksamheten vill ge mer detaljerad information om nyanslutning, process, handlingar eller kontaktvägar för fastighetsägare"
+    },
+    {
+      "id": "hitta-hit",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när fysisk besöksadress eller kundmottagning behöver en egen sida med karta och vägbeskrivning"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "drift-status-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "water-quality-summary",
+        "story",
+        "reviews",
+        "faq",
+        "opening-hours",
+        "map-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the verksamhet type and include a clear primary CTA.",
+        "Service summary must describe concrete vattenförsörjningsrelaterade tjänster, not generic business copy.",
+        "Drift status summary should appear before the final contact CTA when current or recurring driftinformation is available.",
+        "Trust proof must use real identifiers such as organisationsnummer, references or operational facts actually provided.",
+        "Sections must not promise uninterrupted supply or response times unless such information is explicitly supplied."
+      ]
+    },
+    "tjanster": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "faq",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-summary",
+        "process-overview",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the organisation's role to the offered services.",
+        "Service list items must be concrete, such as anslutning, vattenmätare, felanmälan or kundservicefrågor when supported by source data.",
+        "FAQ should answer practical customer questions and avoid legal or technical claims not present in the dossier."
+      ]
+    },
+    "vattenkvalitet": {
+      "requiredSections": [
+        "quality-intro",
+        "quality-facts",
+        "faq",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "process-overview",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Quality intro must stay factual and easy to understand.",
+        "Quality facts must only include supplied information about provtagning, kontroller or allmän vägledning.",
+        "This page must not invent test results, compliance claims or health guarantees."
+      ]
+    },
+    "driftinformation": {
+      "requiredSections": [
+        "operations-intro",
+        "status-list",
+        "contact-info"
+      ],
+      "optionalSections": [
+        "faq",
+        "map-preview",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "Operations intro must explain what kinds of driftmeddelanden or underhållsinformation visitors can expect here.",
+        "Status list entries must be clearly time-bound or described as general information if no live data exists.",
+        "Contact info for urgent questions should appear on the page without requiring visitors to search elsewhere."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "gallery",
+        "map-preview",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the verksamhet and its local role in specific terms.",
+        "Team should only be shown when real people or functions are available.",
+        "Trust proof must remain factual and must not imply certifications that are not provided."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "opening-hours"
+      ],
+      "optionalSections": [
+        "map-embed-section",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must all be present and must not be placeholders.",
+        "Contact form should be easy to use and suitable for general frågor or ärenden.",
+        "Opening hours should be shown when available; if unavailable, the page should not invent them."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har alltid startsida '/' och kontaktsida.",
+      "Siduppsättningen speglar vattenförsörjningens faktiska behov med tjänster, vattenkvalitet och driftinformation.",
+      "Alla default-rutter har motsvarande sectionsPerRoute-post.",
+      "Kontaktvägar prioriteras tydligt med formulär, telefon, e-post och adress där uppgifter finns.",
+      "Innehållet håller saklig och förtroendeingivande ton utan påhittade certifieringar eller siffror.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska tjänstesidor utan vattenrelaterat innehåll.",
+      "Påståenden om vattenkvalitet, svarstider eller leveranssäkerhet utan underlag.",
+      "E-handelsflöden, menylogik eller bokningsupplägg som inte passar branschen.",
+      "Överdriven säljton på sidor som bör vara informativa och driftorienterade."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "faq-accordion",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Vattenförsörjning, dricksvatten, vattenleverans, driftinformation, avbrott, underhåll, vattenkvalitet, provtagning, anslutning, vattenmätare, kundservice, kontakt, karta, öppettider, kommunal eller lokal vattenverksamhet.",
+    "semanticSignals": [
+      "vattenforsorjning",
+      "dricksvatten",
+      "vattenkvalitet",
+      "provtagning",
+      "driftstorning",
+      "planerat-avbrott",
+      "underhallsarbete",
+      "anslutning",
+      "vattenmatare",
+      "felanmalan",
+      "kundservice",
+      "oppettider",
+      "besoksadress"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "webbshop",
+      "produktkatalog",
+      "bordsbokning",
+      "portfoljfotografering",
+      "hotellrum",
+      "takeaway",
+      "medlemskapstraning"
+    ],
+    "llmClassificationHints": [
+      "Likely fits organisations that supply water or manage local drinking water distribution.",
+      "Look for signals about dricksvatten, ledningsnät, avbrott, vattenprov or anslutning.",
+      "Prioritise informative public-service-like structure over aggressive sales structure."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

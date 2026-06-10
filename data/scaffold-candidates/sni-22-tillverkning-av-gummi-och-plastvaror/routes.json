@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, förklara vad som tillverkas och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktområden, komponenttyper och exempel på vad företaget tillverkar."
+    },
+    {
+      "id": "manufacturing",
+      "path": "/tillverkning",
+      "required": true,
+      "purpose": "Beskriva material, processer, kapacitet och arbetssätt så att inköpare och tekniska beställare kan bedöma lämplighet."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende med företagspresentation, team, arbetsmetod och relevanta kundreferenser."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Få in kontakt- och offertförfrågningar via formulär, telefon, e-post och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "industries",
+      "path": "/branscher",
+      "when": "när företaget vill visa lösningar för flera kundsegment som fordon, bygg, medicinteknik, industri eller förpackning"
+    },
+    {
+      "id": "quality",
+      "path": "/kvalitet",
+      "when": "när underlag finns för att beskriva kvalitetssäkring, spårbarhet, provning eller dokumenterade arbetssätt utan att lova certifieringar som inte kan styrkas"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-74-annan-verksamhet-inom-juridik-ekonom",
+  "sniCode": "74",
+  "wizardCategoryId": "consulting",
+  "industryProfileId": "sni-74",
+  "referenceScaffoldId": "agency-studio",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:31:05Z",
+  "outputPath": "data/scaffold-candidates/sni-74-annan-verksamhet-inom-juridik-ekonom",
+  "operatorBriefHash": "sha256:16ab76b70b13f673ad320e9aeda9d36b8742a737229806ff5e8ab9585919543b",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

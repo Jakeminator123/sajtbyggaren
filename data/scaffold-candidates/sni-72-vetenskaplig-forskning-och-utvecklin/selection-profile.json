@@ -1,0 +1,34 @@
+{
+  "id": "sni-72-vetenskaplig-forskning-och-utvecklin",
+  "embeddingText": "Vetenskaplig forskning och utveckling, forskningsområden, projekt och case, metodik, studiedesign, analys, utvecklingsprojekt, expertteam, samarbete, offert, konsultativ forskning, tillämpad forskning, laboratorie- eller kunskapsintensiva uppdrag, kontaktformulär, FAQ.",
+  "semanticSignals": [
+    "forskningsomraden",
+    "projektcase",
+    "metodik",
+    "studiedesign",
+    "analys",
+    "vetenskapligt-arbetssatt",
+    "teamkompetens",
+    "samarbete",
+    "offertforfragan",
+    "publikationer",
+    "uppdragsforskning",
+    "tillampad-forskning"
+  ],
+  "negativeSignals": [
+    "meny",
+    "bordbokning",
+    "produktkatalog",
+    "e-handel",
+    "fast-prislista",
+    "dagliga-oppettider-som-huvudfokus",
+    "spel-eller-underhallning-som-primar-uppgift"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the business sells research competence, analysis, development projects or scientific expertise.",
+    "Prefer this over a generic consulting scaffold when methodology, domains and project evidence are central to conversion.",
+    "Projects may be called projekt, case, uppdrag, studier or samarbeten depending on tone and confidentiality."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

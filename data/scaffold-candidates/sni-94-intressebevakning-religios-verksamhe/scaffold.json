@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-94-intressebevakning-religios-verksamhe",
+  "version": "0.1.0",
+  "label": "Intressebevakning och religiös verksamhet",
+  "description": "Scaffold för föreningar, samfund och andra idéburna organisationer inom SNI 94 med fokus på uppdrag, gemenskap, medlemskap, aktiviteter, nyheter och transparent kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara uppdrag och värdegrund",
+    "visa verksamheter och aktiviteter",
+    "driva medlemskap eller deltagande",
+    "samla intresseanmälningar och kontaktförfrågningar",
+    "kommunicera nyheter och information transparent"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

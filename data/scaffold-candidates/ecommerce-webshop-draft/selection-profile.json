@@ -1,0 +1,39 @@
+{
+  "id": "ecommerce-webshop-draft",
+  "embeddingText": "Detaljhandel webshop e-handel onlinebutik produkter sortiment köpupplevelse betalning kundrecensioner returer byten kontakt kundservice fysisk butik öppettider inspiration produktgrid kategorier trygg betalning.",
+  "semanticSignals": [
+    "webshop",
+    "e-handel",
+    "produkter",
+    "produktgrid",
+    "sortiment",
+    "kategori",
+    "pris",
+    "kop-nu",
+    "kundrecensioner",
+    "trygg-betalning",
+    "returer",
+    "byten",
+    "kundservice",
+    "butik",
+    "oppettider",
+    "leverans",
+    "fysisk-butik"
+  ],
+  "negativeSignals": [
+    "bokning-som-huvudflode",
+    "menyservering",
+    "portfoljgalleri-utan-produkter",
+    "ren-konsulttjanst",
+    "offertflode-som-primart-mal",
+    "eventbiljetter-som-karnerbjudande"
+  ],
+  "llmClassificationHints": [
+    "Använd denna scaffold när verksamheten säljer fysiska eller tydligt paketerade varor till konsument.",
+    "Prioritera produkter, köpsignaler och kontakt inför köp framför servicebeskrivningar.",
+    "Om fysisk butik finns, komplettera med butik- och öppettidssida; annars håll fokus på onlineköp.",
+    "FAQ är särskilt relevant för villkor, leverans och returer i handelsflöden."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

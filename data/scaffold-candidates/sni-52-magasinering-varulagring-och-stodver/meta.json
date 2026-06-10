@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-52-magasinering-varulagring-och-stodver",
+  "sniCode": "52",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-52",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:28:48Z",
+  "outputPath": "data/scaffold-candidates/sni-52-magasinering-varulagring-och-stodver",
+  "operatorBriefHash": "sha256:75634337c0cf0000c633f94d1e29c44f148354d03edd364ce184741702cac32b",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,308 @@
+{
+  "id": "sni-58-forlagsverksamhet",
+  "label": "Förlagsverksamhet",
+  "description": "Scaffold för förlag och annan utgivningsverksamhet med fokus på titlar, författare, nyheter, prenumeration och kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa utgivning och titlar",
+    "bygga förtroende kring förlagets profil och redaktionella inriktning",
+    "driva registrering till nyhetsbrev",
+    "göra det enkelt att kontakta förlaget"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera förlaget, lyfta aktuell utgivning och leda besökaren vidare till titlar, nyheter och nyhetsbrev."
+    },
+    {
+      "id": "titles",
+      "path": "/titlar",
+      "required": true,
+      "purpose": "Samla och presentera utgivningen med tydliga ingångar till böcker, serier eller andra publikationer."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": true,
+      "purpose": "Publicera redaktionella nyheter, lanseringar, pressmeddelanden och uppdateringar om utgivningen."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Förklara förlagets inriktning, historia och redaktionella profil för att bygga förtroende hos läsare, författare och samarbetspartners."
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "required": true,
+      "purpose": "Få besökare att registrera sig för utskick om nya titlar, författarnyheter och kommande utgivning."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta förlaget för allmänna frågor, press, rättigheter eller manusrelaterade ärenden."
+    },
+    {
+      "id": "authors",
+      "path": "/forfattare",
+      "optional": true,
+      "when": "när webbplatsen har flera återkommande författare eller profiler som behöver egen presentationsyta"
+    },
+    {
+      "id": "press",
+      "path": "/press",
+      "optional": true,
+      "when": "när förlaget aktivt arbetar med media, recensionsexemplar eller pressmaterial"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "featured-titles",
+        "newsletter-cta",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "editorial-intro",
+        "news-preview",
+        "authors-preview",
+        "reviews-proof",
+        "image-grid"
+      ],
+      "sectionOrderRules": [
+        "Hero ska tydligt beskriva förlagets eller utgivningens inriktning och innehålla en primär CTA till nyhetsbrev eller titlar.",
+        "Featured-titles ska komma tidigt på sidan och visa verkliga titlar eller tydliga platshållare som renderer kan utelämna om data saknas.",
+        "News-preview och authors-preview får placeras mellan featured-titles och newsletter-cta när underlag finns.",
+        "Förtroendeskapande innehåll som recensioner eller utmärkelser får bara visas om det finns verkligt underlag och ska inte upprepas i flera sektioner med samma budskap.",
+        "Sidan ska prioritera utgivning och registrering före allmän företagsinformation."
+      ]
+    },
+    "titles": {
+      "requiredSections": [
+        "titles-intro",
+        "titles-grid",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "series-filter",
+        "featured-title",
+        "reviews-proof",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Titles-intro ska förklara hur besökaren kan utforska utgivningen, till exempel efter genre, serie eller format.",
+        "Titles-grid ska vara den dominerande sektionen och innehålla konkreta titlar eller publikationer, inte generiska exempeltexter.",
+        "Featured-title får ligga ovanför eller direkt under titles-grid när en ny eller särskilt viktig titel ska lyftas.",
+        "Kontakt-CTA ska vinklas mot frågor om titlar, rättigheter eller återförsäljning snarare än generell försäljning om sådant underlag saknas."
+      ]
+    },
+    "news": {
+      "requiredSections": [
+        "news-intro",
+        "post-list",
+        "newsletter-cta"
+      ],
+      "optionalSections": [
+        "featured-post",
+        "category-list",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "News-intro ska sätta en redaktionell ton och beskriva vilken typ av uppdateringar som publiceras.",
+        "Post-list ska bestå av artiklar, nyheter eller inlägg med tydliga rubriker och datum när sådana finns.",
+        "Featured-post får placeras före post-list när ett enskilt inlägg ska prioriteras.",
+        "Newsletter-cta ska komma efter att innehållet visat sitt värde, inte före huvudlistningen."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-intro",
+        "editorial-profile",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "timeline",
+        "authors-preview",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "About-intro ska vara specifik om förlagets inriktning, målgrupper eller utgivningsområden och undvika generiska formuleringar.",
+        "Editorial-profile ska beskriva hur förlaget arbetar med utgivning, urval eller redaktionell identitet utan att lova sådant som inte stöds av underlaget.",
+        "Team visas när personer finns i underlaget; annars kan renderer tona ned sektionen men inte ersätta den med påhittade namn.",
+        "Trust-proof får innehålla verkliga recensioner, priser eller andra belägg men ska utelämnas om verifierbart underlag saknas."
+      ]
+    },
+    "newsletter": {
+      "requiredSections": [
+        "newsletter-intro",
+        "newsletter-benefits",
+        "newsletter-signup"
+      ],
+      "optionalSections": [
+        "featured-titles",
+        "faq",
+        "privacy-note"
+      ],
+      "sectionOrderRules": [
+        "Newsletter-intro ska tydligt beskriva vad besökaren får genom att registrera sig, till exempel nyheter om kommande titlar och evenemang.",
+        "Newsletter-benefits ska vara konkreta och korta, utan överdrivna löften om frekvens eller exklusivitet om sådant inte är känt.",
+        "Newsletter-signup ska vara sidans huvudsakliga konverteringsyta och ligga ovanför eventuella sekundära sektioner."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "faq",
+        "submission-note"
+      ],
+      "sectionOrderRules": [
+        "Contact-info ska innehålla verkliga kontaktvägar som e-post och andra tillgängliga uppgifter från underlaget.",
+        "Contact-form ska vara tydligt märkt för allmän kontakt och får kompletteras med vägledning för press, rättigheter eller manus om sådana flöden nämns.",
+        "Submission-note får användas för att klargöra hur manus eller förfrågningar hanteras, men ska inte lova svarstider eller antagning om sådant inte är känt.",
+        "Kontakt-CTA ska avsluta sidan utan att upprepa exakt samma text som formuläret redan kommunicerar."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har en startsida med path '/'.",
+      "Har en kontakt-sida med svensk path och utan trailing slash.",
+      "Siduppsättningen speglar förlagsverksamhet genom att inkludera utgivning/titlar och redaktionella nyheter.",
+      "Varje default route har en motsvarande sectionsPerRoute-post med samma routeId.",
+      "Primär konvertering för nyhetsbrev stöds tydligt i både routes och sektioner.",
+      "All copy håller sig till verifierbara uppgifter och undviker påhittade meriter.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska tjänstesidor som passar lokal service men inte förlag.",
+      "E-handelslogik som kassa eller produktköp när sådan funktion inte efterfrågas.",
+      "Påhittade författare, priser, recensioner eller antal utgivna titlar.",
+      "Sektioner som upprepar samma CTA för många gånger utan nytt sammanhang.",
+      "Vaga texter om 'passion' utan konkret redaktionell eller utgivningsmässig information."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "team-roster",
+      "reviews-display",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Förlagsverksamhet, utgivning, böcker, publikationer, titlar, författare, redaktionell profil, nyheter, nyhetsbrev, kontakt, press och recensioner. Scaffolden passar förlag och utgivare som behöver visa omslag i grid, lyfta aktuell utgivning, publicera nyheter och samla prenumeranter.",
+    "semanticSignals": [
+      "forlag",
+      "utgivning",
+      "titlar",
+      "bocker",
+      "publikationer",
+      "forfattare",
+      "redaktionell",
+      "nyhetsbrev",
+      "omslag",
+      "recensioner",
+      "press",
+      "lanseringar"
+    ],
+    "negativeSignals": [
+      "lokal-tjansteverksamhet",
+      "bokning-av-tider",
+      "restaurangmeny",
+      "webshop-kassa",
+      "fastighetsobjekt",
+      "salongsbehandlingar"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten handlar om att ge ut böcker, magasin eller annan publicistisk utgivning.",
+      "Titlar eller utgivningslista är starkare signal än generisk bloggstruktur.",
+      "Nyhetsbrev och redaktionellt innehåll är centralt, men webbplatsen ska också ha en tydlig yta för utgivning.",
+      "Författare och press kan vara tilläggsytor men är inte alltid obligatoriska."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

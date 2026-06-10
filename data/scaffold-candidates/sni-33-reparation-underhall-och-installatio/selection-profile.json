@@ -1,0 +1,33 @@
+{
+  "id": "sni-33-reparation-underhall-och-installatio",
+  "embeddingText": "Bransch scaffold för SNI 33 reparation underhåll och installation av maskiner och utrustning. Fokus på startsida, tjänster, serviceavtal, om oss och kontakt. Passar industriservice, servicetekniker, maskinreparation, förebyggande underhåll, installation av utrustning, jourservice och teknisk fältservice för företag.",
+  "semanticSignals": [
+    "industriservice",
+    "maskinreparation",
+    "forebyggande-underhall",
+    "serviceavtal",
+    "installation-av-utrustning",
+    "servicetekniker",
+    "driftstopp",
+    "felsokning",
+    "underhallsplanering",
+    "teknisk-service"
+  ],
+  "negativeSignals": [
+    "webshop",
+    "produktkatalog",
+    "meny",
+    "bordsbokning",
+    "fotografportfolio",
+    "onlinekurs",
+    "eventbiljetter"
+  ],
+  "llmClassificationHints": [
+    "Välj detta scaffold när verksamheten säljer teknisk service för maskiner, produktionsutrustning eller annan företagsutrustning.",
+    "Serviceavtal eller förebyggande underhåll är starka signaler för denna struktur.",
+    "Kontaktbehovet är ofta både akut och planerat, så kontaktvägar och tillgänglighet ska vara centrala.",
+    "Om copy nämner installation, felsökning, reparation på plats eller servicetekniker passar scaffolden väl."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-26-tillverkning-av-datorer-elektronikva",
+  "version": "0.1.0",
+  "label": "Tillverkning av datorer, elektronikvaror och optik",
+  "description": "Branschspecifik scaffold för företag inom SNI 26 som tillverkar datorer, elektronikvaror och optik. Fokuserar på produktöversikt, teknisk trovärdighet, tillämpningar, supportkontakt och nyheter för B2B-kunder, partners och upphandlare.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produktutbud och produktkategorier",
+    "bygga teknisk trovärdighet och förtroende",
+    "förklara användningsområden och kundnytta",
+    "driva kontakt för offert, dialog eller partnerskap",
+    "publicera nyheter och uppdateringar om produkter och verksamhet"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera pappers- eller pappersvaruföretaget, förklara vad som tillverkas och leda vidare till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktområden, material eller pappersvaror som företaget tillverkar och hjälpa besökaren förstå relevanta användningsområden."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Beskriva tillverkningsprocess, kapacitet, anläggning och arbetssätt för att skapa affärsförtroende hos inköpare och partners."
+    },
+    {
+      "id": "sustainability",
+      "path": "/hallbarhet",
+      "required": true,
+      "purpose": "Samla företagets arbete kring råvaror, resurshushållning, återvinning och miljöansvar utan överdrivna påståenden."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Ge en kort företagsbild med historia, team och grundläggande företagsuppgifter som stärker förtroendet."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, produktfrågor, leveransdialog eller besök med tydliga kontaktuppgifter."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "quality",
+      "path": "/kvalitet",
+      "when": "när företaget vill beskriva kvalitetsarbete, tester, spårbarhet eller interna rutiner mer utförligt"
+    },
+    {
+      "id": "applications",
+      "path": "/anvandningsomraden",
+      "when": "när produktutbudet behöver förklaras utifrån kundsegment eller användningsområden snarare än enbart produkttyper"
+    }
+  ]
+}

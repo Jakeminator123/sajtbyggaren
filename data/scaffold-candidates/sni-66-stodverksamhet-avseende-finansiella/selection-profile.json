@@ -1,0 +1,35 @@
+{
+  "id": "sni-66-stodverksamhet-avseende-finansiella",
+  "embeddingText": "Stödverksamhet avseende finansiella tjänster och försäkringsverksamhet behöver en webbstruktur som förklarar tjänster, målgrupper, process, prisupplägg och kontakt på ett tryggt och sakligt sätt. Vanliga behov är tjänstesida, prissida, om-sida med arbetssätt och team samt kontaktsida med formulär och vanliga frågor. Innehållet ska minska osäkerhet kring ansvar, upplägg och nästa steg.",
+  "semanticSignals": [
+    "finansiell-radgivning",
+    "forsakringsformedling",
+    "skaderegleringsstod",
+    "administration",
+    "prisupplagg",
+    "offert",
+    "radgivningsmote",
+    "digitala-arbetssatt",
+    "team",
+    "vanliga-fragor",
+    "kontaktformular",
+    "trygg-process"
+  ],
+  "negativeSignals": [
+    "produktkatalog",
+    "varukorg",
+    "bordsbokning",
+    "meny",
+    "galleri-som-huvudsyfte",
+    "eventbiljetter",
+    "medicinsk-behandling",
+    "restaurangupplagg"
+  ],
+  "llmClassificationHints": [
+    "Liknar professionella tjänster inom ekonomi och rådgivning men ska vara mer inriktad på finansiell och försäkringsnära stödverksamhet än klassisk redovisningsbyrå.",
+    "Ska prioritera sidor för tjänster, priser, om oss och kontakt framför blogg eller nyhetsflöde.",
+    "FAQ är ofta relevant eftersom besökare behöver förstå ansvar, process och ersättningsmodell innan kontakt."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

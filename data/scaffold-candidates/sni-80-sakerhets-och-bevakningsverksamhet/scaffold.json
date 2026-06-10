@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-80-sakerhets-och-bevakningsverksamhet",
+  "version": "0.1.0",
+  "label": "Säkerhets- och bevakningsverksamhet",
+  "description": "Branschspecifik scaffold för bevakningsföretag, ordningsvakter, stationär bevakning, rondering, larmutryckning och närliggande säkerhetstjänster. Strukturen prioriterar förtroende, tydliga tjänstebeskrivningar, auktorisation/kompetens, jour och enkel kontakt för offert eller upphandling.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Skapa förtroende för bevakningsföretaget",
+    "Förklara säkerhetstjänster tydligt för företag, bostadsrättsföreningar och organisationer",
+    "Driva kontakt för offert, upphandling eller akut behov",
+    "Lyfta auktorisation, kompetens, jour och geografisk närvaro utan överdrifter"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

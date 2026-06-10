@@ -1,0 +1,114 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "problem-solution",
+      "case-highlights",
+      "process-overview",
+      "technology-focus",
+      "team-preview",
+      "pricing-summary",
+      "faq",
+      "newsletter-cta"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company builds or delivers, for whom, and include a primary CTA.",
+      "Service-summary must describe concrete offer areas such as system development, integrations, cloud, product development or consulting.",
+      "Case-highlights should appear before the final CTA when case material exists.",
+      "Trust-proof must use real signals such as named clients, certifications if actually held, security practices or testimonials; it must not invent numbers or badges.",
+      "Sections should avoid repeating the same technical claims without adding new information."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "process-overview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "technology-focus",
+      "pricing-summary",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services-intro must connect the company's competence to real customer needs or business problems.",
+      "Service-list items must be specific about scope, examples or outcomes, not only broad labels like 'IT solutions'.",
+      "Process-overview should explain how projects, sprints, advisory work or maintenance are delivered.",
+      "If pricing-summary is shown here, it should explain pricing logic clearly without pretending fixed prices exist for custom development."
+    ]
+  },
+  "cases": {
+    "requiredSections": [
+      "cases-intro",
+      "case-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "testimonials",
+      "technology-focus",
+      "results-summary"
+    ],
+    "sectionOrderRules": [
+      "Each case should describe client type or context, the challenge, what was built or improved, and the outcome if known.",
+      "Case-list must not expose confidential details; anonymized cases are acceptable when needed.",
+      "Testimonials should support the cases and not duplicate the same proof statements verbatim."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-intro",
+      "pricing-models",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "package-list",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Pricing-intro must explain whether the company works with fixed packages, retainers, hourly rates, discovery phases or custom quotes.",
+      "Pricing-models must be transparent about what affects scope and cost.",
+      "If package-list is used, packages must reflect realistic offerings such as audit, workshop, MVP sprint or support plan."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "working-method"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "values",
+      "technology-focus"
+    ],
+    "sectionOrderRules": [
+      "About-story must be specific about background, competence or focus areas, not generic passion statements.",
+      "Team should highlight relevant roles or expertise areas when available.",
+      "Working-method should describe collaboration, communication, documentation or quality practices in a concrete way."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include real contact channels such as email and any available phone or office details.",
+      "Contact-form should fit lead capture for consulting or product inquiries, for example project type, timeline or message.",
+      "The page must make the next step clear, such as booking a meeting, sending a request or registering interest."
+    ]
+  }
+}

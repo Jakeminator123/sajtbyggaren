@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Scaffold must support both inspiration and conversion: visitors should be able to see the property and understand how to book.",
+    "Room and pricing information must have a dedicated surface because it is core to this industry.",
+    "Booking must have its own route because booking intent is primary for hotel and lodging sites.",
+    "Contact route must support both direct contact and finding the property physically.",
+    "Copy structure must support practical guest concerns such as amenities, cancellation terms and arrival information.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the site like a generic local service business with only services pages.",
+    "Do not replace room/pricing content with vague marketing copy about comfort or quality.",
+    "Do not force restaurant-specific structures such as full menu pages unless the business actually operates that as a core offer.",
+    "Do not imply instant booking if the actual flow is only an inquiry form or external link.",
+    "Do not overuse repeated trust blocks that say the same thing on every page."
+  ]
+}

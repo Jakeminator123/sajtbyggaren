@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera lufttransportföretaget, sammanfatta erbjudandet och leda till kontaktförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Presentera transporttjänster, uppdragstyper och hur kunden kan gå vidare med en förfrågan."
+    },
+    {
+      "id": "operations",
+      "path": "/trafik-och-omraden",
+      "required": true,
+      "purpose": "Visa vilka typer av flygningar, områden eller linjer verksamheten arbetar med och ge praktisk överblick."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, team och arbetssätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget med formulär, telefon, e-post, adress och eventuell karta."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "verksamheten får återkommande frågor om bokning, gods, bagage, uppdrag eller tillgänglighet"
+    },
+    {
+      "id": "reviews",
+      "path": "/referenser",
+      "when": "det finns kundomdömen eller referenser som kan visas utan att överdriva omfattning"
+    }
+  ]
+}

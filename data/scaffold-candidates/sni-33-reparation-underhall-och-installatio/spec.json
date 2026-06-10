@@ -1,0 +1,284 @@
+{
+  "id": "sni-33-reparation-underhall-och-installatio",
+  "label": "Reparation, underhåll och installation av maskiner och utrustning",
+  "description": "Scaffold för företag som reparerar, underhåller och installerar maskiner och utrustning. Strukturen prioriterar tydliga tjänster, serviceavtal, driftstopp-kritisk kontakt och förtroendeskapande information om teknisk kompetens, tillgänglighet och arbetssätt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänster inom reparation, underhåll och installation",
+    "bygga förtroende kring teknisk kompetens och serviceberedskap",
+    "driva kontakt för akut service, planerat underhåll och offertförfrågan",
+    "lyfta serviceavtal och långsiktigt underhåll"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, förklara vad som servas och driva kontakt för service eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Visa konkreta tjänster inom reparation, underhåll och installation av maskiner och utrustning."
+    },
+    {
+      "id": "service-agreements",
+      "path": "/serviceavtal",
+      "required": true,
+      "purpose": "Förklara upplägg, nytta och omfattning för serviceavtal och förebyggande underhåll."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets erfarenhet, arbetssätt och teamets kompetens."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att snabbt kontakta företaget för felanmälan, serviceförfrågan eller installation."
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "företaget arbetar i flera orter eller regioner och behöver en tydlig lokal närvarosida"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "optional": true,
+      "when": "det finns tillräckligt med verkliga kundomdömen, projektbilder eller uppdrag att visa utan att sidan blir tunn"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "service-agreements-summary",
+        "emergency-service",
+        "industries-served",
+        "reviews",
+        "faq",
+        "gallery",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must include what kinds of machines or equipment the company works with, optional location if known, and a primary contact CTA.",
+        "Service summary must describe concrete work such as repair, preventive maintenance and installation, not vague all-round claims.",
+        "If emergency-service is shown, it must state the actual availability only when the dossier supports it.",
+        "Trust proof must appear before the final contact CTA and should focus on real signals such as certificates, service agreements, response routines or documented experience.",
+        "Sections should avoid repeating the same promise in multiple blocks."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "industries-served",
+        "pricing-note",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company to repair, maintenance and installation work in a specific and practical way.",
+        "Service list items must be concrete examples of work performed on machines, equipment or production-related systems.",
+        "Pricing-note may explain how quotes, inspections or call-out fees work, but must not invent fixed prices if none are known.",
+        "If trust-proof is included, it should support the service offer with real qualifications or process clarity, not duplicate the intro."
+      ]
+    },
+    "service-agreements": {
+      "requiredSections": [
+        "service-agreements-intro",
+        "agreement-benefits",
+        "agreement-scope",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof",
+        "industries-served"
+      ],
+      "sectionOrderRules": [
+        "Service-agreements intro must explain who the agreements are for and why preventive maintenance matters.",
+        "Agreement-benefits should focus on practical outcomes such as reduced downtime, planned service intervals and clearer follow-up.",
+        "Agreement-scope must describe examples of included checks, maintenance visits or documentation routines without promising more than the company can deliver.",
+        "The page must end with a CTA to discuss needs, book a review or request a quote."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "gallery",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About-story must be specific about the company's background, focus or way of working, not generic quality wording.",
+        "Team should emphasize relevant technician roles, experience areas or service approach when data exists.",
+        "Trust-proof should use real evidence such as certifications, documented routines, response readiness or long-term customer relationships."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map",
+        "service-area-note"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must include available contact methods supplied by the business and must not use placeholder data.",
+        "If opening-hours is shown, it must reflect actual staffed hours or service availability.",
+        "Contact CTA should support both urgent service inquiries and planned maintenance or installation requests."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "ha en startsida med tydlig serviceinriktning mot maskiner och utrustning",
+      "ha en kontaktsida som stödjer snabb kontakt för serviceärenden",
+      "innehålla en dedikerad sida för serviceavtal eftersom det är centralt i branschen",
+      "beskriva tjänster konkret utifrån reparation, underhåll och installation",
+      "bygga förtroende med verkliga kompetens- och tillgänglighetssignaler",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generiska tjänstebeskrivningar utan koppling till maskiner eller utrustning",
+      "påhittade certifieringar, responstider eller jourlöften",
+      "e-handelsupplägg eller produktkatalog som huvudstruktur",
+      "restaurang-, portfolio- eller bokningsflöden som inte passar branschen",
+      "överdrivna prislöften när pris beror på felsökning eller uppdragets omfattning"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "trust-guarantees",
+      "reviews-display",
+      "team-roster",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Bransch scaffold för SNI 33 reparation underhåll och installation av maskiner och utrustning. Fokus på startsida, tjänster, serviceavtal, om oss och kontakt. Passar industriservice, servicetekniker, maskinreparation, förebyggande underhåll, installation av utrustning, jourservice och teknisk fältservice för företag.",
+    "semanticSignals": [
+      "industriservice",
+      "maskinreparation",
+      "forebyggande-underhall",
+      "serviceavtal",
+      "installation-av-utrustning",
+      "servicetekniker",
+      "driftstopp",
+      "felsokning",
+      "underhallsplanering",
+      "teknisk-service"
+    ],
+    "negativeSignals": [
+      "webshop",
+      "produktkatalog",
+      "meny",
+      "bordsbokning",
+      "fotografportfolio",
+      "onlinekurs",
+      "eventbiljetter"
+    ],
+    "llmClassificationHints": [
+      "Välj detta scaffold när verksamheten säljer teknisk service för maskiner, produktionsutrustning eller annan företagsutrustning.",
+      "Serviceavtal eller förebyggande underhåll är starka signaler för denna struktur.",
+      "Kontaktbehovet är ofta både akut och planerat, så kontaktvägar och tillgänglighet ska vara centrala.",
+      "Om copy nämner installation, felsökning, reparation på plats eller servicetekniker passar scaffolden väl."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

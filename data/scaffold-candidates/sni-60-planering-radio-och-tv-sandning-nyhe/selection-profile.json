@@ -1,0 +1,37 @@
+{
+  "id": "sni-60-planering-radio-och-tv-sandning-nyhe",
+  "embeddingText": "Redaktionell verksamhet inom radio, tv, nyhetsbyrå eller mediedistribution. Sajten behöver startsida med aktuellt innehåll, nyhetssida med publiceringsflöde, programsida eller formatöversikt, sida om redaktionen, nyhetsbrevssida och kontaktsida. Fokus på läsbarhet, publiceringsrytm, redaktionell trovärdighet, team, prenumeration och tydliga kontaktvägar för tips och frågor.",
+  "semanticSignals": [
+    "redaktion",
+    "nyheter",
+    "artiklar",
+    "program",
+    "sandning",
+    "inslag",
+    "bevakning",
+    "nyhetsbrev",
+    "redaktionella-principer",
+    "tipsa-oss",
+    "aktuellt",
+    "arkiv",
+    "format",
+    "publicering"
+  ],
+  "negativeSignals": [
+    "bokning",
+    "prislista",
+    "webbutik",
+    "produktkatalog",
+    "meny",
+    "offertforfragan",
+    "behandlingar",
+    "hantverkstjanster"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for media publishers, editorial sites, radio or tv content brands, local newsrooms, niche news outlets and agencies distributing ongoing media content.",
+    "Prefer this over a generic blog when the site needs both an editorial feed and a separate program/format overview.",
+    "Prefer newsletter and editorial trust structures over commercial conversion patterns."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

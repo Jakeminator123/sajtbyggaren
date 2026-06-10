@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-82-kontorstjanster-och-annan-stodverksa",
+  "sniCode": "82",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-82",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:31:52Z",
+  "outputPath": "data/scaffold-candidates/sni-82-kontorstjanster-och-annan-stodverksa",
+  "operatorBriefHash": "sha256:8d35015780faf703def718e726dc1115fcd58bc5b93d8848cb9b967fa1b3ef56",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

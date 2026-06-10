@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en snabb överblick av verksamheten: vilka personalbehov företaget löser, för vilka kunder, hur processen fungerar och varför en arbetsgivare eller kandidat ska ta nästa steg direkt."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samla kärnerbjudandet inom bemanning, rekrytering och närliggande personaltjänster i en tydlig översikt så besökaren snabbt kan avgöra om företaget matchar behovet."
+    },
+    {
+      "id": "for-arbetsgivare",
+      "path": "/for-arbetsgivare",
+      "required": true,
+      "purpose": "Rikta sig till företag som behöver hyra in, rekrytera eller hitta kompetens. Sidan ska tydliggöra behovsbild, arbetssätt, leveransmodell och hur man begär offert eller startar dialog."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Bygga förtroende genom att presentera företagets inriktning, erfarenhet, team och arbetssätt på ett konkret och professionellt sätt."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en rak väg till kontakt med formulär, kontaktuppgifter och nästa steg för både arbetsgivare och kandidater."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "lediga-jobb",
+      "path": "/lediga-jobb",
+      "when": "när verksamheten aktivt publicerar annonser eller vill ge kandidater en separat ingång till aktuella uppdrag och tjänster"
+    },
+    {
+      "id": "case",
+      "path": "/case",
+      "when": "när företaget kan visa kunduppdrag, rekryteringscase eller exempel på tillsatta roller utan att lämna ut känslig information"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "när många frågor återkommer om process, kandidathantering, svarstider, upplägg eller avtal"
+    }
+  ]
+}

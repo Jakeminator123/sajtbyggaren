@@ -1,0 +1,113 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "featured-products",
+      "value-props",
+      "trust-proof",
+      "shop-cta"
+    ],
+    "optionalSections": [
+      "category-links",
+      "reviews-highlight",
+      "newsletter-signup",
+      "editorial-feature"
+    ],
+    "sectionOrderRules": [
+      "Hero ska innehålla butiksnamn, ett tydligt erbjudande eller sortimentslöfte och en primär CTA till /produkter.",
+      "Featured-products ska visa konkreta produkter eller produktkategorier, aldrig generiska platshållare.",
+      "Trust-proof ska vara ärlig och får bygga på faktisk betaltrygghet, returvillkor, recensioner eller kundservice — inte påhittade utmärkelser.",
+      "Shop-cta ska komma efter att utbud eller värde visats och tydligt leda vidare mot köp."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-grid",
+      "trust-proof",
+      "shop-cta"
+    ],
+    "optionalSections": [
+      "filter-bar",
+      "category-links",
+      "faq-snippet",
+      "reviews-highlight"
+    ],
+    "sectionOrderRules": [
+      "Products-intro ska förklara vad som förenar sortimentet eller hur kunden hittar rätt, inte bara säga 'välkommen'.",
+      "Product-grid ska innehålla konkreta produkter med namn, bild och pris när pris används.",
+      "Filter-bar är valfri men får bara använda verkliga attribut som kategori, storlek, färg eller material.",
+      "Trust-proof nära produkterna ska stödja köpbeslut med riktiga villkor som betalning, byten eller leveransinformation utan överdrifter."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "customer-service-topics"
+    ],
+    "optionalSections": [
+      "store-location",
+      "opening-hours",
+      "faq-snippet",
+      "shop-cta"
+    ],
+    "sectionOrderRules": [
+      "Kontaktuppgifter ska vara riktiga och relevanta för köpstöd, exempelvis e-post, telefon och adress när sådan finns.",
+      "Contact-form ska vara anpassat för handelsfrågor som orderfrågor, produktfrågor eller returärenden.",
+      "Store-location och opening-hours används bara när företaget faktiskt har fysisk butik, showroom eller utlämningsplats."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "values",
+      "brand-selection"
+    ],
+    "optionalSections": [
+      "team",
+      "sourcing",
+      "store-photos",
+      "reviews-highlight"
+    ],
+    "sectionOrderRules": [
+      "About-story ska vara specifik för butiken och förklara vad ni säljer och varför urvalet ser ut som det gör.",
+      "Values ska beskriva konkreta arbetssätt, till exempel kvalitet, urval, service eller materialfokus, inte tomma modeord.",
+      "Brand-selection ska hjälpa kunden förstå sortimentets inriktning eller kvalitetssyn."
+    ]
+  },
+  "faq": {
+    "requiredSections": [
+      "faq-intro",
+      "faq-categories",
+      "shop-cta"
+    ],
+    "optionalSections": [
+      "contact-shortcut",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "FAQ ska fokusera på verkliga köphinder som betalning, leverans, returer, byten, storlek eller lagerstatus.",
+      "Svar ska vara tydliga och sakliga och får inte lova villkor som inte faktiskt erbjuds.",
+      "Contact-shortcut ska finnas när vissa frågor behöver kundservice snarare än generella svar."
+    ]
+  },
+  "store-info": {
+    "requiredSections": [
+      "store-intro",
+      "store-location",
+      "opening-hours"
+    ],
+    "optionalSections": [
+      "parking-transit",
+      "pickup-info",
+      "store-gallery",
+      "contact-shortcut"
+    ],
+    "sectionOrderRules": [
+      "Sidan ska bara användas när verksamheten har en verklig fysisk plats eller utlämning.",
+      "Store-location ska visa faktisk adress eller tydlig platsbeskrivning.",
+      "Pickup-info är valfri men ska bara användas om upphämtning i butik eller utlämning faktiskt erbjuds."
+    ]
+  }
+}

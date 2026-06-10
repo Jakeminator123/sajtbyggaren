@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-11-framstallning-av-drycker",
+  "version": "0.1.0",
+  "label": "Framställning av drycker",
+  "description": "Branschspecifik scaffold för producenter av drycker som vill visa sortiment, råvaror och tillverkning samt ta emot förfrågningar från återförsäljare, restauranger eller privatkunder.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa dryckessortiment",
+    "bygga förtroende kring råvaror och produktion",
+    "driva produktförfrågningar eller beställningar",
+    "göra det enkelt att ta kontakt för offert eller återförsäljarfrågor"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

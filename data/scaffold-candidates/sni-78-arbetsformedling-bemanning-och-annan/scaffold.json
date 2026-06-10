@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-78-arbetsformedling-bemanning-och-annan",
+  "version": "0.1.0",
+  "label": "Arbetsförmedling, bemanning och annan personalrelaterad verksamhet",
+  "description": "Scaffold för bemanningsföretag, rekryteringsbyråer och personalrelaterade verksamheter inom SNI 78. Strukturen prioriterar snabb förståelse av erbjudandet, tydliga tjänstespår för arbetsgivare och kandidater, förtroendeskapande process och enkel offert- eller kontaktväg.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "vinna förfrågningar från arbetsgivare",
+    "förklara bemannings- och rekryteringstjänster",
+    "bygga förtroende genom process, case och team",
+    "göra det enkelt för kandidater och kunder att ta kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

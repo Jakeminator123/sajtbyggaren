@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-49-landtransport-transport-i-rorsystem",
+  "version": "0.1.0",
+  "label": "Landtransport; transport i rörsystem",
+  "description": "Scaffold för transportföretag inom landtransport och transport i rörsystem, med fokus på tjänster, geografisk täckning, kapacitet, förtroendeskapande uppgifter och tydlig väg till kontakt eller offert.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara transporttjänster och upplägg",
+    "visa geografiska områden och kapacitet",
+    "bygga förtroende med tillstånd, försäkring och punktlighet",
+    "driva kontakt och offertförfrågan"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-13-textilvarutillverkning",
+  "version": "0.1.0",
+  "label": "Textilvarutillverkning",
+  "description": "Branschspecifik scaffold för textilvarutillverkning med fokus på produktionskapacitet, produktområden, material/kompetens och tydlig kontaktväg för förfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera tillverkaren och dess inriktning",
+    "visa produktområden och tillverkningskompetens",
+    "bygga förtroende med referenser, process och företagsfakta",
+    "driva kontakt för offert, dialog eller produktspecifikation"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,73 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "specialist-areas",
+      "trust-signals",
+      "team-preview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq-preview",
+      "reviews-proof",
+      "process-overview"
+    ],
+    "sectionOrderRules": [
+      "Hero ska kommunicera specialisering, trygghet och sekretess med saklig ton; undvik säljig eller dramatisk formulering.",
+      "Specialistområden ska presenteras som tydliga områden eller tjänstekategorier, inte som en lös och osorterad lista.",
+      "Förtroendesignaler ska endast nämna faktiska medlemskap, auktorisationer eller arbetssätt som verksamheten verkligen har.",
+      "Kontakt-CTA ska vara återhållsam och professionell, till exempel 'Kontakta oss' eller 'Boka ett första samtal'."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "service-taxonomy",
+      "who-we-help",
+      "process-overview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq-preview",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "Tjänsteöversikten ska gruppera erbjudandet i begripliga kategorier som exempelvis familjerätt, affärsjuridik, redovisning, skatt eller löpande rådgivning beroende på verksamhetens inriktning.",
+      "Varje område ska ha en kort, konkret beskrivning av vad hjälpen omfattar så att besökaren kan självsortera sitt ärende.",
+      "Om både juridiska och ekonomiska tjänster erbjuds ska skillnaden mellan dem framgå tydligt för att minska felaktiga förfrågningar."
+    ]
+  },
+  "team": {
+    "requiredSections": [
+      "team-roster",
+      "credentials",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "about-method",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "Teamsektionen ska visa namn, roll och specialisering för varje person som lyfts fram.",
+      "Meriter och medlemskap ska anges korrekt och utan överdrifter; om titel eller auktorisation nämns ska den vara faktisk.",
+      "Det ska vara lätt att förstå vem som bör kontaktas för olika typer av frågor."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "map-or-location",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "team-contact-shortlist"
+    ],
+    "sectionOrderRules": [
+      "Telefonnummer och e-post ska vara klickbara när sådana visas.",
+      "Kontaktformuläret ska inge förtroende och gärna upplysa om att känsliga personuppgifter eller konfidentiella handlingar inte bör skickas innan vidare instruktion ges.",
+      "Om fysisk mottagning eller kontor finns ska adressen presenteras tydligt och sakligt."
+    ]
+  }
+}

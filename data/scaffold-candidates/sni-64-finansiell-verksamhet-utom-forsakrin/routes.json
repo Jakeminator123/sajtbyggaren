@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Skapa förtroende direkt med en saklig hero, tydlig beskrivning av erbjudandet, tillstånds- och trygghetssignaler samt en väg vidare till offert eller rådgivningskontakt."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Presentera företagets finansiella tjänster i tydliga kategorier så att besökaren snabbt kan förstå vad som erbjuds, för vem tjänsten passar och hur processen normalt går till."
+    },
+    {
+      "id": "prislista",
+      "path": "/prislista",
+      "required": true,
+      "purpose": "Visa priser, arvodesmodeller eller exempelupplägg på ett transparent sätt där det är möjligt, så att kunden kan bedöma nivåer och nästa steg innan kontakt."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Beskriv företagets arbetssätt, erfarenhet, rådgivningsfilosofi och ansvarstagande så att verksamheten upplevs som seriös, tillgänglig och trygg att anlita."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Erbjud tydliga kontaktvägar med formulär, direktuppgifter och praktisk information för den som vill begära offert, boka rådgivning eller ställa frågor om tjänsterna."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "verksamheten säljer mycket på namngivna rådgivare, analytiker eller ledande personer vars erfarenhet och specialisering påverkar kundens förtroende"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "målgruppen ofta har återkommande frågor om process, dokumentation, sekretess, risk, tillstånd eller prissättning och företaget vill avlasta första kontakten"
+    }
+  ]
+}

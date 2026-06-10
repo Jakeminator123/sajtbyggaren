@@ -1,0 +1,31 @@
+{
+  "id": "sni-26-tillverkning-av-datorer-elektronikva",
+  "embeddingText": "Tillverkning av datorer, elektronikvaror och optik. Webbplatsstruktur för B2B-orienterad tillverkare med startsida, produktsida, användningsområden, om oss, nyheter och kontakt. Fokus på produktnytta först, teknisk trovärdighet direkt efter, med plats för FAQ, supportsignal, referenser och kontaktformulär.",
+  "semanticSignals": [
+    "elektronikproduktion",
+    "optikprodukter",
+    "datorhardvara",
+    "produktkategorier",
+    "teknisk-trovardighet",
+    "anvandningsomraden",
+    "industriella-kunder",
+    "support-och-kontakt",
+    "produktnyheter",
+    "referenskunder"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "bokningskalender-for-behandlingar",
+    "maklarobjekt",
+    "fotografportfolio",
+    "ren-konsultsajt-utan-produkter",
+    "ren-webbshopstruktur-med-kundkorg-som-huvudflode"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for manufacturers of hardware, electronics modules, optical equipment, instruments or related product families.",
+    "Prefer this scaffold when the business needs product overview pages and use-case explanation rather than service packages.",
+    "Do not classify pure software startups or IT consultancies here unless physical products are central."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

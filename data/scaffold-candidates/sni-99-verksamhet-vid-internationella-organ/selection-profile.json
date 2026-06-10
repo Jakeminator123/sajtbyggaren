@@ -1,0 +1,34 @@
+{
+  "id": "sni-99-verksamhet-vid-internationella-organ",
+  "embeddingText": "Internationell organisation, ambassad eller liknande beskickning med behov av tydlig startsida, tjänstesida för konsulära eller administrativa ärenden, och kontaktsida med formulär, adress och öppettider. Fokus på uppdrag, praktisk information, kontaktvägar och saklig förtroendeskapande presentation.",
+  "semanticSignals": [
+    "ambassad",
+    "beskickning",
+    "internationell-organisation",
+    "konsular-service",
+    "visering",
+    "passarenden",
+    "kontaktuppgifter",
+    "oppettider",
+    "besoksadress",
+    "representation",
+    "arenden",
+    "fragor-och-svar"
+  ],
+  "negativeSignals": [
+    "webbshop",
+    "produktkatalog",
+    "bokningsbar-restaurangmeny",
+    "fastighetsobjekt",
+    "portfoljgalleri-som-huvudsyfte",
+    "e-handel",
+    "kampanjsidor-for-detaljhandel"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the site represents an embassy, consulate, international office or similar non-retail organisation.",
+    "Prefer service and contact clarity over marketing-heavy layouts.",
+    "About and FAQ should be optional, while services and contact are core surfaces."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

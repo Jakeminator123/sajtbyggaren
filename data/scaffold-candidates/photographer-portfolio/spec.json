@@ -1,0 +1,277 @@
+{
+  "id": "photographer-portfolio",
+  "label": "Foto / Video",
+  "description": "Scaffold för fotografer och videografer med tydlig startsida, portfolio/case, galleri, om-sida och kontakt. Fokus ligger på visuellt arbete, förtroende, arbetsområden och enkel kontakt eller bokningsförfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa portfolio och tidigare arbeten",
+    "förklara foto- och videotjänster",
+    "bygga förtroende genom personligt uttryck och recensioner",
+    "driva kontakt eller bokningsförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera fotografen eller videografen, visa visuell stil direkt och leda vidare till portfolio eller kontakt."
+    },
+    {
+      "id": "portfolio",
+      "path": "/portfolio",
+      "required": true,
+      "purpose": "Visa utvalda case eller projekt som hjälper besökaren att bedöma stil, kvalitet och typ av uppdrag."
+    },
+    {
+      "id": "gallery",
+      "path": "/bildgalleri",
+      "required": true,
+      "purpose": "Visa ett bredare urval bilder eller stills i ett mer visuellt galleri-format."
+    },
+    {
+      "id": "about",
+      "path": "/om-mig",
+      "required": false,
+      "purpose": "Bygg förtroende genom att berätta vem som står bakom verksamheten, arbetssätt och specialisering."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan, beskriva uppdraget och ta kontakt via formulär, e-post eller telefon."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "optional": true,
+      "when": "när verksamheten erbjuder flera tydliga typer av uppdrag som bröllop, porträtt, företag, event eller video"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "optional": true,
+      "when": "när fasta paket, startpriser eller prisexempel behöver visas öppet för att kvalificera förfrågningar"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när kunder ofta behöver svar om leverans, bokning, ombokning, rättigheter eller förberedelser"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "portfolio-preview",
+        "specialties",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "reviews",
+        "about-intro",
+        "process-summary",
+        "image-gallery",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Hero must show the business type or creator role and a clear primary CTA to view work or make contact.",
+        "Portfolio preview must appear early on the page and use real project imagery rather than generic stock-like filler.",
+        "Specialties should name concrete assignment types or niches, such as portraits, weddings, commercial photo or brand video.",
+        "Trust elements like reviews or process summary should support the visual work, not overshadow it.",
+        "The final CTA should invite a booking inquiry or project conversation without promising availability that is not confirmed."
+      ]
+    },
+    "portfolio": {
+      "requiredSections": [
+        "portfolio-intro",
+        "case-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "reviews",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Case list items must be concrete and grouped by project, shoot or production rather than shown as unexplained random images.",
+        "Each case should help the visitor understand style, context, or assignment type.",
+        "If reviews are shown, they should appear after enough work samples have established visual credibility.",
+        "Contact CTA should invite the visitor to ask about a similar assignment or discuss their own brief."
+      ]
+    },
+    "gallery": {
+      "requiredSections": [
+        "gallery-intro",
+        "image-gallery",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Gallery should prioritize image density and visual flow over long paragraphs.",
+        "Images should be relevant to the offered work and not duplicate the same selection too heavily from the portfolio page.",
+        "Intro copy should explain what kind of material the visitor is seeing, for example portraits, weddings, products or video stills."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "working-style",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be personal, specific and grounded in the creator's actual background or way of working.",
+        "Working style should explain collaboration, preparation or delivery in practical terms.",
+        "If a team section is used, it should only present real collaborators or crew roles."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-intro",
+        "contact-info",
+        "contact-form"
+      ],
+      "optionalSections": [
+        "map",
+        "faq",
+        "booking-cta"
+      ],
+      "sectionOrderRules": [
+        "Contact page must provide real contact details available in the dossier, without placeholder text.",
+        "Contact form should help the visitor describe date, type of assignment, location or desired deliverables when relevant.",
+        "Map should only be shown when location is meaningful for studio visits or local presence.",
+        "If booking CTA is present, it must support the form rather than compete with it."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes a dedicated portfolio route because this industry depends on showcasing previous work.",
+      "Includes a contact route and clear inquiry path suitable for quote or booking requests.",
+      "Section structure prioritizes visual proof, concrete assignment types and personal trust signals.",
+      "All routes use Swedish lowercase paths and kebab-case ids.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic local-service structure where services dominate over visual work samples.",
+      "Invented awards, client logos, certifications or exaggerated shoot counts.",
+      "Large text-heavy pages that hide the portfolio behind marketing copy.",
+      "Repeating the same gallery content on every page without a distinct purpose.",
+      "Forcing address or map prominence when the business works on location or remotely."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "image-gallery",
+      "mailto-contact-form",
+      "reviews-display",
+      "booking-cta",
+      "video-hero",
+      "pricing-table"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Foto och video, fotograf, videograf, portfolio, case, bildgalleri, porträtt, bröllop, event, företagsfoto, produktfoto, reklamfoto, brand video, kontaktformulär, bokningsförfrågan, kreativ stil, arbetsprocess, recensioner.",
+    "semanticSignals": [
+      "portfolio-med-projekt-eller-case-ar-central",
+      "visuell-presentation-vager-tyngre-an-lang-tjanstetext",
+      "bildgalleri-ar-en-egen-viktig-yta",
+      "om-sida-bygger-fortroende-genom-person-och-arbetssatt",
+      "kontaktformular-anvands-for-forfragningar-och-bokning",
+      "kan-omfatta-bade-foto-och-video",
+      "specialisering-per-uppdragstyp-ar-vanligt"
+    ],
+    "negativeSignals": [
+      "standardiserad-hantverkarsajt-med-fokus-pa-serviceomraden",
+      "meny-oppettider-eller-restaurangstruktur",
+      "produktkatalog-eller-webbshop-som-primar-struktur",
+      "trovardighet-byggd-pa-pahittade-certifikat",
+      "overdriven-copy-utan-faktiska-arbetsprover"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten säljer foto-, film- eller visuella produktionstjänster och behöver visa arbeten.",
+      "Portfolio och bildgalleri ska väga tyngre än traditionell tjänstelista.",
+      "Passar enmansfotograf, studio, bröllopsfotograf, porträttfotograf, eventfotograf eller mindre videobyrå."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

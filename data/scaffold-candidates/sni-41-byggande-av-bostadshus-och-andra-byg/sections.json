@@ -1,0 +1,93 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "project-highlights",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "process-summary",
+      "testimonials",
+      "faq",
+      "gallery",
+      "service-area",
+      "reviews",
+      "certifications"
+    ],
+    "sectionOrderRules": [
+      "Hero must include what the company builds, relevant geography if known and a primary CTA to request a quote.",
+      "Service summary should focus on concrete building work such as nybyggnation, tillbyggnad, råbyggnad or totalentreprenad rather than generic claims.",
+      "Project highlights should appear before the final CTA when reference material exists.",
+      "Trust proof must only use real signals such as F-skattsedel, försäkring, ID06, garantier or reference projects when supplied.",
+      "Sections should not repeat the same promise in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing",
+      "faq",
+      "trust-guarantees"
+    ],
+    "sectionOrderRules": [
+      "Services intro must explain the type of building assignments the company takes on.",
+      "Service list items must be concrete and can group work by project type, for example villor, flerbostadshus, tillbyggnader or kommersiella byggnader.",
+      "If pricing is shown it should stay high-level and not imply fixed prices for complex construction projects without basis."
+    ]
+  },
+  "projects": {
+    "requiredSections": [
+      "projects-intro",
+      "project-gallery",
+      "project-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "testimonials",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Each project item should describe the type of build, scope and outcome in honest terms.",
+      "Gallery and project list should support each other and avoid showing the same project twice with identical content.",
+      "This page should prioritize real completed or ongoing reference projects over generic stock copy."
+    ]
+  },
+  "quote": {
+    "requiredSections": [
+      "quote-intro",
+      "project-scope-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "process-summary",
+      "faq",
+      "trust-guarantees"
+    ],
+    "sectionOrderRules": [
+      "Quote intro must tell visitors what information helps the company assess a building project.",
+      "Project scope form should ask for practical details such as project type, location, timeline and contact details when the form dossier supports it.",
+      "Any mention of response times must only be shown when the business has supplied them."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Phone and email must be present and must not be placeholders.",
+      "Address should be shown when available; if no visit address exists, the page should still provide clear contact routes.",
+      "Map should only render when a real address is supplied."
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "ecommerce-webshop-draft",
+  "version": "0.1.0",
+  "label": "Webshop / E-handel",
+  "description": "Branschspecifik scaffold för detaljhandel via webshop med fokus på produkter, köpkänsla, trygghet och kontakt inför köp.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produktsortiment",
+    "leda besökare till köp",
+    "bygga förtroende kring betalning, byten och kundservice",
+    "hjälpa kunder att kontakta butiken före köp"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

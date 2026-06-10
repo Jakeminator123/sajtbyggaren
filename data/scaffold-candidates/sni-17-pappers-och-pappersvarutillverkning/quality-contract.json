@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "The scaffold must reflect manufacturing and B2B information needs rather than a generic local service layout.",
+    "Home, products, production, sustainability and contact together must give a credible overview of offer, capability and how to initiate dialogue.",
+    "All environmental or quality-related wording must remain cautious and factual unless the dossier explicitly supports stronger claims.",
+    "The contact route must support direct inquiry with clear business contact details and optional form.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not model the business like a restaurant, portfolio site or appointment-led consumer service.",
+    "Do not invent certifications, export claims, capacity figures, customer counts or sustainability achievements.",
+    "Do not rely on generic 'services' wording when the industry's core need is product and manufacturing presentation.",
+    "Do not create a webshop or shopping-cart structure unless the dossier explicitly indicates online retail."
+  ]
+}

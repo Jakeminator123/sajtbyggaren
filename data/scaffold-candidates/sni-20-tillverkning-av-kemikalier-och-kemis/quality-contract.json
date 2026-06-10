@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Ha en startsida och en kontaktsida.",
+    "Lyfta fram produktområden och tillverknings-/kvalitetsinformation eftersom det är centralt för branschens köpprocess.",
+    "Kontaktvägar ska vara tydliga och lämpade för offert, tekniska frågor och affärsdialog.",
+    "All copy om kvalitet, säkerhet och kapacitet måste vara verifierbar och saklig.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generiska tjänstesidor som inte speglar att verksamheten tillverkar kemiska produkter.",
+    "Påhittade certifieringar, godkännanden, laboratorieresultat eller säkerhetslöften.",
+    "Överdrivet detaljerade eller riskfyllda instruktioner om kemikalieanvändning.",
+    "Otydlig eller dold kontaktinformation."
+  ]
+}

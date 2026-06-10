@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Include a clear route for services and a clear route for geographic coverage because both are central decision factors in transport buying.",
+    "Show trust signals grounded in real operations, such as permits, insured goods, punctuality, routines, experience or reachable dispatch contact.",
+    "Make contact pathways prominent on every primary route.",
+    "Keep service descriptions specific to transport and logistics work, not generic local-service copy.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not structure the site like a restaurant, portfolio or webshop scaffold.",
+    "Do not invent fleet size, delivery volumes, certifications, response times or customer counts.",
+    "Do not promise nationwide or regional coverage unless the dossier supports it.",
+    "Do not use vague filler such as 'high quality service' without operational substance."
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-53-post-och-kurirverksamhet",
+  "version": "0.1.0",
+  "label": "Post- och kurirverksamhet",
+  "description": "Scaffold för företag inom post- och kurirverksamhet med fokus på tydliga leveranstjänster, geografisk täckning, förtroendeskapande information och enkel kontakt för bokning eller förfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara leverans- och kurirtjänster tydligt",
+    "visa vilka områden och typer av uppdrag som hanteras",
+    "bygga förtroende genom tydlig företagsinformation och referenser",
+    "driva kontaktförfrågningar för transport, bud och distribution"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

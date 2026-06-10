@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar bibliotek, arkiv, museer och liknande publik eller samhällsinriktad verksamhet bättre än en generisk företagsmall.",
+    "Fångar både uppdragskommunikation och praktisk besöksinformation.",
+    "Har alltid startsida och kontaktsida.",
+    "Sektioner och syften stödjer nyhetsbrev och kontaktformulär utan att göra dem obligatoriska överallt.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "E-handelsstruktur med produkter och varukorg.",
+    "Tjänsteföretagsupplägg som utgår från offertförfrågningar som huvudmål.",
+    "Påhittade bevis som besökssiffror, certifieringar eller utmärkelser.",
+    "Restaurang- eller bokningscentrerad informationsarkitektur om det inte uttryckligen behövs."
+  ]
+}

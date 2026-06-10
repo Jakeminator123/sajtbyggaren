@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-60-planering-radio-och-tv-sandning-nyhe",
+  "version": "0.1.0",
+  "label": "Planering, radio- och tv-sändning, nyhetsbyråer och annan distribution av medieinnehåll",
+  "description": "Scaffold för redaktionell verksamhet inom radio, tv, nyhetsbyrå och annan mediedistribution där aktuellt innehåll, program/format, prenumeration och redaktionell trovärdighet står i centrum.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera aktuellt innehåll och publiceringar",
+    "driva registrering till nyhetsbrev",
+    "förklara program, format eller bevakningsområden",
+    "bygga förtroende genom redaktion, publiceringsprinciper och kontaktvägar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

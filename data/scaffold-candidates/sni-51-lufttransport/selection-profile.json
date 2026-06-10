@@ -1,0 +1,26 @@
+{
+  "id": "sni-51-lufttransport",
+  "embeddingText": "Lufttransport, flygtransport, charterflyg, gods, passagerartransport, operativ täckning, trafik och områden, kontaktförfrågan, referenser, team, karta, öppettider.",
+  "semanticSignals": [
+    "air-transport-services",
+    "charter-or-assignment-based-transport",
+    "cargo-or-passenger-transport-context",
+    "operational-coverage-or-routes",
+    "aviation-operations-trust-signals",
+    "contact-led-conversion"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "retail-products-catalog",
+    "beauty-treatment-booking-flow",
+    "photography-portfolio-as-primary-route",
+    "construction-project-case-studies-as-core-structure"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily provides air transport or aviation-based transport services.",
+    "Prefer an operations or coverage page because visitors need to understand where and how the company flies or operates.",
+    "Do not force ecommerce, menu, or generic local tradesman structures onto this industry."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

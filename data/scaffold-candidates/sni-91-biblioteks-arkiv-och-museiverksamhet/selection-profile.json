@@ -1,0 +1,38 @@
+{
+  "id": "sni-91-biblioteks-arkiv-och-museiverksamhet",
+  "embeddingText": "Branschspecifik scaffold för bibliotek, arkiv och museer. Fokus på startsida med aktuellt och besöksinformation, verksamhetssida för samlingar program eller tjänster, om-oss för uppdrag och organisation, nyheter för aktuella händelser och kontakt med öppettider och karta. Passar ideell, offentlig eller stiftelseburen kultur- och kunskapsverksamhet.",
+  "semanticSignals": [
+    "bibliotek",
+    "arkiv",
+    "museum",
+    "samlingar",
+    "utstallningar",
+    "program",
+    "besok",
+    "oppettider",
+    "lasesal",
+    "pedagogisk-verksamhet",
+    "kulturarv",
+    "forskning",
+    "nyheter",
+    "organisation",
+    "kontakt"
+  ],
+  "negativeSignals": [
+    "webshop",
+    "varukorg",
+    "produktkatalog",
+    "offerttjanster",
+    "akut-jour",
+    "meny",
+    "bordsbokning",
+    "rumsbokning"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten främst informerar om kulturarv, samlingar, utställningar, bibliotekstjänster, arkivtjänster eller publika program.",
+    "Välj denna scaffold när besöksinformation och uppdrag är viktigare än försäljning.",
+    "Undvik denna scaffold för kommersiella servicebolag, restauranger, hotell och rena e-handlare."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

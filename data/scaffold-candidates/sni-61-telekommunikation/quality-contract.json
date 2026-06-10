@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Has home route '/' and contact route.",
+    "Reflects telecom buying journey with solutions and pricing as core pages.",
+    "Supports trust signals around security, support and reliability without making unverifiable claims.",
+    "Uses Swedish lowercase paths with leading slash and no trailing slash.",
+    "Provides sectionsPerRoute for every default route.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic local-service structure without telecom-specific solution and pricing pages",
+    "invented certifications, uptime figures, customer counts or coverage claims",
+    "overloading the site with technical jargon before explaining customer benefit",
+    "mixing support promises and commercial CTAs in a confusing way"
+  ]
+}

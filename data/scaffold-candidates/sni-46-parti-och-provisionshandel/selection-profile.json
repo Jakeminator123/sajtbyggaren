@@ -1,0 +1,38 @@
+{
+  "id": "sni-46-parti-och-provisionshandel",
+  "embeddingText": "Branschspecifik scaffold för parti- och provisionshandel, grossist, distributör och agenturföretag inom B2B. Webbplatsen behöver startsida, sortiment, bli kund, om oss och kontakt. Innehållet ska betona produktkategorier, leveranssäkerhet, logistik, leverantörsrelationer, företagskunder, kontoansökan, offertförfrågan och tydliga kontaktvägar snarare än konsumentköp.",
+  "semanticSignals": [
+    "grossist",
+    "partihandel",
+    "provisionshandel",
+    "agentur",
+    "distributor",
+    "aterforsaljare",
+    "foretagskunder",
+    "sortiment",
+    "produktkategorier",
+    "leverans",
+    "logistik",
+    "lager",
+    "inkopsforfragan",
+    "kontoansokan",
+    "offert",
+    "varumarken",
+    "leverantorer"
+  ],
+  "negativeSignals": [
+    "onlinebutik-for-konsumenter",
+    "restaurangmeny",
+    "tidsbokning-som-huvudflode",
+    "portfoljgalleri-som-primar-affarsyta",
+    "eventbokning",
+    "patientbesok"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company primarily sells goods B2B as a wholesaler, distributor, trading company or sales agent.",
+    "Prefer this scaffold when assortment, supply, brands, resellers, industrial buyers or customer onboarding are core themes.",
+    "Do not choose this scaffold for pure manufacturing, consumer retail ecommerce or local household services unless wholesale trade is the dominant offer."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

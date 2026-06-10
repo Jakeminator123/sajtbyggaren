@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad som hämtas eller tas emot och leda besökaren till kontakt eller beställningsförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets insamlings-, återvinnings- och bortskaffandetjänster på ett konkret sätt för olika kundbehov."
+    },
+    {
+      "id": "waste-types",
+      "path": "/avfallsslag",
+      "required": true,
+      "purpose": "Visa vilka avfallsslag som hanteras, hur sortering går till och vad kunden behöver förbereda före hämtning eller inlämning."
+    },
+    {
+      "id": "collection-order",
+      "path": "/hamtning-bestallning",
+      "required": true,
+      "purpose": "Samla information om hur hämtning, container, löpande uppdrag eller offertförfrågan går till och driva kontakt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att beskriva verksamheten, arbetssättet och personalens ansvar inom återvinning och avfallshantering."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för hämtning, frågor, vägbeskrivning eller öppettider."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "facilities",
+      "path": "/anlaggning",
+      "when": "när företaget tar emot avfall på en fysisk anläggning och behöver visa platsinformation, öppettider eller besöksvillkor"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "när företaget verkar i flera kommuner eller orter och behöver tydlig lokal täckning"
+    }
+  ]
+}

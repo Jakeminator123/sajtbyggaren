@@ -1,0 +1,80 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "material-summary",
+      "operations-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews",
+      "faq-preview",
+      "location-summary"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and the main offered materials or extraction focus, with a primary contact CTA.",
+      "Material-summary must appear before the final contact CTA so visitors quickly understand what is offered.",
+      "Operations-summary should explain capacity, delivery or handling in concrete terms without making unverifiable claims.",
+      "Trust-proof must use real business facts such as organisation details, references, visible location information or practical experience when provided.",
+      "Avoid repeating the same material list in multiple sections with identical wording."
+    ]
+  },
+  "materials": {
+    "requiredSections": [
+      "materials-intro",
+      "material-list",
+      "use-cases",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-note",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Materials intro must connect the offered materials to likely buyer needs in plain language.",
+      "Material-list items must be specific, for example material type, fraction, intended use or delivery format when known.",
+      "Use-cases should stay factual and describe suitable applications without promising performance that is not supported by supplied data.",
+      "If pricing-note is shown it must frame pricing as request-based or variable unless exact prices are actually supplied."
+    ]
+  },
+  "operations": {
+    "requiredSections": [
+      "operations-intro",
+      "process-overview",
+      "logistics-and-delivery",
+      "responsibility-and-safety",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "team",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Operations intro must explain what the site does in practical business terms, not generic marketing copy.",
+      "Process-overview should describe extraction, sorting, processing or handling only at a level supported by the dossier.",
+      "Logistics-and-delivery must clarify pickup, transport, delivery area or coordination details when known.",
+      "Responsibility-and-safety should present factual routines, site rules or environmental consideration without inventing certificates, permits or compliance claims."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "location",
+      "opening-hours"
+    ],
+    "optionalSections": [
+      "map",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real phone, email and address details when available and must not contain placeholders.",
+      "Contact form should be positioned after core contact details so urgent visitors can call directly.",
+      "Location and opening-hours should help visitors plan visits, pickups or deliveries.",
+      "If map is shown it should support the address and access information rather than replace written directions."
+    ]
+  }
+}

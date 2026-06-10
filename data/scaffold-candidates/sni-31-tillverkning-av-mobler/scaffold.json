@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-31-tillverkning-av-mobler",
+  "version": "0.1.0",
+  "label": "Tillverkning av möbler",
+  "description": "Scaffold för möbeltillverkare med fokus på material, måttanpassning, sortiment/erbjudande, referensbilder och tydlig kontaktväg för offert eller dialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara vilket slags möbler företaget tillverkar",
+    "visa material, utförande och möjlig måttanpassning",
+    "bygga förtroende med process, referenser och verkstadsnära innehåll",
+    "driva kontakt för offert, beställning eller rådgivning"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

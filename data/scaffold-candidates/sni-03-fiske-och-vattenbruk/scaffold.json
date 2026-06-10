@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-03-fiske-och-vattenbruk",
+  "version": "0.1.0",
+  "label": "Fiske och vattenbruk",
+  "description": "Branschspecifik scaffold för företag inom fiske och vattenbruk med fokus på verksamhetsöversikt, erbjudande, hållbar produktion/fångst och enkel kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera verksamheten tydligt",
+    "förklara produkter och tjänster",
+    "bygga förtroende med spårbarhet, arbetssätt och referenser",
+    "driva kontaktförfrågningar från kunder och samarbetspartners"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

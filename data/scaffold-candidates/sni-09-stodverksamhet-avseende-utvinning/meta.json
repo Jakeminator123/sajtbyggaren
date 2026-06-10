@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-09-stodverksamhet-avseende-utvinning",
+  "sniCode": "09",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-09",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:24:32Z",
+  "outputPath": "data/scaffold-candidates/sni-09-stodverksamhet-avseende-utvinning",
+  "operatorBriefHash": "sha256:60b0590f3e6275c9d15bbef7f78448ed58929f16841868319b2670e2bcfb2731",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

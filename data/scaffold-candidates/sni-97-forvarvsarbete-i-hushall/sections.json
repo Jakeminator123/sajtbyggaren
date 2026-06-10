@@ -1,0 +1,54 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "faq",
+      "reviews",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero ska tydligt beskriva vilken typ av hushållsarbete verksamheten gäller och innehålla primär CTA.",
+      "Service-summary ska vara konkret och lätt att förstå, utan vaga eller alltför breda formuleringar.",
+      "Trust-proof ska bygga på verkliga uppgifter som tydlig avsändare, organisationsnummer eller praktisk information och placeras före slutlig CTA.",
+      "Samma budskap ska inte upprepas i flera sektioner med nästan identisk formulering."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "work-method",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "team",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "About-story ska beskriva verksamheten sakligt och mänskligt utan generiska formuleringar.",
+      "Work-method ska förklara hur kontakt, planering eller genomförande brukar gå till om sådan information finns.",
+      "Om team används ska innehållet spegla verkliga personer eller roller och inte fyllas med platshållare."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Kontaktvägar ska vara verkliga och tydliga, utan platshållartext.",
+      "Kontaktformulär ska vara enkelt och anpassat för allmän förfrågan eller kontaktförfrågan.",
+      "Om karta visas ska den bara användas när en relevant besöks- eller postadress finns."
+    ]
+  }
+}

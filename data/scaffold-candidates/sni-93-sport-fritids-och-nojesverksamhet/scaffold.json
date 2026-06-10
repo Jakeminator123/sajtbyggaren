@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-93-sport-fritids-och-nojesverksamhet",
+  "version": "0.1.0",
+  "label": "Sport-, fritids- och nöjesverksamhet",
+  "description": "Scaffold för gym, tränare och andra verksamheter inom sport, fritid och nöje med fokus på att sänka tröskeln till första besöket, visa schema/priser och driva bokning eller registrering.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera utbud av pass eller aktiviteter",
+    "visa priser eller medlemskap tydligt",
+    "driva bokning, prova-på eller registrering",
+    "bygga förtroende med instruktörer, omdömen och praktisk information"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

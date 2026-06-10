@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Har alltid startsida med tydlig CTA till kontakt.",
+    "Har alltid kontaktsida.",
+    "Tjänstesidan är anpassad för skogsbruk och beskriver skogliga tjänster konkret.",
+    "Scaffolden innehåller yta för geografiskt arbetsområde eftersom verksamheten ofta är platsbunden.",
+    "Förtroendesignaler kan visa organisationsnummer, F-skattsedel och referenser utan att hitta på meriter.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generiska sidor som portfolio eller meny som inte passar skogsbruk som standard.",
+    "Påståenden om certifieringar, maskinpark eller kapacitet som inte finns i underlaget.",
+    "Överdrivna rikstäckande formuleringar om arbetsområde utan stöd.",
+    "Onödigt många konverteringsvägar; huvudmålet är enkel kontakt/offertförfrågan."
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "id": "sni-98-hushallens-produktion-av-diverse-var",
+  "label": "Hushållens produktion av diverse varor och tjänster för eget bruk",
+  "description": "Scaffold för verksamheter inom SNI 98 där besökaren främst behöver förstå vad som görs, i vilken form det sker och hur kontakt tas. Upplägget prioriterar tydlig beskrivning av egenproduktion/eget bruk, enkel presentation och kontaktmöjlighet snarare än avancerade säljflöden.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Förklara verksamhetens inriktning tydligt",
+    "Beskriva vilka typer av varor eller tjänster som omfattas",
+    "Ge grundläggande förtroendesignaler och kontaktvägar",
+    "Göra det enkelt att skicka en förfrågan"
+  ],
+  "defaultPageCount": 3,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Förklara verksamheten kort och tydligt, visa vad som produceras eller utförs och leda vidare till kontakt."
+    },
+    {
+      "id": "about",
+      "path": "/om",
+      "required": false,
+      "purpose": "Ge sammanhang om hushållet eller verksamheten, arbetssättet och bakgrunden till produktionen eller tjänsterna."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Samla kontaktuppgifter och kontaktformulär så att besökaren enkelt kan höra av sig."
+    },
+    {
+      "id": "services",
+      "path": "/verksamhet",
+      "optional": true,
+      "when": "när verksamheten behöver beskriva flera typer av egenproducerade varor eller tjänster mer utförligt"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när besökare ofta behöver förklaring kring omfattning, arbetssätt, tillgänglighet eller kontaktvägar"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "activity-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "about-summary",
+        "faq",
+        "gallery",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero måste tydligt säga vad verksamheten gör och ha en primär CTA till kontakt.",
+        "Activity-summary ska beskriva faktiska typer av varor eller tjänster och undvika vaga formuleringar.",
+        "Trust-proof ska bygga på verifierbara uppgifter som organisationsnummer, tydliga kontaktvägar eller konkret arbetssätt.",
+        "Slutlig contact-cta ska ligga sist och inte upprepa samma text som hero ordagrant."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "work-method",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "team",
+        "gallery"
+      ],
+      "sectionOrderRules": [
+        "About-story ska förklara verksamhetens bakgrund sakligt och utan utfyllnad.",
+        "Work-method ska beskriva hur produktionen eller tjänsterna går till på en begriplig nivå.",
+        "Om team visas ska det vara verkliga personer eller roller, inte generiska platshållare."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Kontaktuppgifter ska vara konkreta och användbara, utan platshållartext.",
+        "Kontaktformulär ska vara enkelt och tydligt kopplat till frågor eller förfrågningar.",
+        "Map ska bara visas om en relevant besöksadress finns."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Passar verksamheter där enkel och tydlig informationsstruktur är viktigare än katalog, bokning eller e-handel.",
+      "Hemsidan måste kunna fungera väl med mycket begränsat innehåll.",
+      "Kontaktväg ska vara central på både startsida och kontaktsida.",
+      "Beskrivningen av verksamheten ska kunna hantera både varor och tjänster utan att lova mer än underlaget stödjer.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "E-handelsmönster som produktkorg eller checkout.",
+      "Bokningsflöden som antyder tidsbokning om sådan funktion inte finns.",
+      "Branschsektioner som certifieringar, installationer eller serviceområden utan tydlig relevans.",
+      "Överdrivet säljande copy för en verksamhet som främst behöver tydlighet och kontakt."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "trust-guarantees",
+      "image-gallery",
+      "opening-hours"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Hushållens produktion av diverse varor och tjänster för eget bruk, SNI 98, enkel informationswebb, tydlig startsida, om-sida, kontakt, egenproduktion, hushållsbaserad verksamhet, saklig presentation, kontaktformulär, organisationsnummer, verksamhetsbeskrivning.",
+    "semanticSignals": [
+      "egenproduktion",
+      "eget-bruk",
+      "hushallsbaserad-verksamhet",
+      "enkel-foretagsinformation",
+      "saklig-verksamhetsbeskrivning",
+      "kontakt-i-fokus",
+      "varor-och-tjanster-i-liten-skala",
+      "tydlig-avsandare"
+    ],
+    "negativeSignals": [
+      "webbshop",
+      "produktkorg",
+      "onlinebokning",
+      "restaurangmeny",
+      "fastighetsobjekt",
+      "medicinsk-vard",
+      "stort-tjansteutbud-med-specialistkategorier"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten är svår att placera i mer specifik bransch men behöver en enkel och trovärdig närvaro på webben.",
+      "Prioritera tydlighet om vad verksamheten gör framför marknadssektioner med många varianter.",
+      "Om underlaget bara stödjer mycket kort information ska home och contact fortfarande räcka för en fungerande webbplats."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

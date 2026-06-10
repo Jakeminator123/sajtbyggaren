@@ -1,0 +1,88 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "process-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "gallery",
+      "reviews",
+      "faq",
+      "service-area"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and primary service focus in clear language, with a primary contact CTA.",
+      "Service summary must mention actual sanitation or remediation work offered, not generic environmental claims.",
+      "Process summary should appear before the final contact CTA to reduce uncertainty about how work starts.",
+      "Trust proof must stay factual, such as visible company details, references or practical experience, and must not invent certifications.",
+      "Sections should avoid repeating the same promise in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "pricing-overview"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company to remediation, contamination control or related field work.",
+      "Service list items must be concrete examples such as marksanering, vattensanering, provtagning support or efterbehandling where relevant.",
+      "If pricing-overview is shown, it must stay high-level and avoid misleading fixed prices for work that normally requires assessment."
+    ]
+  },
+  "process": {
+    "requiredSections": [
+      "process-intro",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Process intro must explain why the work is assessed and planned before execution.",
+      "Process steps should follow a realistic sequence such as initial contact, site assessment, action, handling and follow-up.",
+      "The page should reduce uncertainty without making promises about outcomes that depend on site conditions or authority requirements."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery",
+      "service-area"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the company's work, customers or operating context, not generic brand language.",
+      "Team should only be shown when real people or roles are available.",
+      "Trust proof should focus on verifiable business details, references and practical competence."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real ways to get in touch and must not use placeholder content.",
+      "If map is shown, it should match the stated address or service base.",
+      "Contact CTA should support quote requests, questions or urgent contact in plain language."
+    ]
+  }
+}

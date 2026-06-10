@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera förlaget, lyfta aktuell utgivning och leda besökaren vidare till titlar, nyheter och nyhetsbrev."
+    },
+    {
+      "id": "titles",
+      "path": "/titlar",
+      "required": true,
+      "purpose": "Samla och presentera utgivningen med tydliga ingångar till böcker, serier eller andra publikationer."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": true,
+      "purpose": "Publicera redaktionella nyheter, lanseringar, pressmeddelanden och uppdateringar om utgivningen."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Förklara förlagets inriktning, historia och redaktionella profil för att bygga förtroende hos läsare, författare och samarbetspartners."
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "required": true,
+      "purpose": "Få besökare att registrera sig för utskick om nya titlar, författarnyheter och kommande utgivning."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta förlaget för allmänna frågor, press, rättigheter eller manusrelaterade ärenden."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "authors",
+      "path": "/forfattare",
+      "when": "när webbplatsen har flera återkommande författare eller profiler som behöver egen presentationsyta"
+    },
+    {
+      "id": "press",
+      "path": "/press",
+      "when": "när förlaget aktivt arbetar med media, recensionsexemplar eller pressmaterial"
+    }
+  ]
+}

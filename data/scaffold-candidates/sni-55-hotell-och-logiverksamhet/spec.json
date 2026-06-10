@@ -1,0 +1,334 @@
+{
+  "id": "sni-55-hotell-och-logiverksamhet",
+  "label": "Hotell- och logiverksamhet",
+  "description": "Branschspecifik scaffold för hotell, pensionat, vandrarhem, bed & breakfast och annan logiverksamhet med fokus på rum, priser, bokning, läge och förtroendeskapande information inför vistelsen.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa boende och rumstyper visuellt",
+    "göra det enkelt att boka eller skicka bokningsförfrågan",
+    "förklara priser, paket och villkor",
+    "bygga trygghet med recensioner, faciliteter och praktisk information",
+    "hjälpa gäster att hitta till boendet"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera boendet, läget och känslan i vistelsen samt leda vidare till bokning."
+    },
+    {
+      "id": "rooms-and-prices",
+      "path": "/rum-och-priser",
+      "required": true,
+      "purpose": "Visa rumstyper, vad som ingår, priser eller prisexempel och leda vidare till bokning."
+    },
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "required": true,
+      "purpose": "Samla boknings-CTA, bokningsförfrågan och viktig information inför bokning."
+    },
+    {
+      "id": "gallery",
+      "path": "/bildgalleri",
+      "required": false,
+      "purpose": "Visa boendet, rummen, gemensamma ytor och omgivningen med starkt bildfokus."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att berätta om boendet, värdskapet och platsen."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta boendet och hitta adress, karta och praktisk information."
+    },
+    {
+      "id": "packages",
+      "path": "/paket-erbjudanden",
+      "optional": true,
+      "when": "när verksamheten säljer weekendpaket, säsongserbjudanden eller tillägg utöver vanliga rumsbokningar"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när gäster ofta behöver svar om incheckning, avbokning, parkering, husdjur eller frukost"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när läge, resväg, parkering eller lokal orientering är en central del av köpresan"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "accommodation-summary",
+        "room-highlights",
+        "trust-proof",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews",
+        "facilities",
+        "location-preview",
+        "faq",
+        "seasonal-offer"
+      ],
+      "sectionOrderRules": [
+        "Hero must communicate accommodation type, place or setting if known, and a primary booking CTA.",
+        "Accommodation-summary should quickly explain who the stay suits and what makes the property practically relevant, not only atmospheric copy.",
+        "Room-highlights should preview a small number of concrete room options or stay formats and link to rum-och-priser.",
+        "Trust-proof must appear before the final booking CTA and may use reviews, policies or included amenities without repeating identical claims.",
+        "Location-preview should only appear when there is meaningful nearby context such as city center, nature, beach, station or attractions.",
+        "Sections should balance inspiration with practical booking information."
+      ]
+    },
+    "rooms-and-prices": {
+      "requiredSections": [
+        "rooms-intro",
+        "room-list",
+        "pricing-table",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "facilities",
+        "faq",
+        "trust-proof",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Rooms-intro must explain how room categories, occupancy or pricing work in plain language.",
+        "Room-list items must be concrete and distinguish rooms by size, bed setup, amenities, view or suitability.",
+        "Pricing information must be honest: use actual prices, from-prices or clear price examples when exact live pricing is unavailable.",
+        "If policies such as breakfast, cancellation or check-in affect the offer, they should appear near pricing or CTA rather than being buried."
+      ]
+    },
+    "booking": {
+      "requiredSections": [
+        "booking-intro",
+        "booking-cta",
+        "booking-policies"
+      ],
+      "optionalSections": [
+        "pricing-table",
+        "faq",
+        "contact-cta",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Booking-intro must state whether the visitor books directly, requests availability or is redirected to an external booking flow.",
+        "Booking-cta must be the main interaction on the page and should not be visually buried below long text.",
+        "Booking-policies should cover the practical conditions supplied by the business, such as cancellation terms, check-in windows or breakfast inclusion, without inventing guarantees.",
+        "If a contact alternative is shown, it should support the booking flow rather than compete with it."
+      ]
+    },
+    "gallery": {
+      "requiredSections": [
+        "gallery-intro",
+        "image-gallery",
+        "booking-cta"
+      ],
+      "optionalSections": [
+        "room-highlights",
+        "location-preview",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Gallery images should be grouped or captioned so visitors understand whether they show rooms, common areas, food or surroundings.",
+        "The page should stay visually focused and avoid turning into a duplicate of the home page.",
+        "A booking CTA must appear after visitors have seen enough imagery to act."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "host-or-team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "location-story",
+        "reviews",
+        "booking-cta"
+      ],
+      "sectionOrderRules": [
+        "About-story must be specific to the property, host, building or local setting and avoid generic hospitality clichés.",
+        "Host-or-team should only be shown when real people or roles can be presented credibly.",
+        "Trust-proof may include guest reviews, practical standards or longstanding local presence, but must not imply unavailable awards or certifications."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "map",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "faq",
+        "location-details"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must include real phone, email and address details when available and must not use placeholders.",
+        "Map should support wayfinding to the property, not replace the written address.",
+        "If check-in times, reception times or arrival notes matter, they should be placed near the contact details."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Scaffold must support both inspiration and conversion: visitors should be able to see the property and understand how to book.",
+      "Room and pricing information must have a dedicated surface because it is core to this industry.",
+      "Booking must have its own route because booking intent is primary for hotel and lodging sites.",
+      "Contact route must support both direct contact and finding the property physically.",
+      "Copy structure must support practical guest concerns such as amenities, cancellation terms and arrival information.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the site like a generic local service business with only services pages.",
+      "Do not replace room/pricing content with vague marketing copy about comfort or quality.",
+      "Do not force restaurant-specific structures such as full menu pages unless the business actually operates that as a core offer.",
+      "Do not imply instant booking if the actual flow is only an inquiry form or external link.",
+      "Do not overuse repeated trust blocks that say the same thing on every page."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "booking-cta",
+      "faq-accordion",
+      "image-gallery",
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "pricing-table",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Hotell- och logiverksamhet scaffold med startsida, rum och priser, bokning, bildgalleri, om oss och kontakt. Fokuserar på visuella rumspresentationer, faciliteter, recensioner, bokningsvillkor, karta och enkel väg till bokning eller bokningsförfrågan för hotell, pensionat, vandrarhem, B&B och annan logi.",
+    "semanticSignals": [
+      "hotell",
+      "boende",
+      "logi",
+      "rum",
+      "dubbelrum",
+      "familjerum",
+      "svit",
+      "vandrarhem",
+      "pensionat",
+      "bed-and-breakfast",
+      "bokning",
+      "bokningsforfragan",
+      "priser",
+      "paket",
+      "frukost",
+      "incheckning",
+      "utcheckning",
+      "avbokning",
+      "faciliteter",
+      "galleri",
+      "hitta-hit",
+      "reception"
+    ],
+    "negativeSignals": [
+      "tjansteutforande-pa-plats-hos-kund",
+      "produktkatalog-for-fysisk-detaljhandel",
+      "restaurangmeny-som-huvudsaklig-affar",
+      "medicinska-behandlingar",
+      "hantverkartjanster",
+      "ren-e-handel-utan-vistelse-eller-boende"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily sells overnight stays or accommodation.",
+      "Strong indicators include rooms, booking, check-in, breakfast, guest reviews, amenities and directions to the property.",
+      "Applies to hotels, motels, hostels, guesthouses, inns, lodges, cabins with hosted accommodation and B&B-style businesses.",
+      "If the site needs to convert visitors into reservations, this scaffold is a better fit than a generic service scaffold."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-51-lufttransport",
+  "sniCode": "51",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-51",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:28:36Z",
+  "outputPath": "data/scaffold-candidates/sni-51-lufttransport",
+  "operatorBriefHash": "sha256:7289d59dc999897cfdc90eab4548eea09eb7b853b87874a8ac2d369fe5d10dff",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

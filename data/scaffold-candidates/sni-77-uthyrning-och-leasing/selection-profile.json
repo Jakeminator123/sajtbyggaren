@@ -1,0 +1,41 @@
+{
+  "id": "sni-77-uthyrning-och-leasing",
+  "embeddingText": "Branschspecifik scaffold för uthyrning och leasing, SNI 77. Passar företag som hyr ut eller leasar fordon, maskiner, utrustning, verktyg, lokaler eller andra objekt. Viktiga sidor är startsida, utbud, så fungerar det, kontakt och ibland priser, vanliga frågor och hitta hit. Fokuserar på tydligt erbjudande, tillgänglighet, villkor, process, referenser och enkel kontaktförfrågan.",
+  "semanticSignals": [
+    "uthyrning",
+    "leasing",
+    "hyresperiod",
+    "leasingavtal",
+    "objekt",
+    "utrustning",
+    "maskiner",
+    "fordon",
+    "verktyg",
+    "tillganglighet",
+    "prisforfragan",
+    "offert",
+    "leverans",
+    "upphamtning",
+    "aterlamning",
+    "deposition",
+    "forsakring",
+    "villkor"
+  ],
+  "negativeSignals": [
+    "webshop",
+    "produktkassa",
+    "meny",
+    "bordsbokning",
+    "fotogalleri-som-huvudsyfte",
+    "projektportfolio",
+    "patientbokning",
+    "fastighetsformedling"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company primarily earns from renting out assets or offering leasing agreements.",
+    "Prefer this scaffold when visitors need to understand available categories, rental or leasing process, and practical terms before contacting.",
+    "Do not classify as generic local service if the core offer is access to rented or leased objects rather than labor-only services."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

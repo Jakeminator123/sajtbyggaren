@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-93-sport-fritids-och-nojesverksamhet",
+  "sniCode": "93",
+  "wizardCategoryId": "fitness",
+  "industryProfileId": "sni-93",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:32:59Z",
+  "outputPath": "data/scaffold-candidates/sni-93-sport-fritids-och-nojesverksamhet",
+  "operatorBriefHash": "sha256:95843fffa36d8c74a65375c45c90425f923a3bfad4f0a9c128125c7511c796a6",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

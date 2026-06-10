@@ -1,0 +1,277 @@
+{
+  "id": "sni-10-livsmedelsframstallning",
+  "label": "Livsmedelsframställning",
+  "description": "Branschspecifik scaffold för livsmedelsframställning med fokus på produkter, tillverkning, återförsäljare och kontakt/offert.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produktutbud",
+    "bygga förtroende kring råvaror och produktion",
+    "hjälpa besökare hitta återförsäljare",
+    "driva offertförfrågningar och kontakt",
+    "möjliggöra enkel produktbeställning eller köpförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera varumärket, produktkategorierna och det viktigaste erbjudandet med tydlig väg till produkter eller offert."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktutbudet med konkreta produkter, användningsområden, förpackningar och information som hjälper återförsäljare eller kunder vidare."
+    },
+    {
+      "id": "resellers",
+      "path": "/aterforsaljare",
+      "required": true,
+      "purpose": "Hjälpa besökare att hitta butiker, återförsäljare eller försäljningsställen där produkterna finns."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att berätta om verksamheten, råvarorna, hantverket och hur produktionen går till."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Fånga upp offertförfrågningar, återförsäljarkontakter och allmänna frågor via tydliga kontaktvägar."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "optional": true,
+      "when": "när företaget vill fördjupa information om tillverkningsprocess, råvaruhantering eller kvalitetssätt utöver om-sidan"
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "optional": true,
+      "when": "när starkt bildmaterial från produktion, råvaror eller färdiga produkter behöver en egen visuell sida"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-category-preview",
+        "value-props",
+        "trust-proof",
+        "quote-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews",
+        "production-highlight"
+      ],
+      "sectionOrderRules": [
+        "Hero must include brand name, what the producer makes and a primary CTA to /produkter or /kontakt.",
+        "Product-category-preview must show real categories or flagship products, not generic placeholder cards.",
+        "Trust-proof must only mention concrete signals such as local sourcing, egenkontroll or retailer availability when actually relevant to the business.",
+        "Quote-cta should be framed for realistic next steps such as offert, återförsäljarkontakt or product inquiry."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-grid",
+        "product-details-notes",
+        "quote-cta"
+      ],
+      "optionalSections": [
+        "menu-display",
+        "pricing-table",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Products-intro must explain what defines the assortment, such as type of food, production style, audience or packaging format.",
+        "Product-grid items must be concrete products or product families with image, name and useful facts when available.",
+        "Product-details-notes should cover relevant facts such as ingredients focus, storage, packaging sizes or serving suggestions without making unsupported claims.",
+        "Pricing-table is optional and should only be used when the business publicly shares prices or package levels."
+      ]
+    },
+    "resellers": {
+      "requiredSections": [
+        "resellers-intro",
+        "reseller-list",
+        "map",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Reseller-list must contain actual sales locations, areas or partner names when available, not placeholder geography.",
+        "Map should only be shown when there is meaningful location data for a shop, factory outlet or reseller cluster.",
+        "Contact-cta should help visitors who cannot find a nearby retailer or want to become a reseller."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "production-process",
+        "values"
+      ],
+      "optionalSections": [
+        "team",
+        "image-gallery",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "About-story must be specific to the company, its products and its way of working.",
+        "Production-process should describe real steps or principles in sourcing, preparation, manufacturing or delivery at a truthful level of detail.",
+        "Values must be concrete and tied to actual choices, such as ingredient quality, local suppliers or small-batch production."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "quote-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must include real contact paths such as email, phone or address where available.",
+        "Contact-form should be suitable for offert, retailer inquiry or product questions.",
+        "Map and opening-hours should only appear when the business has a relevant public location or pickup point."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Home route with '/' is present.",
+      "Contact route is present.",
+      "Routes and section ids use kebab-case slugs.",
+      "Page set reflects food production needs with products and reseller discovery, not restaurant booking logic.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Copy stays factual and avoids invented certifications, volumes or retailer counts.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "restaurant-specific booking flow as a default for manufacturers",
+      "generic e-commerce filler without concrete product context",
+      "placeholder reseller entries or fake stockists",
+      "claims about certifications, allergens, origin or sustainability that the business has not provided",
+      "overstating direct online checkout if the site mainly supports inquiries or retailer-led sales"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "image-gallery",
+      "opening-hours",
+      "faq-accordion",
+      "pricing-table",
+      "trust-guarantees",
+      "reviews-display"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "auth-flow",
+      "dashboard-shell",
+      "pricing-table-saas"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Livsmedelsframställning, matproducent, småskalig produktion, råvaror, förädling, produkter, sortiment, återförsäljare, offert, kontakt, tillverkning, lokala råvaror, kvalitet, leverans.",
+    "semanticSignals": [
+      "food-manufacturer",
+      "producer-brand",
+      "packaged-food-products",
+      "retailers-or-stockists",
+      "production-story",
+      "ingredients-and-sourcing",
+      "wholesale-or-reseller-inquiry",
+      "product-catalogue"
+    ],
+    "negativeSignals": [
+      "restaurant-table-booking",
+      "service-only-business-without-physical-products",
+      "generic-fashion-retail",
+      "pure-event-catering-flow-as-primary-structure",
+      "placeholder-webshop-without-real-products"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily makes or processes food products rather than serving restaurant meals on site.",
+      "Prefer this scaffold when reseller information, production trust and product assortment are more important than booking tables.",
+      "Suitable for bakeries, jam makers, beverage producers without alcohol-specific regulatory pages, charcuterie producers, confectionery makers and other packaged food brands."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fbfaf7",
+          "foreground": "#1a1a1a",
+          "muted": "#6e6e68",
+          "border": "#e8e6e0",
+          "primary": "#1a1a1a",
+          "primaryForeground": "#fbfaf7",
+          "accent": "#c9a87c",
+          "accentForeground": "#1a1a1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.25rem",
+          "md": "0.375rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "editorial",
+          "premium-but-restrained",
+          "product-led",
+          "calm"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara erbjudandet på en tydlig nivå och leda vidare till kontakt eller besök."
+    },
+    {
+      "id": "games",
+      "path": "/spel-och-utbud",
+      "required": true,
+      "purpose": "Visa vilka spel, vadhållningsformer eller aktiviteter som erbjuds och hur besökaren tar nästa steg."
+    },
+    {
+      "id": "visit",
+      "path": "/besok-oss",
+      "required": true,
+      "purpose": "Ge praktisk information om plats, öppettider och hur ett besök går till."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten via formulär, telefon, e-post eller hitta rätt adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "when the business has a clear story, team presentation or ownership information that strengthens trust"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "when the business needs to answer common questions about rules, åldersgränser, öppettider or practical details"
+    }
+  ]
+}

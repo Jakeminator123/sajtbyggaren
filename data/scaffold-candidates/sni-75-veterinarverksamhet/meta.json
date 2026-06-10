@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-75-veterinarverksamhet",
+  "sniCode": "75",
+  "wizardCategoryId": "healthcare",
+  "industryProfileId": "sni-75",
+  "referenceScaffoldId": "clinic-healthcare",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:31:15Z",
+  "outputPath": "data/scaffold-candidates/sni-75-veterinarverksamhet",
+  "operatorBriefHash": "sha256:d771540045c4ef9bf099da41d0ad07dc07286d3274f5c886427e36a2be73b823",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,88 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "applications-summary",
+      "gallery",
+      "reviews",
+      "faq",
+      "certifications"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company manufactures or refines and include a primary contact CTA.",
+      "Product summary must describe concrete product categories or supply areas, not vague industrial wording.",
+      "Trust proof must appear before the final contact CTA.",
+      "Applications summary may appear before trust proof when it helps clarify relevance for target customers.",
+      "Sections must avoid repeating the same claims about quality, safety or reliability."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Products intro must connect the business identity to its actual product areas.",
+      "Product list items must be concrete and grouped in a way that fits industrial buyers, for example fuels, oils, bitumen or related refined products.",
+      "If pricing-overview is used, it should describe quotation-based pricing or commercial setup honestly rather than fixed consumer prices when pricing is not public."
+    ]
+  },
+  "applications": {
+    "requiredSections": [
+      "applications-intro",
+      "application-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Applications intro must explain which industries, operations or use cases the company serves.",
+      "Application list must focus on practical fit and customer needs rather than generic marketing language.",
+      "Trust proof, if shown, should support relevance without duplicating the entire about page."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery",
+      "facility-summary"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the company, its operations or market focus and avoid empty claims.",
+      "Team should only be shown when real people or functions are available in the dossier.",
+      "Facility summary may be included when it clarifies production, storage, logistics or service capability."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real phone, email and address details when available.",
+      "Map and opening-hours should support contact and visits, not replace the main contact details.",
+      "Contact CTA should make clear what kinds of enquiries are welcome, such as product questions, deliveries or business dialogue."
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "sni-68-fastighetsverksamhet",
+  "embeddingText": "Fastighetsverksamhet scaffold för mäklare och andra fastighetsaktörer. Fokus på startsida, objekt, områden, om oss och kontakt. Sektioner stödjer objektöversikt, lokal marknadskännedom, team, förtroende och kontaktformulär.",
+  "semanticSignals": [
+    "fastighetsmaklare",
+    "objekt",
+    "bostader",
+    "lokaler",
+    "omraden",
+    "visning",
+    "vardering",
+    "saljare",
+    "kopare",
+    "lokal-marknad",
+    "team",
+    "kontaktformular"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "product-checkout",
+    "medical-treatment-pages",
+    "software-pricing-plans",
+    "industrial-machine-catalog"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily markets real estate brokerage, property listings, area expertise or related contact-driven property services.",
+    "Prefer this scaffold over a generic local-service scaffold when objects/listings and local areas are core to the visitor journey.",
+    "Do not classify as webshop just because many objects are displayed."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

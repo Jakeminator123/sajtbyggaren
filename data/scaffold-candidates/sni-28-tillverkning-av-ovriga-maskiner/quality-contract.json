@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Har alltid startsida och kontaktsida.",
+    "Lyfter maskiner, lösningar eller kundanpassad tillverkning som kärnerbjudande.",
+    "Ger utrymme för service och support efter leverans.",
+    "Bygger förtroende med konkreta uppgifter som referenser, organisationsuppgifter, team eller produktionskapacitet.",
+    "Kontaktvägen fungerar för offert eller teknisk förfrågan.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generisk konsultstruktur utan plats för maskiner eller tillverkningskapacitet.",
+    "E-handelsupplägg med varukorg eller prislista som standard.",
+    "Påhittade certifieringar, produktionsvolymer eller kundantal.",
+    "Överdrivet livsstilsspråk som inte passar industriell B2B-kommunikation.",
+    "Dubbelvisning av samma förtroendesignaler i flera sektioner utan nytt innehåll."
+  ]
+}

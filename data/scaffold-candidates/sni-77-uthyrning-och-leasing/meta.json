@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-77-uthyrning-och-leasing",
+  "sniCode": "77",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-77",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:31:16Z",
+  "outputPath": "data/scaffold-candidates/sni-77-uthyrning-och-leasing",
+  "operatorBriefHash": "sha256:110256f9319094dc1064c43a229daf8da00ae311adb9510a72ff3e869aa657f2",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad som tillverkas och leda vidare till kontakt eller produktöversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktkategorier, användningsområden och vad företaget faktiskt tillverkar."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende med företagets bakgrund, hantverk, materialkunskap och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan om offert, specialtillverkning eller samarbete."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "materials",
+      "path": "/material",
+      "when": "verksamheten behöver förklara skillnader mellan läder, skinn och andra använda material eller lyfta hållbarhet och skötsel"
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "when": "företaget har starka produktbilder, detaljbilder eller exempel på tidigare tillverkning som förtjänar egen yta"
+    }
+  ]
+}

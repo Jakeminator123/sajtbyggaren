@@ -1,0 +1,92 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "trust-signals",
+      "services-overview",
+      "selected-cases-preview",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business problem or strategic value clearly and avoid vague management jargon.",
+      "Trust signals should appear early and use honest proof such as case themes, senior roles or industry experience.",
+      "Selected cases preview should come before long company story text so visitors see evidence before narrative.",
+      "Contact CTA should invite a first conversation or quote request without pressure or exaggerated claims."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-list",
+      "ideal-client-problems",
+      "engagement-models",
+      "faq-accordion",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-signals",
+      "selected-cases-preview"
+    ],
+    "sectionOrderRules": [
+      "Services must be framed around client needs and outcomes, not only internal consulting labels.",
+      "Engagement models should explain how work can be structured without implying fixed pricing if none exists.",
+      "FAQ should answer practical buying questions briefly and concretely."
+    ]
+  },
+  "cases": {
+    "requiredSections": [
+      "selected-work-grid",
+      "results-highlights",
+      "client-types",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "services-overview",
+      "reviews-display"
+    ],
+    "sectionOrderRules": [
+      "Each case card should identify assignment type, client context and outcome in a sober tone.",
+      "If exact metrics are unavailable, results-highlights may describe qualitative outcomes but must not invent numbers.",
+      "Contact CTA should follow the proof section, inviting similar discussions or requests."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story-block",
+      "positioning-statement",
+      "team-block",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-signals",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "About story should explain focus, background and how the firm works with clients, not generic vision filler.",
+      "Team block should emphasize seniority, roles and relevant expertise because buyers often assess who will do the work.",
+      "Process steps should use real consulting stages the business actually delivers."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "faq-accordion",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Phone must be a tel: link and email must be a mailto: link.",
+      "Contact form should ask only for information needed to start a relevant dialogue.",
+      "Any address shown should be readable as plain text even if a map is omitted."
+    ]
+  }
+}

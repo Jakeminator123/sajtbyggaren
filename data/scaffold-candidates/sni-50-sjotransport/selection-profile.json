@@ -1,0 +1,31 @@
+{
+  "id": "sni-50-sjotransport",
+  "embeddingText": "Sjötransport, frakt till sjöss, passagerartrafik, charter, gods, rutter, destinationer, hamnar, kusttrafik, transportförfrågan, kontakt, om oss, fartyg och kapacitet.",
+  "semanticSignals": [
+    "sjotransportforetag",
+    "maritim-transport",
+    "gods-till-sjoss",
+    "passagerartransport",
+    "chartertrafik",
+    "hamn-och-destination",
+    "rutter-och-tackning",
+    "transportforfragan",
+    "fartygskapacitet"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "e-handel",
+    "fotograf",
+    "tandlakare",
+    "bilverkstad",
+    "hotell",
+    "produktkatalog-for-fysisk-retail"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily transports goods or passengers via water.",
+    "Prefer this scaffold when route coverage, destinations, ports or vessel capacity are central buying questions.",
+    "Do not classify inland generic logistics brokers here unless sea transport is a clear core service."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

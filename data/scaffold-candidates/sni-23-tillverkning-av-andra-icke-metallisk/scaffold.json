@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-23-tillverkning-av-andra-icke-metallisk",
+  "version": "0.1.0",
+  "label": "Tillverkning av andra icke-metalliska mineraliska produkter",
+  "description": "Scaffold för företag inom SNI 23 som tillverkar glas, keramik, betong, cement, kalk, gips, stenvaror, slipmedel eller liknande mineraliska produkter. Fokus ligger på tydlig presentation av produktområden, produktionskapacitet och kontaktvägar för offert, leveransfrågor eller teknisk dialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och tillverkningskapacitet",
+    "bygga förtroende med fakta om verksamhet, kvalitet och leverans",
+    "göra det enkelt att kontakta företaget för offert eller förfrågan"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

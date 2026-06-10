@@ -1,0 +1,75 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "process",
+      "image-gallery",
+      "reviews",
+      "faq",
+      "materials-summary"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what kinds of goods are manufactured and include a primary contact CTA.",
+      "Product summary must show concrete product categories or use cases, not vague claims.",
+      "Trust proof must rely on real business information such as organisation details, references or visible workshop context.",
+      "Process, gallery and reviews may appear between product-summary and trust-proof when supported by real content.",
+      "Final CTA should invite quote requests, custom orders or business enquiries without implying online checkout if none exists."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-table",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain the product range or manufacturing focus in plain language.",
+      "Product list items must be specific, for example bags, belts, cases, straps, covers or custom-made items where relevant.",
+      "Pricing table may only be used when the business has simple package-like offers or starting prices; otherwise omit it.",
+      "Contact CTA should connect product interest to enquiry, quote or custom order dialogue."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "process",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "team",
+      "materials-summary",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company, workshop or production focus concretely and avoid generic quality slogans.",
+      "Process should explain how work is carried out, for example design, cutting, sewing, assembly or finishing, when such information exists.",
+      "Team should only appear when actual people or roles can be presented."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Contact info must contain real reachable details and should support both private and business enquiries when relevant.",
+      "Contact CTA should include a form or clear email path for quote requests and questions.",
+      "Map and opening hours should only be shown when visitors can benefit from visiting or locating the business physically."
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera telekombolaget, förklara erbjudandet snabbt och driva registrering eller kontakt."
+    },
+    {
+      "id": "solutions",
+      "path": "/losningar",
+      "required": true,
+      "purpose": "Presentera tjänster, abonnemang eller kommunikationslösningar för privatpersoner eller företag med tydliga användningsfall."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Visa paket, abonnemang eller prisnivåer så att besökaren kan jämföra alternativ och ta nästa steg."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att visa team, arbetssätt och företagets inriktning på service, teknik och kundnytta."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Fånga upp registreringar, säljsamtal och supportrelaterade förfrågningar via tydliga kontaktvägar."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "när erbjudandet kräver svar på vanliga frågor om täckning, drift, säkerhet, avtal eller onboarding"
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "when": "när bolaget publicerar produktnyheter, driftinformation eller branschuppdateringar"
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "when": "när bolaget aktivt samlar prenumeranter för produktnyheter eller driftrelaterad information"
+    }
+  ]
+}

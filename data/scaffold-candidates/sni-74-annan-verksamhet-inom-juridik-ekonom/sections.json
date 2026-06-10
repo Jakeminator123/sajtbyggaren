@@ -1,0 +1,96 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "services-overview",
+      "selected-cases-preview",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "process-steps",
+      "team-preview",
+      "faq-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the firm's expertise, target client or problem area, and the primary CTA without vague management filler.",
+      "Services overview should appear before long company story so visitors can quickly confirm relevance.",
+      "Selected cases preview should come before deep about copy because this industry sells on proof as much as on credentials.",
+      "Trust signals must stay factual, such as case outcomes, client types, sectors or years of experience, without invented certifications or exaggerated counts.",
+      "Contact CTA should appear by the end of the page with a clear next step such as request a quote or start a conversation."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-list",
+      "ideal-client-fit",
+      "process-summary",
+      "faq-accordion",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-approach",
+      "selected-cases-preview",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "Services list must be grouped by real offer areas or assignment types, not abstract buzzwords.",
+      "Ideal client fit should clarify when the service is suitable and what kinds of needs the firm typically solves.",
+      "If pricing is mentioned, present it as approach, scope logic or starting point only when truthful; do not imply fixed packages unless they exist.",
+      "FAQ should answer practical purchase questions and reduce friction before contact."
+    ]
+  },
+  "cases": {
+    "requiredSections": [
+      "cases-grid",
+      "case-method-note",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "client-quotes",
+      "services-overview"
+    ],
+    "sectionOrderRules": [
+      "Each case card should name the assignment type or problem solved and summarise the delivered value in concrete language.",
+      "Do not overclaim measurable outcomes if exact figures are unavailable; describe improvements honestly.",
+      "Case method note can explain confidentiality limits when client work cannot be shown in full detail."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "expertise-highlights",
+      "team-block",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "values",
+      "selected-cases-preview",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "About story should explain background, specialisation and why the business exists in practical terms.",
+      "Expertise highlights should focus on domain knowledge, methods, sectors or problem areas rather than generic passion statements.",
+      "Team block may collapse to founder profile when the company is a solo specialist.",
+      "Process steps should describe the actual way of working from first dialogue to delivery and follow-up."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "inquiry-guidance"
+    ],
+    "optionalSections": [
+      "map",
+      "faq-accordion"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include direct and usable contact methods such as email and phone when available.",
+      "Contact form should ask for the essentials needed to understand the assignment without making the form unnecessarily long.",
+      "Inquiry guidance should help the visitor describe scope, timeline or challenge to improve lead quality."
+    ]
+  }
+}

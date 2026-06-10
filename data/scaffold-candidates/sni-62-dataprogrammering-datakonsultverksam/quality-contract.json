@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Includes home and contact routes.",
+    "Page set reflects software development and consulting needs with services, cases and optional pricing.",
+    "All default routes have matching sectionsPerRoute entries.",
+    "Purposes and rules avoid invented trust claims or fake metrics.",
+    "Swedish route paths are lowercase and start with '/'.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic local-service structure without space for case studies or technical competence.",
+    "Vague service copy that says little more than 'digital solutions'.",
+    "Pricing promises that imply fixed costs for undefined custom projects.",
+    "Made-up certifications, client logos or security claims.",
+    "Too many routes for very small firms that only need a compact presence."
+  ]
+}

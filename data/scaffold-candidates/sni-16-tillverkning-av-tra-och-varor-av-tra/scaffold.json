@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-16-tillverkning-av-tra-och-varor-av-tra",
+  "version": "0.1.0",
+  "label": "Träförädling och tillverkning av trävaror",
+  "description": "Scaffold för företag inom SNI 16 som tillverkar och bearbetar trä, kork, halm, rotting eller liknande material. Strukturen lyfter produkter, material, tillverkningskapacitet, referensprojekt och tydlig kontakt för offertförfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produkter och tillverkningsinriktning",
+    "bygga förtroende med material- och processinformation",
+    "visa referensprojekt och exempelarbeten",
+    "driva kontakt och offertförfrågningar"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,39 @@
+{
+  "id": "sni-59-film-video-och-tv-programverksamhet",
+  "embeddingText": "Film-, video-, tv-, ljud- och musikverksamhet behöver en visuell och showreel-först struktur där portfolio, tjänster, produktionsbevis och enkel offertförfrågan står i centrum. Sajten ska hjälpa besökare att snabbt bedöma stil, kapacitet och arbetsform genom rörligt material, case, produktionslista och kontaktvägar.",
+  "semanticSignals": [
+    "showreel",
+    "portfolio",
+    "case",
+    "produktioner",
+    "reklamfilm",
+    "videoproduktion",
+    "postproduktion",
+    "ljudinspelning",
+    "musikproduktion",
+    "musikutgivning",
+    "tv-program",
+    "redigering",
+    "inspelning",
+    "kreativt-team",
+    "samarbetspartners",
+    "offert"
+  ],
+  "negativeSignals": [
+    "jour",
+    "utryckning",
+    "meny",
+    "bordsbokning",
+    "webshop",
+    "produktkatalog",
+    "serviceomraden",
+    "fastighetsservice"
+  ],
+  "llmClassificationHints": [
+    "Denna scaffold passar verksamheter som säljer kreativa produktioner eller ljudarbete där tidigare verk är avgörande för konvertering.",
+    "Portfolio eller showreel är viktigare än traditionell lokal-seo-struktur.",
+    "Om verksamheten främst lever på uppdrag, projekt eller produktioner är denna scaffold mer relevant än en generell tjänsteföretagssajt."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

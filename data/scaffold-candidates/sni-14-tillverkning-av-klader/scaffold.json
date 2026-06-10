@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-14-tillverkning-av-klader",
+  "version": "0.1.0",
+  "label": "Tillverkning av kläder",
+  "description": "Scaffold för företag inom tillverkning av kläder som behöver visa produktionskapacitet, produktområden, arbetsprocess och en tydlig väg till kontakt för förfrågningar om produktion, samarbeten eller offert.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera klädtillverkningens inriktning och kapacitet",
+    "visa produktområden och tillverkningsmöjligheter",
+    "bygga förtroende med process, referenser och verksamhetsfakta",
+    "driva kontakt för offert, produktion eller samarbete"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

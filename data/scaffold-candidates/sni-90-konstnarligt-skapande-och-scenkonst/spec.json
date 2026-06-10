@@ -1,0 +1,254 @@
+{
+  "id": "sni-90-konstnarligt-skapande-och-scenkonst",
+  "label": "Konstnärligt skapande och scenkonst",
+  "description": "Scaffold för konstnärer, scenkonstnärer, fria grupper och kreatörer som behöver visa verk, föreställningar och aktuella datum samt ge en tydlig kontaktväg för bokning, press och samarbeten.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa verk, produktioner eller repertoar visuellt",
+    "presentera kommande föreställningar, utställningar eller datum",
+    "bygga förtroende med press, recensioner, stipendier och tidigare sammanhang",
+    "göra det enkelt att ta kontakt för bokning, press eller samarbeten"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Introducera konstnärskapet eller scenverksamheten, lyfta aktuellt arbete och leda vidare till verk, datum och kontakt."
+    },
+    {
+      "id": "portfolio",
+      "path": "/verk",
+      "required": true,
+      "purpose": "Visa utvalda verk, produktioner, roller eller projekt med bildmaterial och kort kontext."
+    },
+    {
+      "id": "about",
+      "path": "/om",
+      "required": true,
+      "purpose": "Ge bakgrund, konstnärlig inriktning och relevanta meriter på ett personligt och trovärdigt sätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten för bokning, pressförfrågningar, samarbeten eller allmänna frågor."
+    },
+    {
+      "id": "events",
+      "path": "/aktuellt",
+      "optional": true,
+      "when": "när verksamheten har kommande föreställningar, utställningar, spelningar eller andra publika datum"
+    },
+    {
+      "id": "press",
+      "path": "/press",
+      "optional": true,
+      "when": "när det finns recensioner, presscitat, pressbilder eller behov av en tydlig sida för arrangörer och media"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "featured-work",
+        "current-highlights",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "artist-statement",
+        "image-gallery",
+        "press-proof",
+        "reviews",
+        "video-hero"
+      ],
+      "sectionOrderRules": [
+        "Hero must clearly state artist, ensemble or production name and include a primary contact CTA.",
+        "Featured work should appear early on the page and use concrete titles, formats or production names instead of generic labels.",
+        "Current highlights should present upcoming dates, current exhibition, latest release or active project when such information exists.",
+        "Trust-oriented material such as press-proof or reviews should support the artistic profile without overpowering the work itself.",
+        "The page should remain visually focused and avoid repeating the same project or claim in multiple sections."
+      ]
+    },
+    "portfolio": {
+      "requiredSections": [
+        "portfolio-intro",
+        "project-gallery",
+        "project-listing",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "reviews",
+        "press-proof"
+      ],
+      "sectionOrderRules": [
+        "Portfolio intro must explain what kind of works, productions or roles are shown on the page.",
+        "Project gallery should prioritize strong visuals with concise captions such as title, year, medium, role or venue when available.",
+        "Project listing must use specific work names or production names, not filler categories.",
+        "If both gallery and listing are present, the gallery should come before deeper itemized content.",
+        "Contact CTA should invite booking, collaboration or press contact without interrupting the first screen."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "artistic-profile",
+        "merits",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team",
+        "press-proof",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be personal and specific to the artist, group or practice.",
+        "Artistic profile should describe themes, methods, genres or stage roles in concrete language.",
+        "Merits may include exhibitions, productions, residencies, scholarships, festivals or collaborations only when supported by provided data.",
+        "If a team section is used, it should list real members or collaborators with clear roles."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "social-links"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include at least email and any other provided contact channels, and must not use placeholder content.",
+        "Contact form should be framed for booking, press or collaboration inquiries when relevant.",
+        "If map is shown, it should only be used when a public location, studio, venue or office is actually relevant to visitors."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "home route must foreground artistic identity and recent or current work",
+      "portfolio route must exist because this industry needs a primary surface for works, productions or roles",
+      "contact route must support direct inquiries for booking, press or collaboration",
+      "copy should feel personal and restrained rather than sales-heavy",
+      "visual sections must support high-resolution artwork or stage imagery",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic service-company structure centered on services instead of works or productions",
+      "invented awards, reviews, venues, festivals, grants or press quotes",
+      "forcing map, opening hours or pricing when those are not natural for the practice",
+      "overwriting the artistic work with excessive marketing claims",
+      "using vague portfolio labels without naming actual works, productions or roles"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "image-gallery",
+      "mailto-contact-form",
+      "video-hero",
+      "reviews-display",
+      "booking-cta"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Konstnärligt skapande och scenkonst, portfolio, verk, föreställningar, utställningar, produktioner, roller, scenbilder, press, recensioner, stipendier, aktuella datum, bokning, kontakt.",
+    "semanticSignals": [
+      "artist-portfolio",
+      "performing-arts-website",
+      "theatre-or-dance-production-showcase",
+      "visual-artist-gallery",
+      "upcoming-performances-or-exhibitions",
+      "press-and-reviews-for-cultural-practice",
+      "booking-inquiries-for-artistic-work"
+    ],
+    "negativeSignals": [
+      "plumber-or-electrician-service-pages",
+      "restaurant-menu-or-food-ordering",
+      "full-ecommerce-product-catalog",
+      "generic-consulting-services",
+      "local-tradesperson-service-area-seo"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily presents artistic works, performances, productions or a creative practice.",
+      "Prefer this scaffold for solo artists, ensembles, theatre groups, dancers, musicians, performers and exhibition-focused creators.",
+      "A dedicated works or portfolio page is central; services should not be the primary information architecture.",
+      "Optional aktuellt route fits recurring public dates, while optional press route fits media-facing material."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

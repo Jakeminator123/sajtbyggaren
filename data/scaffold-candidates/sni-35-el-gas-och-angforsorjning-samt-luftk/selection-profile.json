@@ -1,0 +1,41 @@
+{
+  "id": "sni-35-el-gas-och-angforsorjning-samt-luftk",
+  "embeddingText": "Branschspecifik webbstruktur för el-, gas-, värme-, kyla- och luftkonditioneringsverksamheter. Sajten ska prioritera startsida, tjänster, om oss och kontakt, med möjlighet att lägga till geografiska områden och vanliga frågor. Tonen ska vara rak och förtroendeingivande, med fokus på tydlig tjänstebeskrivning, företagsuppgifter, referenser och enkel kontaktväg.",
+  "semanticSignals": [
+    "energilosningar",
+    "elforsorjning",
+    "gasforsorjning",
+    "angforsorjning",
+    "fjarrvarme",
+    "kyla",
+    "ventilation",
+    "luftkonditionering",
+    "installation",
+    "service",
+    "underhall",
+    "drift",
+    "teknisk-forvaltning",
+    "foretagskunder",
+    "fastigheter",
+    "industri",
+    "kontakt",
+    "omraden"
+  ],
+  "negativeSignals": [
+    "webbutik",
+    "produktkatalog-med-kassa",
+    "restaurangmeny",
+    "bordsbokning",
+    "fotogalleri-som-huvudsyfte",
+    "eventbiljetter",
+    "medlemsportal",
+    "stort-redaktionellt-magasin"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten säljer eller utför energirelaterade tjänster, teknisk försörjning, värme, kyla, ventilation eller närliggande servicearbete.",
+    "Passar särskilt när kontakt och tjänstebeskrivning är viktigare än katalog, bokning eller e-handel.",
+    "Om innehållet betonar installation, drift, underhåll, leveransområden, teknisk service eller kundkontakt är detta en stark match."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

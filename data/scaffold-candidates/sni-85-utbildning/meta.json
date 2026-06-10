@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-85-utbildning",
+  "sniCode": "85",
+  "wizardCategoryId": "education",
+  "industryProfileId": "sni-85",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:32:08Z",
+  "outputPath": "data/scaffold-candidates/sni-85-utbildning",
+  "operatorBriefHash": "sha256:879cf7f5bd62236927c31b7eae411cb90779189a3828b19df590ddf23acb1fcb",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

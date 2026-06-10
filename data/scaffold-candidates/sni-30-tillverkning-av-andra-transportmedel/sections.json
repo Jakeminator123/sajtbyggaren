@@ -1,0 +1,110 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "offering-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "production-summary",
+      "reference-highlights",
+      "image-gallery",
+      "reviews",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company manufactures or develops and include a primary contact CTA.",
+      "Offering summary must be concrete and describe product areas, manufacturing assignments or customer needs served.",
+      "Production summary and reference highlights may appear between offering-summary and trust-proof when supported by real content.",
+      "Trust proof must rely on truthful company facts, visible business details, references or documented working methods.",
+      "Sections must avoid repeating the same claims across hero, offering-summary and trust-proof."
+    ]
+  },
+  "solutions": {
+    "requiredSections": [
+      "solutions-intro",
+      "solution-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-table",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Solutions intro must connect the company's manufacturing focus to the listed offerings.",
+      "Solution list items must describe real product categories, manufacturing services or project types in specific language.",
+      "Pricing information is optional and should only be shown when the company has clear standardized packages or indicative models.",
+      "The page should end with a clear CTA to contact the company for dialogue or quotation."
+    ]
+  },
+  "production": {
+    "requiredSections": [
+      "production-intro",
+      "process-steps",
+      "capabilities",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "video-hero",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Production intro must explain how the company works without making unverifiable quality or capacity claims.",
+      "Process steps should follow a logical sequence such as design, prototyping, production, assembly, testing or delivery when applicable.",
+      "Capabilities must describe facilities, methods, materials or competence areas only when the dossier supplies that information.",
+      "Trust proof should come after capabilities and before the final CTA."
+    ]
+  },
+  "references": {
+    "requiredSections": [
+      "references-intro",
+      "reference-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "reviews",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "References intro must explain the type of projects, deliveries or customer segments shown.",
+      "Reference list must contain concrete examples and must not invent customer names, quantities or outcomes.",
+      "Reviews should only be shown when authentic testimonial content exists and should not replace the reference list entirely."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company in specific terms and avoid generic filler about passion or excellence.",
+      "Team should only show named roles or functions that actually exist in the provided content.",
+      "Trust proof may include business facts, references and visible company details, but must not claim certifications unless explicitly provided."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include available real contact channels such as phone, email, address or location details.",
+      "Contact form should be easy to use and clearly framed around quotation, project dialogue or general inquiries.",
+      "Opening hours and map may appear after the main contact methods when the business receives visits or has a public location."
+    ]
+  }
+}

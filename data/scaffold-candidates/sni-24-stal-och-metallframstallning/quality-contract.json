@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Includes home and contact routes.",
+    "Route set is adapted to stål- och metallframställning through products and processes pages.",
+    "Every default route has a matching sectionsPerRoute entry.",
+    "Paths are Swedish, lowercase and start with '/'.",
+    "Recommended dossiers only use allowed ids.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic local-service structure without industrial production context.",
+    "Vague claims about quality, capacity or certifications without source support.",
+    "Consumer-oriented sections that do not fit B2B manufacturing intent.",
+    "Invented standards, testing regimes, volumes or delivery promises."
+  ]
+}

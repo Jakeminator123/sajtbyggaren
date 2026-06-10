@@ -1,0 +1,285 @@
+{
+  "id": "sni-03-fiske-och-vattenbruk",
+  "label": "Fiske och vattenbruk",
+  "description": "Branschspecifik scaffold för företag inom fiske och vattenbruk med fokus på verksamhetsöversikt, erbjudande, hållbar produktion/fångst och enkel kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera verksamheten tydligt",
+    "förklara produkter och tjänster",
+    "bygga förtroende med spårbarhet, arbetssätt och referenser",
+    "driva kontaktförfrågningar från kunder och samarbetspartners"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad företaget erbjuder inom fiske eller vattenbruk och leda vidare till kontakt."
+    },
+    {
+      "id": "products-services",
+      "path": "/produkter-och-tjanster",
+      "required": true,
+      "purpose": "Beskriva fångst, odling, leveranser och andra erbjudanden på ett konkret sätt."
+    },
+    {
+      "id": "sustainability",
+      "path": "/hallbarhet-och-arbetssatt",
+      "required": true,
+      "purpose": "Förklara hur verksamheten arbetar med kvalitet, hantering, odling eller fiske och relevanta praktiska rutiner."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, team, verksamhetsmiljö och arbetssätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för beställning, samarbete eller frågor via telefon, e-post, formulär och adress."
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "when the business has a physical anläggning, hamnläge, gårdsbutik or pickup location that visitors need to find"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "when customers often ask recurring questions about availability, leverans, arter, odling, beställning or visits"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "business-summary",
+        "products-services-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews",
+        "faq",
+        "opening-hours",
+        "map-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type within fiske eller vattenbruk, and include a primary contact CTA.",
+        "Business summary should explain what the company does in concrete terms such as fiske, odling, leverans, förädling or försäljning.",
+        "Products-services-summary must highlight actual offerings without implying stock or species that are not provided in the source data.",
+        "Trust-proof must appear before the final contact CTA and should use real signals such as organisationsnummer, referenser, leveransområde or transparent working methods.",
+        "Opening-hours and map-preview should only be shown when the business has visitor-relevant times or a physical location."
+      ]
+    },
+    "products-services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-table",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the business identity to the actual offering, for example försäljning av fisk och skaldjur, vattenbruk, leverans, rådgivning or entreprenadtjänster.",
+        "Service-list items must be concrete and specific, not generic promises.",
+        "Pricing-table may only be used when prices, examples or ordering formats are actually provided.",
+        "Contact CTA should invite enquiry about availability, beställning or samarbete without promising delivery capacity that is not confirmed."
+      ]
+    },
+    "sustainability": {
+      "requiredSections": [
+        "sustainability-intro",
+        "work-process",
+        "quality-trust",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Sustainability intro must describe the company's real arbetssätt, handling, odlingsmiljö or quality routines without claiming certifications unless supplied.",
+        "Work-process should explain how products or services are handled from fångst eller odling to leverans, with plain language.",
+        "Quality-trust may include traceability, hygiene routines, local presence or references, but must avoid invented labels or guarantees.",
+        "This page should educate and reassure, not repeat the same service copy as the products-services page."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific to the business history, place, ownership or daily work, not generic brand language.",
+        "Team should only show named people or clear role descriptions when such data exists.",
+        "Trust-proof should reinforce reliability with real business facts and references without duplicating every item already shown elsewhere."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real phone, email and address or service location details when available.",
+        "Contact-form should offer a simple path for order enquiries, partnership questions or general contact.",
+        "Map-embed should only be shown when a real visitable or pickup-relevant location exists.",
+        "Opening-hours should only be shown when they are relevant for customers or visitors."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Include clear paths to contact on home, products-services, sustainability and contact pages.",
+      "Reflect both sides of the industry when relevant: fiske, vattenbruk, försäljning, leverans or related service work.",
+      "Use concrete operational language rather than abstract agency-style marketing copy.",
+      "Support trust-building through transparent process, references and visible company information.",
+      "Allow the site to work for both B2B and consumer-facing operators depending on dossier data.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not assume a restaurant, webshop or tourism business unless the source content supports it.",
+      "Do not invent species, catch areas, volumes, certifications or sustainability claims.",
+      "Do not force pricing, booking or opening hours if the business does not publish them.",
+      "Do not overuse generic environmental claims without evidence.",
+      "Do not duplicate the same trust points on every page."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Website scaffold for Swedish fishery and aquaculture businesses. Includes home, products and services, sustainability and working methods, about, and contact pages. Optimized for presenting fishing or aquaculture operations, product and delivery offering, transparent quality routines, local trust signals, and straightforward contact conversion.",
+    "semanticSignals": [
+      "fiske",
+      "vattenbruk",
+      "odling",
+      "fisk",
+      "skaldjur",
+      "leverans",
+      "forsaljning",
+      "fangst",
+      "hallbarhet",
+      "sparbarhet",
+      "hamn",
+      "anlaggning",
+      "foradling",
+      "bestallning",
+      "kontakt"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "hotel-booking",
+      "ecommerce-checkout",
+      "photography-portfolio",
+      "software-app",
+      "medical-clinic"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily catches, cultivates, handles, delivers or sells fishery/aquaculture products or related services.",
+      "Prefer this scaffold over generic local-service scaffolds when sustainability/process explanation is important for trust.",
+      "Do not choose this scaffold for seafood restaurants, tourist fishing experiences or pure retail shops unless fishery or aquaculture operations are the core business."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

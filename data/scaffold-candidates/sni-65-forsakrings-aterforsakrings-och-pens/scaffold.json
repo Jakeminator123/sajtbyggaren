@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-65-forsakrings-aterforsakrings-och-pens",
+  "version": "0.1.0",
+  "label": "Försäkrings-, återförsäkrings- och pensionsfondsverksamhet",
+  "description": "Scaffold för försäkringsbolag, återförsäkringsaktörer och pensionsfondsverksamheter som behöver förklara erbjudande, målgrupper, villkor på översiktlig nivå, förtroendeskapande information och tydliga kontaktvägar för rådgivning eller offertförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara försäkrings- och pensionsrelaterade erbjudanden",
+    "hjälpa besökaren att hitta rätt produktområde eller kundkategori",
+    "bygga förtroende genom tydlighet, stabilitet och kontaktvägar",
+    "driva offert- eller rådgivningsförfrågningar"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

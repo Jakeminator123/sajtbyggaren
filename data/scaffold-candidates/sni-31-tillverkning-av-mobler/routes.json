@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera möbeltillverkaren, visa typ av möbler och materialval samt leda vidare till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "produkter",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera vilka möbler eller produktkategorier företaget tillverkar med konkreta beskrivningar av material, användning och anpassningsmöjligheter."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att visa företagets bakgrund, arbetssätt och människorna bakom tillverkningen."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att kontakta företaget för offert, måttförfrågan, besök eller allmän dialog."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "galleri",
+      "path": "/galleri",
+      "when": "när verksamheten har starkt bildmaterial från färdiga möbler, miljöbilder eller verkstad som förtjänar en egen sida"
+    },
+    {
+      "id": "material-och-process",
+      "path": "/material-och-process",
+      "when": "när företaget vill förklara träslag, ytor, konstruktion och hur beställning eller tillverkning går till"
+    },
+    {
+      "id": "referenser",
+      "path": "/referenser",
+      "when": "när det finns kundomdömen eller tidigare projekt som behöver mer utrymme än startsidan"
+    }
+  ]
+}

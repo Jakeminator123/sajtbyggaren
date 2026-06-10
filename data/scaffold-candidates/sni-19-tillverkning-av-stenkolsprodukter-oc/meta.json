@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-19-tillverkning-av-stenkolsprodukter-oc",
+  "sniCode": "19",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-19",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:25:39Z",
+  "outputPath": "data/scaffold-candidates/sni-19-tillverkning-av-stenkolsprodukter-oc",
+  "operatorBriefHash": "sha256:e94e839afac94cebc9d21a7730e7f2b68364486b435003dc74ab9edcf96670a8",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

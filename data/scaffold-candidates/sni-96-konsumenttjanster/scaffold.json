@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-96-konsumenttjanster",
+  "version": "0.1.0",
+  "label": "Konsumenttjänster – Salong / Skönhet",
+  "description": "Branschspecifik scaffold för salong, skönhet och liknande konsumenttjänster där bildbevis, prisöversikt och enkel bokning driver konvertering.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa behandlingar tydligt",
+    "göra bokning enkel",
+    "bygga förtroende med hygien, omdömen och behandlarpresentation",
+    "visa priser, paket och praktisk information"
+  ],
+  "defaultPageCount": 7,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

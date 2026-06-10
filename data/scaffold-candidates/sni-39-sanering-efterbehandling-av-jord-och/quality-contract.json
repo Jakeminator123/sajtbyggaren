@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Tydlig kontaktväg med kontaktformulär eller motsvarande CTA.",
+    "Tjänstesidan ska beskriva faktiska sanerings- eller efterbehandlingstjänster, inte bara allmän miljökonsulting.",
+    "Scaffolden ska bygga förtroende genom konkret arbetssätt, företagsuppgifter och referensmöjligheter.",
+    "Hem och kontakt måste fungera även för företag som verkar lokalt eller regionalt snarare än från publik besöksadress.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Överdrivna eller obestyrkta miljölöften.",
+    "Påhittade certifieringar, tillstånd eller myndighetssamarbeten.",
+    "Detaljerade prislöften för uppdrag som normalt kräver platsbedömning.",
+    "Generiska serviceblock utan koppling till sanering, efterbehandling eller föroreningsbekämpning."
+  ]
+}

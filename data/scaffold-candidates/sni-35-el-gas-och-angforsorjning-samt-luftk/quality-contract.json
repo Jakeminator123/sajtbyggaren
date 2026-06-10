@@ -1,0 +1,24 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar företag inom energiförsörjning, värme, kyla, ventilation eller närliggande tekniska leverans- och serviceverksamheter.",
+    "Lyfter fram kontakt, tjänster, driftnära information och förtroendeskapande företagsfakta.",
+    "Fungerar för både lokal serviceverksamhet och mer tekniskt orienterade företag med tydligt tjänsteutbud.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Undvik e-handelsstruktur med produkter och kassa som huvudflöde.",
+    "Undvik restaurang-, meny- eller bokningsupplägg som primär struktur.",
+    "Undvik att anta myndighetsinformation, driftstatussidor eller kundportal om sådant inte uttryckligen efterfrågas.",
+    "Undvik att lova certifieringar, tillstånd eller responstider som inte finns i underlaget."
+  ]
+}

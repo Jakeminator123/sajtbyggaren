@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-58-forlagsverksamhet",
+  "sniCode": "58",
+  "wizardCategoryId": "blog",
+  "industryProfileId": "sni-58",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:28Z",
+  "outputPath": "data/scaffold-candidates/sni-58-forlagsverksamhet",
+  "operatorBriefHash": "sha256:e302215d912973ced86c4d19fde87ddd4073e89e22fed7d3f58e81272ad7628d",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

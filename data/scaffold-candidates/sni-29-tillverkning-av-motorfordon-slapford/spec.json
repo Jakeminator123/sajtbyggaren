@@ -1,0 +1,281 @@
+{
+  "id": "sni-29-tillverkning-av-motorfordon-slapford",
+  "label": "Tillverkning av motorfordon, släpfordon och påhängsvagnar",
+  "description": "Scaffold för tillverkare inom motorfordon, släpfordon och påhängsvagnar med fokus på produktöversikt, teknisk kapacitet, kvalitetsarbete och kontakt för offert eller affärsdialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera fordons- eller släpvagnsprogram",
+    "visa tillverkningskapacitet och teknisk kompetens",
+    "bygga förtroende med kvalitets- och leveransinformation",
+    "driva kontakt för offert, försäljning eller partnerskap"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara erbjudandet och leda vidare till kontakt eller produktöversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa företagets fordons-, släp- eller påhängsvagnsmodeller och deras användningsområden."
+    },
+    {
+      "id": "manufacturing",
+      "path": "/tillverkning",
+      "required": true,
+      "purpose": "Beskriva produktion, anpassningsmöjligheter och teknisk kapacitet för att stötta affärsdialog."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, arbetssätt och team eller nyckelkompetenser."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för offert, försäljningsfrågor eller samarbete."
+    },
+    {
+      "id": "quality",
+      "path": "/kvalitet",
+      "optional": true,
+      "when": "när verksamheten har tydligt kvalitetsarbete, testprocesser, spårbarhet eller efterlevnad som behöver förklaras separat"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när företaget kan visa kundcase, leveransprojekt eller branscherfarenhet utan att bryta mot sekretess"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-summary",
+        "capabilities-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "video-hero",
+        "image-gallery",
+        "reviews",
+        "faq",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company manufactures and include a primary contact CTA.",
+        "Product summary should group offerings by vehicle, trailer or application area rather than using vague labels.",
+        "Capabilities summary must highlight real production strengths such as customization, series production or technical support when supported by data.",
+        "Trust proof must appear before the final contact CTA and must only use verifiable claims.",
+        "Avoid repeating the same product claims across hero, product summary and trust proof."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Products intro must explain the scope of the product range in clear business language.",
+        "Product list items must be concrete and structured around model type, use case or configuration options.",
+        "If exact specifications are unavailable, copy should stay general and not invent dimensions, payloads or standards."
+      ]
+    },
+    "manufacturing": {
+      "requiredSections": [
+        "manufacturing-intro",
+        "process-overview",
+        "capabilities-detail",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "trust-proof",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Manufacturing intro must connect production capability to customer needs such as customization, quality consistency or delivery planning.",
+        "Process overview should describe real stages such as design, fabrication, assembly, testing or delivery preparation when known.",
+        "Capabilities detail must stay factual and avoid unsupported promises about capacity, lead times or certifications."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific to the company and its manufacturing focus, not generic brand copy.",
+        "Team may show leadership, engineering, production or sales roles when available.",
+        "Trust proof should emphasize visible company facts, references or documented ways of working."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact page must provide real contact paths such as phone, email, address or contact form.",
+        "If site visitors may need logistics or factory visits, map should appear after core contact details.",
+        "Do not include placeholder details or imply showroom or visiting hours unless supplied."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has home route with path /.",
+      "Has contact route.",
+      "All default routes have matching sectionsPerRoute entries.",
+      "Route ids, section ids and scaffold id use kebab-case.",
+      "Paths are Swedish, lowercase, start with / and have no trailing slash.",
+      "Page set reflects manufacturing of motor vehicles, trailers or semi-trailers rather than generic local services.",
+      "Recommended dossiers only use allowed ids.",
+      "Copy avoids invented certifications, production volumes or customer counts.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic service-business structure without product or manufacturing pages",
+      "vague section names that do not fit industrial manufacturing",
+      "invented compliance claims, homologation statements or certifications",
+      "consumer-booking flows as primary conversion for a B2B manufacturing context",
+      "menu, game or unrelated hospitality patterns"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "trust-guarantees",
+      "team-roster",
+      "reviews-display",
+      "faq-accordion",
+      "map-embed",
+      "opening-hours",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tillverkning av motorfordon, släpfordon och påhängsvagnar. B2B-orienterad tillverkningswebb med startsida, produkter, tillverkning, om oss och kontakt. Sektioner för produktöversikt, tillverkningsprocess, teknisk kapacitet, förtroendeskapande fakta, team och kontakt. Optionala sidor för kvalitet och referenser.",
+    "semanticSignals": [
+      "vehicle-manufacturing",
+      "trailer-manufacturing",
+      "semi-trailer-manufacturing",
+      "product-range",
+      "industrial-production",
+      "technical-capability",
+      "custom-manufacturing",
+      "b2b-sales-contact",
+      "quality-process",
+      "factory-trust-signals"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "online-booking-primary",
+      "beauty-treatment-services",
+      "event-schedule",
+      "consumer-ecommerce-checkout",
+      "game-loop-primary",
+      "table-booking"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the company manufactures motor vehicles, trailers, body solutions or semi-trailers.",
+      "Prefer this over a generic service-company scaffold when product models and production capability are central to the offer.",
+      "Suitable for industrial firms selling through inquiry, sales contact or quote dialogue rather than instant online purchase."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

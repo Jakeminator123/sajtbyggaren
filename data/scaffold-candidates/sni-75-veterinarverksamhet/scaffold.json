@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-75-veterinarverksamhet",
+  "version": "0.1.0",
+  "label": "Veterinärverksamhet",
+  "description": "Branschspecifik scaffold för veterinärklinik eller veterinärmottagning med fokus på trygg djurvård, tydlig behandlingsöversikt, akutinformation, bokning och praktisk kontaktinformation.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förmedla trygg och legitimerad veterinärvård",
+    "hjälpa djurägare att snabbt förstå vilka behandlingar som erbjuds",
+    "leda besökaren till bokning eller telefonkontakt",
+    "ge tydlig information om akut hjälp, öppettider och hitta hit"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

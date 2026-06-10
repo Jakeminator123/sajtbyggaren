@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-05-kolutvinning",
+  "version": "0.1.0",
+  "label": "Kolutvinning",
+  "description": "Scaffold för företag inom kolutvinning med fokus på verksamhetsöversikt, utvinnings- och logistiktjänster, säkerhets- och miljöinformation, anläggningsnärvaro och tydlig kontaktväg för affärsförfrågningar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Presentera kolutvinningsverksamheten och dess kapacitet",
+    "Beskriva tjänster inom utvinning, hantering och leverans",
+    "Bygga förtroende genom konkret information om säkerhet, miljö och drift",
+    "Göra det enkelt för kunder, leverantörer och samarbetspartners att ta kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

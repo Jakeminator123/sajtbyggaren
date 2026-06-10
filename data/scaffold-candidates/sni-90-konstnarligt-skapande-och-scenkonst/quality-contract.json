@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "home route must foreground artistic identity and recent or current work",
+    "portfolio route must exist because this industry needs a primary surface for works, productions or roles",
+    "contact route must support direct inquiries for booking, press or collaboration",
+    "copy should feel personal and restrained rather than sales-heavy",
+    "visual sections must support high-resolution artwork or stage imagery",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic service-company structure centered on services instead of works or productions",
+    "invented awards, reviews, venues, festivals, grants or press quotes",
+    "forcing map, opening hours or pricing when those are not natural for the practice",
+    "overwriting the artistic work with excessive marketing claims",
+    "using vague portfolio labels without naming actual works, productions or roles"
+  ]
+}

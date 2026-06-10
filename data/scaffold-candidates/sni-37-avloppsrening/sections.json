@@ -1,0 +1,81 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "process-summary",
+      "reviews",
+      "faq",
+      "gallery",
+      "opening-hours",
+      "map-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and primary service scope in clear Swedish and include a primary contact CTA.",
+      "Service-summary should cover the main operational offerings such as drift, underhåll, provtagning or behandling only when supported by the dossier.",
+      "Trust-proof must use real company facts such as organisation details, visible contact paths, references or practical experience descriptions without inventing certifications.",
+      "Process-summary, reviews and gallery may appear between service-summary and trust-proof when data exists.",
+      "The page should avoid repeating the same claim across hero, service-summary and trust-proof."
+    ]
+  },
+  "tjanster": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services-intro must connect the company identity to actual avloppsrening services, not generic business copy.",
+      "Service-list items must be concrete and may include drift och tillsyn, slamhantering, provtagning, underhåll or närliggande tjänster only if they are truly offered.",
+      "Pricing-summary must stay high level unless verified pricing data exists; do not imply fixed prices where pricing depends on scope.",
+      "A contact CTA should appear after the service list."
+    ]
+  },
+  "anlaggningar-och-process": {
+    "requiredSections": [
+      "process-intro",
+      "facility-types",
+      "workflow",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "gallery",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Process-intro should explain what kinds of anläggningar or reningssteg the company works with in accessible language.",
+      "Facility-types must describe actual plant types, capacities or environments only when the information is available.",
+      "Workflow should present a believable sequence such as bedömning, drift/åtgärd, uppföljning and rapportering when relevant.",
+      "Technical content should remain understandable to non-experts and avoid unsupported performance claims."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "map",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and must not be placeholders.",
+      "Contact-form should be short and suitable for service inquiries or general questions.",
+      "Map may be shown when a physical address is available.",
+      "Opening-hours should only be shown when verified."
+    ]
+  }
+}

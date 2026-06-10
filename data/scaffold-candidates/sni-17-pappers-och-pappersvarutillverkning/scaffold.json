@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-17-pappers-och-pappersvarutillverkning",
+  "version": "0.1.0",
+  "label": "Pappers- och pappersvarutillverkning",
+  "description": "Scaffold för företag inom pappers- och pappersvarutillverkning med fokus på produktionskapacitet, produktområden, materialkvalitet, hållbarhetsarbete och tydlig kontakt för offert eller affärsdialog.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och tillverkningsinriktning",
+    "bygga förtroende genom kapacitet, kvalitet och affärsinformation",
+    "göra det enkelt att kontakta företaget för offert, förfrågan eller samarbete"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera bolaget, förklara verksamheten på en begriplig nivå och leda vidare till kontakt eller relevanta undersidor."
+    },
+    {
+      "id": "operations",
+      "path": "/verksamhet",
+      "required": true,
+      "purpose": "Beskriva utvinningsverksamheten, från prospektering och produktion till drift, logistik och teknisk kapacitet."
+    },
+    {
+      "id": "safety-sustainability",
+      "path": "/sakerhet-och-hallbarhet",
+      "required": true,
+      "purpose": "Visa hur bolaget arbetar med säkerhet, miljö, efterlevnad och ansvar i verksamheten."
+    },
+    {
+      "id": "assets-projects",
+      "path": "/tillgangar-och-projekt",
+      "required": true,
+      "purpose": "Presentera geografiska områden, fält, licenser eller projekt på en strukturerad och saklig nivå."
+    },
+    {
+      "id": "about",
+      "path": "/om-bolaget",
+      "required": true,
+      "purpose": "Bygga förtroende genom bolagsöversikt, ledning, organisation och grundläggande företagsfakta."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att nå bolaget för affärskontakt, leverantörsfrågor, platsrelaterade frågor och allmänna ärenden."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "careers",
+      "path": "/karriar",
+      "when": "när bolaget rekryterar aktivt eller vill presentera kompetensbehov och arbetsmiljö"
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "when": "när bolaget publicerar driftuppdateringar, pressmeddelanden eller projektinformation löpande"
+    }
+  ]
+}

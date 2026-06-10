@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-68-fastighetsverksamhet",
+  "sniCode": "68",
+  "wizardCategoryId": "realestate",
+  "industryProfileId": "sni-68",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:30:17Z",
+  "outputPath": "data/scaffold-candidates/sni-68-fastighetsverksamhet",
+  "operatorBriefHash": "sha256:2b340ff51afdf45c408e4e3f82816f3ba6481e1db57bffa012ff5edb867865e3",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

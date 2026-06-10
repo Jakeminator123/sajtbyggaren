@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, förklara vad företaget sanerar och leda besökaren vidare till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Visa företagets sanerings- och efterbehandlingstjänster med konkreta beskrivningar av vad som erbjuds."
+    },
+    {
+      "id": "process",
+      "path": "/arbetsprocess",
+      "required": true,
+      "purpose": "Förklara hur uppdrag genomförs från bedömning till åtgärd och uppföljning för att skapa trygghet inför kontakt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva företaget, teamet och hur man arbetar i praktiken."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att kontakta företaget via formulär och tydliga kontaktuppgifter."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "projects",
+      "path": "/referenser",
+      "when": "när företaget har verkliga uppdrag, projektbeskrivningar eller kundreferenser som kan visas utan sekretessproblem"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "när företaget arbetar i flera orter eller regioner och behöver tydlig lokal närvaro"
+    }
+  ]
+}

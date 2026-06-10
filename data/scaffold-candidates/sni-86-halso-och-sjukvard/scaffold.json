@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-86-halso-och-sjukvard",
+  "version": "0.1.0",
+  "label": "Hälso- och sjukvård",
+  "description": "Scaffold för vårdverksamheter och kliniker där trygghet, legitimation, praktisk information och enkel bokning står i centrum. Strukturen stödjer både allmän klinikpresentation och tydliga vägar till behandlingar, priser, FAQ och kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "skapa trygghet direkt",
+    "göra det enkelt att boka tid",
+    "förklara behandlingar i klarspråk",
+    "visa legitimation, patientsäkerhet och praktisk information",
+    "besvara vanliga patientfrågor innan kontakt"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

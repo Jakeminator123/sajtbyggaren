@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera bygg- eller hantverksforetaget, visa huvudinriktning och leda besokaren till offert eller kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva de specialiserade tjansterna konkret sa att kunden forstar vad foretaget utfor."
+    },
+    {
+      "id": "portfolio",
+      "path": "/referenser",
+      "required": true,
+      "purpose": "Visa utvalda projekt, fore- och efterbilder samt vilken typ av arbete som har utforts."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gora det enkelt att begara offert eller ta kontakt via telefon, e-post och kontaktformular."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "nar foretaget vill lyfta erfarenhet, arbetsatt, team eller yrkesbakgrund"
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "nar foretaget arbetar i flera orter och vill tydliggora verksamhetsomraden for lokala besokare"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "nar kunder ofta undrar om process, materialval, tidsplan, garantier eller ansvar"
+    }
+  ]
+}

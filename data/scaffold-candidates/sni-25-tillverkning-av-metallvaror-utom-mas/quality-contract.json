@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar tillverkande metallföretag bättre än en generisk lokal tjänstescaffold.",
+    "Lyfter både erbjudande och produktionskapacitet som separata informationsbehov.",
+    "Har tydlig kontaktväg för offert eller förfrågan.",
+    "Använder svenska route paths och kebab-case ids enligt reglerna.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generiska rutter som inte speglar industrins behov, som meny eller bokning.",
+    "E-handelslogik med produkter och kassa.",
+    "Påståenden om certifieringar, kapacitet eller kundvolymer utan stöd.",
+    "För många marknadssektioner som tränger undan teknisk och praktisk information."
+  ]
+}

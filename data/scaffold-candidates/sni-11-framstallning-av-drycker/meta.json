@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-11-framstallning-av-drycker",
+  "sniCode": "11",
+  "wizardCategoryId": "food",
+  "industryProfileId": "sni-11",
+  "referenceScaffoldId": "ecommerce-lite",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:24:55Z",
+  "outputPath": "data/scaffold-candidates/sni-11-framstallning-av-drycker",
+  "operatorBriefHash": "sha256:498957ae21a090e2e782afd9ce6c1198b1adc402b1b18e3f3343bb71ee1d3ffb",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

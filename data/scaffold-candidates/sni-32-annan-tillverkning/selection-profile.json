@@ -1,0 +1,33 @@
+{
+  "id": "sni-32-annan-tillverkning",
+  "embeddingText": "Tillverkningsföretag inom annan tillverkning som producerar specialprodukter, serier eller kundanpassade artiklar behöver en webbplats som visar produktområden, material, tillverkningsprocess, kvalitet, referenser och tydliga kontaktvägar för offert och dialog.",
+  "semanticSignals": [
+    "tillverkning",
+    "produktion",
+    "produktkategorier",
+    "specialtillverkning",
+    "kundanpassning",
+    "material",
+    "kvalitet",
+    "leverans",
+    "referenser",
+    "offertforfragan",
+    "verksamhetsmiljo",
+    "medarbetare-i-arbete"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "onlinebokning-som-huvudflode",
+    "behandlingsbokning",
+    "fastighetsobjekt",
+    "journalistiskt-magasin",
+    "ren-e-handel-med-varukorg"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten tillverkar fysiska produkter snarare än säljer rena tjänster.",
+    "Passar företag som behöver beskriva produktområden, produktionssätt och material.",
+    "Särskilt relevant när bilder från verkstad, fabrik eller arbetsprocess är viktiga för förtroendet."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-12-tobaksvarutillverkning",
+  "version": "0.1.0",
+  "label": "Tobaksvarutillverkning",
+  "description": "Scaffold för tobaksvarutillverkning med fokus på företagsprofil, produktionskapacitet, produktsortiment, regelefterlevnad och affärskontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera verksamheten och dess inriktning",
+    "beskriva produktsortiment eller produktkategorier",
+    "bygga förtroende genom tydlig företagsinformation och regelefterlevnad",
+    "ge inköpare, återförsäljare eller samarbetspartners en enkel väg till kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

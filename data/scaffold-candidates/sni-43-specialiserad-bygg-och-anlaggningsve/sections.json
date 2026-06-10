@@ -1,0 +1,78 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "gallery",
+      "testimonials",
+      "guarantees",
+      "service-area",
+      "faq",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Hero must include company type or trade focus, service area if known, and a primary CTA to request a quote.",
+      "Service summary must mention actual work categories relevant to the business, not vague promises.",
+      "Trust proof should highlight real qualifications, industry rules, guarantees or work methods only when supported by the business data.",
+      "Gallery or testimonials may appear before trust-proof when project material exists.",
+      "Final contact-cta must appear near the bottom and should not repeat the exact same copy as the hero."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "faq",
+      "guarantees"
+    ],
+    "sectionOrderRules": [
+      "Services intro must explain what kinds of specialized construction or installation work the company performs.",
+      "Service list items must be concrete, for example renovation, tiling, painting, groundworks, electrical or plumbing work when applicable.",
+      "If pricing-overview is shown, it must describe pricing structure honestly and avoid fixed promises unless supplied by the business.",
+      "A contact CTA should follow the service details to capture quote intent."
+    ]
+  },
+  "portfolio": {
+    "requiredSections": [
+      "portfolio-intro",
+      "project-gallery",
+      "project-highlights",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "testimonials",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Portfolio intro must explain that the page shows examples of completed or ongoing work.",
+      "Project gallery should prioritize authentic project photos, especially before-and-after material when available.",
+      "Project highlights must describe the type of job, scope or outcome without inventing customer names or project facts.",
+      "Contact CTA should invite similar project inquiries after the showcased work."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form-section",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real phone, email and address details when available.",
+      "Contact-form-section should be oriented around quote requests and allow the visitor to describe the job.",
+      "Map may be shown when the business has a physical address or office worth displaying.",
+      "Opening hours should only be shown when the business has defined contact or office hours."
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera varumärket, dryckesutbudet och hantverket med en tydlig väg vidare till sortiment eller kontakt."
+    },
+    {
+      "id": "produkter",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa det konkreta sortimentet med produktnamn, typ, smakprofil, volym och annan relevant information för köp- eller offertintresse."
+    },
+    {
+      "id": "om-produktionen",
+      "path": "/om-produktionen",
+      "required": true,
+      "purpose": "Bygg förtroende genom att beskriva råvaror, framställning, ursprung och arbetssätt på ett konkret sätt."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Fånga upp besökare som vill begära offert, ställa frågor om sortiment, boka visning eller hitta kontaktuppgifter."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "bildgalleri",
+      "path": "/bildgalleri",
+      "when": "när verksamheten har starka miljö-, produkt- eller processbilder som hjälper till att sälja in varumärket"
+    },
+    {
+      "id": "aterforsaljare",
+      "path": "/aterforsaljare",
+      "when": "när producenten vill rikta sig särskilt till restauranger, butiker eller distributörer med B2B-information"
+    },
+    {
+      "id": "besok-och-provning",
+      "path": "/besok-och-provning",
+      "when": "när verksamheten tar emot besök, provningar eller studiebesök på plats"
+    }
+  ]
+}

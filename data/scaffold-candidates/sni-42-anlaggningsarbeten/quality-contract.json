@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Include strong offer/request-for-quote flow because primary CTA is 'Begär offert'.",
+    "Reflect industry trust through capacity, references and practical execution rather than lifestyle branding.",
+    "Include a dedicated references/projects route because completed work is central for this industry.",
+    "Contact route must support direct contact and form submission.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not structure the scaffold like a retail shop, restaurant or appointment-led business.",
+    "Do not rely on generic home-service copy that ignores machinery, scale or site execution.",
+    "Do not invent public-sector approvals, Trafikverket contracts, certifications or project volumes.",
+    "Do not make pricing promises or timeline guarantees that are not supported by source data."
+  ]
+}

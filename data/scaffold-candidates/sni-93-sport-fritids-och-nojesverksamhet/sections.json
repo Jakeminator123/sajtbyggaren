@@ -1,0 +1,90 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "activity-summary",
+      "trust-proof",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "team-preview",
+      "testimonials",
+      "image-gallery",
+      "faq",
+      "opening-hours",
+      "map-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero måste tydligt säga vilken typ av träning, sport eller aktivitet som erbjuds och innehålla primär CTA för registrering eller bokning.",
+      "Activity-summary ska beskriva konkreta pass, nivåer eller upplägg snarare än allmänna formuleringar om hälsa och motivation.",
+      "Trust-proof ska bygga på verkliga signaler som instruktörer, prova-på eller omdömen och placeras före sista CTA.",
+      "Prissammanfattning och team-preview kan ligga före eller efter trust-proof beroende på vilket underlag som finns, men samma argument får inte upprepas i flera sektioner."
+    ]
+  },
+  "classes": {
+    "requiredSections": [
+      "classes-intro",
+      "class-list",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "pricing-summary",
+      "team-preview"
+    ],
+    "sectionOrderRules": [
+      "Classes-intro ska förklara vem passen eller aktiviteterna passar för, till exempel nybörjare, vana deltagare eller specifika målgrupper.",
+      "Class-list ska vara konkret med typ av pass eller aktivitet, nivå, fokus eller upplägg när sådan information finns.",
+      "Booking-cta ska komma efter class-list och länka vidare till bokning, registrering eller kontakt utan att lova tillgänglighet som inte är bekräftad."
+    ]
+  },
+  "pricing": {
+    "requiredSections": [
+      "pricing-intro",
+      "pricing-table",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Pricing-intro ska hjälpa besökaren förstå skillnaden mellan medlemskap, paket, klippkort eller drop-in.",
+      "Pricing-table ska presentera priser eller paket sakligt och utan dolda påståenden om besparingar om sådana inte framgår av underlaget.",
+      "Om trust-proof används på prissidan ska den stötta beslutet utan att upprepa samma omdömen ordagrant från startsidan."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "About-story ska beskriva verksamhetens inriktning, stämning eller träningsfilosofi på ett konkret och mänskligt sätt.",
+      "Team-sektionen ska presentera verkliga personer eller roller och inte hitta på meriter eller certifieringar.",
+      "Om team-route också används ska om-oss visa kortare team-preview medan full fördjupning ligger på den separata sidan."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "map",
+      "opening-hours",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Kontaktuppgifter ska vara praktiska och kompletta med minst de uppgifter som faktiskt finns tillgängliga i underlaget.",
+      "Karta och öppettider ska visas när sådan data finns och får inte innehålla platshållare.",
+      "Contact-cta ska stödja formulär eller direktkontakt och ligga efter den viktigaste praktiska informationen."
+    ]
+  }
+}

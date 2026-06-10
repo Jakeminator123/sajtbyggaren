@@ -1,0 +1,81 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "showreel",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "selected-productions",
+      "about-summary",
+      "reviews",
+      "faq",
+      "partners-strip"
+    ],
+    "sectionOrderRules": [
+      "Hero måste tydligt säga vilken typ av produktion eller ljudarbete verksamheten gör och innehålla en primär CTA.",
+      "Showreel ska ligga högt på sidan och får inte ersättas av enbart stillbilder när videomaterial finns.",
+      "Service-summary ska vara konkret och spegla faktisk inriktning, till exempel reklamfilm, contentproduktion, postproduktion, ljudinspelning eller musikutgivning.",
+      "Trust-proof ska bygga på verkliga produktioner, samarbetspartners, omdömen eller arbetsprocess och placeras före sista contact-cta.",
+      "Sektioner får inte upprepa samma exempelproduktion eller samma säljbudskap flera gånger."
+    ]
+  },
+  "portfolio": {
+    "requiredSections": [
+      "portfolio-intro",
+      "case-grid",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "category-filter",
+      "image-gallery",
+      "project-list",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Portfolio-intro ska hjälpa besökaren att förstå urvalet, exempelvis format, genre eller typ av uppdrag.",
+      "Case-grid eller projektlista ska visa konkreta produktioner eller verkprover, inte generiska platshållare.",
+      "Om både video och stillbilder används ska videoexempel prioriteras högre när sådant material finns.",
+      "Varje case ska hållas kort och tydligt med fokus på vad som producerats, inte på överdrivna resultatpåståenden."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services-intro ska koppla verksamhetens kreativa inriktning till faktiska tjänster.",
+      "Service-list ska vara konkret och kan omfatta exempelvis idé och koncept, inspelning, redigering, ljudläggning, postproduktion eller distribution beroende på underlag.",
+      "Process-sektionen ska beskriva arbetsflödet på ett begripligt sätt från brief till leverans utan att lova sådant som inte stöds av underlaget.",
+      "Om pricing-summary visas ska den vara transparent med att priser ofta beror på omfattning, format och produktionens behov."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "booking-info",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Kontaktvägar ska vara verkliga och innehålla de uppgifter som finns tillgängliga, utan platshållartext.",
+      "Contact-form ska göra det lätt att beskriva projektets typ, tidsplan och önskat leveransformat när sådana fält stöds.",
+      "Sidan ska tydligt uppmana till offertförfrågan eller första kontakt utan att skapa onödig friktion."
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "featured-work",
+      "current-highlights",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "artist-statement",
+      "image-gallery",
+      "press-proof",
+      "reviews",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must clearly state artist, ensemble or production name and include a primary contact CTA.",
+      "Featured work should appear early on the page and use concrete titles, formats or production names instead of generic labels.",
+      "Current highlights should present upcoming dates, current exhibition, latest release or active project when such information exists.",
+      "Trust-oriented material such as press-proof or reviews should support the artistic profile without overpowering the work itself.",
+      "The page should remain visually focused and avoid repeating the same project or claim in multiple sections."
+    ]
+  },
+  "portfolio": {
+    "requiredSections": [
+      "portfolio-intro",
+      "project-gallery",
+      "project-listing",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "reviews",
+      "press-proof"
+    ],
+    "sectionOrderRules": [
+      "Portfolio intro must explain what kind of works, productions or roles are shown on the page.",
+      "Project gallery should prioritize strong visuals with concise captions such as title, year, medium, role or venue when available.",
+      "Project listing must use specific work names or production names, not filler categories.",
+      "If both gallery and listing are present, the gallery should come before deeper itemized content.",
+      "Contact CTA should invite booking, collaboration or press contact without interrupting the first screen."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "artistic-profile",
+      "merits",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team",
+      "press-proof",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About story must be personal and specific to the artist, group or practice.",
+      "Artistic profile should describe themes, methods, genres or stage roles in concrete language.",
+      "Merits may include exhibitions, productions, residencies, scholarships, festivals or collaborations only when supported by provided data.",
+      "If a team section is used, it should list real members or collaborators with clear roles."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "social-links"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include at least email and any other provided contact channels, and must not use placeholder content.",
+      "Contact form should be framed for booking, press or collaboration inquiries when relevant.",
+      "If map is shown, it should only be used when a public location, studio, venue or office is actually relevant to visitors."
+    ]
+  }
+}

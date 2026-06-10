@@ -1,0 +1,96 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "service-agreements-summary",
+      "emergency-service",
+      "industries-served",
+      "reviews",
+      "faq",
+      "gallery",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must include what kinds of machines or equipment the company works with, optional location if known, and a primary contact CTA.",
+      "Service summary must describe concrete work such as repair, preventive maintenance and installation, not vague all-round claims.",
+      "If emergency-service is shown, it must state the actual availability only when the dossier supports it.",
+      "Trust proof must appear before the final contact CTA and should focus on real signals such as certificates, service agreements, response routines or documented experience.",
+      "Sections should avoid repeating the same promise in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "industries-served",
+      "pricing-note",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company to repair, maintenance and installation work in a specific and practical way.",
+      "Service list items must be concrete examples of work performed on machines, equipment or production-related systems.",
+      "Pricing-note may explain how quotes, inspections or call-out fees work, but must not invent fixed prices if none are known.",
+      "If trust-proof is included, it should support the service offer with real qualifications or process clarity, not duplicate the intro."
+    ]
+  },
+  "service-agreements": {
+    "requiredSections": [
+      "service-agreements-intro",
+      "agreement-benefits",
+      "agreement-scope",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof",
+      "industries-served"
+    ],
+    "sectionOrderRules": [
+      "Service-agreements intro must explain who the agreements are for and why preventive maintenance matters.",
+      "Agreement-benefits should focus on practical outcomes such as reduced downtime, planned service intervals and clearer follow-up.",
+      "Agreement-scope must describe examples of included checks, maintenance visits or documentation routines without promising more than the company can deliver.",
+      "The page must end with a CTA to discuss needs, book a review or request a quote."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About-story must be specific about the company's background, focus or way of working, not generic quality wording.",
+      "Team should emphasize relevant technician roles, experience areas or service approach when data exists.",
+      "Trust-proof should use real evidence such as certifications, documented routines, response readiness or long-term customer relationships."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map",
+      "service-area-note"
+    ],
+    "sectionOrderRules": [
+      "Contact-info must include available contact methods supplied by the business and must not use placeholder data.",
+      "If opening-hours is shown, it must reflect actual staffed hours or service availability.",
+      "Contact CTA should support both urgent service inquiries and planned maintenance or installation requests."
+    ]
+  }
+}

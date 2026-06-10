@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-27-tillverkning-av-elapparatur",
+  "sniCode": "27",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-27",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:26:28Z",
+  "outputPath": "data/scaffold-candidates/sni-27-tillverkning-av-elapparatur",
+  "operatorBriefHash": "sha256:e7528bda002aaa204863cc02fac6a51e4de01dd697826e7db5ba2386e774b5a3",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

@@ -1,0 +1,36 @@
+{
+  "id": "sni-52-magasinering-varulagring-och-stodver",
+  "embeddingText": "Magasinering, varulagring och stödverksamhet avseende transport. Scaffolden passar företag som erbjuder lagerhållning, terminaltjänster, omlastning, godsflöden och praktisk logistiksamordning. Den behöver startsida, tjänstesida, anläggningssida och kontaktsida, med fokus på konkret tjänsteinformation, lagringsmiljö, tillgänglighet och tydlig kontaktväg för offert eller förfrågan.",
+  "semanticSignals": [
+    "warehouse-services",
+    "storage-facility",
+    "warehousing",
+    "terminal-services",
+    "cross-docking",
+    "goods-handling",
+    "logistics-support",
+    "freight-support",
+    "distribution-support",
+    "inventory-storage",
+    "loading-and-unloading",
+    "transport-support-activities",
+    "industrial-facility",
+    "commercial-storage"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "online-shop",
+    "photography-portfolio",
+    "medical-clinic-booking",
+    "hotel-rooms",
+    "salon-treatments",
+    "construction-project-gallery"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily stores goods, manages warehousing, runs terminal operations or provides supporting logistics/transport services.",
+    "Prefer this scaffold when visitors need both service overview and practical information about facility access or handling conditions.",
+    "Do not choose this scaffold for pure transport-only operators unless storage, terminal or support functions are central to the offer."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förmedla energi och gemenskap och leda besökaren vidare till registrering, bokning eller prova-på."
+    },
+    {
+      "id": "classes",
+      "path": "/schema",
+      "required": true,
+      "purpose": "Visa pass, aktiviteter eller träningstyper så att besökaren snabbt förstår vad som erbjuds och kan gå vidare till bokning."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Förklara medlemskap, paket eller drop-in-priser tydligt så att besökaren kan jämföra alternativ och ta nästa steg."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att presentera verksamhetens inriktning, instruktörer eller coacher och arbetssätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att hitta anläggningen eller komma i kontakt via formulär, adress, karta och öppettider."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "when": "när verksamheten har separat bokningsflöde eller vill ge bokning extra synlighet utanför schema- och prissidorna"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "när flera instruktörer, personliga tränare eller ledare behöver egna presentationer"
+    }
+  ]
+}

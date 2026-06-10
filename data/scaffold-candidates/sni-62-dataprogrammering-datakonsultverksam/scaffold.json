@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-62-dataprogrammering-datakonsultverksam",
+  "version": "0.1.0",
+  "label": "Dataprogrammering, datakonsultverksamhet o.d.",
+  "description": "Branschspecifik scaffold för bolag inom dataprogrammering och datakonsultverksamhet. Strukturen prioriterar tydlig beskrivning av tjänster, teknikkompetens, case, prissättning/modeller och kontakt för uppdrag eller registrering.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara erbjudandet tydligt",
+    "bygga förtroende genom case, team och arbetssätt",
+    "driva kontakt, demo eller registrering",
+    "visa teknisk spets utan generiska konsultfloskler"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

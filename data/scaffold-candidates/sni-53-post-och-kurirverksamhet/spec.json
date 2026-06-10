@@ -1,0 +1,288 @@
+{
+  "id": "sni-53-post-och-kurirverksamhet",
+  "label": "Post- och kurirverksamhet",
+  "description": "Scaffold för företag inom post- och kurirverksamhet med fokus på tydliga leveranstjänster, geografisk täckning, förtroendeskapande information och enkel kontakt för bokning eller förfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara leverans- och kurirtjänster tydligt",
+    "visa vilka områden och typer av uppdrag som hanteras",
+    "bygga förtroende genom tydlig företagsinformation och referenser",
+    "driva kontaktförfrågningar för transport, bud och distribution"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara huvudtjänsterna och leda besökaren till kontakt eller förfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets leverans-, bud- och distributionstjänster konkret så att kunder snabbt ser vad som erbjuds."
+    },
+    {
+      "id": "coverage",
+      "path": "/omraden",
+      "required": true,
+      "purpose": "Visa geografisk täckning, lokala leveransmöjligheter och hur uppdrag hanteras i olika områden."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att presentera företaget, arbetssättet och personerna bakom verksamheten."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för bokning, offert eller frågor via formulär, telefon och adress."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "optional": true,
+      "when": "när verksamheten arbetar med fasta priser, zonpriser eller tydliga pristabeller för vanliga leveranser"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när kunder ofta behöver svar om leveranstider, försändelsetyper, områden eller bokningsprocess"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "coverage-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "reviews",
+        "opening-hours",
+        "team-teaser",
+        "faq",
+        "video-hero"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and primary service focus, and include a clear contact CTA.",
+        "Service summary must mention concrete delivery or courier tasks, not vague business claims.",
+        "Coverage summary should appear before the final contact CTA when service areas are known.",
+        "Trust proof must rely on real signals such as organisation number, F-tax status, references or clear operating details.",
+        "Sections should avoid repeating the same promise about speed or reliability in multiple blocks."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "service-process",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-table",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company to actual courier or postal services offered.",
+        "Service list items must be concrete examples such as expressbud, företagsleveranser, distribution or upphämtning where supported by content.",
+        "Service process should explain how booking, pickup, transport and delivery work in a simple sequence.",
+        "If pricing is shown, it must be presented as real example pricing, fixed pricing or request-a-quote guidance without invented figures."
+      ]
+    },
+    "coverage": {
+      "requiredSections": [
+        "coverage-intro",
+        "service-area",
+        "delivery-types",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map-embed",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Coverage intro must explain where the company operates and how area affects availability or delivery setup.",
+        "Service area content should list actual cities, districts or regions only when known.",
+        "Delivery types must clarify whether the same service applies everywhere or differs by area, urgency or shipment type.",
+        "Map content should support the area description and not replace written coverage information."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "reviews",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company in specific terms relevant to transport, delivery or logistics work.",
+        "Team should only be shown when real people or roles are available.",
+        "Trust proof should focus on transparent company details and references rather than generic marketing language."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "mailto-contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real contact paths such as phone, email or address and must not use placeholders.",
+        "The contact form should support straightforward booking or inquiry intent for delivery and courier assignments.",
+        "Opening hours and map should appear after the core contact options unless they are essential for visiting a physical location."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "home route with '/' is present",
+      "contact route is present",
+      "services route exists because this industry needs explicit presentation of delivery and courier offerings",
+      "coverage route exists because service geography is central to courier and postal operations",
+      "every default route has a matching sectionsPerRoute entry",
+      "all route ids and section ids are kebab-case slugs",
+      "all paths are Swedish, lowercase, start with '/' and have no trailing slash",
+      "recommended dossiers only use allowed dossier ids",
+      "copy avoids invented certifications, fake counts or unsupported promises",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic local-service structure without explicit coverage or delivery logic",
+      "vague service descriptions like 'hög kvalitet' without naming shipment or courier tasks",
+      "invented claims about delivery speed, fleet size, response times or national reach",
+      "forcing pricing when the business primarily works via quote requests",
+      "portfolio-style galleries as primary structure instead of operational service information"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "pricing-table",
+      "faq-accordion"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Post- och kurirverksamhet behöver en scaffold som lyfter fram konkreta bud-, leverans- och distributionstjänster, geografisk täckning, tydlig kontaktväg och förtroendeskapande företagsinformation. Besökaren ska snabbt förstå vad som kan skickas eller levereras, inom vilka områden, hur processen fungerar och hur man bokar eller frågar om ett uppdrag.",
+    "semanticSignals": [
+      "budfirma",
+      "kurir",
+      "expressbud",
+      "leverans",
+      "distribution",
+      "upphamtning",
+      "foretagsleveranser",
+      "paketleverans",
+      "lokala-transporter",
+      "serviceomraden",
+      "leveransomraden",
+      "kontakt-for-bokning",
+      "logistik-for-mindre-uppdrag"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "produktkatalog-for-e-handel",
+      "fotografportfolio",
+      "bokningskalender-for-behandlingar",
+      "fastighetsmaklare",
+      "byggprojektgalleri"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for companies whose main offer is courier, bud, postnära leveranser, distribution eller lokala transportuppdrag.",
+      "Prefer this scaffold when geography, leveransområden and contact-driven bookings are central to the business model.",
+      "Do not classify as generic local service if the company clearly needs explicit pages for services and coverage areas tied to deliveries."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

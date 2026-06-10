@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-98-hushallens-produktion-av-diverse-var",
+  "sniCode": "98",
+  "wizardCategoryId": "other",
+  "industryProfileId": "sni-98",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:33:25Z",
+  "outputPath": "data/scaffold-candidates/sni-98-hushallens-produktion-av-diverse-var",
+  "operatorBriefHash": "sha256:f13b9b8f23e3e4027a824d39b28a8966725f5cb8e07a78117ece670c320fcc74",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

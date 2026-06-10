@@ -1,0 +1,291 @@
+{
+  "id": "sni-80-sakerhets-och-bevakningsverksamhet",
+  "label": "Säkerhets- och bevakningsverksamhet",
+  "description": "Branschspecifik scaffold för bevakningsföretag, ordningsvakter, stationär bevakning, rondering, larmutryckning och närliggande säkerhetstjänster. Strukturen prioriterar förtroende, tydliga tjänstebeskrivningar, auktorisation/kompetens, jour och enkel kontakt för offert eller upphandling.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Skapa förtroende för bevakningsföretaget",
+    "Förklara säkerhetstjänster tydligt för företag, bostadsrättsföreningar och organisationer",
+    "Driva kontakt för offert, upphandling eller akut behov",
+    "Lyfta auktorisation, kompetens, jour och geografisk närvaro utan överdrifter"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förmedla trygghet och leda till kontakt för offert eller snabb hjälp."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva bevaknings- och säkerhetstjänster konkret så att besökaren snabbt ser vad företaget erbjuder."
+    },
+    {
+      "id": "agreements-pricing",
+      "path": "/avtal-och-priser",
+      "required": true,
+      "purpose": "Förklara hur avtal, upplägg och prisbild fungerar på en övergripande nivå och uppmuntra offertförfrågan."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att presentera företaget, arbetssätt, personal och relevanta tillstånd eller kompetenser."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget via formulär, telefon, e-post och besöksuppgifter."
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "när företaget verkar i flera orter eller behöver en separat yta för geografisk täckning och lokal synlighet"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när verksamheten ofta behöver förklara skillnaden mellan bevakningstjänster, responstider, avtal eller uppstart"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "jour-highlight",
+        "industries-served",
+        "testimonials",
+        "faq",
+        "certifications",
+        "team-preview",
+        "service-area",
+        "video-intro"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and primary offer clearly, and may mention location or availability only when known.",
+        "Service summary must cover concrete security services such as rondering, stationär bevakning, larmutryckning or ordningshållning when those services exist in the dossier.",
+        "Trust proof must rely on real signals like auktorisation, utbildad personal, jour or documented experience, and must not imply approvals that are not provided.",
+        "If testimonials or reviews are shown, trust-proof should avoid repeating the same claims verbatim.",
+        "The final contact CTA must make next step clear: contact, request quote or discuss a security solution."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "industries-served",
+        "process-overview",
+        "faq",
+        "service-area"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company's role in security and monitoring to the listed services.",
+        "Service list items must be specific, for example mobile patrols, reception security, event security, alarm response or camera monitoring support, rather than vague labels.",
+        "If a process overview is present, it should explain assessment, proposal, start-up and follow-up in plain language without promising outcomes the business cannot guarantee.",
+        "Contact CTA should invite a needs dialogue or quote request, not force exact pricing when services are custom."
+      ]
+    },
+    "agreements-pricing": {
+      "requiredSections": [
+        "pricing-intro",
+        "agreement-options",
+        "pricing-factors",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "This page must explain that pricing often depends on assignment scope, schedule, staffing, site conditions and service level.",
+        "Agreement options may describe examples such as ongoing contracts, scheduled rounds or event-based assignments, but must not present fabricated package names as if they are standard.",
+        "If prices are unavailable, the page should use transparent estimation language and steer to quote request rather than inventing numbers.",
+        "Trust proof on this page should support seriousness and professionalism, not replace pricing clarity."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "operating-principles",
+        "service-area",
+        "contact-cta"
+      ],
+      "sectionOrderRules": [
+        "About story must be concrete about the company, customers served, working style or history, avoiding empty claims.",
+        "Team section should present roles or competence responsibly and must not expose sensitive personal details unnecessarily.",
+        "Trust proof may include authorisation, training focus, routines and availability only when supported by the dossier."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map",
+        "emergency-note"
+      ],
+      "sectionOrderRules": [
+        "Contact page must provide real phone, email and address details when available and should not use placeholders.",
+        "Contact form should fit quote requests and general inquiries with clear expectations for response.",
+        "If an emergency note is shown, it must not imply official emergency services; it should only clarify the company's own jour or urgent contact route when such service exists."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has a dedicated home route at '/' and a dedicated contact route.",
+      "Routes reflect this industry's needs by including services and a page for avtal/priser.",
+      "All default routes have matching sectionsPerRoute entries.",
+      "Copy framework prioritizes trust, clarity, availability and real qualifications without invented claims.",
+      "Recommended dossiers only use allowed dossier ids.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic local-service structure that omits security-specific needs like avtal, jour or trust/authorisation context.",
+      "Overpromising safety outcomes, guaranteed prevention or official authority status.",
+      "Invented certifications, client counts, response times or geographic coverage.",
+      "Pricing presentation that suggests fixed universal rates for custom security assignments.",
+      "Sensational or fear-based copy that undermines credibility."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "pricing-table",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "video-hero",
+      "faq-accordion"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Säkerhets- och bevakningsverksamhet scaffold för småföretagswebb. Innehåller startsida, tjänster, avtal och priser, om oss och kontakt. Fokuserar på bevakningstjänster, rondering, stationär bevakning, larmutryckning, ordningshållning, jour, auktorisation, kompetens, trygghet, offertförfrågan och lokal närvaro.",
+    "semanticSignals": [
+      "bevakningsforetag",
+      "sakerhetstjanster",
+      "rondering",
+      "stationar-bevakning",
+      "larmutryckning",
+      "jour",
+      "ordningsvakt",
+      "vaktbolag",
+      "sakerhetslosningar",
+      "avtal-och-priser",
+      "auktorisation",
+      "certifierad-personal",
+      "kontakt-for-offert"
+    ],
+    "negativeSignals": [
+      "menu",
+      "restaurant-booking",
+      "product-catalog",
+      "ecommerce-checkout",
+      "portfolio-shoots",
+      "medical-clinic-booking",
+      "real-estate-listings"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for companies selling security and guarding services rather than physical alarm product ecommerce.",
+      "Strong match when the business emphasizes bevakning, ordningsvakter, rondering, larmutryckning, jour or auktorisation.",
+      "The avtal/priser page is important because buyers often compare ongoing agreements and quote-based assignments.",
+      "Trust and compliance signals matter more than lifestyle storytelling for this industry."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

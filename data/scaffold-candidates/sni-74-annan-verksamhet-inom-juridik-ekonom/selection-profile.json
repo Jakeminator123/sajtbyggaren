@@ -1,0 +1,34 @@
+{
+  "id": "sni-74-annan-verksamhet-inom-juridik-ekonom",
+  "embeddingText": "Branschspecifik scaffold för SNI 74 annan verksamhet inom juridik, ekonomi, vetenskap och teknik: expertkonsulter, specialister och byråliknande verksamheter som behöver startsida, tjänstesida, casesida, om-sida och kontaktsida. Fokus på expertis, kundcase, team, process, FAQ och offertförfrågan.",
+  "semanticSignals": [
+    "konsulttjanster",
+    "specialistkompetens",
+    "uppdragstyper",
+    "kundcase",
+    "referenskunder",
+    "expertprofil",
+    "teamkompetens",
+    "arbetssatt",
+    "offertforfragan",
+    "professionell-byra",
+    "analys-och-radgivning"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "produktkatalog",
+    "restaurangmeny",
+    "bordsbokning",
+    "medicinsk-klinik",
+    "salongsbehandlingar",
+    "hotellbokning",
+    "evenemangsbiljetter"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold for SNI 74 businesses that primarily sell expertise or project-based services.",
+    "Strong fit when the company needs case studies, service descriptions, team credibility and a quote-oriented contact flow.",
+    "Also fits solo specialists where team content can reduce to founder profile and selected collaborators."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

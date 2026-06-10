@@ -1,0 +1,100 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "trust-signals",
+      "services-overview",
+      "audience-split",
+      "process-steps",
+      "case-preview",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "faq-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business focus in plain language such as bemanning, rekrytering or personalstöd, not vague consulting copy.",
+      "Trust signals should appear early and be grounded in real indicators like industries served, named case examples or clear experience areas.",
+      "Audience split should help visitors self-select between arbetsgivare and kandidater when both audiences are relevant.",
+      "Process steps must show how the company works from behov till tillsättning or matchning, using concrete step names.",
+      "Contact CTA should appear after enough proof and clarity for an employer to request an offer without hunting for the next action."
+    ]
+  },
+  "tjanster": {
+    "requiredSections": [
+      "services-list",
+      "service-detail-blocks",
+      "process-steps",
+      "faq-accordion",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-expectations",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "Services list must reflect actual personnel services offered, such as bemanning, rekrytering, search or interim, rather than generic business advice.",
+      "Service detail blocks should explain when each service fits, what the customer gets and how the collaboration starts.",
+      "If pricing expectations are used, they must stay high-level and honest, never implying fixed fees that the business cannot stand behind.",
+      "FAQ should answer practical service questions before the final CTA."
+    ]
+  },
+  "for-arbetsgivare": {
+    "requiredSections": [
+      "hero",
+      "employer-needs",
+      "service-fit",
+      "process-steps",
+      "case-preview",
+      "faq-accordion",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "This page must speak primarily to employers and hiring managers, not mix candidate messaging into the main narrative.",
+      "Employer needs section should frame real situations like snabb förstärkning, svårrekryterad kompetens or tillfälliga toppar.",
+      "Service fit should map needs to solutions clearly so the reader understands whether bemanning, rekrytering or another setup is appropriate.",
+      "Case preview should focus on solved staffing or hiring problems and outcomes described honestly without inflated claims."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "about-story",
+      "specialisation-areas",
+      "team-roster",
+      "process-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "case-preview",
+      "trust-signals"
+    ],
+    "sectionOrderRules": [
+      "About story must explain what the company does, who it helps and how it approaches matching or recruitment, without generic mission filler.",
+      "Team roster should support credibility with roles and areas of responsibility relevant to staffing and recruitment.",
+      "Specialisation areas should name industries, roles or competence niches only when they are real focus areas of the business."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "mailto-contact-form",
+      "audience-contact-options",
+      "faq-preview"
+    ],
+    "optionalSections": [
+      "map-embed",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include direct and usable contact paths such as phone and email.",
+      "The form should make it easy to state whether the enquiry concerns bemanning, rekrytering, kandidatfråga or other contact reason.",
+      "If audience contact options are used, they should separate employers from candidates clearly to reduce friction.",
+      "Map and opening hours are optional and should only be shown when they add practical value."
+    ]
+  }
+}

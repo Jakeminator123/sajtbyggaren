@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-63-datainfrastruktur-databehandling-hos",
+  "version": "0.1.0",
+  "label": "Datainfrastruktur, databehandling, hosting och annan informationsverksamhet",
+  "description": "Scaffold för företag inom hosting, databehandling, molnplattformar, datainfrastruktur och informationsverksamhet där produktnytta ska förklaras snabbt och teknisk trovärdighet byggas med säkerhet, drift, support och tydliga användningsfall.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänstens nytta snabbt",
+    "bygga teknisk trovärdighet",
+    "presentera plattform eller tjänsteutbud",
+    "driva registrering eller demo-förfrågan",
+    "svara på frågor om säkerhet, drift och support"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

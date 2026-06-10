@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Industry fit must reflect upstream petroleum and natural gas extraction rather than consumer-facing energy sales or generic consulting.",
+    "Home and contact routes must always be present.",
+    "All default routes must have matching sectionsPerRoute entries.",
+    "Purposes and section rules must remain factual and avoid invented certifications, reserves, production volumes or incident claims.",
+    "Contact flow must support business enquiries through contact details and form capability.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Consumer-oriented sections such as menus, booking flows or retail product catalogs.",
+    "Overstating environmental performance, safety results or regulatory status without source data.",
+    "Generic local-service framing like household jobs, emergency callouts or neighborhood service areas.",
+    "Investor-specific claims, production figures or project milestones unless explicitly provided by the dossier."
+  ]
+}

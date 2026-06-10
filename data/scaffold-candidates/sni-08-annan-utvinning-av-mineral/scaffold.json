@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-08-annan-utvinning-av-mineral",
+  "version": "0.1.0",
+  "label": "Annan utvinning av mineral",
+  "description": "Branschspecifik scaffold för verksamheter inom annan utvinning av mineral. Strukturen fokuserar på att förklara material, utvinnings- och leveranskapacitet, verksamhetsområde, ansvarstagande och tydliga kontaktvägar för förfrågningar från företag, entreprenörer och offentliga beställare.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera mineral och material som erbjuds",
+    "förklara leverans- och verksamhetskapacitet",
+    "bygga förtroende genom konkret verksamhetsinformation",
+    "driva kontakt för offert, leveransförfrågan eller platsbesök"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,36 @@
+{
+  "id": "sni-03-fiske-och-vattenbruk",
+  "embeddingText": "Website scaffold for Swedish fishery and aquaculture businesses. Includes home, products and services, sustainability and working methods, about, and contact pages. Optimized for presenting fishing or aquaculture operations, product and delivery offering, transparent quality routines, local trust signals, and straightforward contact conversion.",
+  "semanticSignals": [
+    "fiske",
+    "vattenbruk",
+    "odling",
+    "fisk",
+    "skaldjur",
+    "leverans",
+    "forsaljning",
+    "fangst",
+    "hallbarhet",
+    "sparbarhet",
+    "hamn",
+    "anlaggning",
+    "foradling",
+    "bestallning",
+    "kontakt"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "hotel-booking",
+    "ecommerce-checkout",
+    "photography-portfolio",
+    "software-app",
+    "medical-clinic"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business primarily catches, cultivates, handles, delivers or sells fishery/aquaculture products or related services.",
+    "Prefer this scaffold over generic local-service scaffolds when sustainability/process explanation is important for trust.",
+    "Do not choose this scaffold for seafood restaurants, tourist fishing experiences or pure retail shops unless fishery or aquaculture operations are the core business."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

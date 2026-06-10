@@ -1,0 +1,279 @@
+{
+  "id": "sni-14-tillverkning-av-klader",
+  "label": "Tillverkning av kläder",
+  "description": "Scaffold för företag inom tillverkning av kläder som behöver visa produktionskapacitet, produktområden, arbetsprocess och en tydlig väg till kontakt för förfrågningar om produktion, samarbeten eller offert.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera klädtillverkningens inriktning och kapacitet",
+    "visa produktområden och tillverkningsmöjligheter",
+    "bygga förtroende med process, referenser och verksamhetsfakta",
+    "driva kontakt för offert, produktion eller samarbete"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad företaget tillverkar och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa vilka typer av kläder eller kollektioner företaget tillverkar och för vilka behov."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Förklara tillverkningsprocess, kapacitet och arbetssätt så att kunder kan bedöma om företaget passar deras uppdrag."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom företagets bakgrund, team och arbetssätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan om tillverkning, samarbete eller kontakt genom tydliga kontaktuppgifter och formulär."
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "optional": true,
+      "when": "när bildmaterial från produkter, sömnad, prover eller produktionsmiljö håller tillräcklig kvalitet för att bära en egen sida"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när verksamheten ofta behöver besvara frågor om minimumvolymer, ledtider, material eller arbetsprocess"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-summary",
+        "production-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews",
+        "faq",
+        "story"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what kinds of clothing the company manufactures and include a primary contact CTA.",
+        "Product-summary should show concrete clothing categories or customer segments, not vague claims.",
+        "Production-summary must explain the manufacturing offer briefly before trust-proof.",
+        "Trust-proof must use real business details such as organisation information, references or visible production context and appear before the final CTA.",
+        "Avoid repeating the same manufacturing claim across hero, summaries and CTA."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-categories",
+        "use-cases",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "pricing-overview",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Products-intro must connect the company to the types of garments it manufactures.",
+        "Product-categories must be specific, for example arbetskläder, profilkläder, modeplagg or barnkläder when supported by input data.",
+        "Use-cases should clarify customer needs, order types or intended applications without inventing brands or client names.",
+        "If pricing-overview is shown, it must describe pricing principles or quote process rather than fabricated fixed prices."
+      ]
+    },
+    "production": {
+      "requiredSections": [
+        "production-intro",
+        "process-steps",
+        "capacity-and-quality",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Production-intro must explain how assignments move from inquiry or design to finished garment.",
+        "Process-steps should follow a logical sequence such as design, sampling, cutting, sewing, finishing and delivery when supported by the dossier.",
+        "Capacity-and-quality must stay factual and avoid promises about certifications, volumes or lead times unless provided by source data.",
+        "A final CTA should invite manufacturing inquiries, sampling requests or collaboration contact."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "About-story must describe the company's background or focus in a concrete way.",
+        "Team should highlight real roles or functions when available and may be omitted by the renderer if no people data exists.",
+        "Trust-proof should reinforce credibility with visible business facts, references or production experience without generic filler."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must include real phone, email and address details when available.",
+        "Contact-form should be suitable for inquiries about manufacturing, quotes or collaboration.",
+        "Opening-hours and map may appear after primary contact details and must not replace direct contact methods."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Passar företag som tillverkar kläder på uppdrag, i egen produktion eller för B2B/B2C med behov av att visa produktområden och produktionsprocess.",
+      "Startsida och kontaktsida måste tydligt driva kontaktförfrågan.",
+      "Scaffolden måste ha en branschanpassad sida för produkter och en för produktion eller arbetsprocess.",
+      "Sektionerna ska stödja förtroende genom konkreta verksamhetsfakta, inte allmän reklamspråk.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Undvik restaurang-, portfolio- eller ren konsultstruktur utan produktsida och produktionssida.",
+      "Undvik påhittade certifieringar, hållbarhetslöften, volymer eller leveranstider.",
+      "Undvik att behandla verksamheten som modebutik eller e-handel när uppgiften gäller tillverkning.",
+      "Undvik generiska tjänstebeskrivningar som inte säger vilka plagg eller vilken produktion som erbjuds."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees",
+      "map-embed",
+      "opening-hours"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tillverkning av kläder, konfektion, sömnad, produktion av plagg, arbetskläder, profilkläder, modeplagg, kollektioner, provsömnad, tillverkningsprocess, produktionskapacitet, kvalitetsarbete, kontakt och offertförfrågan.",
+    "semanticSignals": [
+      "clothing-manufacturing",
+      "garment-production",
+      "sewing",
+      "apparel-factory",
+      "textile-production",
+      "workwear",
+      "profile-clothing",
+      "fashion-production",
+      "sampling",
+      "private-label",
+      "cut-make-trim",
+      "production-process"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "online-shop-checkout",
+      "photography-portfolio",
+      "medical-clinic-booking",
+      "real-estate-listings",
+      "software-saas-pricing"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily manufactures clothing or sewn garments rather than only selling finished products.",
+      "Prefer this scaffold when visitors need to understand both what garments are produced and how production works.",
+      "Strong indicators include mentions of konfektion, sömnad, produktion, kollektioner, provplagg, arbetskläder or profilkläder."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

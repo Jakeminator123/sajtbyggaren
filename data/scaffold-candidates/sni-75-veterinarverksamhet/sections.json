@@ -1,0 +1,77 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "care-summary",
+      "credentials",
+      "trust-proof",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "animal-types",
+      "reviews",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Hero ska signalera lugn, trygghet och tydlig nästa handling; undvik stressande eller grafiska vårdbilder i första vyn.",
+      "Klinikens legitimerade kompetens eller motsvarande yrkesroller ska synas tidigt så att besökaren förstår att det är professionell djursjukvård.",
+      "En snabb väg till 'Boka tid' eller telefonkontakt ska finnas utan att besökaren måste leta långt ned på sidan.",
+      "Om djurslag nämns ska det vara exakt vilka djur kliniken faktiskt tar emot, utan antaganden eller överdrifter."
+    ]
+  },
+  "behandlingar": {
+    "requiredSections": [
+      "treatment-list",
+      "animal-types",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Behandlingar ska beskrivas i vardagligt språk utifrån djurägarens behov, exempelvis vaccination, kastration, tandvård eller undersökning.",
+      "Varje behandling eller tjänstekategori ska hjälpa besökaren förstå när den är relevant, vad besöket typiskt omfattar och hur bokning går till.",
+      "Om priser visas ska de vara tydligt markerade som prisexempel, från-priser eller fasta priser beroende på verksamhetens verkliga upplägg.",
+      "Sidan ska mynna ut i en tydlig boknings- eller kontaktuppmaning."
+    ]
+  },
+  "akut-hjalp": {
+    "requiredSections": [
+      "emergency-guidance",
+      "contact-info",
+      "hours-summary"
+    ],
+    "optionalSections": [
+      "faq",
+      "booking-cta"
+    ],
+    "sectionOrderRules": [
+      "Första delen ska omedelbart besvara om djurägaren ska ringa direkt, åka in akut eller söka annan jourhjälp.",
+      "Akutinformation ska vara saklig och försiktig; ge inga medicinska löften och ersätt inte individuell bedömning.",
+      "Telefonnummer för akuta ärenden ska vara mycket lätt att hitta och klickbart på mobil.",
+      "Om kliniken inte har jour dygnet runt ska det framgå tydligt, inklusive hur djurägaren hittar rätt hjälp utanför öppettider."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "hours-summary",
+      "map",
+      "contact-form",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "parking-info"
+    ],
+    "sectionOrderRules": [
+      "Telefonnummer ska vara tel:-länk, e-post mailto:-länk och adressen ska kunna kopieras som ett sammanhängande block.",
+      "Öppettider ska visa alla veckodagar och tydligt markera stängt eller avvikande tider där det behövs.",
+      "Kartsektion och hitta-hit-information ska komma tidigt nog för att hjälpa stressade besökare som redan bestämt sig för att åka in.",
+      "Kontaktformulär ska användas för vanliga frågor och återkoppling, inte som enda väg för akuta ärenden."
+    ]
+  }
+}

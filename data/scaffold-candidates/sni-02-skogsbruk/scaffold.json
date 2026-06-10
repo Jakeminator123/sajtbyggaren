@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-02-skogsbruk",
+  "version": "0.1.0",
+  "label": "Skogsbruk",
+  "description": "Branschspecifik scaffold för skogsbruksföretag med fokus på tydliga tjänster, arbetsområden, förtroendeskapande information och enkel kontakt för offert eller förfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera skogsbrukstjänster tydligt",
+    "bygga förtroende med referenser och företagsuppgifter",
+    "visa geografiskt arbetsområde",
+    "driva kontakt för offert och platsbesök"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

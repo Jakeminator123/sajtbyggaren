@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-35-el-gas-och-angforsorjning-samt-luftk",
+  "version": "0.1.0",
+  "label": "El-, gas- och ångförsörjning samt luftkonditionering",
+  "description": "Scaffold för verksamheter inom el-, gas- och ångförsörjning samt luftkonditionering, med fokus på tydlig tjänstepresentation, driftinformation, förtroendeskapande fakta och enkel kontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara energirelaterade tjänster och leveransområden",
+    "bygga förtroende med tydlig företagsinformation och referenser",
+    "göra det enkelt att kontakta verksamheten för frågor, offert eller service"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

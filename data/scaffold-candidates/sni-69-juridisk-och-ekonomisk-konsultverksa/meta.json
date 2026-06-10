@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-69-juridisk-och-ekonomisk-konsultverksa",
+  "sniCode": "69",
+  "wizardCategoryId": "legal",
+  "industryProfileId": "sni-69",
+  "referenceScaffoldId": "professional-services",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:30:21Z",
+  "outputPath": "data/scaffold-candidates/sni-69-juridisk-och-ekonomisk-konsultverksa",
+  "operatorBriefHash": "sha256:4379a8cb4ff0ce4c61b938ca6a85b9d18e9aa358178567237d4de5abfe2f04dc",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

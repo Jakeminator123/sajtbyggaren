@@ -1,0 +1,31 @@
+{
+  "id": "sni-23-tillverkning-av-andra-icke-metallisk",
+  "embeddingText": "Webbplatsstruktur för tillverkare inom andra icke-metalliska mineraliska produkter: produkter, produktkategorier, material, tillverkning, kapacitet, leverans, offertförfrågan, fabrik, anläggning, kontakt, referenser, teknisk dialog.",
+  "semanticSignals": [
+    "manufacturing",
+    "industrial-products",
+    "non-metallic-mineral-products",
+    "product-catalog",
+    "production-process",
+    "materials",
+    "capacity",
+    "delivery",
+    "b2b-contact",
+    "factory-location"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "table-booking",
+    "clinic-treatments",
+    "event-ticketing",
+    "personal-portfolio",
+    "full-ecommerce-checkout"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the business manufactures or processes products such as glass, ceramics, concrete, cement, gypsum, stone or related mineral-based goods.",
+    "Prefer this scaffold when visitors need to evaluate product range and production capability before contacting the company.",
+    "Do not choose this scaffold for pure installers, retailers or consultants unless manufacturing is the primary business."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

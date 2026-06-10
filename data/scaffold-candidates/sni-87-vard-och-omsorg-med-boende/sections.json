@@ -1,0 +1,77 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "target-group-summary",
+      "boende-summary",
+      "omsorg-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "reviews",
+      "practical-info-teaser"
+    ],
+    "sectionOrderRules": [
+      "Hero ska förmedla lugn, trygghet och mänsklig närvaro snarare än säljton eller klinisk distans.",
+      "Målgrupp och boendeform ska framgå tidigt på sidan så att besökaren snabbt förstår vem verksamheten är till för.",
+      "Kontaktvägen ska uttrycka låg tröskel, exempelvis för frågor, visning eller intresseanmälan, och inte låsas till 'Boka tid' om det inte faktiskt är relevant."
+    ]
+  },
+  "boende": {
+    "requiredSections": [
+      "boende-overview",
+      "environment-and-facilities",
+      "daily-life",
+      "admission-or-placement-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "faq",
+      "accessibility-info"
+    ],
+    "sectionOrderRules": [
+      "Sidan ska först klargöra vilken typ av boende det gäller och för vem det passar.",
+      "Miljö och lokaler ska beskrivas konkret och respektfullt utan att lova sådant verksamheten inte kan garantera individuellt.",
+      "Information om inflyttning eller placering ska vara översiktlig och tydligt hänvisa vidare till kontakt för bedömning av enskilda fall."
+    ]
+  },
+  "omsorg-och-stod": {
+    "requiredSections": [
+      "care-overview",
+      "support-services",
+      "activities-and-social-life",
+      "staff-and-approach",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "credentials",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Beskriv omsorg och stöd i vardagligt språk med fokus på vad den boende faktiskt får hjälp med.",
+      "Om legitimerad personal nämns ska det vara sant och beskrivas utan överdrift eller otydliga titlar.",
+      "Aktiviteter och socialt innehåll ska presenteras som exempel eller återkommande inslag, inte som löften om exakt samma upplägg för alla."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "hours-summary",
+      "location",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "visit-info"
+    ],
+    "sectionOrderRules": [
+      "Telefonnummer ska vara klickbart med tel:-länk och e-post med mailto:-länk.",
+      "Adress ska visas som ett sammanhållet block och kompletteras med karta när det hjälper besökaren hitta rätt.",
+      "Nästa steg ska vara tydliga för både allmän fråga, visningsförfrågan och placeringskontakt om verksamheten tar emot sådana förfrågningar."
+    ]
+  }
+}

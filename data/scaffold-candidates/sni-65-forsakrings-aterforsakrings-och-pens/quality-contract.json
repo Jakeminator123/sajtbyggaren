@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "ha en startsida som förklarar erbjudande och målgrupp inom första scrollen",
+    "ha en kontaktväg som stödjer offert- eller rådgivningsförfrågan",
+    "presentera produkt- eller tjänsteområden i strukturerad form anpassad till försäkring, återförsäkring eller pension",
+    "använda saklig och trygg tonalitet utan överdrivna löften",
+    "inkludera sektioner eller sidlogik som kan bära FAQ eftersom det är en efterfrågad capability",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "bygga sajten som en generisk redovisningsbyrå trots wizard-kategorin",
+    "lova ersättning, avkastning eller godkännande utan förbehåll",
+    "uppfinna myndighetstillstånd, certifieringar eller medlemskap",
+    "gömma kontaktvägar bakom enbart allmän copy utan tydlig CTA",
+    "använda e-handelslogik med kundvagn eller produktkort som om försäkring vore standardvaror"
+  ]
+}

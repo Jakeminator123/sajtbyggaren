@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-99-verksamhet-vid-internationella-organ",
+  "version": "0.1.0",
+  "label": "Verksamhet vid internationella organisationer, utländska ambassader o.d.",
+  "description": "Scaffold för internationella organisationer, ambassader och liknande verksamheter där besökaren snabbt behöver förstå uppdrag, konsulär eller administrativ service, praktisk kontaktinformation och eventuella öppettider eller besöksvillkor.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Förklara organisationens eller beskickningens uppdrag",
+    "Visa tillgängliga tjänster eller ärenden för besökare",
+    "Göra det enkelt att hitta kontaktvägar, adress och öppettider"
+  ],
+  "defaultPageCount": 3,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

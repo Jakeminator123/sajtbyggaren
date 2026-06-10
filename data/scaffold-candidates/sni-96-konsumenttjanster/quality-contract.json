@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Include home, treatments/services, pricing, booking and contact to match salon and beauty conversion needs.",
+    "Support strong visual presentation and clear booking flow.",
+    "Reflect trust needs for personal services through practitioner presentation, hygiene/trust signals and reviews when available.",
+    "Keep route paths Swedish and business-relevant.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not use generic tradesperson structure as the main model.",
+    "Do not omit pricing or booking surfaces for this category.",
+    "Do not imply medical outcomes, certifications or customer counts that are not provided.",
+    "Do not make the gallery the only trust mechanism; practical info and booking clarity are also required."
+  ]
+}

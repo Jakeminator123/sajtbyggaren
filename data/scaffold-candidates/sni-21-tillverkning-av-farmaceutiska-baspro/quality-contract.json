@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Industry fit is pharmaceutical manufacturing rather than generic local services.",
+    "Home and contact routes are included.",
+    "Default routes each have matching sectionsPerRoute entries.",
+    "Route paths are Swedish, lowercase and slash-prefixed.",
+    "Copy remains factual and avoids invented certifications, approvals or production claims.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic local-service framing focused on household jobs",
+    "consumer webshop structure",
+    "medical advice content",
+    "claims about regulatory approval, GMP status, export rights or certifications unless explicitly provided",
+    "fake counts, invented customer logos or unsupported testimonials"
+  ]
+}

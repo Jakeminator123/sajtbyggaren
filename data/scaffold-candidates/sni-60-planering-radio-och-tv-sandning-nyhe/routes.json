@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera redaktionen eller medieverksamheten, lyfta aktuellt innehåll och driva registrering till nyhetsbrev eller vidare läsning/lyssning/tittning."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": true,
+      "purpose": "Samla artiklar, sändningar, inslag eller uppdateringar i ett tydligt redaktionellt flöde."
+    },
+    {
+      "id": "program",
+      "path": "/program",
+      "required": true,
+      "purpose": "Presentera återkommande program, format, bevakningsområden eller innehållskategorier så att besökaren snabbt hittar rätt innehåll."
+    },
+    {
+      "id": "about",
+      "path": "/om-redaktionen",
+      "required": true,
+      "purpose": "Bygga förtroende genom att beskriva redaktionen, uppdraget, arbetssättet och personerna bakom innehållet."
+    },
+    {
+      "id": "newsletter",
+      "path": "/nyhetsbrev",
+      "required": true,
+      "purpose": "Konvertera återkommande besökare till prenumeranter med tydlig förklaring av vad utskicken innehåller och hur ofta de skickas."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge tydliga kontaktvägar för tips, redaktionsfrågor, presskontakt eller allmänna förfrågningar."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "archive",
+      "path": "/arkiv",
+      "when": "när verksamheten publicerar ett större innehållsbibliotek och behöver en separat yta för äldre material eller ämnesvis översikt"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när återkommande frågor om publicering, tips, rättelser eller prenumeration behöver besvaras samlat"
+    }
+  ]
+}

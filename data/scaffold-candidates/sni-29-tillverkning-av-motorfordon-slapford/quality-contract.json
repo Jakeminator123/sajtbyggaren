@@ -1,0 +1,30 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Has home route with path /.",
+    "Has contact route.",
+    "All default routes have matching sectionsPerRoute entries.",
+    "Route ids, section ids and scaffold id use kebab-case.",
+    "Paths are Swedish, lowercase, start with / and have no trailing slash.",
+    "Page set reflects manufacturing of motor vehicles, trailers or semi-trailers rather than generic local services.",
+    "Recommended dossiers only use allowed ids.",
+    "Copy avoids invented certifications, production volumes or customer counts.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic service-business structure without product or manufacturing pages",
+    "vague section names that do not fit industrial manufacturing",
+    "invented compliance claims, homologation statements or certifications",
+    "consumer-booking flows as primary conversion for a B2B manufacturing context",
+    "menu, game or unrelated hospitality patterns"
+  ]
+}

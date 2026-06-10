@@ -1,0 +1,92 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "capacity-trust",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "project-teaser",
+      "image-gallery",
+      "reviews",
+      "work-process",
+      "service-area",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Hero must state that the company works with anläggningsarbeten and include the primary CTA.",
+      "Service summary must highlight concrete service categories, not vague construction copy.",
+      "Capacity trust should present real trust signals such as machine park, relevant project experience, insurance or guarantees when supplied.",
+      "Project teaser and gallery may appear before capacity trust when strong case material exists.",
+      "The page should move from offer to proof to contact without repeating the same claims."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "work-process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-expectations",
+      "faq",
+      "trust-guarantees"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company's identity to anläggningsarbeten specifically.",
+      "Service list items must be concrete examples such as markarbete, schakt, dränering, väg eller grundrelaterade arbeten when supported by input.",
+      "Work process should set realistic expectations around planning, execution and quote dialogue without promising fixed lead times unless provided."
+    ]
+  },
+  "projects": {
+    "requiredSections": [
+      "projects-intro",
+      "project-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "image-gallery",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Project entries must describe actual project types, locations if provided, and what was performed.",
+      "Before-and-after style visuals may be used when images exist and are relevant.",
+      "The route should emphasize relevance and execution, not exaggerated marketing language."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Phone and email must be present when available and must not use placeholders.",
+      "Contact form should be framed around quote requests or project questions.",
+      "If map or opening hours are shown, they must reflect supplied business data."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "experience-proof",
+      "team-or-ownership"
+    ],
+    "optionalSections": [
+      "machine-park-summary",
+      "service-area",
+      "trust-guarantees"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the company, ownership or working style and avoid generic claims.",
+      "Experience proof should reference real kinds of assignments, sectors or client contexts only when provided.",
+      "Team-or-ownership may render as a small company presentation when no larger team exists."
+    ]
+  }
+}

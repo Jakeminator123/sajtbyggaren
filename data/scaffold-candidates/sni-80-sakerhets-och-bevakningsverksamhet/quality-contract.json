@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Has a dedicated home route at '/' and a dedicated contact route.",
+    "Routes reflect this industry's needs by including services and a page for avtal/priser.",
+    "All default routes have matching sectionsPerRoute entries.",
+    "Copy framework prioritizes trust, clarity, availability and real qualifications without invented claims.",
+    "Recommended dossiers only use allowed dossier ids.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic local-service structure that omits security-specific needs like avtal, jour or trust/authorisation context.",
+    "Overpromising safety outcomes, guaranteed prevention or official authority status.",
+    "Invented certifications, client counts, response times or geographic coverage.",
+    "Pricing presentation that suggests fixed universal rates for custom security assignments.",
+    "Sensational or fear-based copy that undermines credibility."
+  ]
+}

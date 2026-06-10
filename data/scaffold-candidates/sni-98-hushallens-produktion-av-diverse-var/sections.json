@@ -1,0 +1,53 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "activity-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "about-summary",
+      "faq",
+      "gallery",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero måste tydligt säga vad verksamheten gör och ha en primär CTA till kontakt.",
+      "Activity-summary ska beskriva faktiska typer av varor eller tjänster och undvika vaga formuleringar.",
+      "Trust-proof ska bygga på verifierbara uppgifter som organisationsnummer, tydliga kontaktvägar eller konkret arbetssätt.",
+      "Slutlig contact-cta ska ligga sist och inte upprepa samma text som hero ordagrant."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "work-method",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "team",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "About-story ska förklara verksamhetens bakgrund sakligt och utan utfyllnad.",
+      "Work-method ska beskriva hur produktionen eller tjänsterna går till på en begriplig nivå.",
+      "Om team visas ska det vara verkliga personer eller roller, inte generiska platshållare."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Kontaktuppgifter ska vara konkreta och användbara, utan platshållartext.",
+      "Kontaktformulär ska vara enkelt och tydligt kopplat till frågor eller förfrågningar.",
+      "Map ska bara visas om en relevant besöksadress finns."
+    ]
+  }
+}

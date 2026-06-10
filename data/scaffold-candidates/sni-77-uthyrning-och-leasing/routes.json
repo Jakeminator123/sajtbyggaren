@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad som hyrs ut eller leasas och leda besökaren vidare till kontakt eller förfrågan."
+    },
+    {
+      "id": "rental-offer",
+      "path": "/utbud",
+      "required": true,
+      "purpose": "Presentera vilka objekt, maskiner, fordon eller produkter som går att hyra eller leasa, med tydlig beskrivning av användningsområden."
+    },
+    {
+      "id": "how-it-works",
+      "path": "/sa-fungerar-det",
+      "required": true,
+      "purpose": "Förklara processen från förfrågan till utlämning, leverans eller avtalsstart samt vilka grundvillkor som gäller."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, arbetssätt, lokalkännedom och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för prisförfrågan, tillgänglighet, leveransfrågor eller bokning."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "när verksamheten arbetar med öppna standardpriser, hyresnivåer eller tydliga paket som kan visas offentligt"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när kunder ofta behöver svar om deposition, försäkring, leverans, bindningstid, återlämning eller skador"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "when": "när besökare behöver fysisk adress, karta, upphämtning eller inlämning på plats"
+    }
+  ]
+}

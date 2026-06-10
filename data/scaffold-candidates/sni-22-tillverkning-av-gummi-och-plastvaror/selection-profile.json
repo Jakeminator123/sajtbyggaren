@@ -1,0 +1,36 @@
+{
+  "id": "sni-22-tillverkning-av-gummi-och-plastvaror",
+  "embeddingText": "Industriscaffold för SNI 22 tillverkning av gummi- och plastvaror. B2B-fokus med startsida, produkter, tillverkning/processer, om oss och kontakt. Sektioner för produktöversikt, material och processer, kvalitetsarbete, referenser, team, formulär, karta och FAQ. Passar företag som tillverkar plast- eller gummikomponenter, profiler, formgods, detaljer eller kundanpassade industriprodukter.",
+  "semanticSignals": [
+    "gummi",
+    "plast",
+    "tillverkning",
+    "formsprutning",
+    "extrudering",
+    "komponenter",
+    "industriprodukter",
+    "material",
+    "produktion",
+    "kvalitetssakring",
+    "kundanpassade-detaljer",
+    "b2b",
+    "offertforfragan"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "meny",
+    "bokning",
+    "fotografportfolio",
+    "e-handel",
+    "behandlingar",
+    "event",
+    "hotell"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the business manufactures rubber or plastic products, components or custom industrial parts.",
+    "Prefer this scaffold over a generic service scaffold when process capability, materials and product categories are central to the buying decision.",
+    "Suitable for companies selling to other businesses where quote requests and technical dialogue matter more than consumer checkout."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

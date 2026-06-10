@@ -1,0 +1,37 @@
+{
+  "id": "sni-94-intressebevakning-religios-verksamhe",
+  "embeddingText": "Ideell organisation, förening, samfund eller religiös verksamhet med behov av startsida, om oss, bli medlem, nyheter och kontakt. Fokus på uppdrag, värdegrund, demokratisk styrning, aktiviteter, engagemang, nyhetsbrev och transparent kontakt.",
+  "semanticSignals": [
+    "ideell-organisation",
+    "forening",
+    "samfund",
+    "religios-verksamhet",
+    "medlemskap",
+    "engagemang",
+    "vardegrund",
+    "demokratisk-styrning",
+    "styrelse",
+    "forsamling",
+    "nyheter",
+    "aktiviteter",
+    "gemenskap",
+    "kontaktformular",
+    "nyhetsbrev"
+  ],
+  "negativeSignals": [
+    "webshop",
+    "produktkatalog",
+    "bokningskalender-for-kommersiella-tjanster",
+    "restaurangmeny",
+    "fastighetsannonser",
+    "medicinsk-klinik",
+    "hantverkartjanster"
+  ],
+  "llmClassificationHints": [
+    "Använd denna scaffold när verksamheten främst vill samla medlemmar, deltagare eller engagerade personer snarare än sälja kommersiella tjänster.",
+    "Passar både allmän intressebevakning och religiösa aktörer inom SNI 94, särskilt när uppdrag, styrning och återkommande information är centralt.",
+    "Välj inte denna scaffold om webbplatsens huvudsyfte är e-handel, bokning eller lokal serviceleverans."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar företag inom hosting, databehandling, molntjänster, dataplattformar eller annan informationsverksamhet.",
+    "Lyfter produktnytta först och teknisk trovärdighet direkt efter.",
+    "Har tydlig yta för säkerhet, dataskydd, drift och support.",
+    "Innehåller både registreringsnära och kontaktorienterade konverteringsvägar.",
+    "Prissidan är anpassad för SaaS-, plattforms- eller tjänstepaketering snarare än lokal tjänsteverksamhet.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Lokala serviceupplägg som serviceområden, öppettider i butik eller områdessidor som standard.",
+    "Portfölj- eller galleristruktur som hör hemma i kreativa branscher.",
+    "Meny-, boknings- eller restauranglogik.",
+    "Påhittade certifieringar, uptime-siffror, kundantal eller säkerhetslöften.",
+    "För generiska tjänstebeskrivningar utan faktisk koppling till data, drift, hosting eller informationshantering."
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "capacity-overview",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "service-areas-summary",
+      "how-it-works",
+      "reviews",
+      "faq",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "Hero must state transport type, main service area if known and a primary contact CTA.",
+      "Service summary must mention concrete transport categories, flows or assignments rather than vague claims.",
+      "Capacity overview should present practical facts such as vehicle types, handling setup, volumes, operating model or pipeline context when supplied.",
+      "Trust proof must appear before the final CTA and only include real signals such as trafiktillstånd, försäkrat gods, punctuality, response speed or documented routines.",
+      "Service areas summary, reviews and FAQ may appear between capacity-overview and trust-proof when data exists.",
+      "Sections must avoid repeating the same promise in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "booking-steps",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-guidance",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company's transport role to the customer problems it solves.",
+      "Service list items must be concrete, for example distribution, linehaul, bulk, special transport, terminal-linked transport or pipeline-related transport where relevant.",
+      "Booking steps should explain how a customer starts a job, what information is needed and how follow-up happens.",
+      "Pricing guidance must stay honest and describe what affects price rather than inventing fixed prices when none exist."
+    ]
+  },
+  "service-areas": {
+    "requiredSections": [
+      "areas-intro",
+      "areas-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "logistics-notes",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Areas intro must explain how geography affects delivery, pickup or transport planning.",
+      "Areas list should use real places, corridors or regions and avoid implying coverage where the company does not operate.",
+      "Map may be shown when a real address, terminal or coverage visualization is available.",
+      "Logistics notes may describe lead times, access constraints or planning considerations by area when supplied."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "opening-hours",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and not be placeholders.",
+      "Contact form should ask for useful transport details such as pickup, destination, goods type, volume or desired time when relevant.",
+      "Opening hours must reflect real availability or traffic office hours if provided.",
+      "Final CTA must be consistent with the primary action: contact or request a quote."
+    ]
+  }
+}

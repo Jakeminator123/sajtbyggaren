@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad företaget erbjuder inom fiske eller vattenbruk och leda vidare till kontakt."
+    },
+    {
+      "id": "products-services",
+      "path": "/produkter-och-tjanster",
+      "required": true,
+      "purpose": "Beskriva fångst, odling, leveranser och andra erbjudanden på ett konkret sätt."
+    },
+    {
+      "id": "sustainability",
+      "path": "/hallbarhet-och-arbetssatt",
+      "required": true,
+      "purpose": "Förklara hur verksamheten arbetar med kvalitet, hantering, odling eller fiske och relevanta praktiska rutiner."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, team, verksamhetsmiljö och arbetssätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att ta kontakt för beställning, samarbete eller frågor via telefon, e-post, formulär och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "when": "when the business has a physical anläggning, hamnläge, gårdsbutik or pickup location that visitors need to find"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "when customers often ask recurring questions about availability, leverans, arter, odling, beställning or visits"
+    }
+  ]
+}

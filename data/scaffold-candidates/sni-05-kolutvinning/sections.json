@@ -1,0 +1,100 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "operations-summary",
+      "service-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "video-hero",
+      "story",
+      "gallery",
+      "reviews",
+      "faq",
+      "location-summary"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and a clear primary CTA for contact.",
+      "Operations summary should explain what the company does in practical terms before deeper trust content appears.",
+      "Service summary must stay concrete and avoid vague industrial buzzwords.",
+      "Trust proof must use real signals such as visible company details, references when available, and operational clarity.",
+      "Final CTA should invite contact for supply, contracting or partnership discussions without promising unavailable capacity."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "process-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-note",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company identity to actual offered services within extraction, handling or logistics.",
+      "Service list items must be specific, for example extraction, sorting, storage, transport coordination or contract operations, not generic labels.",
+      "If pricing information is absent, do not imply fixed prices; use a contact-oriented note instead.",
+      "Process summary should clarify how assignments or deliveries are handled from inquiry to execution."
+    ]
+  },
+  "operations": {
+    "requiredSections": [
+      "operations-intro",
+      "facility-overview",
+      "capacity-scope",
+      "logistics-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "gallery",
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Operations intro should describe the site's role, output or service scope in plain language.",
+      "Facility overview must focus on real assets, workflows or site characteristics and not invent technical specifications.",
+      "Capacity and scope content should stay approximate unless exact figures are provided in source data.",
+      "Logistics summary should explain access, transport modes or delivery handling when such information exists."
+    ]
+  },
+  "safety-environment": {
+    "requiredSections": [
+      "safety-intro",
+      "work-environment",
+      "environment-practices",
+      "compliance-note",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "This page must communicate safety and environmental work factually and avoid unsupported claims of compliance or certification.",
+      "Work environment content should describe routines, training, equipment or responsibility areas only when supported by source data.",
+      "Environment practices should mention mitigation, monitoring or handling processes in honest terms and avoid greenwashing.",
+      "Compliance note may mention permits, reporting or regulatory responsibility only when explicitly known."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "map",
+      "opening-hours"
+    ],
+    "optionalSections": [
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "Phone, email, address and contact form must all be present when available in source data and must not use placeholders.",
+      "Map should appear when location data exists.",
+      "Opening hours may be operational, office-based or inquiry hours, but should not be guessed.",
+      "Any CTA on this page should support direct business contact, not repeat large marketing claims."
+    ]
+  }
+}

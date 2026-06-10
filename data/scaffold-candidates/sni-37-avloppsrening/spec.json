@@ -1,0 +1,266 @@
+{
+  "id": "sni-37-avloppsrening",
+  "label": "Avloppsrening",
+  "description": "Scaffold för företag inom avloppsrening med fokus på tjänster, process/kapacitet, driftinformation och tydlig kontaktväg för kommuner, fastighetsägare och verksamhetskunder.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara renings- och driftstjänster tydligt",
+    "bygga förtroende genom konkret verksamhetsinformation",
+    "leda besökare till kontakt för frågor, uppdrag eller driftärenden"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, förklara erbjudandet inom avloppsrening och leda vidare till kontakt."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva renings-, drift-, underhålls- och provtagningstjänster med konkret innehåll."
+    },
+    {
+      "id": "anlaggningar-och-process",
+      "path": "/anlaggningar-och-process",
+      "required": true,
+      "purpose": "Förklara anläggningstyper, processer, kapacitet och hur arbetet bedrivs på ett sakligt sätt."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att nå verksamheten via formulär, telefon, e-post, adress och karta."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när företaget vill bygga extra förtroende med bakgrund, team och arbetssätt"
+    },
+    {
+      "id": "driftinformation",
+      "path": "/driftinformation",
+      "optional": true,
+      "when": "när verksamheten behöver publicera öppettider, besöksinformation eller praktiska uppgifter för kunder och samarbetspartners"
+    },
+    {
+      "id": "fragor-och-svar",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när återkommande frågor om process, mottagning, kontaktvägar eller arbetsgång behöver besvaras tydligt"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "process-summary",
+        "reviews",
+        "faq",
+        "gallery",
+        "opening-hours",
+        "map-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the business type and primary service scope in clear Swedish and include a primary contact CTA.",
+        "Service-summary should cover the main operational offerings such as drift, underhåll, provtagning or behandling only when supported by the dossier.",
+        "Trust-proof must use real company facts such as organisation details, visible contact paths, references or practical experience descriptions without inventing certifications.",
+        "Process-summary, reviews and gallery may appear between service-summary and trust-proof when data exists.",
+        "The page should avoid repeating the same claim across hero, service-summary and trust-proof."
+      ]
+    },
+    "tjanster": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-summary",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services-intro must connect the company identity to actual avloppsrening services, not generic business copy.",
+        "Service-list items must be concrete and may include drift och tillsyn, slamhantering, provtagning, underhåll or närliggande tjänster only if they are truly offered.",
+        "Pricing-summary must stay high level unless verified pricing data exists; do not imply fixed prices where pricing depends on scope.",
+        "A contact CTA should appear after the service list."
+      ]
+    },
+    "anlaggningar-och-process": {
+      "requiredSections": [
+        "process-intro",
+        "facility-types",
+        "workflow",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "gallery",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Process-intro should explain what kinds of anläggningar or reningssteg the company works with in accessible language.",
+        "Facility-types must describe actual plant types, capacities or environments only when the information is available.",
+        "Workflow should present a believable sequence such as bedömning, drift/åtgärd, uppföljning and rapportering when relevant.",
+        "Technical content should remain understandable to non-experts and avoid unsupported performance claims."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "map",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must all be present and must not be placeholders.",
+        "Contact-form should be short and suitable for service inquiries or general questions.",
+        "Map may be shown when a physical address is available.",
+        "Opening-hours should only be shown when verified."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Has a dedicated home route and contact route.",
+      "Routes reflect the industry's actual need to explain services and treatment/process context.",
+      "Every default route has a matching sectionsPerRoute entry.",
+      "Primary CTA is contact-focused and aligned with the operator brief.",
+      "All paths are Swedish, lowercase and slash-prefixed.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generic portfolio or blog routes with no clear relevance to avloppsrening.",
+      "Invented environmental results, certifications, permits or treatment capacities.",
+      "Restaurant, webshop or appointment-booking patterns that do not fit the industry.",
+      "Overpromising emergency response or service coverage unless verified."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "reviews-display",
+      "trust-guarantees",
+      "image-gallery"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik scaffold för avloppsrening och närliggande verksamhet inom rening, drift, underhåll, provtagning och anläggningsinformation. Sajten ska prioritera tydlig tjänstepresentation, process- och anläggningsförklaring, förtroendeskapande fakta samt enkel kontakt via formulär, telefon, e-post och karta.",
+    "semanticSignals": [
+      "avloppsrening",
+      "reningsverk",
+      "spillvatten",
+      "processvatten",
+      "drift-och-underhall",
+      "provtagning",
+      "slamhantering",
+      "anlaggning",
+      "reningsprocess",
+      "miljoteknik",
+      "vattenrening",
+      "service-och-tillsyn"
+    ],
+    "negativeSignals": [
+      "e-handel",
+      "restaurangmeny",
+      "bordsbokning",
+      "fotogalleri-som-huvudsyfte",
+      "produktkatalog-for-konsumentvaror",
+      "medlemsportal"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for businesses whose main offer is avloppsrening, drift av reningsanläggningar, behandling av avloppsvatten or closely related service work.",
+      "Prefer this scaffold when the site needs to explain technical services and process context, not just generic local business information.",
+      "Do not classify as plumbing, restaurant, ecommerce or pure consulting unless avloppsrening is the core business."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,259 @@
+{
+  "id": "sni-35-el-gas-och-angforsorjning-samt-luftk",
+  "label": "El-, gas- och ångförsörjning samt luftkonditionering",
+  "description": "Scaffold för verksamheter inom el-, gas- och ångförsörjning samt luftkonditionering, med fokus på tydlig tjänstepresentation, driftinformation, förtroendeskapande fakta och enkel kontakt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara energirelaterade tjänster och leveransområden",
+    "bygga förtroende med tydlig företagsinformation och referenser",
+    "göra det enkelt att kontakta verksamheten för frågor, offert eller service"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, vad den levererar eller installerar, och leda besökaren vidare till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets tjänster inom exempelvis installation, drift, service, underhåll eller energilösningar på ett konkret sätt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Skapa förtroende genom att visa verksamhetens bakgrund, arbetssätt, team och företagsuppgifter."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en enkel väg till kontakt med telefon, e-post, adress, öppettider och kontaktformulär."
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "när verksamheten vill beskriva geografiska områden, nät eller orter där leverans, service eller installation erbjuds"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när många återkommande frågor finns om drift, installation, servicebesök, fakturafrågor eller kontaktvägar"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "operations-overview",
+        "story",
+        "reviews",
+        "faq",
+        "service-area",
+        "contact-info"
+      ],
+      "sectionOrderRules": [
+        "Hero must state business type and primary offer, and should mention location or service area when known.",
+        "Service summary must describe actual offered services or supply-related areas, not vague claims.",
+        "Trust proof must appear before the final contact CTA.",
+        "Operations overview may appear between service-summary and trust-proof when the dossier contains useful operational facts such as support flow, response context or how service is delivered.",
+        "Sections must avoid repeating the same promise in multiple blocks."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "faq",
+        "service-area"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company's role to the listed services in plain language.",
+        "Service list items must be concrete, such as installation, maintenance, ventilation service, cooling systems, district heating connections or similar relevant offers when supported by content.",
+        "Pricing overview is optional and should only be shown when the company can present transparent example pricing or pricing principles without misleading certainty."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "operations-overview",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific to the business and its work, not generic quality claims.",
+        "Team should only render when real people, roles or responsibilities are available.",
+        "Trust proof may include visible organisation details, references and practical experience, but must not imply approvals or certifications that are not provided."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must be present when available and must not use placeholder content.",
+        "Opening hours should appear before the final CTA when the business has stated customer service or office hours.",
+        "Map should only be shown when a real visit address exists."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Passar företag inom energiförsörjning, värme, kyla, ventilation eller närliggande tekniska leverans- och serviceverksamheter.",
+      "Lyfter fram kontakt, tjänster, driftnära information och förtroendeskapande företagsfakta.",
+      "Fungerar för både lokal serviceverksamhet och mer tekniskt orienterade företag med tydligt tjänsteutbud.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Undvik e-handelsstruktur med produkter och kassa som huvudflöde.",
+      "Undvik restaurang-, meny- eller bokningsupplägg som primär struktur.",
+      "Undvik att anta myndighetsinformation, driftstatussidor eller kundportal om sådant inte uttryckligen efterfrågas.",
+      "Undvik att lova certifieringar, tillstånd eller responstider som inte finns i underlaget."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspecifik webbstruktur för el-, gas-, värme-, kyla- och luftkonditioneringsverksamheter. Sajten ska prioritera startsida, tjänster, om oss och kontakt, med möjlighet att lägga till geografiska områden och vanliga frågor. Tonen ska vara rak och förtroendeingivande, med fokus på tydlig tjänstebeskrivning, företagsuppgifter, referenser och enkel kontaktväg.",
+    "semanticSignals": [
+      "energilosningar",
+      "elforsorjning",
+      "gasforsorjning",
+      "angforsorjning",
+      "fjarrvarme",
+      "kyla",
+      "ventilation",
+      "luftkonditionering",
+      "installation",
+      "service",
+      "underhall",
+      "drift",
+      "teknisk-forvaltning",
+      "foretagskunder",
+      "fastigheter",
+      "industri",
+      "kontakt",
+      "omraden"
+    ],
+    "negativeSignals": [
+      "webbutik",
+      "produktkatalog-med-kassa",
+      "restaurangmeny",
+      "bordsbokning",
+      "fotogalleri-som-huvudsyfte",
+      "eventbiljetter",
+      "medlemsportal",
+      "stort-redaktionellt-magasin"
+    ],
+    "llmClassificationHints": [
+      "Välj denna scaffold när verksamheten säljer eller utför energirelaterade tjänster, teknisk försörjning, värme, kyla, ventilation eller närliggande servicearbete.",
+      "Passar särskilt när kontakt och tjänstebeskrivning är viktigare än katalog, bokning eller e-handel.",
+      "Om innehållet betonar installation, drift, underhåll, leveransområden, teknisk service eller kundkontakt är detta en stark match."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

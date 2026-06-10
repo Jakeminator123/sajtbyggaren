@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad företaget tillverkar eller bearbetar och leda till kontakt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa huvudsakliga stål- eller metallprodukter, materialslag eller produktkategorier på ett konkret sätt."
+    },
+    {
+      "id": "processes",
+      "path": "/processer",
+      "required": true,
+      "purpose": "Beskriva tillverknings- eller bearbetningsprocesser, kapacitet och hur uppdrag hanteras från förfrågan till leverans."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, anläggning, arbetssätt och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att komma i kontakt för offert, materialfrågor, leveransdialog eller besök."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "quality",
+      "path": "/kvalitet",
+      "when": "when the company has documented quality, testing, traceability or sustainability work worth describing"
+    },
+    {
+      "id": "industries",
+      "path": "/branscher",
+      "when": "when the company serves distinct customer segments such as bygg, verkstad, energi or industri and needs segment-specific messaging"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "sni-17-pappers-och-pappersvarutillverkning",
+  "embeddingText": "Branschscaffold för pappers- och pappersvarutillverkning. Passar tillverkare av papper, kartong eller pappersvaror som behöver presentera produktområden, produktion, hållbarhetsarbete, företagsfakta och kontaktvägar för offert eller affärsdialog. Prioriterar produktsidor, tillverkningsbeskrivning, hållbarhetsinformation och tydlig B2B-kontakt.",
+  "semanticSignals": [
+    "paper-manufacturing",
+    "paper-goods-manufacturer",
+    "kartong-och-papper",
+    "produktion",
+    "tillverkningsprocess",
+    "produktomraden",
+    "material",
+    "forpackning",
+    "hygienpapper",
+    "specialpapper",
+    "hallbarhet",
+    "atervinning",
+    "b2b",
+    "offertforfragan"
+  ],
+  "negativeSignals": [
+    "restaurant-menu",
+    "online-booking-focus",
+    "beauty-salon-treatments",
+    "photography-portfolio",
+    "event-ticketing",
+    "consumer-appointment-flow",
+    "table-reservation"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold when the company primarily manufactures paper, cardboard or paper-based products.",
+    "Prefer this scaffold when visitors need to understand products, production capability and sustainability work before contacting the business.",
+    "Do not choose this scaffold for generic service firms with no manufacturing or product structure."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

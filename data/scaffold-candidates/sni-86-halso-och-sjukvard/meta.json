@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-86-halso-och-sjukvard",
+  "sniCode": "86",
+  "wizardCategoryId": "healthcare",
+  "industryProfileId": "sni-86",
+  "referenceScaffoldId": "clinic-healthcare",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:32:14Z",
+  "outputPath": "data/scaffold-candidates/sni-86-halso-och-sjukvard",
+  "operatorBriefHash": "sha256:4a7b47fbcb2593eabecccb7a52f2f46187657ae7efeae228c8f0ded752ffe543",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

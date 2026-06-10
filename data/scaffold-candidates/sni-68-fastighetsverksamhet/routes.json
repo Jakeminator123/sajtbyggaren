@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, lyft aktuella objekt eller erbjudande och driv kontakt."
+    },
+    {
+      "id": "properties",
+      "path": "/objekt",
+      "required": true,
+      "purpose": "Visa bostäder, lokaler eller andra objekt med överblick och tydlig väg till kontakt eller intresseanmälan."
+    },
+    {
+      "id": "areas",
+      "path": "/omraden",
+      "required": true,
+      "purpose": "Visa lokal närvaro och områdeskännedom för att hjälpa besökare förstå marknaden och relevanta lägen."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att presentera företaget, mäklaren eller teamet och arbetssättet."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att ta kontakt för värdering, visning, köpfrågor eller allmän förfrågan."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "sell-with-us",
+      "path": "/salj-med-oss",
+      "when": "när webbplatsen främst ska konvertera bostadssäljare eller uppdragsgivare"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när många återkommande frågor finns om process, visning, budgivning eller kontaktvägar"
+    }
+  ]
+}

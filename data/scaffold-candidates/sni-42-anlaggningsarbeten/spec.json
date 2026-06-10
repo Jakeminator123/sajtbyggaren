@@ -1,0 +1,286 @@
+{
+  "id": "sni-42-anlaggningsarbeten",
+  "label": "Anläggningsarbeten",
+  "description": "Scaffold för företag inom anläggningsarbeten med fokus på kapacitet, tjänster, referensprojekt och snabb offertförfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera anläggningstjänster tydligt",
+    "visa referensprojekt och utförd kapacitet",
+    "bygga förtroende med maskinpark, erfarenhet och arbetssätt",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget inom anläggningsarbeten, visa kapacitet och leda till offertförfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets anläggningstjänster konkret så att besökaren snabbt förstår vad som utförs."
+    },
+    {
+      "id": "projects",
+      "path": "/referensprojekt",
+      "required": true,
+      "purpose": "Visa utförda projekt och arbetsresultat för att styrka erfarenhet och relevans."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att begära offert eller ta kontakt via telefon, e-post och formulär."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att beskriva företaget, arbetssättet och relevant erfarenhet."
+    },
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "optional": true,
+      "when": "när företaget vill visa flera geografiska områden eller kommuner för lokal synlighet"
+    },
+    {
+      "id": "machine-park",
+      "path": "/maskinpark",
+      "optional": true,
+      "when": "när maskiner, utrustning och kapacitet är en viktig del av erbjudandet"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när många kunder behöver vägledning om process, offert, tidsplan eller praktiska förutsättningar"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "capacity-trust",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "project-teaser",
+        "image-gallery",
+        "reviews",
+        "work-process",
+        "service-area",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Hero must state that the company works with anläggningsarbeten and include the primary CTA.",
+        "Service summary must highlight concrete service categories, not vague construction copy.",
+        "Capacity trust should present real trust signals such as machine park, relevant project experience, insurance or guarantees when supplied.",
+        "Project teaser and gallery may appear before capacity trust when strong case material exists.",
+        "The page should move from offer to proof to contact without repeating the same claims."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "work-process",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-expectations",
+        "faq",
+        "trust-guarantees"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company's identity to anläggningsarbeten specifically.",
+        "Service list items must be concrete examples such as markarbete, schakt, dränering, väg eller grundrelaterade arbeten when supported by input.",
+        "Work process should set realistic expectations around planning, execution and quote dialogue without promising fixed lead times unless provided."
+      ]
+    },
+    "projects": {
+      "requiredSections": [
+        "projects-intro",
+        "project-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Project entries must describe actual project types, locations if provided, and what was performed.",
+        "Before-and-after style visuals may be used when images exist and are relevant.",
+        "The route should emphasize relevance and execution, not exaggerated marketing language."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Phone and email must be present when available and must not use placeholders.",
+        "Contact form should be framed around quote requests or project questions.",
+        "If map or opening hours are shown, they must reflect supplied business data."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "experience-proof",
+        "team-or-ownership"
+      ],
+      "optionalSections": [
+        "machine-park-summary",
+        "service-area",
+        "trust-guarantees"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about the company, ownership or working style and avoid generic claims.",
+        "Experience proof should reference real kinds of assignments, sectors or client contexts only when provided.",
+        "Team-or-ownership may render as a small company presentation when no larger team exists."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Include strong offer/request-for-quote flow because primary CTA is 'Begär offert'.",
+      "Reflect industry trust through capacity, references and practical execution rather than lifestyle branding.",
+      "Include a dedicated references/projects route because completed work is central for this industry.",
+      "Contact route must support direct contact and form submission.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not structure the scaffold like a retail shop, restaurant or appointment-led business.",
+      "Do not rely on generic home-service copy that ignores machinery, scale or site execution.",
+      "Do not invent public-sector approvals, Trafikverket contracts, certifications or project volumes.",
+      "Do not make pricing promises or timeline guarantees that are not supported by source data."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "reviews-display",
+      "trust-guarantees",
+      "map-embed"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Anläggningsarbeten, markentreprenad, schakt, dränering, väg, grundarbete, maskinpark, referensprojekt, offert, bygg och hantverk, entreprenadföretag med fokus på kapacitet och utförda arbeten.",
+    "semanticSignals": [
+      "anlaggning",
+      "markarbete",
+      "markentreprenad",
+      "schakt",
+      "dranering",
+      "vagbygge",
+      "grundarbete",
+      "maskinpark",
+      "entreprenad",
+      "referensprojekt",
+      "offert",
+      "byggarbetsplats"
+    ],
+    "negativeSignals": [
+      "meny",
+      "bokning-av-bord",
+      "webbshop",
+      "produktkatalog",
+      "behandlingar",
+      "frisor",
+      "fotografpaket",
+      "restaurang",
+      "e-handel"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold for businesses performing anläggningsarbeten or markentreprenad under SNI 42.",
+      "Prioritize services, project references, machine capacity and quote conversion.",
+      "A projects/reference page is more important here than blog-like editorial content.",
+      "The tone should feel rak, pålitlig and operational rather than design-driven."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

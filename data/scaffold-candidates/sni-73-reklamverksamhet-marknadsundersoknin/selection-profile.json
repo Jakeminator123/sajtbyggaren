@@ -1,0 +1,35 @@
+{
+  "id": "sni-73-reklamverksamhet-marknadsundersoknin",
+  "embeddingText": "Reklambyrå, PR-byrå och marknadsundersökningsverksamhet behöver en scaffold som sätter kundcase, kampanjresultat, erbjudande, team och kontakt i centrum. Besökaren vill snabbt förstå vilken typ av uppdrag byrån gör, hur den arbetar och hur man tar nästa steg mot offert eller dialog.",
+  "semanticSignals": [
+    "byra",
+    "reklam",
+    "kampanj",
+    "varumarke",
+    "pr",
+    "kommunikation",
+    "marknadsundersokning",
+    "insikter",
+    "case",
+    "kunduppdrag",
+    "strategi",
+    "analys",
+    "team",
+    "offert"
+  ],
+  "negativeSignals": [
+    "e-handel",
+    "produktkatalog",
+    "bokningskalender-som-primar-funktion",
+    "restaurangmeny",
+    "behandlingslista",
+    "fastighetsobjekt"
+  ],
+  "llmClassificationHints": [
+    "Passar verksamheter som säljer kreativt, kommunikativt eller analytiskt byråarbete till företag eller organisationer.",
+    "Särskilt relevant när case, referenser och team är viktigare än prislistor.",
+    "Kan användas för reklam-, PR-, kommunikations- och insights-byråer inom SNI 73."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

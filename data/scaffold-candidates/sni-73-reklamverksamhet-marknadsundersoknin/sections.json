@@ -1,0 +1,91 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "selected-case-preview",
+      "services-overview",
+      "trust-signals",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "team-preview",
+      "process-steps",
+      "faq-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero ska snabbt förklara byråns inriktning och huvudsakliga värde, med en tydlig CTA för offert eller kontakt.",
+      "Utvalda case ska komma före längre generell byråtext eftersom branschen säljer på relevanta exempel och resultat.",
+      "Tjänsteöversikten ska vara konkret och läsbar, utan att ersätta behovet av case som huvudbevis.",
+      "Kontakt-CTA ska avsluta sidan med låg friktion till formulär eller direktkontakt."
+    ]
+  },
+  "case": {
+    "requiredSections": [
+      "case-grid",
+      "results-highlights",
+      "client-trust",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "service-tags",
+      "testimonials"
+    ],
+    "sectionOrderRules": [
+      "Case-grid ska dominera sidan och göra det enkelt att skanna olika typer av uppdrag.",
+      "Varje case ska beskriva uppdrag, insats och observerbart resultat eller utfall utan överdrift.",
+      "Förtroendesignaler ska stödja case-sidan, men inte ta över från själva arbetena."
+    ]
+  },
+  "tjanster": {
+    "requiredSections": [
+      "services-list",
+      "service-fit",
+      "process-summary",
+      "faq-accordion",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-approach",
+      "case-links"
+    ],
+    "sectionOrderRules": [
+      "Tjänsterna ska grupperas på ett sätt som känns naturligt för byråköpare, till exempel strategi, kreativ produktion, PR och insiktsarbete.",
+      "Service-fit ska hjälpa besökaren förstå när byrån är rätt val, inte bara lista leverabler.",
+      "FAQ ska ligga efter huvudförklaringen av erbjudandet och före avslutande CTA."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "about-story",
+      "agency-positioning",
+      "team-block",
+      "working-principles",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "awards-or-recognition",
+      "client-relationships"
+    ],
+    "sectionOrderRules": [
+      "Om oss ska förklara byråns perspektiv och erfarenhet utan generisk självbeskrivning.",
+      "Team-blocket ska visa människorna bakom leveransen och deras roller på ett tydligt sätt.",
+      "Arbetsprinciper ska vara konkreta och spegla hur byrån faktiskt samarbetar med kunder."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "faq-accordion"
+    ],
+    "optionalSections": [
+      "map",
+      "team-contact-points"
+    ],
+    "sectionOrderRules": [
+      "Kontaktuppgifter ska vara omedelbart synliga högst upp eller tidigt på sidan.",
+      "Kontaktformuläret ska vara enkelt att använda för offertförfrågan eller första möte.",
+      "FAQ på kontaktsidan ska endast besvara praktiska frågor som underlättar nästa steg."
+    ]
+  }
+}

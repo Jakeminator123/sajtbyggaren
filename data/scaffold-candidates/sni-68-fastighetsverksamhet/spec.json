@@ -1,0 +1,280 @@
+{
+  "id": "sni-68-fastighetsverksamhet",
+  "label": "Fastighetsverksamhet",
+  "description": "Branschspecifik scaffold för fastighetsverksamhet med fokus på objekt, områdeskännedom, förtroende och kontakt/uppdragsförfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa aktuella objekt",
+    "bygga förtroende för mäklare eller fastighetsaktör",
+    "driva kontakt från säljare, köpare och intressenter",
+    "lyfta lokal områdeskännedom"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, lyft aktuella objekt eller erbjudande och driv kontakt."
+    },
+    {
+      "id": "properties",
+      "path": "/objekt",
+      "required": true,
+      "purpose": "Visa bostäder, lokaler eller andra objekt med överblick och tydlig väg till kontakt eller intresseanmälan."
+    },
+    {
+      "id": "areas",
+      "path": "/omraden",
+      "required": true,
+      "purpose": "Visa lokal närvaro och områdeskännedom för att hjälpa besökare förstå marknaden och relevanta lägen."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att presentera företaget, mäklaren eller teamet och arbetssättet."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att ta kontakt för värdering, visning, köpfrågor eller allmän förfrågan."
+    },
+    {
+      "id": "sell-with-us",
+      "path": "/salj-med-oss",
+      "optional": true,
+      "when": "när webbplatsen främst ska konvertera bostadssäljare eller uppdragsgivare"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när många återkommande frågor finns om process, visning, budgivning eller kontaktvägar"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "property-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "area-summary",
+        "team-preview",
+        "reviews",
+        "image-gallery",
+        "faq",
+        "map",
+        "video-hero"
+      ],
+      "sectionOrderRules": [
+        "Hero must include business type, local market or area if known, and a primary CTA.",
+        "Property summary should appear early on the page and highlight actual categories or examples of available object types without implying inventory that is not provided.",
+        "Area summary may render after property-summary to reinforce local expertise.",
+        "Trust proof must appear before the final contact-cta.",
+        "Sections should not repeat the same trust claim or CTA wording."
+      ]
+    },
+    "properties": {
+      "requiredSections": [
+        "properties-intro",
+        "property-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "map",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Properties intro must explain what kinds of objects the business works with, such as bostäder, lokaler or tomter, when such data exists.",
+        "Property list items must be concrete and based on supplied content, not fabricated listings.",
+        "If map is shown, it should support orientation and area context rather than replace the property list."
+      ]
+    },
+    "areas": {
+      "requiredSections": [
+        "areas-intro",
+        "area-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "reviews",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Areas intro must connect the business to local market knowledge in a factual way.",
+        "Area list should describe relevant neighborhoods, municipalities or markets that are actually served or covered.",
+        "Do not repeat identical area descriptions across multiple entries."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "reviews",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "About story must be specific about local presence, experience or working style and avoid generic claims.",
+        "Team section should only show real people or roles provided in the dossier.",
+        "Trust proof should use available signals such as registration, reviews or market knowledge without inventing awards or totals."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include the real contact methods supplied in the dossier.",
+        "Contact form should support general enquiries such as värdering, visning or object questions when appropriate.",
+        "Map should appear after primary contact details when address data exists."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes industry-relevant routes for objects and areas, not a generic service-only structure.",
+      "Supports both lead generation and trust building for real estate activity.",
+      "Home and contact routes are included.",
+      "Every default route has matching sectionsPerRoute.",
+      "All route paths are Swedish, lowercase and start with '/'.",
+      "Recommended dossiers use only allowed ids.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "generic webshop structure unless the business actually sells products online",
+      "invented object listings, sold statistics, certifications or review counts",
+      "service language that ignores objects, areas and local market context",
+      "repeating the same CTA block on every section without new purpose",
+      "placeholder contact details or fictional office addresses"
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "team-roster",
+      "map-embed",
+      "reviews-display",
+      "trust-guarantees",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Fastighetsverksamhet scaffold för mäklare och andra fastighetsaktörer. Fokus på startsida, objekt, områden, om oss och kontakt. Sektioner stödjer objektöversikt, lokal marknadskännedom, team, förtroende och kontaktformulär.",
+    "semanticSignals": [
+      "fastighetsmaklare",
+      "objekt",
+      "bostader",
+      "lokaler",
+      "omraden",
+      "visning",
+      "vardering",
+      "saljare",
+      "kopare",
+      "lokal-marknad",
+      "team",
+      "kontaktformular"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "product-checkout",
+      "medical-treatment-pages",
+      "software-pricing-plans",
+      "industrial-machine-catalog"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily markets real estate brokerage, property listings, area expertise or related contact-driven property services.",
+      "Prefer this scaffold over a generic local-service scaffold when objects/listings and local areas are core to the visitor journey.",
+      "Do not classify as webshop just because many objects are displayed."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

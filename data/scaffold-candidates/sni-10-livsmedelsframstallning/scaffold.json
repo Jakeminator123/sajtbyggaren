@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-10-livsmedelsframstallning",
+  "version": "0.1.0",
+  "label": "Livsmedelsframställning",
+  "description": "Branschspecifik scaffold för livsmedelsframställning med fokus på produkter, tillverkning, återförsäljare och kontakt/offert.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa produktutbud",
+    "bygga förtroende kring råvaror och produktion",
+    "hjälpa besökare hitta återförsäljare",
+    "driva offertförfrågningar och kontakt",
+    "möjliggöra enkel produktbeställning eller köpförfrågan"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

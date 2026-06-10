@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-36-vattenforsorjning",
+  "version": "0.1.0",
+  "label": "Vattenförsörjning",
+  "description": "Scaffold för företag inom vattenförsörjning med fokus på vattenleverans, dricksvattenkvalitet, driftinformation, anslutning och tydliga kontaktvägar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara vattenförsörjningens tjänster och ansvar",
+    "ge tydlig information om vattenkvalitet och leverans",
+    "visa hur kunder kontaktar verksamheten vid frågor, felanmälan eller anslutning"
+  ],
+  "defaultPageCount": 6,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

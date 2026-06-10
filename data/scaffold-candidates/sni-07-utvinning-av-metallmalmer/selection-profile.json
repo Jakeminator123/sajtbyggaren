@@ -1,0 +1,35 @@
+{
+  "id": "sni-07-utvinning-av-metallmalmer",
+  "embeddingText": "Branschspecifik scaffold för utvinning av metallmalmer. Sajten bör ha startsida, verksamhet, säkerhet och miljö, anläggningar eller projekt samt kontakt. Innehållet ska vara sakligt, förtroendeingivande och tydligt kring drift, ansvar, platser och kontaktvägar. Passar gruvbolag, prospekteringsnära driftinformation, anrikning eller relaterad metallmalmsverksamhet där säkerhet, miljöhänsyn och operativ överblick är centralt.",
+  "semanticSignals": [
+    "gruva",
+    "gruvdrift",
+    "metallmalm",
+    "utvinning",
+    "anlaggning",
+    "projekt",
+    "bearbetning",
+    "sakerhet",
+    "miljo",
+    "driftomrade",
+    "prospektering",
+    "malmtyp"
+  ],
+  "negativeSignals": [
+    "restaurang",
+    "e-handel",
+    "frisor",
+    "fotograf",
+    "bokning-av-bord",
+    "produktkatalog-for-konsument",
+    "meny",
+    "webbshop"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the company primarily works with extraction or operational handling of metallic ore.",
+    "Prefer this scaffold when safety, environment, facilities and project/site presentation are more important than retail sales flows.",
+    "Do not classify general construction, transport or equipment rental here unless metallic ore extraction is the core business."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

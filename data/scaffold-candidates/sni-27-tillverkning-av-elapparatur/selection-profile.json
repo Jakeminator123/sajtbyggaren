@@ -1,0 +1,36 @@
+{
+  "id": "sni-27-tillverkning-av-elapparatur",
+  "embeddingText": "Tillverkning av elapparatur, industriell tillverkare, elektriska produkter, produktkategorier, tillverkningskapacitet, montering, testning, kvalitet, leverans, teknisk forfragan, offert, kontakt.",
+  "semanticSignals": [
+    "manufacturer",
+    "electrical-apparatus",
+    "products",
+    "product-categories",
+    "industrial-production",
+    "assembly",
+    "testing",
+    "quality-process",
+    "technical-inquiry",
+    "quote-request",
+    "b2b",
+    "factory",
+    "applications"
+  ],
+  "negativeSignals": [
+    "restaurant",
+    "menu",
+    "booking",
+    "portfolio-only",
+    "medical-clinic",
+    "real-estate-listings",
+    "event-schedule",
+    "ecommerce-cart-first"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the business manufactures electrical apparatus or closely related electrical product lines.",
+    "Prefer this over a generic service-business scaffold when products and production capability are central to the buying decision.",
+    "The site should support B2B trust-building through product overview, manufacturing information and direct inquiry contact."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

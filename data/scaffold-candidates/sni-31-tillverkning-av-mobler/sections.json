@@ -1,0 +1,78 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "produktoversikt",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "image-gallery",
+      "process-summary",
+      "testimonials",
+      "faq",
+      "reviews",
+      "material-highlights"
+    ],
+    "sectionOrderRules": [
+      "Hero måste tydligt ange att verksamheten tillverkar möbler och bör nämna material, måttanpassning eller typ av sortiment när underlag finns.",
+      "Produktöversikt ska vara konkret och beskriva faktiska möbeltyper eller kategorier, inte vaga formuleringar om lösningar.",
+      "Bildgalleri och process-sammanfattning kan placeras mellan produktöversikt och trust-proof när bild- eller processunderlag finns.",
+      "Trust-proof ska bygga på verkliga signaler som material, arbetssätt, referenskunder eller lång erfarenhet utan att hitta på certifieringar eller volymer.",
+      "Sista sektionen ska leda till kontakt eller offertförfrågan utan att upprepa samma påstående ordagrant flera gånger."
+    ]
+  },
+  "produkter": {
+    "requiredSections": [
+      "products-intro",
+      "product-category-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-guidance",
+      "image-gallery",
+      "faq",
+      "material-highlights"
+    ],
+    "sectionOrderRules": [
+      "Introduktionen ska koppla företagets tillverkning till sortimentet och gärna förklara om möblerna är standard, kundanpassade eller både och.",
+      "Produktkategorier ska namnges konkret, till exempel bord, stolar, förvaring eller specialsnickeri, när sådana uppgifter finns i underlaget.",
+      "Om prisinformation saknas får sidan beskriva hur offert går till men får inte ange påhittade prisnivåer.",
+      "Kontakt-CTA ska uppmuntra besökaren att höra av sig med mått, önskemål eller användningsområde."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "process-summary"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "image-gallery",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "Berättelsen ska vara specifik för verksamheten och beskriva bakgrund, verkstad, materialfilosofi eller arbetssätt utan generiska floskler.",
+      "Team visas när personuppgifter finns; annars kan renderaren tona ned sektionen men behålla fokus på människorna bakom företaget.",
+      "Process-sammanfattningen ska förklara hur en beställning eller tillverkning går från idé till färdig möbel på ett begripligt sätt."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Kontaktinfo måste innehålla de verkliga kontaktuppgifter som finns tillgängliga och får inte fyllas med platshållare.",
+      "Om besök i verkstad eller showroom är relevant bör adress och eventuella öppettider visas tydligt.",
+      "Kontakt-CTA ska fungera för offert, frågor om måttanpassning och allmän kontakt."
+    ]
+  }
+}

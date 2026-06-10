@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-41-byggande-av-bostadshus-och-andra-byg",
+  "version": "0.1.0",
+  "label": "Byggande av bostadshus och andra byggnader",
+  "description": "Scaffold för byggföretag inom SNI 41 med fokus på nybyggnation, tillbyggnad, totalentreprenad, referensprojekt och tydlig offertväg.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa byggtjänster tydligt",
+    "bygga förtroende med referensprojekt och trygg process",
+    "driva offertförfrågningar för byggprojekt",
+    "beskriva arbetsprocess och ansvar i större projekt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

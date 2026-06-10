@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en snabb överblick av byråns profil, viktigaste erbjudanden, utvalda case och en tydlig väg till offert eller kontakt."
+    },
+    {
+      "id": "case",
+      "path": "/case",
+      "required": true,
+      "purpose": "Samla kundcase, kampanjer och uppdrag med fokus på uppgift, genomförande och resultat så att besökaren kan bedöma byråns relevans."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva byråns tjänster inom exempelvis strategi, kampanj, PR, innehåll, analys och marknadsundersökning på ett sätt som hjälper kunden att förstå när byrån passar."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presentera byråns inriktning, arbetssätt och team för att skapa förtroende bakom leveransen."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en direkt väg till kontakt med kontaktuppgifter och formulär för offertförfrågan eller inledande dialog."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "process",
+      "path": "/process",
+      "when": "när byrån säljer in sin metodik som en viktig del av erbjudandet, till exempel från brief och insikt till produktion, lansering och uppföljning"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när återkommande frågor om upplägg, samarbeten, leveranser, PR-arbete eller undersökningsprocess behöver besvaras tydligt före kontakt"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "när byrån har flera specialister och vill ge teamet mer utrymme än vad som ryms på om oss-sidan"
+    }
+  ]
+}

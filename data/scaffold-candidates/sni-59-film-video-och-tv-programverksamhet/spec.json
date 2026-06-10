@@ -1,0 +1,274 @@
+{
+  "id": "sni-59-film-video-och-tv-programverksamhet",
+  "label": "Film-, video- och tv-programverksamhet, ljudinspelning och musikutgivning",
+  "description": "Branschspecifik scaffold för produktionsbolag, videoproducenter, tv-projekt, ljudstudior och musikutgivare där showreel, utvalda produktioner, tjänsteerbjudande och enkel offertförfrågan är centralt.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa showreel och utvalda produktioner",
+    "förklara tjänster och produktionsupplägg",
+    "bygga förtroende med produktionslista och samarbeten",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten med showreel, visuellt uttryck och tydlig väg till offertförfrågan."
+    },
+    {
+      "id": "portfolio",
+      "path": "/portfolio",
+      "required": true,
+      "purpose": "Visa utvalda produktioner, case eller verkprover så att besökaren snabbt förstår stil, nivå och inriktning."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Förklara vilka produktionstjänster som erbjuds och hur uppdrag kan genomföras."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan, boka ett första samtal eller kontakta verksamheten direkt."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när verksamheten har en tydlig berättelse, nyckelpersoner eller kreativ profil som stärker förtroendet"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "optional": true,
+      "when": "när fasta paket, startpriser eller tydliga prisexempel används i säljprocessen"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när återkommande frågor om process, leverans, rättigheter eller bokning behöver besvaras separat"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "showreel",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "image-gallery",
+        "selected-productions",
+        "about-summary",
+        "reviews",
+        "faq",
+        "partners-strip"
+      ],
+      "sectionOrderRules": [
+        "Hero måste tydligt säga vilken typ av produktion eller ljudarbete verksamheten gör och innehålla en primär CTA.",
+        "Showreel ska ligga högt på sidan och får inte ersättas av enbart stillbilder när videomaterial finns.",
+        "Service-summary ska vara konkret och spegla faktisk inriktning, till exempel reklamfilm, contentproduktion, postproduktion, ljudinspelning eller musikutgivning.",
+        "Trust-proof ska bygga på verkliga produktioner, samarbetspartners, omdömen eller arbetsprocess och placeras före sista contact-cta.",
+        "Sektioner får inte upprepa samma exempelproduktion eller samma säljbudskap flera gånger."
+      ]
+    },
+    "portfolio": {
+      "requiredSections": [
+        "portfolio-intro",
+        "case-grid",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "category-filter",
+        "image-gallery",
+        "project-list",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Portfolio-intro ska hjälpa besökaren att förstå urvalet, exempelvis format, genre eller typ av uppdrag.",
+        "Case-grid eller projektlista ska visa konkreta produktioner eller verkprover, inte generiska platshållare.",
+        "Om både video och stillbilder används ska videoexempel prioriteras högre när sådant material finns.",
+        "Varje case ska hållas kort och tydligt med fokus på vad som producerats, inte på överdrivna resultatpåståenden."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "process",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-summary",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services-intro ska koppla verksamhetens kreativa inriktning till faktiska tjänster.",
+        "Service-list ska vara konkret och kan omfatta exempelvis idé och koncept, inspelning, redigering, ljudläggning, postproduktion eller distribution beroende på underlag.",
+        "Process-sektionen ska beskriva arbetsflödet på ett begripligt sätt från brief till leverans utan att lova sådant som inte stöds av underlaget.",
+        "Om pricing-summary visas ska den vara transparent med att priser ofta beror på omfattning, format och produktionens behov."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "booking-info",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Kontaktvägar ska vara verkliga och innehålla de uppgifter som finns tillgängliga, utan platshållartext.",
+        "Contact-form ska göra det lätt att beskriva projektets typ, tidsplan och önskat leveransformat när sådana fält stöds.",
+        "Sidan ska tydligt uppmana till offertförfrågan eller första kontakt utan att skapa onödig friktion."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Hemsidan ska prioritera showreel eller rörligt material högt när sådant finns.",
+      "Scaffolden ska ha en tydlig portfolioyta för produktioner eller verkprover.",
+      "Kontaktväg och offert-CTA ska finnas tydligt både på startsidan och kontaktsidan.",
+      "Tjänstesidan ska förklara erbjudandet på ett konkret sätt anpassat till produktion och ljudarbete.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska lokala service-sektioner som service-area när de inte är centrala för denna bransch.",
+      "Överdrivna resultatpåståenden eller påhittade samarbeten.",
+      "Att ersätta portfolio med enbart allmän företagsbeskrivning.",
+      "Prissidor som antyder fasta priser för alla typer av produktion utan förklaring."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "video-hero",
+      "image-gallery",
+      "mailto-contact-form",
+      "booking-cta",
+      "pricing-table",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Film-, video-, tv-, ljud- och musikverksamhet behöver en visuell och showreel-först struktur där portfolio, tjänster, produktionsbevis och enkel offertförfrågan står i centrum. Sajten ska hjälpa besökare att snabbt bedöma stil, kapacitet och arbetsform genom rörligt material, case, produktionslista och kontaktvägar.",
+    "semanticSignals": [
+      "showreel",
+      "portfolio",
+      "case",
+      "produktioner",
+      "reklamfilm",
+      "videoproduktion",
+      "postproduktion",
+      "ljudinspelning",
+      "musikproduktion",
+      "musikutgivning",
+      "tv-program",
+      "redigering",
+      "inspelning",
+      "kreativt-team",
+      "samarbetspartners",
+      "offert"
+    ],
+    "negativeSignals": [
+      "jour",
+      "utryckning",
+      "meny",
+      "bordsbokning",
+      "webshop",
+      "produktkatalog",
+      "serviceomraden",
+      "fastighetsservice"
+    ],
+    "llmClassificationHints": [
+      "Denna scaffold passar verksamheter som säljer kreativa produktioner eller ljudarbete där tidigare verk är avgörande för konvertering.",
+      "Portfolio eller showreel är viktigare än traditionell lokal-seo-struktur.",
+      "Om verksamheten främst lever på uppdrag, projekt eller produktioner är denna scaffold mer relevant än en generell tjänsteföretagssajt."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

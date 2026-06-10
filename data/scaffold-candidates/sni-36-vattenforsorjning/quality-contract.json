@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Har alltid startsida '/' och kontaktsida.",
+    "Siduppsättningen speglar vattenförsörjningens faktiska behov med tjänster, vattenkvalitet och driftinformation.",
+    "Alla default-rutter har motsvarande sectionsPerRoute-post.",
+    "Kontaktvägar prioriteras tydligt med formulär, telefon, e-post och adress där uppgifter finns.",
+    "Innehållet håller saklig och förtroendeingivande ton utan påhittade certifieringar eller siffror.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generiska tjänstesidor utan vattenrelaterat innehåll.",
+    "Påståenden om vattenkvalitet, svarstider eller leveranssäkerhet utan underlag.",
+    "E-handelsflöden, menylogik eller bokningsupplägg som inte passar branschen.",
+    "Överdriven säljton på sidor som bör vara informativa och driftorienterade."
+  ]
+}

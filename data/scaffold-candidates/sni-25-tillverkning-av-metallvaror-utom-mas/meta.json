@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-25-tillverkning-av-metallvaror-utom-mas",
+  "sniCode": "25",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-25",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:26:20Z",
+  "outputPath": "data/scaffold-candidates/sni-25-tillverkning-av-metallvaror-utom-mas",
+  "operatorBriefHash": "sha256:7609f5205e46ddcc59c032be93489a19fbcc8e656fe52b50aecc696769d6fed5",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

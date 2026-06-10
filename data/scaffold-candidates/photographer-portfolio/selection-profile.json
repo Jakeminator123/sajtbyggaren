@@ -1,0 +1,27 @@
+{
+  "id": "photographer-portfolio",
+  "embeddingText": "Foto och video, fotograf, videograf, portfolio, case, bildgalleri, porträtt, bröllop, event, företagsfoto, produktfoto, reklamfoto, brand video, kontaktformulär, bokningsförfrågan, kreativ stil, arbetsprocess, recensioner.",
+  "semanticSignals": [
+    "portfolio-med-projekt-eller-case-ar-central",
+    "visuell-presentation-vager-tyngre-an-lang-tjanstetext",
+    "bildgalleri-ar-en-egen-viktig-yta",
+    "om-sida-bygger-fortroende-genom-person-och-arbetssatt",
+    "kontaktformular-anvands-for-forfragningar-och-bokning",
+    "kan-omfatta-bade-foto-och-video",
+    "specialisering-per-uppdragstyp-ar-vanligt"
+  ],
+  "negativeSignals": [
+    "standardiserad-hantverkarsajt-med-fokus-pa-serviceomraden",
+    "meny-oppettider-eller-restaurangstruktur",
+    "produktkatalog-eller-webbshop-som-primar-struktur",
+    "trovardighet-byggd-pa-pahittade-certifikat",
+    "overdriven-copy-utan-faktiska-arbetsprover"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten säljer foto-, film- eller visuella produktionstjänster och behöver visa arbeten.",
+    "Portfolio och bildgalleri ska väga tyngre än traditionell tjänstelista.",
+    "Passar enmansfotograf, studio, bröllopsfotograf, porträttfotograf, eventfotograf eller mindre videobyrå."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

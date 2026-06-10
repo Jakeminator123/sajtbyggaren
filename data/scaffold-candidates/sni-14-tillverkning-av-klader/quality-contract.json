@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Passar företag som tillverkar kläder på uppdrag, i egen produktion eller för B2B/B2C med behov av att visa produktområden och produktionsprocess.",
+    "Startsida och kontaktsida måste tydligt driva kontaktförfrågan.",
+    "Scaffolden måste ha en branschanpassad sida för produkter och en för produktion eller arbetsprocess.",
+    "Sektionerna ska stödja förtroende genom konkreta verksamhetsfakta, inte allmän reklamspråk.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Undvik restaurang-, portfolio- eller ren konsultstruktur utan produktsida och produktionssida.",
+    "Undvik påhittade certifieringar, hållbarhetslöften, volymer eller leveranstider.",
+    "Undvik att behandla verksamheten som modebutik eller e-handel när uppgiften gäller tillverkning.",
+    "Undvik generiska tjänstebeskrivningar som inte säger vilka plagg eller vilken produktion som erbjuds."
+  ]
+}

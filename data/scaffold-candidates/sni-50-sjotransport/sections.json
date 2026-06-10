@@ -1,0 +1,89 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "routes-overview",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "reviews",
+      "faq",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Hero must include sjötransport som verksamhet, relevant geografisk kontext if available and a primary CTA.",
+      "Service-summary must describe the main transport offering concretely, such as gods, passagerare, charter or specialisttransport, without vague claims.",
+      "Routes-overview should appear before the final CTA when destination or traffic-area information exists.",
+      "Trust-proof must stay specific to visible facts such as organisation details, references or practical experience, and must not invent certifications or fleet size.",
+      "Sections should avoid repeating the same promise in hero, trust-proof and final CTA."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "booking-cta"
+    ],
+    "optionalSections": [
+      "pricing",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services-intro must connect the company identity to actual sjötransport services.",
+      "Service-list items must be concrete and describe what is transported, for whom or under what operating setup.",
+      "If pricing is shown, it should present starting models, examples or quote-based information honestly rather than fabricated fixed rates."
+    ]
+  },
+  "routes-destinations": {
+    "requiredSections": [
+      "routes-intro",
+      "coverage-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Routes-intro must explain whether the company serves fixed routes, destination areas, charter assignments or tailored transport solutions.",
+      "Coverage-list must use real place names or real operating areas when supplied, not generic nationwide claims unless supported.",
+      "Map may complement but not replace readable text about destination coverage."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "operations-overview",
+      "team"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "gallery",
+      "reviews"
+    ],
+    "sectionOrderRules": [
+      "About-story must be specific about the company and avoid generic quality slogans.",
+      "Operations-overview should explain how assignments are handled, such as planning, loading, coordination or customer communication, when such data exists.",
+      "Team is optional to render if no identifiable people are supplied, but the section slot remains part of the route grammar."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and must not be placeholders.",
+      "Contact-form-cta should invite transport or booking enquiries in plain language.",
+      "Opening-hours should only be shown when actual staffed times are known."
+    ]
+  }
+}

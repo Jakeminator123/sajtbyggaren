@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, lyft produktnyttan direkt och led besökaren vidare till produkter eller kontakt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera produktkategorier, huvudegenskaper och användningsområden på ett tydligt och jämförbart sätt."
+    },
+    {
+      "id": "applications",
+      "path": "/anvandningsomraden",
+      "required": true,
+      "purpose": "Visa vilka branscher, miljöer eller användningsfall produkterna är framtagna för och varför de passar där."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att beskriva verksamheten, teamet och hur företaget arbetar med kvalitet, support och långsiktighet."
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "required": false,
+      "purpose": "Publicera produktnyheter, företagsuppdateringar och annan aktuell information som visar aktivitet och utveckling."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att komma i kontakt för offertförfrågan, produktfrågor, support eller samarbete."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "när företaget ofta behöver besvara återkommande frågor om produkter, leverans, kompatibilitet, support eller arbetssätt"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "när standardiserade produkter, paket eller startnivåer kan beskrivas öppet utan att vilseleda om projektspecifika priser"
+    }
+  ]
+}

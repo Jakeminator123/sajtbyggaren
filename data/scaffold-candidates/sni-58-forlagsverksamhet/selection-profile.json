@@ -1,0 +1,34 @@
+{
+  "id": "sni-58-forlagsverksamhet",
+  "embeddingText": "Förlagsverksamhet, utgivning, böcker, publikationer, titlar, författare, redaktionell profil, nyheter, nyhetsbrev, kontakt, press och recensioner. Scaffolden passar förlag och utgivare som behöver visa omslag i grid, lyfta aktuell utgivning, publicera nyheter och samla prenumeranter.",
+  "semanticSignals": [
+    "forlag",
+    "utgivning",
+    "titlar",
+    "bocker",
+    "publikationer",
+    "forfattare",
+    "redaktionell",
+    "nyhetsbrev",
+    "omslag",
+    "recensioner",
+    "press",
+    "lanseringar"
+  ],
+  "negativeSignals": [
+    "lokal-tjansteverksamhet",
+    "bokning-av-tider",
+    "restaurangmeny",
+    "webshop-kassa",
+    "fastighetsobjekt",
+    "salongsbehandlingar"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten handlar om att ge ut böcker, magasin eller annan publicistisk utgivning.",
+    "Titlar eller utgivningslista är starkare signal än generisk bloggstruktur.",
+    "Nyhetsbrev och redaktionellt innehåll är centralt, men webbplatsen ska också ha en tydlig yta för utgivning.",
+    "Författare och press kan vara tilläggsytor men är inte alltid obligatoriska."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

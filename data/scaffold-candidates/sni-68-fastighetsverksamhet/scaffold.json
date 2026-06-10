@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-68-fastighetsverksamhet",
+  "version": "0.1.0",
+  "label": "Fastighetsverksamhet",
+  "description": "Branschspecifik scaffold för fastighetsverksamhet med fokus på objekt, områdeskännedom, förtroende och kontakt/uppdragsförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa aktuella objekt",
+    "bygga förtroende för mäklare eller fastighetsaktör",
+    "driva kontakt från säljare, köpare och intressenter",
+    "lyfta lokal områdeskännedom"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

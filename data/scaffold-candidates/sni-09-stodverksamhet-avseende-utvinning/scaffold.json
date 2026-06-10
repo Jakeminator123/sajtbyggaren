@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-09-stodverksamhet-avseende-utvinning",
+  "version": "0.1.0",
+  "label": "Stödverksamhet avseende utvinning",
+  "description": "Scaffold för företag som levererar stödverksamhet till utvinning, såsom tekniska fälttjänster, driftstöd, underhåll, logistiknära insatser och entreprenadstöd. Strukturen prioriterar tydlig tjänstepresentation, kapacitet/förtroende och enkel kontaktväg för företagskunder.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera specialisttjänster för stödverksamhet inom utvinning",
+    "bygga förtroende med kapacitet, arbetssätt och referensnära signaler",
+    "driva kontaktförfrågningar från företagskunder och uppdragsgivare"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

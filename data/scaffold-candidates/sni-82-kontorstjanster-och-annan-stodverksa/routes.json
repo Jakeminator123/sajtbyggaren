@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera företaget, förklara vilket administrativt stöd som erbjuds och leda besökaren till kontakt."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Presentera tjänsteutbudet konkret, till exempel administration, kundservice, dokumenthantering eller annan företagsstödjande service."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Skapa förtroende genom att visa företagets arbetssätt, erfarenhet och vilka personer som utför uppdragen."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt via formulär, telefon, e-post och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "när verksamheten arbetar med fasta paket, timpris eller tydliga prisnivåer som underlättar offertförfrågan"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när kunder ofta behöver svar om arbetssätt, sekretess, uppstart eller upplägg innan de kontaktar företaget"
+    },
+    {
+      "id": "hitta-hit",
+      "path": "/hitta-hit",
+      "when": "när företaget tar emot besök på kontor och behöver karta, adress och öppettider som egen sida"
+    }
+  ]
+}

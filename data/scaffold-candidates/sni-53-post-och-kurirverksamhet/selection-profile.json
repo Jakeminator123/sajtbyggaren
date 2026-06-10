@@ -1,0 +1,34 @@
+{
+  "id": "sni-53-post-och-kurirverksamhet",
+  "embeddingText": "Post- och kurirverksamhet behöver en scaffold som lyfter fram konkreta bud-, leverans- och distributionstjänster, geografisk täckning, tydlig kontaktväg och förtroendeskapande företagsinformation. Besökaren ska snabbt förstå vad som kan skickas eller levereras, inom vilka områden, hur processen fungerar och hur man bokar eller frågar om ett uppdrag.",
+  "semanticSignals": [
+    "budfirma",
+    "kurir",
+    "expressbud",
+    "leverans",
+    "distribution",
+    "upphamtning",
+    "foretagsleveranser",
+    "paketleverans",
+    "lokala-transporter",
+    "serviceomraden",
+    "leveransomraden",
+    "kontakt-for-bokning",
+    "logistik-for-mindre-uppdrag"
+  ],
+  "negativeSignals": [
+    "restaurangmeny",
+    "produktkatalog-for-e-handel",
+    "fotografportfolio",
+    "bokningskalender-for-behandlingar",
+    "fastighetsmaklare",
+    "byggprojektgalleri"
+  ],
+  "llmClassificationHints": [
+    "Use this scaffold for companies whose main offer is courier, bud, postnära leveranser, distribution eller lokala transportuppdrag.",
+    "Prefer this scaffold when geography, leveransområden and contact-driven bookings are central to the business model.",
+    "Do not classify as generic local service if the company clearly needs explicit pages for services and coverage areas tied to deliveries."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

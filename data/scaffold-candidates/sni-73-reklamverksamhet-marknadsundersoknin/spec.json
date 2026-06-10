@@ -1,0 +1,289 @@
+{
+  "id": "sni-73-reklamverksamhet-marknadsundersoknin",
+  "label": "Reklamverksamhet, marknadsundersökningar och PR",
+  "description": "Branschspecifik scaffold för reklam-, marknadsundersöknings- och PR-byråer. Strukturen prioriterar case, erbjudande, arbetssätt, team och tydlig kontaktväg för offertförfrågningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa kundcase och kampanjresultat",
+    "förklara erbjudande inom reklam, PR och marknadsinsikter",
+    "bygga förtroende genom team, referenser och arbetssätt",
+    "driva offertförfrågningar och kontakt"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en snabb överblick av byråns profil, viktigaste erbjudanden, utvalda case och en tydlig väg till offert eller kontakt."
+    },
+    {
+      "id": "case",
+      "path": "/case",
+      "required": true,
+      "purpose": "Samla kundcase, kampanjer och uppdrag med fokus på uppgift, genomförande och resultat så att besökaren kan bedöma byråns relevans."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva byråns tjänster inom exempelvis strategi, kampanj, PR, innehåll, analys och marknadsundersökning på ett sätt som hjälper kunden att förstå när byrån passar."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presentera byråns inriktning, arbetssätt och team för att skapa förtroende bakom leveransen."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en direkt väg till kontakt med kontaktuppgifter och formulär för offertförfrågan eller inledande dialog."
+    },
+    {
+      "id": "process",
+      "path": "/process",
+      "optional": true,
+      "when": "när byrån säljer in sin metodik som en viktig del av erbjudandet, till exempel från brief och insikt till produktion, lansering och uppföljning"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när återkommande frågor om upplägg, samarbeten, leveranser, PR-arbete eller undersökningsprocess behöver besvaras tydligt före kontakt"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "optional": true,
+      "when": "när byrån har flera specialister och vill ge teamet mer utrymme än vad som ryms på om oss-sidan"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "selected-case-preview",
+        "services-overview",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team-preview",
+        "process-steps",
+        "faq-preview"
+      ],
+      "sectionOrderRules": [
+        "Hero ska snabbt förklara byråns inriktning och huvudsakliga värde, med en tydlig CTA för offert eller kontakt.",
+        "Utvalda case ska komma före längre generell byråtext eftersom branschen säljer på relevanta exempel och resultat.",
+        "Tjänsteöversikten ska vara konkret och läsbar, utan att ersätta behovet av case som huvudbevis.",
+        "Kontakt-CTA ska avsluta sidan med låg friktion till formulär eller direktkontakt."
+      ]
+    },
+    "case": {
+      "requiredSections": [
+        "case-grid",
+        "results-highlights",
+        "client-trust",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "service-tags",
+        "testimonials"
+      ],
+      "sectionOrderRules": [
+        "Case-grid ska dominera sidan och göra det enkelt att skanna olika typer av uppdrag.",
+        "Varje case ska beskriva uppdrag, insats och observerbart resultat eller utfall utan överdrift.",
+        "Förtroendesignaler ska stödja case-sidan, men inte ta över från själva arbetena."
+      ]
+    },
+    "tjanster": {
+      "requiredSections": [
+        "services-list",
+        "service-fit",
+        "process-summary",
+        "faq-accordion",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-approach",
+        "case-links"
+      ],
+      "sectionOrderRules": [
+        "Tjänsterna ska grupperas på ett sätt som känns naturligt för byråköpare, till exempel strategi, kreativ produktion, PR och insiktsarbete.",
+        "Service-fit ska hjälpa besökaren förstå när byrån är rätt val, inte bara lista leverabler.",
+        "FAQ ska ligga efter huvudförklaringen av erbjudandet och före avslutande CTA."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "about-story",
+        "agency-positioning",
+        "team-block",
+        "working-principles",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "awards-or-recognition",
+        "client-relationships"
+      ],
+      "sectionOrderRules": [
+        "Om oss ska förklara byråns perspektiv och erfarenhet utan generisk självbeskrivning.",
+        "Team-blocket ska visa människorna bakom leveransen och deras roller på ett tydligt sätt.",
+        "Arbetsprinciper ska vara konkreta och spegla hur byrån faktiskt samarbetar med kunder."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "faq-accordion"
+      ],
+      "optionalSections": [
+        "map",
+        "team-contact-points"
+      ],
+      "sectionOrderRules": [
+        "Kontaktuppgifter ska vara omedelbart synliga högst upp eller tidigt på sidan.",
+        "Kontaktformuläret ska vara enkelt att använda för offertförfrågan eller första möte.",
+        "FAQ på kontaktsidan ska endast besvara praktiska frågor som underlättar nästa steg."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Har alltid startsida och kontaktsida.",
+      "Lyfter case och resultat som centralt säljstöd för byråverksamhet.",
+      "Innehåller tydlig väg till offert eller kontakt.",
+      "Stödjer teampresentation och FAQ eftersom detta efterfrågas i kategorin.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Att ersätta case med enbart allmän tjänstelista.",
+      "Att använda butiksliknande strukturer som produkter, varukorg eller meny.",
+      "Att lova specifika resultat, certifieringar eller kundvolymer utan underlag.",
+      "Att överlasta startsidan med lång byråhistorik före relevanta exempel."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "team-roster",
+      "reviews-display",
+      "trust-guarantees",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Reklambyrå, PR-byrå och marknadsundersökningsverksamhet behöver en scaffold som sätter kundcase, kampanjresultat, erbjudande, team och kontakt i centrum. Besökaren vill snabbt förstå vilken typ av uppdrag byrån gör, hur den arbetar och hur man tar nästa steg mot offert eller dialog.",
+    "semanticSignals": [
+      "byra",
+      "reklam",
+      "kampanj",
+      "varumarke",
+      "pr",
+      "kommunikation",
+      "marknadsundersokning",
+      "insikter",
+      "case",
+      "kunduppdrag",
+      "strategi",
+      "analys",
+      "team",
+      "offert"
+    ],
+    "negativeSignals": [
+      "e-handel",
+      "produktkatalog",
+      "bokningskalender-som-primar-funktion",
+      "restaurangmeny",
+      "behandlingslista",
+      "fastighetsobjekt"
+    ],
+    "llmClassificationHints": [
+      "Passar verksamheter som säljer kreativt, kommunikativt eller analytiskt byråarbete till företag eller organisationer.",
+      "Särskilt relevant när case, referenser och team är viktigare än prislistor.",
+      "Kan användas för reklam-, PR-, kommunikations- och insights-byråer inom SNI 73."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#ffffff",
+          "foreground": "#0a0a0a",
+          "muted": "#5b5b5b",
+          "border": "#e0e0e0",
+          "primary": "#0a0a0a",
+          "primaryForeground": "#ffffff",
+          "accent": "#caa14a",
+          "accentForeground": "#0a0a0a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.125rem",
+          "md": "0.25rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "monochrome",
+          "modular",
+          "sharp",
+          "curated",
+          "confident",
+          "creative"
+        ]
+      }
+    }
+  ]
+}

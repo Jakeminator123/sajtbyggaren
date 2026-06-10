@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-70-verksamheter-som-utovas-av-huvudkont",
+  "sniCode": "70",
+  "wizardCategoryId": "consulting",
+  "industryProfileId": "sni-70",
+  "referenceScaffoldId": "agency-studio",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:30:28Z",
+  "outputPath": "data/scaffold-candidates/sni-70-verksamheter-som-utovas-av-huvudkont",
+  "operatorBriefHash": "sha256:542bad22684ce2d7f498c9e771f57a4921e890cf8f6cb9a1a5364176cfa2b990",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

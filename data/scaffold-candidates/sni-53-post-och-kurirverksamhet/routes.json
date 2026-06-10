@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara huvudtjänsterna och leda besökaren till kontakt eller förfrågan."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva företagets leverans-, bud- och distributionstjänster konkret så att kunder snabbt ser vad som erbjuds."
+    },
+    {
+      "id": "coverage",
+      "path": "/omraden",
+      "required": true,
+      "purpose": "Visa geografisk täckning, lokala leveransmöjligheter och hur uppdrag hanteras i olika områden."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att presentera företaget, arbetssättet och personerna bakom verksamheten."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för bokning, offert eller frågor via formulär, telefon och adress."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "när verksamheten arbetar med fasta priser, zonpriser eller tydliga pristabeller för vanliga leveranser"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när kunder ofta behöver svar om leveranstider, försändelsetyper, områden eller bokningsprocess"
+    }
+  ]
+}

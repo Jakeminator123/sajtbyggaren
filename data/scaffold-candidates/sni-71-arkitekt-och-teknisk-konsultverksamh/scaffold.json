@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-71-arkitekt-och-teknisk-konsultverksamh",
+  "version": "0.1.0",
+  "label": "Arkitekt- och teknisk konsultverksamhet; teknisk provning och analys",
+  "description": "Scaffold för arkitektkontor, tekniska konsulter och provnings-/analysverksamheter som säljer på tydliga tjänster, referensprojekt, behörigheter, process och enkel offertkontakt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänster och kompetens",
+    "visa referensprojekt och uppdragstyper",
+    "bygga förtroende med behörigheter, ansvar och arbetssätt",
+    "få in offertförfrågningar och kontaktförfrågningar"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

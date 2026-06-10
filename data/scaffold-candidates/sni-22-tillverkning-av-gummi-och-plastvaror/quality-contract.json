@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Have a clear B2B manufacturing angle rather than a generic local service layout.",
+    "Make products and manufacturing/process capability first-class content surfaces.",
+    "Provide a direct route to contact or quote request on home, product and manufacturing pages.",
+    "Use factual trust signals only, such as references, company details and documented working methods.",
+    "Support both standard product presentation and custom manufacturing inquiries.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic service-business wording that hides what is actually manufactured.",
+    "Invented certifications, machine park details, tolerances, production volumes or customer logos.",
+    "Restaurant, portfolio, booking or consumer retail route patterns that do not match industrial manufacturing.",
+    "Overpromising exact lead times or capabilities without source support."
+  ]
+}

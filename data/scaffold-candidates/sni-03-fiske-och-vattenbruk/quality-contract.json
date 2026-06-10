@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Include clear paths to contact on home, products-services, sustainability and contact pages.",
+    "Reflect both sides of the industry when relevant: fiske, vattenbruk, försäljning, leverans or related service work.",
+    "Use concrete operational language rather than abstract agency-style marketing copy.",
+    "Support trust-building through transparent process, references and visible company information.",
+    "Allow the site to work for both B2B and consumer-facing operators depending on dossier data.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Do not assume a restaurant, webshop or tourism business unless the source content supports it.",
+    "Do not invent species, catch areas, volumes, certifications or sustainability claims.",
+    "Do not force pricing, booking or opening hours if the business does not publish them.",
+    "Do not overuse generic environmental claims without evidence.",
+    "Do not duplicate the same trust points on every page."
+  ]
+}

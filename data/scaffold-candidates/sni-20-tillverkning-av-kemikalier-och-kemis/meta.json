@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-20-tillverkning-av-kemikalier-och-kemis",
+  "sniCode": "20",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-20",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:25:44Z",
+  "outputPath": "data/scaffold-candidates/sni-20-tillverkning-av-kemikalier-och-kemis",
+  "operatorBriefHash": "sha256:047515d94872c8f261ffec92a493d7b4b9622d775d342ebe727ebec4e3ff5ba9",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

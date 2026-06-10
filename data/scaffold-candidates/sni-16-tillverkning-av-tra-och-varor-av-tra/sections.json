@@ -1,0 +1,105 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "process-summary",
+      "image-gallery",
+      "reviews",
+      "materials-summary",
+      "faq",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company manufactures and include a primary contact CTA.",
+      "Product summary should show concrete product types or manufacturing focus, not vague promises.",
+      "Trust proof must rely on real references, lead times, material information or customer reviews when available.",
+      "Avoid repeating the same examples in both product summary and gallery without adding new information."
+    ]
+  },
+  "products": {
+    "requiredSections": [
+      "products-intro",
+      "product-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-overview",
+      "image-gallery",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Products intro must explain what kinds of goods, components or custom products are offered.",
+      "Product list items must be specific and grouped in a way that fits the business, such as panel, packaging, interior details, components or custom production.",
+      "If pricing information is shown, it must be indicative and clearly framed when variation depends on material, dimensions or volume."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "process-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the production capability to customer needs such as custom dimensions, series production or finishing.",
+      "Service list should describe actual manufacturing or support services, not generic business statements.",
+      "Process summary should clarify how an order typically moves from inquiry to delivery."
+    ]
+  },
+  "references": {
+    "requiredSections": [
+      "references-intro",
+      "reference-gallery",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "reviews",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "References intro must explain what the examples represent, such as completed jobs, product examples or delivered series.",
+      "Reference gallery should use real project or product examples and may include short context like material, use case or scope.",
+      "Do not present speculative outcomes or unsupported claims about customer results."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "materials-summary",
+      "process-summary"
+    ],
+    "sectionOrderRules": [
+      "About story must be specific about the companys background, production focus or way of working.",
+      "Team should only be shown when actual people or roles are available.",
+      "Trust proof may include sourcing information, years of experience, production know-how or references, but must stay factual."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include the real contact channels that are available and should not use placeholder content.",
+      "Contact CTA should support quote requests, drawings, measurements or other useful inquiry details when relevant.",
+      "Map and opening hours are optional and should only appear when the business has public-facing visit information."
+    ]
+  }
+}

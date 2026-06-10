@@ -1,0 +1,111 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "drift-status-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "water-quality-summary",
+      "story",
+      "reviews",
+      "faq",
+      "opening-hours",
+      "map-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the verksamhet type and include a clear primary CTA.",
+      "Service summary must describe concrete vattenförsörjningsrelaterade tjänster, not generic business copy.",
+      "Drift status summary should appear before the final contact CTA when current or recurring driftinformation is available.",
+      "Trust proof must use real identifiers such as organisationsnummer, references or operational facts actually provided.",
+      "Sections must not promise uninterrupted supply or response times unless such information is explicitly supplied."
+    ]
+  },
+  "tjanster": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "faq",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-summary",
+      "process-overview",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the organisation's role to the offered services.",
+      "Service list items must be concrete, such as anslutning, vattenmätare, felanmälan or kundservicefrågor when supported by source data.",
+      "FAQ should answer practical customer questions and avoid legal or technical claims not present in the dossier."
+    ]
+  },
+  "vattenkvalitet": {
+    "requiredSections": [
+      "quality-intro",
+      "quality-facts",
+      "faq",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "process-overview",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Quality intro must stay factual and easy to understand.",
+      "Quality facts must only include supplied information about provtagning, kontroller or allmän vägledning.",
+      "This page must not invent test results, compliance claims or health guarantees."
+    ]
+  },
+  "driftinformation": {
+    "requiredSections": [
+      "operations-intro",
+      "status-list",
+      "contact-info"
+    ],
+    "optionalSections": [
+      "faq",
+      "map-preview",
+      "contact-cta"
+    ],
+    "sectionOrderRules": [
+      "Operations intro must explain what kinds of driftmeddelanden or underhållsinformation visitors can expect here.",
+      "Status list entries must be clearly time-bound or described as general information if no live data exists.",
+      "Contact info for urgent questions should appear on the page without requiring visitors to search elsewhere."
+    ]
+  },
+  "om-oss": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery",
+      "map-preview",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the verksamhet and its local role in specific terms.",
+      "Team should only be shown when real people or functions are available.",
+      "Trust proof must remain factual and must not imply certifications that are not provided."
+    ]
+  },
+  "kontakt": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "opening-hours"
+    ],
+    "optionalSections": [
+      "map-embed-section",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and must not be placeholders.",
+      "Contact form should be easy to use and suitable for general frågor or ärenden.",
+      "Opening hours should be shown when available; if unavailable, the page should not invent them."
+    ]
+  }
+}

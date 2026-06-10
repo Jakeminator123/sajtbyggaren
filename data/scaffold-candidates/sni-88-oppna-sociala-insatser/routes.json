@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara uppdraget och leda besökaren vidare till registrering, kontakt eller engagemang."
+    },
+    {
+      "id": "insatser",
+      "path": "/insatser",
+      "required": true,
+      "purpose": "Beskriva de öppna sociala insatserna konkret, vilka de riktar sig till och hur man tar del av stödet."
+    },
+    {
+      "id": "engagera-dig",
+      "path": "/engagera-dig",
+      "required": true,
+      "purpose": "Visa hur besökare kan engagera sig genom deltagande, volontärskap, medlemskap, gåvor eller andra insatser."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Bygga förtroende genom att beskriva organisationens bakgrund, arbetssätt, team och transparens."
+    },
+    {
+      "id": "nyheter",
+      "path": "/nyheter",
+      "required": false,
+      "purpose": "Publicera uppdateringar om verksamheten, aktiviteter, berättelser från arbetet och viktiga datum."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att komma i kontakt med verksamheten för frågor, samverkan eller stödbehov."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "nyhetsbrev",
+      "path": "/nyhetsbrev",
+      "when": "when the organisation actively works with recurring updates and wants a dedicated subscription page"
+    },
+    {
+      "id": "fragor-och-svar",
+      "path": "/fragor-och-svar",
+      "when": "when many visitors need practical clarification before registering, participating or contacting the organisation"
+    }
+  ]
+}

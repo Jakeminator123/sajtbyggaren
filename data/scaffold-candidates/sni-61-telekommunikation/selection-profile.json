@@ -1,0 +1,33 @@
+{
+  "id": "sni-61-telekommunikation",
+  "embeddingText": "Telekommunikation, mobiltelefoni, bredband, företagsväxel, kommunikationslösningar, abonnemang, priser, support, säkerhet, drift, onboarding, registrera dig, FAQ, nyheter, kontakt.",
+  "semanticSignals": [
+    "telekom",
+    "kommunikationslosningar",
+    "mobilabonnemang",
+    "bredband",
+    "foretagsvaxel",
+    "uppkoppling",
+    "driftsakerhet",
+    "support",
+    "sakerhet",
+    "gdpr",
+    "prissida",
+    "faq",
+    "nyhetsbrev"
+  ],
+  "negativeSignals": [
+    "lokal-hantverkstjanst",
+    "restaurangmeny",
+    "bokningskalender",
+    "e-handel-med-produktkatalog",
+    "medicinsk-klinik"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the company sells telecom, connectivity, telephony or communication services.",
+    "Strong fit when pricing, plans, uptime, security, support and product benefit are central to the purchase journey.",
+    "Prefer this over a generic SaaS scaffold when the offer is clearly telecom or operator-like rather than broad software only."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

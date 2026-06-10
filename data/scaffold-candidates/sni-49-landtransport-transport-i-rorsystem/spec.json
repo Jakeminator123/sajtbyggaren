@@ -1,0 +1,266 @@
+{
+  "id": "sni-49-landtransport-transport-i-rorsystem",
+  "label": "Landtransport; transport i rörsystem",
+  "description": "Scaffold för transportföretag inom landtransport och transport i rörsystem, med fokus på tjänster, geografisk täckning, kapacitet, förtroendeskapande uppgifter och tydlig väg till kontakt eller offert.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara transporttjänster och upplägg",
+    "visa geografiska områden och kapacitet",
+    "bygga förtroende med tillstånd, försäkring och punktlighet",
+    "driva kontakt och offertförfrågan"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera transportföretaget, sammanfatta tjänster och områden samt leda besökaren till kontakt eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriva transporttjänster, upplägg, godstyper eller flöden på ett konkret sätt och hjälpa kunden att avgöra om företaget passar behovet."
+    },
+    {
+      "id": "service-areas",
+      "path": "/omraden",
+      "required": true,
+      "purpose": "Visa vilka orter, stråk, terminaler eller geografiska områden som företaget trafikerar eller betjänar."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för bokning, offert eller trafikfrågor via telefon, e-post, formulär och adressuppgifter."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "when the business has a meaningful company story, team, fleet culture or operating experience that strengthens trust"
+    },
+    {
+      "id": "quote-request",
+      "path": "/begar-offert",
+      "optional": true,
+      "when": "when the business wants a dedicated page for transportförfrågningar with route, volume or timing details"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "capacity-overview",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "service-areas-summary",
+        "how-it-works",
+        "reviews",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Hero must state transport type, main service area if known and a primary contact CTA.",
+        "Service summary must mention concrete transport categories, flows or assignments rather than vague claims.",
+        "Capacity overview should present practical facts such as vehicle types, handling setup, volumes, operating model or pipeline context when supplied.",
+        "Trust proof must appear before the final CTA and only include real signals such as trafiktillstånd, försäkrat gods, punctuality, response speed or documented routines.",
+        "Service areas summary, reviews and FAQ may appear between capacity-overview and trust-proof when data exists.",
+        "Sections must avoid repeating the same promise in multiple blocks."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "booking-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-guidance",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company's transport role to the customer problems it solves.",
+        "Service list items must be concrete, for example distribution, linehaul, bulk, special transport, terminal-linked transport or pipeline-related transport where relevant.",
+        "Booking steps should explain how a customer starts a job, what information is needed and how follow-up happens.",
+        "Pricing guidance must stay honest and describe what affects price rather than inventing fixed prices when none exist."
+      ]
+    },
+    "service-areas": {
+      "requiredSections": [
+        "areas-intro",
+        "areas-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map",
+        "logistics-notes",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Areas intro must explain how geography affects delivery, pickup or transport planning.",
+        "Areas list should use real places, corridors or regions and avoid implying coverage where the company does not operate.",
+        "Map may be shown when a real address, terminal or coverage visualization is available.",
+        "Logistics notes may describe lead times, access constraints or planning considerations by area when supplied."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "opening-hours",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Phone, email and address must all be present and not be placeholders.",
+        "Contact form should ask for useful transport details such as pickup, destination, goods type, volume or desired time when relevant.",
+        "Opening hours must reflect real availability or traffic office hours if provided.",
+        "Final CTA must be consistent with the primary action: contact or request a quote."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Include a clear route for services and a clear route for geographic coverage because both are central decision factors in transport buying.",
+      "Show trust signals grounded in real operations, such as permits, insured goods, punctuality, routines, experience or reachable dispatch contact.",
+      "Make contact pathways prominent on every primary route.",
+      "Keep service descriptions specific to transport and logistics work, not generic local-service copy.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not structure the site like a restaurant, portfolio or webshop scaffold.",
+      "Do not invent fleet size, delivery volumes, certifications, response times or customer counts.",
+      "Do not promise nationwide or regional coverage unless the dossier supports it.",
+      "Do not use vague filler such as 'high quality service' without operational substance."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "opening-hours",
+      "map-embed",
+      "reviews-display",
+      "trust-guarantees",
+      "image-gallery",
+      "booking-cta"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Transportföretag inom landtransport och transport i rörsystem. Webbplatsen behöver startsida, tjänster, områden och kontakt. Innehållet ska lyfta transportupplägg, kapacitet, geografisk täckning, tillstånd, försäkrat gods, punktlighet och enkel kontakt eller offertväg. Optional routes kan vara om oss och begär offert.",
+    "semanticSignals": [
+      "transport",
+      "landtransport",
+      "rorsystem",
+      "logistik",
+      "distribution",
+      "gods",
+      "leverans",
+      "hamtning",
+      "trafikledning",
+      "terminal",
+      "omrade",
+      "rutt",
+      "offert",
+      "bokning",
+      "trafiktillstand",
+      "forsakrat-gods"
+    ],
+    "negativeSignals": [
+      "meny",
+      "bokbord",
+      "produktkatalog",
+      "webbshop",
+      "portfolio",
+      "brollopsfoto",
+      "behandlingar",
+      "recept"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold for businesses whose core offer is moving goods or materials by land or via pipeline systems.",
+      "Prefer this scaffold when geography, routes, coverage, capacity and booking/contact details are more important than showcasing projects.",
+      "Service-area content is usually essential for this industry, not merely optional local SEO filler."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

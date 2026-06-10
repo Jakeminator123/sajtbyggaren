@@ -1,0 +1,26 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Har alltid startsida och kontaktsida.",
+    "Sidstrukturen speglar lufttransportens behov genom tjänstesida och en separat sida för trafik, områden eller operativ täckning.",
+    "Alla standardrutter har motsvarande sectionsPerRoute.",
+    "Kontaktväg är tydlig på flera sidor.",
+    "Förtroendesignaler hålls konkreta och verifierbara.",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generiska lokalservice-sidor som inte säger något om flygningar, transporttyp eller operativ täckning.",
+    "Påståenden om certifieringar, tillstånd, flottstorlek eller säkerhetsnivåer utan underlag.",
+    "Falska prislistor för uppdrag som normalt kräver offert.",
+    "Överdrivna löften om tillgänglighet eller geografisk räckvidd."
+  ]
+}

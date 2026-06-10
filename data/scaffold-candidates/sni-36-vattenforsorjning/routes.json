@@ -1,0 +1,52 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera verksamheten, vad vattenförsörjningen omfattar och leda besökaren vidare till kontakt eller relevant information."
+    },
+    {
+      "id": "tjanster",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Förklara vilka tjänster som erbjuds, såsom vattenleverans, anslutning, mätarfrågor och praktisk kundinformation."
+    },
+    {
+      "id": "vattenkvalitet",
+      "path": "/vattenkvalitet",
+      "required": true,
+      "purpose": "Ge saklig information om dricksvattenkvalitet, provtagning och vad kunder kan behöva känna till."
+    },
+    {
+      "id": "driftinformation",
+      "path": "/driftinformation",
+      "required": true,
+      "purpose": "Samla information om planerade avbrott, störningar, underhåll och hur kunder får aktuell status."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom att beskriva verksamheten, uppdraget, medarbetare och lokal förankring."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta verksamheten via formulär, telefon, e-post, adress och öppettider."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "anslutning",
+      "path": "/anslutning",
+      "when": "när verksamheten vill ge mer detaljerad information om nyanslutning, process, handlingar eller kontaktvägar för fastighetsägare"
+    },
+    {
+      "id": "hitta-hit",
+      "path": "/hitta-hit",
+      "when": "när fysisk besöksadress eller kundmottagning behöver en egen sida med karta och vägbeskrivning"
+    }
+  ]
+}

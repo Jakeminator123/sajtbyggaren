@@ -1,0 +1,58 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "mission-summary",
+      "service-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "trust-proof",
+      "opening-hours",
+      "faq",
+      "map",
+      "team-preview"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the organisation or mission clearly and include a primary contact CTA.",
+      "Mission summary should explain what the organisation, embassy or office does in concrete terms without diplomatic jargon when simpler language works.",
+      "Service summary must focus on visitor-relevant matters such as consular, administrative or informational support.",
+      "Trust proof, when present, should rely on factual identifiers such as organisation name, address or visible organisation details and must not invent accreditations.",
+      "Opening hours or map may appear before the final CTA when practical visit information is important."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "opening-hours"
+    ],
+    "sectionOrderRules": [
+      "Services intro must explain who the services are for and what kinds of matters can be handled.",
+      "Service list items must be specific, for example passport matters, document information, visitor enquiries or representation-related contact, if those are actually offered.",
+      "If some matters require prior contact or cannot be handled digitally, that limitation should be stated plainly.",
+      "Final CTA should direct visitors to the correct contact path rather than promise instant handling."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real available channels such as email, phone, address or office location when provided.",
+      "Contact form should be framed for enquiries and general contact, not sensitive submissions unless the operator explicitly supports that.",
+      "Opening hours and visiting information should be shown near contact details when available.",
+      "Map should only be shown when a public visit address is appropriate to publish."
+    ]
+  }
+}

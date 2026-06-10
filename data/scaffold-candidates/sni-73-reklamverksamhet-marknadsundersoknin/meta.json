@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-73-reklamverksamhet-marknadsundersoknin",
+  "sniCode": "73",
+  "wizardCategoryId": "consulting",
+  "industryProfileId": "sni-73",
+  "referenceScaffoldId": "agency-studio",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:30:50Z",
+  "outputPath": "data/scaffold-candidates/sni-73-reklamverksamhet-marknadsundersoknin",
+  "operatorBriefHash": "sha256:33a99898b89688307f5cacb5652cccad9ae209e10dcb9020752e4abc574551c6",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

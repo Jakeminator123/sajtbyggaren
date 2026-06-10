@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-95-reparation-och-underhall-av-datorer",
+  "version": "0.1.0",
+  "label": "Reparation och underhåll av datorer, hushållsartiklar och varor för personligt bruk samt motorfordon och motorcyklar",
+  "description": "Branschspecifik scaffold för verksamheter inom SNI 95 med fokus på felsökning, reparation, service, prisinformation och kontakt. Passar verkstäder och serviceföretag som lagar datorer, telefoner, hushållsapparater, cyklar, skor, klockor eller andra personliga brukssaker, samt aktörer som vill lyfta snabb återkoppling, garanti och tydliga kontaktvägar.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Förklara vilka typer av reparationer och servicearbeten företaget utför",
+    "Bygga förtroende kring felsökning, garanti, reservdelar och arbetsprocess",
+    "Göra det enkelt att kontakta företaget för bokning, offert eller inlämning",
+    "Visa prisexempel eller startpriser för vanliga reparationer",
+    "Besvara vanliga frågor om felsökningstid, inlämning, garanti och reservdelar"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

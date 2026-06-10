@@ -1,0 +1,310 @@
+{
+  "id": "sni-63-datainfrastruktur-databehandling-hos",
+  "label": "Datainfrastruktur, databehandling, hosting och annan informationsverksamhet",
+  "description": "Scaffold för företag inom hosting, databehandling, molnplattformar, datainfrastruktur och informationsverksamhet där produktnytta ska förklaras snabbt och teknisk trovärdighet byggas med säkerhet, drift, support och tydliga användningsfall.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänstens nytta snabbt",
+    "bygga teknisk trovärdighet",
+    "presentera plattform eller tjänsteutbud",
+    "driva registrering eller demo-förfrågan",
+    "svara på frågor om säkerhet, drift och support"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera erbjudandet, visa produktnytta direkt och driva registrering eller kontakt."
+    },
+    {
+      "id": "platform",
+      "path": "/plattform",
+      "required": true,
+      "purpose": "Förklara plattformen eller infrastrukturen, dess huvudfunktioner och typiska användningsfall."
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "required": true,
+      "purpose": "Visa paket, prismodell och vad som ingår så att besökaren kan välja nästa steg."
+    },
+    {
+      "id": "security",
+      "path": "/sakerhet",
+      "required": true,
+      "purpose": "Beskriva säkerhet, dataskydd, drift och support på ett tydligt och trovärdigt sätt."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att kontakta företaget för demo, offert, supportfrågor eller partnerskap."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när team, bakgrund eller bolagets arbetssätt behöver stärka förtroendet"
+    },
+    {
+      "id": "news",
+      "path": "/nyheter",
+      "optional": true,
+      "when": "när företaget publicerar produktnyheter, driftinformation eller insikter regelbundet"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "optional": true,
+      "when": "när köpprocessen kräver svar på återkommande frågor om teknik, avtal, onboarding eller support"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-value",
+        "feature-summary",
+        "trust-proof",
+        "primary-cta"
+      ],
+      "optionalSections": [
+        "use-cases",
+        "pricing-teaser",
+        "faq",
+        "testimonials",
+        "uptime-support",
+        "newsletter-signup"
+      ],
+      "sectionOrderRules": [
+        "Hero måste tydligt säga vad tjänsten är till för och innehålla en primär CTA för registrering eller kontakt.",
+        "Product-value ska komma före djupare tekniska detaljer.",
+        "Feature-summary ska vara konkret och beskriva faktiska funktioner eller kapabiliteter, inte bara allmänna fördelar.",
+        "Trust-proof ska fokusera på verifierbara signaler som säkerhet, support, referenskunder eller tydliga arbetssätt.",
+        "Samma påstående om nytta eller säkerhet får inte upprepas i flera sektioner med nästan identisk formulering."
+      ]
+    },
+    "platform": {
+      "requiredSections": [
+        "platform-intro",
+        "feature-detail",
+        "use-cases",
+        "integration-or-workflow",
+        "primary-cta"
+      ],
+      "optionalSections": [
+        "architecture-overview",
+        "data-handling",
+        "faq",
+        "demo-invite"
+      ],
+      "sectionOrderRules": [
+        "Platform-intro måste koppla tjänstens funktioner till kundens problem eller arbetsflöde.",
+        "Feature-detail ska beskriva centrala funktioner i tydliga block och undvika intern jargong utan förklaring.",
+        "Use-cases ska vara realistiska och branschnära, inte påhittade kundresultat.",
+        "Integration-or-workflow ska förklara hur tjänsten införs, används eller kopplas in i befintlig miljö.",
+        "CTA ska komma efter att funktion och användningsfall blivit tydliga."
+      ]
+    },
+    "pricing": {
+      "requiredSections": [
+        "pricing-intro",
+        "pricing-table",
+        "plan-comparison",
+        "pricing-cta"
+      ],
+      "optionalSections": [
+        "faq",
+        "custom-enterprise-note",
+        "billing-terms"
+      ],
+      "sectionOrderRules": [
+        "Pricing-intro måste förklara hur prissättningen fungerar, till exempel per paket, användning eller offert.",
+        "Pricing-table ska visa vad som ingår utan dolda eller oklara nivåskillnader.",
+        "Plan-comparison ska hjälpa besökaren att välja rätt nivå utifrån behov, inte bara lista funktioner.",
+        "Om exakta priser saknas får sidan vara ärlig med att offert krävs och vad som påverkar priset.",
+        "Pricing-cta ska vara tydlig och passa affären, till exempel registrering, boka demo eller kontakta sälj."
+      ]
+    },
+    "security": {
+      "requiredSections": [
+        "security-intro",
+        "security-measures",
+        "data-privacy",
+        "support-and-reliability",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "incident-process",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Security-intro måste förklara varför säkerhet och dataskydd är relevanta för tjänsten.",
+        "Security-measures ska beskriva konkreta skyddsåtgärder eller processer utan att lova mer än verksamheten faktiskt erbjuder.",
+        "Data-privacy ska behandla personuppgifter, lagring eller ansvar på en begriplig nivå.",
+        "Support-and-reliability ska beskriva supportkanaler, tillgänglighet eller driftarbete utan att hitta på SLA, certifieringar eller procentsiffror.",
+        "Om trust-proof används här får den inte duplicera identiskt innehåll från startsidan."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-intro",
+        "contact-options",
+        "contact-form"
+      ],
+      "optionalSections": [
+        "map",
+        "support-hours",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Kontaktvägar ska vara tydliga och använda verkliga uppgifter, inte platshållare.",
+        "Contact-form ska ha en tydlig anledning att fylla i formuläret, till exempel demo, offert eller allmän fråga.",
+        "Om olika kontaktärenden finns bör sidan hjälpa besökaren att välja rätt väg, till exempel sälj eller support."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Passar företag inom hosting, databehandling, molntjänster, dataplattformar eller annan informationsverksamhet.",
+      "Lyfter produktnytta först och teknisk trovärdighet direkt efter.",
+      "Har tydlig yta för säkerhet, dataskydd, drift och support.",
+      "Innehåller både registreringsnära och kontaktorienterade konverteringsvägar.",
+      "Prissidan är anpassad för SaaS-, plattforms- eller tjänstepaketering snarare än lokal tjänsteverksamhet.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Lokala serviceupplägg som serviceområden, öppettider i butik eller områdessidor som standard.",
+      "Portfölj- eller galleristruktur som hör hemma i kreativa branscher.",
+      "Meny-, boknings- eller restauranglogik.",
+      "Påhittade certifieringar, uptime-siffror, kundantal eller säkerhetslöften.",
+      "För generiska tjänstebeskrivningar utan faktisk koppling till data, drift, hosting eller informationshantering."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "pricing-table",
+      "faq-accordion",
+      "mailto-contact-form",
+      "trust-guarantees",
+      "reviews-display",
+      "team-roster",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Branschspec för SNI 63: datainfrastruktur, databehandling, hosting och annan informationsverksamhet. Sajter i denna kategori behöver snabbt förklara produkt eller plattform, visa funktioner och användningsfall, presentera priser eller offertlogik, samt bygga förtroende med säkerhet, GDPR, support och driftinformation. Typiska sidor är startsida, plattform, priser, säkerhet och kontakt, med valfria sidor för om oss, nyheter och FAQ.",
+    "semanticSignals": [
+      "hosting",
+      "databehandling",
+      "molntjanst",
+      "plattform",
+      "infrastruktur",
+      "serverdrift",
+      "datahantering",
+      "gdpr",
+      "sakerhet",
+      "support",
+      "uptime",
+      "api",
+      "integrationer",
+      "saas",
+      "produktfunktioner",
+      "prismodell",
+      "referenskunder"
+    ],
+    "negativeSignals": [
+      "restaurang",
+      "meny",
+      "boka-bord",
+      "fastighetsmaklare",
+      "frisor",
+      "fotograf",
+      "verkstad",
+      "behandlingsmeny",
+      "serviceomraden",
+      "lokal-jour"
+    ],
+    "llmClassificationHints": [
+      "Använd när verksamheten säljer en digital tjänst, dataplattform, hosting, analysnära infrastruktur eller informationsbaserad online-tjänst.",
+      "Prioritera struktur som förklarar produkt, funktioner, säkerhet och pris framför lokal fysisk närvaro.",
+      "Passar särskilt bra när primär CTA är registrering, demo eller kontakt med sälj/support."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

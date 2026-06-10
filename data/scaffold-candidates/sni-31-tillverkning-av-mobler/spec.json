@@ -1,0 +1,263 @@
+{
+  "id": "sni-31-tillverkning-av-mobler",
+  "label": "Tillverkning av möbler",
+  "description": "Scaffold för möbeltillverkare med fokus på material, måttanpassning, sortiment/erbjudande, referensbilder och tydlig kontaktväg för offert eller dialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara vilket slags möbler företaget tillverkar",
+    "visa material, utförande och möjlig måttanpassning",
+    "bygga förtroende med process, referenser och verkstadsnära innehåll",
+    "driva kontakt för offert, beställning eller rådgivning"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera möbeltillverkaren, visa typ av möbler och materialval samt leda vidare till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "produkter",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera vilka möbler eller produktkategorier företaget tillverkar med konkreta beskrivningar av material, användning och anpassningsmöjligheter."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygg förtroende genom att visa företagets bakgrund, arbetssätt och människorna bakom tillverkningen."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att kontakta företaget för offert, måttförfrågan, besök eller allmän dialog."
+    },
+    {
+      "id": "galleri",
+      "path": "/galleri",
+      "optional": true,
+      "when": "när verksamheten har starkt bildmaterial från färdiga möbler, miljöbilder eller verkstad som förtjänar en egen sida"
+    },
+    {
+      "id": "material-och-process",
+      "path": "/material-och-process",
+      "optional": true,
+      "when": "när företaget vill förklara träslag, ytor, konstruktion och hur beställning eller tillverkning går till"
+    },
+    {
+      "id": "referenser",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när det finns kundomdömen eller tidigare projekt som behöver mer utrymme än startsidan"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "produktoversikt",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "story",
+        "image-gallery",
+        "process-summary",
+        "testimonials",
+        "faq",
+        "reviews",
+        "material-highlights"
+      ],
+      "sectionOrderRules": [
+        "Hero måste tydligt ange att verksamheten tillverkar möbler och bör nämna material, måttanpassning eller typ av sortiment när underlag finns.",
+        "Produktöversikt ska vara konkret och beskriva faktiska möbeltyper eller kategorier, inte vaga formuleringar om lösningar.",
+        "Bildgalleri och process-sammanfattning kan placeras mellan produktöversikt och trust-proof när bild- eller processunderlag finns.",
+        "Trust-proof ska bygga på verkliga signaler som material, arbetssätt, referenskunder eller lång erfarenhet utan att hitta på certifieringar eller volymer.",
+        "Sista sektionen ska leda till kontakt eller offertförfrågan utan att upprepa samma påstående ordagrant flera gånger."
+      ]
+    },
+    "produkter": {
+      "requiredSections": [
+        "products-intro",
+        "product-category-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-guidance",
+        "image-gallery",
+        "faq",
+        "material-highlights"
+      ],
+      "sectionOrderRules": [
+        "Introduktionen ska koppla företagets tillverkning till sortimentet och gärna förklara om möblerna är standard, kundanpassade eller både och.",
+        "Produktkategorier ska namnges konkret, till exempel bord, stolar, förvaring eller specialsnickeri, när sådana uppgifter finns i underlaget.",
+        "Om prisinformation saknas får sidan beskriva hur offert går till men får inte ange påhittade prisnivåer.",
+        "Kontakt-CTA ska uppmuntra besökaren att höra av sig med mått, önskemål eller användningsområde."
+      ]
+    },
+    "om-oss": {
+      "requiredSections": [
+        "about-story",
+        "team",
+        "process-summary"
+      ],
+      "optionalSections": [
+        "trust-proof",
+        "image-gallery",
+        "reviews"
+      ],
+      "sectionOrderRules": [
+        "Berättelsen ska vara specifik för verksamheten och beskriva bakgrund, verkstad, materialfilosofi eller arbetssätt utan generiska floskler.",
+        "Team visas när personuppgifter finns; annars kan renderaren tona ned sektionen men behålla fokus på människorna bakom företaget.",
+        "Process-sammanfattningen ska förklara hur en beställning eller tillverkning går från idé till färdig möbel på ett begripligt sätt."
+      ]
+    },
+    "kontakt": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Kontaktinfo måste innehålla de verkliga kontaktuppgifter som finns tillgängliga och får inte fyllas med platshållare.",
+        "Om besök i verkstad eller showroom är relevant bör adress och eventuella öppettider visas tydligt.",
+        "Kontakt-CTA ska fungera för offert, frågor om måttanpassning och allmän kontakt."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Ha en startsida och en kontaktsida.",
+      "Spegla branschens behov av att visa möbeltyper, material, måttanpassning och tillverkningskänsla.",
+      "Alla standardrutter måste ha definierade sektioner.",
+      "Syften och regler måste vara ärliga och utan påhittade meriter.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Generiska tjänstesidor utan koppling till faktiska möbler eller produktkategorier.",
+      "Påståenden om certifieringar, garantier eller produktionsvolymer som inte stöds av underlag.",
+      "Att behandla verksamheten som ren detaljhandel om underlaget beskriver tillverkning.",
+      "Överdriven upprepning av samma kvalitetsbudskap i flera sektioner."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "map-embed",
+      "opening-hours",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Möbeltillverkare, snickeri och företag inom tillverkning av möbler som behöver visa sortiment, material, måttanpassning, referensbilder, arbetsprocess och tydlig kontaktväg för offert eller beställning.",
+    "semanticSignals": [
+      "mobeltillverkning",
+      "snickeri",
+      "bord",
+      "stolar",
+      "forvaring",
+      "specialbestallning",
+      "mattanpassning",
+      "traslag",
+      "ytbehandling",
+      "verkstad",
+      "referensbilder",
+      "offertforfragan"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "bokningskalender-for-behandlingar",
+      "e-handel-med-varukorg",
+      "fastighetsmaklare",
+      "fotografportfolio-utan-produktbeskrivningar"
+    ],
+    "llmClassificationHints": [
+      "Använd denna scaffold när verksamheten tillverkar möbler eller kundanpassade inredningsprodukter.",
+      "Välj denna även för mindre snickerier om huvudfokus är färdiga möbler snarare än bred byggservice.",
+      "Prioritera produkt-/sortimentspresentation framför generell tjänstelista när underlaget handlar om möbeltyper och materialval."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

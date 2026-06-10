@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-63-datainfrastruktur-databehandling-hos",
+  "sniCode": "63",
+  "wizardCategoryId": "tech",
+  "industryProfileId": "sni-63",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:29:56Z",
+  "outputPath": "data/scaffold-candidates/sni-63-datainfrastruktur-databehandling-hos",
+  "operatorBriefHash": "sha256:d7a18a1fdacd257b50cc3b7bd55b42e42fd40967a41d52d657ac32d1c2073e33",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

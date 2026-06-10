@@ -1,0 +1,267 @@
+{
+  "id": "sni-18-grafisk-produktion-och-reproduktion",
+  "label": "Grafisk produktion och reproduktion av inspelningar",
+  "description": "Scaffold för tryckerier, grafisk produktion, prepress och reproduktion av inspelningar. Fokus på att beskriva produktionstjänster, visa exempel på trycksaker och leda besökaren till kontakt eller offertförfrågan.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara produktionstjänster och kapacitet",
+    "bygga förtroende kring kvalitet, leveranstider och arbetsflöde",
+    "visa exempel på trycksaker eller reproduktionsuppdrag",
+    "driva kontakt och offertförfrågningar"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, förklara vad som produceras och leda till kontakt eller offert."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Beskriv tryck-, prepress-, efterbehandlings- och reproduktionstjänster konkret så att kunden snabbt ser vad som erbjuds."
+    },
+    {
+      "id": "portfolio",
+      "path": "/portfolio",
+      "required": true,
+      "purpose": "Visa representativa exempel på trycksaker, förpackningar, etiketter eller andra produktioner för att göra kvalitet och användningsområden tydliga."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan med kontaktuppgifter, öppettider och platsinformation."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när företaget vill bygga extra förtroende med historia, personal eller arbetssätt"
+    },
+    {
+      "id": "quote-request",
+      "path": "/begar-offert",
+      "optional": true,
+      "when": "när webbplatsen ska fånga mer strukturerade förfrågningar om upplaga, format, material eller leveranstid"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "optional": true,
+      "when": "när kunder ofta behöver vägledning om original, filformat, pappersval, upplagor eller leverans"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "service-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "production-capabilities",
+        "workflow-summary",
+        "gallery",
+        "testimonials",
+        "faq",
+        "opening-hours",
+        "location"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the production business clearly and include a primary contact CTA.",
+        "Service summary must mention concrete offer areas such as tryck, efterbehandling, prepress or reproduktion when supported by the content.",
+        "Trust proof should focus on real signals such as provtryck, miljömärkt tryck, leveranstider or practical experience, without inventing certifications.",
+        "Gallery or testimonials may appear before trust-proof when content exists.",
+        "Sections should avoid repeating the same promise in multiple blocks."
+      ]
+    },
+    "services": {
+      "requiredSections": [
+        "services-intro",
+        "service-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-overview",
+        "workflow-summary",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Services intro must connect the company's production capability to customer needs such as upplagor, materialval, originalhantering or leverans.",
+        "Service list items must be concrete and specific, not generic labels only.",
+        "If pricing-overview is shown, it should present orienting information only unless real prices are available."
+      ]
+    },
+    "portfolio": {
+      "requiredSections": [
+        "portfolio-intro",
+        "gallery",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "case-highlights",
+        "testimonials"
+      ],
+      "sectionOrderRules": [
+        "Portfolio intro must explain what kinds of jobs are shown and what they illustrate, such as material, finish or print quality.",
+        "Gallery items should represent real types of production and avoid exaggerated claims about scale or clients.",
+        "Contact CTA should invite a similar inquiry after the examples."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "location",
+        "map"
+      ],
+      "sectionOrderRules": [
+        "Contact info must include real contact channels available to the business.",
+        "If location or map is shown, it should match the stated address.",
+        "Contact CTA should support quote or production inquiries, not generic placeholder copy."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Includes a portfolio route because visual proof is central for graphic production and print businesses.",
+      "Includes home and contact as required.",
+      "Default routes each have a matching sectionsPerRoute entry.",
+      "Uses Swedish lowercase paths with leading slash and no trailing slash.",
+      "Section and route ids are kebab-case slugs.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the business like a generic local service without visual work samples.",
+      "Do not imply ecommerce product catalog behavior unless the source content actually supports ordering online.",
+      "Do not invent certifications, machine counts, turnaround guarantees or customer logos.",
+      "Do not rely on generic lifestyle sections when production details would be more useful."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "reviews-display",
+      "trust-guarantees",
+      "opening-hours",
+      "map-embed",
+      "pricing-table",
+      "video-hero"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tryckeri, grafisk produktion och reproduktion med fokus på trycksaker, prepress, efterbehandling, upplagor, materialval, provtryck, kvalitet, leveranstider, portfolio, offert och kontakt.",
+    "semanticSignals": [
+      "tryckeri",
+      "grafisk-produktion",
+      "reproduktion-av-inspelningar",
+      "prepress",
+      "efterbehandling",
+      "offset",
+      "digitaltryck",
+      "storformat",
+      "etiketter",
+      "forpackningar",
+      "trycksaker",
+      "provtryck",
+      "upplagor",
+      "leveranstid",
+      "original",
+      "filformat"
+    ],
+    "negativeSignals": [
+      "restaurangmeny",
+      "bordsbokning",
+      "produktkassa",
+      "medlemsportal",
+      "fastighetsmaklare",
+      "tandvardsklinik"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold for businesses that produce printed matter, labels, packaging, prepress work or media reproduction.",
+      "A portfolio/examples route is important because buyers want to assess output quality and application fit.",
+      "Contact and quote intent are central even when exact pricing depends on format, quantity, material and finishing."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-33-reparation-underhall-och-installatio",
+  "version": "0.1.0",
+  "label": "Reparation, underhåll och installation av maskiner och utrustning",
+  "description": "Scaffold för företag som reparerar, underhåller och installerar maskiner och utrustning. Strukturen prioriterar tydliga tjänster, serviceavtal, driftstopp-kritisk kontakt och förtroendeskapande information om teknisk kompetens, tillgänglighet och arbetssätt.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänster inom reparation, underhåll och installation",
+    "bygga förtroende kring teknisk kompetens och serviceberedskap",
+    "driva kontakt för akut service, planerat underhåll och offertförfrågan",
+    "lyfta serviceavtal och långsiktigt underhåll"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "hemrouten ska snabbt bygga kliniskt förtroende och leda mot bokning",
+    "kontaktvägar, öppettider och adress ska vara enkla att hitta",
+    "behandlingar ska beskrivas i begripligt språk för patienter",
+    "strukturen ska stödja både bokning och vanliga frågor",
+    "tonen ska vara lugn, omhändertagande och saklig",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "aggressiv säljton eller kampanjretorik som minskar förtroendet",
+    "medicinska påståenden som inte kan styrkas",
+    "opersonlig företagscopy utan tydlig vårdkontext",
+    "skrämande eller grafiska vårdbilder i förstaintrycket",
+    "dolda villkor kring pris, bokning eller tillgänglighet"
+  ]
+}

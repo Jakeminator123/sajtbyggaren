@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-80-sakerhets-och-bevakningsverksamhet",
+  "sniCode": "80",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-80",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:31:43Z",
+  "outputPath": "data/scaffold-candidates/sni-80-sakerhets-och-bevakningsverksamhet",
+  "operatorBriefHash": "sha256:b6ccb693acc8d5691f9ddd0212fbb3dfda301c2ea881e18e2a4c79402e6209ad",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

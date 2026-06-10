@@ -1,0 +1,284 @@
+{
+  "id": "sni-72-vetenskaplig-forskning-och-utvecklin",
+  "label": "Vetenskaplig forskning och utveckling",
+  "description": "Branschspecifik scaffold för verksamheter inom vetenskaplig forskning och utveckling som behöver visa forskningsområden, projekt/case, metodik, team och en tydlig kontaktväg för uppdrag, samarbeten eller offertförfrågningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara forskningskompetens och specialistområden",
+    "visa projekt, uppdrag eller forskningscase med tydlig nytta",
+    "bygga förtroende genom metodik, team och referenser",
+    "ge en enkel väg till kontakt för offert, samarbete eller uppdragsdialog"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Översiktssida som snabbt förklarar verksamhetens forskningsinriktning, vilka typer av uppdrag eller samarbeten som erbjuds, utvalda projekt/case och en tydlig väg till kontakt."
+    },
+    {
+      "id": "research-areas",
+      "path": "/forskningsomraden",
+      "required": true,
+      "purpose": "Samlad sida för forskningsområden, specialistkompetenser och tillämpningsfält så att besökaren snabbt ser var verksamheten har djup expertis."
+    },
+    {
+      "id": "projects",
+      "path": "/projekt",
+      "required": true,
+      "purpose": "Visar projekt, uppdrag eller kundcase med problemställning, metod, genomförande och resultat eller leveranser. För denna bransch är projektbevis ofta viktigare än en generell tjänstelista."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Presenterar verksamhetens bakgrund, vetenskapliga arbetssätt, team och hur forskning omsätts i uppdrag, analys eller utveckling."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Tydlig kontaktsida för offert, samarbete, forskningsförfrågningar och allmän kontakt, med direktinformation och formulär."
+    },
+    {
+      "id": "process",
+      "path": "/arbetsprocess",
+      "optional": true,
+      "when": "när verksamheten säljer in sitt arbetssätt som en viktig del av erbjudandet, till exempel från frågeställning och studiedesign till analys, rapportering och implementering"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "optional": true,
+      "when": "när många förfrågningar gäller upplägg, sekretess, datainsamling, projektstart eller hur samarbeten brukar gå till"
+    },
+    {
+      "id": "publications",
+      "path": "/publikationer",
+      "optional": true,
+      "when": "när verksamheten har rapporter, white papers, vetenskapliga publikationer eller metodartiklar som är viktiga för trovärdighet och inbound-förfrågningar"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "research-areas-preview",
+        "selected-projects-preview",
+        "method-summary",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "team-preview",
+        "faq-accordion"
+      ],
+      "sectionOrderRules": [
+        "Hero must state the research or development focus in plain language and pair it with a concrete CTA for contact or quote requests.",
+        "Research areas preview must appear before broad company background so visitors can assess subject-matter fit quickly.",
+        "Selected projects preview must come before extended trust copy; this industry often converts through demonstrated competence and applied outcomes.",
+        "Trust signals must stay factual, such as project types, sectors served, methods used or named reference customers when permission exists."
+      ]
+    },
+    "research-areas": {
+      "requiredSections": [
+        "research-areas-list",
+        "applications-block",
+        "method-summary",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq-accordion",
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "Research areas list must lead the page and use recognisable subject labels rather than vague marketing phrasing.",
+        "Applications block should connect each area to practical use cases, sectors or problem types so visitors understand relevance.",
+        "Method summary should describe how the organisation investigates, validates or develops, without implying guarantees that research cannot honestly promise."
+      ]
+    },
+    "projects": {
+      "requiredSections": [
+        "project-grid",
+        "case-method-result",
+        "trust-signals",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "research-areas-preview",
+        "faq-accordion"
+      ],
+      "sectionOrderRules": [
+        "Project grid must dominate the page with one card per project, case or assignment.",
+        "Each case should make room for problem, method and result or deliverable; avoid empty before-after claims where evidence is unavailable.",
+        "Trust signals should support the cases with reference customers, sectors or collaboration formats, not replace the cases themselves."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story-block",
+        "team-block",
+        "scientific-approach",
+        "process-steps",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "trust-signals"
+      ],
+      "sectionOrderRules": [
+        "About story must explain the organisation's background, focus and competence in specific terms rather than generic innovation language.",
+        "Team block should foreground relevant roles, disciplines or areas of expertise so visitors can see who they may work with.",
+        "Scientific approach must describe how rigor, validation and documentation are handled in practice.",
+        "Process steps should use the organisation's real stages, for example frågeställning, design, datainsamling, analys and rapportering, if applicable."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "faq-accordion",
+        "map-embed"
+      ],
+      "sectionOrderRules": [
+        "Phone must be a tel: link and email must be a mailto: link.",
+        "Contact form should support quote, project and collaboration enquiries with a low-friction set of fields.",
+        "Any address must render as a readable block that can be copied into email or calendar tools."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Scaffold must prioritise research areas, projects/cases, methodology and team as core trust-building content.",
+      "Contact route must support both direct contact details and a form-based enquiry path.",
+      "Project/case presentation must fit both commissioned R&D work and broader research collaborations.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the business like a generic creative agency with only portfolio language and no methodological depth.",
+      "Do not make pricing a central route; this industry usually requires scoped dialogue rather than fixed package tables.",
+      "Do not use exaggerated certainty claims about scientific outcomes, impact or validation without evidence.",
+      "Do not rely on generic stock-business trust copy when concrete methods, domains and project examples can be shown."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "faq-accordion",
+      "team-roster",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "booking-cta",
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout",
+      "interactive-game-loop",
+      "opening-hours"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Vetenskaplig forskning och utveckling, forskningsområden, projekt och case, metodik, studiedesign, analys, utvecklingsprojekt, expertteam, samarbete, offert, konsultativ forskning, tillämpad forskning, laboratorie- eller kunskapsintensiva uppdrag, kontaktformulär, FAQ.",
+    "semanticSignals": [
+      "forskningsomraden",
+      "projektcase",
+      "metodik",
+      "studiedesign",
+      "analys",
+      "vetenskapligt-arbetssatt",
+      "teamkompetens",
+      "samarbete",
+      "offertforfragan",
+      "publikationer",
+      "uppdragsforskning",
+      "tillampad-forskning"
+    ],
+    "negativeSignals": [
+      "meny",
+      "bordbokning",
+      "produktkatalog",
+      "e-handel",
+      "fast-prislista",
+      "dagliga-oppettider-som-huvudfokus",
+      "spel-eller-underhallning-som-primar-uppgift"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the business sells research competence, analysis, development projects or scientific expertise.",
+      "Prefer this over a generic consulting scaffold when methodology, domains and project evidence are central to conversion.",
+      "Projects may be called projekt, case, uppdrag, studier or samarbeten depending on tone and confidentiality."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#ffffff",
+          "foreground": "#0a0a0a",
+          "muted": "#5b5b5b",
+          "border": "#e0e0e0",
+          "primary": "#0a0a0a",
+          "primaryForeground": "#ffffff",
+          "accent": "#caa14a",
+          "accentForeground": "#0a0a0a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.125rem",
+          "md": "0.25rem",
+          "lg": "0.5rem"
+        },
+        "spacing": {
+          "section": "6rem",
+          "container": "min(76rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "monochrome",
+          "modular",
+          "sharp",
+          "curated",
+          "confident",
+          "creative"
+        ]
+      }
+    }
+  ]
+}

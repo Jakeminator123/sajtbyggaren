@@ -1,0 +1,34 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Förklara verksamhetens uppdrag, viktiga besöksärenden och leda vidare till kontakt eller rätt informationssida."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "Samla information om konsulära, administrativa eller informationsrelaterade tjänster och hur besökare går vidare."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Visa kontaktuppgifter, adress, eventuella öppettider och kontaktformulär för frågor eller ärenden."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "when": "när verksamheten behöver beskriva uppdrag, organisation, representation eller team mer utförligt"
+    },
+    {
+      "id": "faq",
+      "path": "/fragor-och-svar",
+      "when": "när återkommande praktiska frågor om ärenden, besök eller kontakt behöver besvaras tydligt"
+    }
+  ]
+}

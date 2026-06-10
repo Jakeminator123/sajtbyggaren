@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-17-pappers-och-pappersvarutillverkning",
+  "sniCode": "17",
+  "wizardCategoryId": "business",
+  "industryProfileId": "sni-17",
+  "referenceScaffoldId": "local-service-business",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:25:43Z",
+  "outputPath": "data/scaffold-candidates/sni-17-pappers-och-pappersvarutillverkning",
+  "operatorBriefHash": "sha256:7faada80aef8b4e9c14a1e5f57270c4922b3e62ee3a4d9ea1078e667cff8793f",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

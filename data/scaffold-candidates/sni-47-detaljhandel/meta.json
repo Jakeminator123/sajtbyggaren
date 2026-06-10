@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateType": "scaffold",
+  "candidateId": "sni-47-detaljhandel",
+  "sniCode": "47",
+  "wizardCategoryId": "ecommerce",
+  "industryProfileId": "sni-47",
+  "referenceScaffoldId": "ecommerce-lite",
+  "source": "real",
+  "modelUsed": "gpt-5.4",
+  "modelRole": "scaffoldModel",
+  "generator": "scripts.generate_scaffold_candidate",
+  "createdAt": "2026-06-10T15:28:24Z",
+  "outputPath": "data/scaffold-candidates/sni-47-detaljhandel",
+  "operatorBriefHash": "sha256:c1f55f985ae146795b2ac37feaf4ea29d446c20cb0fe09b406232b710a1baf15",
+  "promotion": "Kandidaten är inert (saknas i scaffold-contract.v1-registret). Promotion: ADR + naming-dictionary per scaffold-contract.v1 revisionRules, kopiera spec.json till tooling/scaffold-generator/spec/<id>.json och kör generatorn."
+}

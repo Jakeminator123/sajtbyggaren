@@ -1,0 +1,248 @@
+{
+  "id": "sni-15-tillverkning-av-lader-och-skinnvaror",
+  "label": "Tillverkning av läder- och skinnvaror och liknande varor av andra material",
+  "description": "Branschspecifik scaffold för tillverkare av läder- och skinnvaror samt liknande produkter i andra material. Strukturen betonar produktområden, tillverkningskompetens, material och tydlig kontaktväg för offert, återförsäljardialog eller specialbeställningar.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och tillverkningskapacitet",
+    "bygga förtroende genom materialkunskap och arbetsprocess",
+    "driva kontakt för offert, beställning eller företagsförfrågan"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera verksamheten, visa vad som tillverkas och leda vidare till kontakt eller produktöversikt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Visa produktkategorier, användningsområden och vad företaget faktiskt tillverkar."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende med företagets bakgrund, hantverk, materialkunskap och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan om offert, specialtillverkning eller samarbete."
+    },
+    {
+      "id": "materials",
+      "path": "/material",
+      "optional": true,
+      "when": "verksamheten behöver förklara skillnader mellan läder, skinn och andra använda material eller lyfta hållbarhet och skötsel"
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "optional": true,
+      "when": "företaget har starka produktbilder, detaljbilder eller exempel på tidigare tillverkning som förtjänar egen yta"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "process",
+        "image-gallery",
+        "reviews",
+        "faq",
+        "materials-summary"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what kinds of goods are manufactured and include a primary contact CTA.",
+        "Product summary must show concrete product categories or use cases, not vague claims.",
+        "Trust proof must rely on real business information such as organisation details, references or visible workshop context.",
+        "Process, gallery and reviews may appear between product-summary and trust-proof when supported by real content.",
+        "Final CTA should invite quote requests, custom orders or business enquiries without implying online checkout if none exists."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "pricing-table",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Products intro must explain the product range or manufacturing focus in plain language.",
+        "Product list items must be specific, for example bags, belts, cases, straps, covers or custom-made items where relevant.",
+        "Pricing table may only be used when the business has simple package-like offers or starting prices; otherwise omit it.",
+        "Contact CTA should connect product interest to enquiry, quote or custom order dialogue."
+      ]
+    },
+    "about": {
+      "requiredSections": [
+        "about-story",
+        "process",
+        "trust-proof"
+      ],
+      "optionalSections": [
+        "team",
+        "materials-summary",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "About story must describe the company, workshop or production focus concretely and avoid generic quality slogans.",
+        "Process should explain how work is carried out, for example design, cutting, sewing, assembly or finishing, when such information exists.",
+        "Team should only appear when actual people or roles can be presented."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map",
+        "faq"
+      ],
+      "sectionOrderRules": [
+        "Contact info must contain real reachable details and should support both private and business enquiries when relevant.",
+        "Contact CTA should include a form or clear email path for quote requests and questions.",
+        "Map and opening hours should only be shown when visitors can benefit from visiting or locating the business physically."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Home route and contact route are always present.",
+      "Routes and section ids use kebab-case slugs.",
+      "Structure supports both standard company presentation and manufacturing-specific product enquiry.",
+      "Product-oriented content is central because this industry needs to show what is actually made.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the business like a generic local service only focused on area coverage.",
+      "Do not imply ecommerce, live inventory or checkout unless the site actually has it.",
+      "Do not use vague service labels where concrete product categories are more useful.",
+      "Do not invent certifications, production volumes or customer counts."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "image-gallery",
+      "reviews-display",
+      "team-roster",
+      "trust-guarantees",
+      "opening-hours",
+      "map-embed"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Tillverkning av läder- och skinnvaror, väskor, bälten, fodral, remmar, etuier och andra produkter i läder, skinn eller liknande material. Webbplatsen bör lyfta produktområden, tillverkningsprocess, materialkunskap, specialbeställningar, företagsförfrågningar och tydlig kontaktväg.",
+    "semanticSignals": [
+      "manufacturer-of-leather-goods",
+      "custom-leather-products",
+      "product-categories-instead-of-service-areas",
+      "workshop-craftsmanship",
+      "materials-and-production-process",
+      "b2b-or-custom-order-enquiries",
+      "gallery-worthy-physical-products"
+    ],
+    "negativeSignals": [
+      "generic-consultant-or-office-service-site",
+      "restaurant-menu-logic",
+      "appointment-first-clinic-structure",
+      "pure-ecommerce-checkout-assumption",
+      "location-area-pages-as-primary-structure"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business primarily makes physical goods from leather, hide, skin or similar materials.",
+      "Prefer product and process presentation over generic services wording.",
+      "Include materials or gallery routes when the visual craft and material differences are important for conversion."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

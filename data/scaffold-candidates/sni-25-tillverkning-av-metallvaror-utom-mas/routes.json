@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera metallföretaget, förklara erbjudandet och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "produkter-tjanster",
+      "path": "/produkter-tjanster",
+      "required": true,
+      "purpose": "Beskriva vilka metallvaror, bearbetningar och tillverkningstjänster företaget erbjuder med konkret information."
+    },
+    {
+      "id": "kapacitet",
+      "path": "/kapacitet",
+      "required": true,
+      "purpose": "Visa material, tillverkningsmetoder, seriestorlekar och praktisk produktionskapacitet för att hjälpa kunden bedöma matchning."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagets bakgrund, arbetssätt, team och referenser."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Göra det enkelt att skicka förfrågan eller ta kontakt med telefon, e-post, adress och kontaktformulär."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "referenser",
+      "path": "/referenser",
+      "when": "när företaget har visningsbara kundcase, produktbilder eller projekt att lyfta utan sekretessproblem"
+    },
+    {
+      "id": "hitta-hit",
+      "path": "/hitta-hit",
+      "when": "när fysisk adress, karta, leveransinfart eller besöksinformation behöver en egen sida"
+    }
+  ]
+}

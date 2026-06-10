@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-47-detaljhandel",
+  "version": "0.1.0",
+  "label": "Detaljhandel",
+  "description": "Branschspecifik scaffold för detaljhandel med fokus på produkter, köpkänsla, trygghet i köpflödet och möjlighet att leda både till onlineköp och fysisk butik.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "visa sortiment tydligt",
+    "driva köp eller köpintresse",
+    "bygga förtroende kring betalning, byten och recensioner",
+    "hjälpa kunder hitta butik, öppettider och kontaktvägar"
+  ],
+  "defaultPageCount": 7,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

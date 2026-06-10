@@ -1,0 +1,46 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, förklara verksamhetens inriktning och leda vidare till kontakt."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera produktkategorier, sortiment eller tillverkningsinriktning på ett tydligt sätt för företagskunder och samarbetspartners."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Beskriva tillverkning, kvalitetssäkring och kapacitet på en konkret och förtroendeskapande nivå."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Bygga förtroende genom företagspresentation, historia, organisation och team."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge tydliga kontaktvägar för affärsförfrågningar, partnerskap och allmän kontakt."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "when the business has recurring questions about sortiment, bestallningar, leveranser eller kontaktvagar"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "when": "when a physical office, fabrik eller besoksadress should be shown separately with karta och oppettider"
+    }
+  ]
+}

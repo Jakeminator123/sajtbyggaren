@@ -1,0 +1,29 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "has home route with path '/'",
+    "has contact route",
+    "all default routes have matching sectionsPerRoute entries",
+    "routes and section ids use kebab-case slugs",
+    "paths are Swedish, lowercase and without trailing slash",
+    "page set reflects industrial manufacturing and refined product sales rather than generic local services",
+    "recommended dossiers only use allowed ids",
+    "All routes from routes.json are present.",
+    "No lorem ipsum or sample placeholder copy.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "generic consumer-service structure without product or application pages",
+    "invented compliance claims, certifications or production capacities",
+    "portfolio-style presentation that does not fit industrial manufacturing",
+    "consumer webshop assumptions such as direct checkout unless explicitly supported",
+    "repeating the same trust message in multiple adjacent sections"
+  ]
+}

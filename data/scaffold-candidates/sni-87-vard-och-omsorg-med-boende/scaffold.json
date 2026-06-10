@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-87-vard-och-omsorg-med-boende",
+  "version": "0.1.0",
+  "label": "Vård och omsorg med boende",
+  "description": "Scaffold för verksamheter inom vård och omsorg med boende, med fokus på trygghet, boendeformer, omsorgsinnehåll, praktisk information för närstående och tydliga kontaktvägar för inflyttning eller placering.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "Skapa trygghet och förklara verksamhetens omsorg och boende",
+    "Hjälpa närstående, handläggare eller boendesökande att förstå målgrupp och erbjudande",
+    "Göra det enkelt att ta kontakt för frågor, visning eller placeringsförfrågan",
+    "Visa praktisk information som adress, tider, tillgänglighet och vanliga frågor"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-19-tillverkning-av-stenkolsprodukter-oc",
+  "version": "0.1.0",
+  "label": "Tillverkning av stenkolsprodukter och raffinerade petroleumprodukter",
+  "description": "Scaffold för företag inom tillverkning och förädling av stenkolsprodukter, petroleumprodukter, bränslen, bitumen, smörjmedel och närliggande industriella produkter. Fokuserar på produktöversikt, tillämpningar, leverans- och kontaktvägar samt förtroendeskapande företagsinformation för B2B och industriella kunder.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och leveranskapacitet",
+    "förklara användningsområden och kundsegment",
+    "bygga förtroende genom företagsinformation, anläggning och arbetssätt",
+    "driva kontaktförfrågningar från industriella kunder, återförsäljare och upphandlare"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

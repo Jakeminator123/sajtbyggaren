@@ -1,0 +1,35 @@
+{
+  "id": "sni-47-detaljhandel",
+  "embeddingText": "Detaljhandel SNI 47. Webbplats för butik eller webshop med fokus på produktsortiment, köpkänsla, trygg betalning, byten, recensioner, fysisk butik, öppettider, kontakt och tydlig väg till köp. Passar retail, concept store, presentbutik, mode, inredning, specialbutik och liknande handel.",
+  "semanticSignals": [
+    "webshop",
+    "e-handel",
+    "produkter",
+    "sortiment",
+    "kassa",
+    "betalning",
+    "kundrecensioner",
+    "butik",
+    "oppettider",
+    "adress",
+    "returer",
+    "byten",
+    "kop-nu",
+    "detaljhandel"
+  ],
+  "negativeSignals": [
+    "bokningsdriven-verksamhet",
+    "ren-restaurangmeny",
+    "tjansteforetag-utan-produkter",
+    "portfolio-utan-kopflode",
+    "eventfokus-utan-sortiment"
+  ],
+  "llmClassificationHints": [
+    "Välj denna scaffold när verksamheten primärt säljer varor till konsumenter.",
+    "Produkter eller sortiment ska vara central route, inte sekundär informationssida.",
+    "Om fysisk butik finns bör butik-oppettider prioriteras som egen sida.",
+    "FAQ om köp, betalning och returer är vanligt och relevant för denna bransch."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

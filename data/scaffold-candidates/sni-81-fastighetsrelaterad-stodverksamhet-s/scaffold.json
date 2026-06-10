@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-81-fastighetsrelaterad-stodverksamhet-s",
+  "version": "0.1.0",
+  "label": "Fastighetsrelaterad stödverksamhet samt skötsel och underhåll av grönytor",
+  "description": "Scaffold för företag inom lokalvård, fastighetsskötsel, städning, trädgårdsskötsel och annan stödverksamhet kopplad till fastigheter och utemiljöer. Fokuserar på tydliga tjänster, avtalsupplägg, förtroendeskapande bevis och enkel offert- eller kontaktförfrågan.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara tjänsteutbud inom fastighetsservice och grönyteskötsel",
+    "bygga förtroende med referenser, försäkring och arbetssätt",
+    "driva offertförfrågningar och kontakt för löpande avtal eller enstaka uppdrag"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

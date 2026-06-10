@@ -1,0 +1,37 @@
+{
+  "id": "sni-86-halso-och-sjukvard",
+  "embeddingText": "Webbplatsstruktur för hälso- och sjukvård, klinik och mottagning. Fokus på trygghet, legitimerad personal, patientsäkerhet, sekretess, vårdgaranti, bokning online, behandlingar, priser och frikort, FAQ, öppettider, karta och kontakt. Passar vårdcentral, specialistmottagning, rehab, privat klinik och annan patientnära vårdverksamhet.",
+  "semanticSignals": [
+    "klinik",
+    "mottagning",
+    "patient",
+    "boka-tid",
+    "behandlingar",
+    "legitimerad-personal",
+    "patientsakerhet",
+    "sekretess",
+    "oppettider",
+    "hitta-hit",
+    "frikort",
+    "patientavgift",
+    "vardgaranti",
+    "faq",
+    "kontaktformular"
+  ],
+  "negativeSignals": [
+    "e-handel-med-produktkatalog",
+    "restaurangmeny",
+    "eventbokning",
+    "fastighetsannonser",
+    "portfoljgalleri-som-huvudsyfte",
+    "spelifierat-innehall"
+  ],
+  "llmClassificationHints": [
+    "Använd denna scaffold när verksamheten erbjuder vård, behandling, mottagningsbesök eller patientnära hälsotjänster.",
+    "Prioritera bokning, praktisk information och förtroendeskapande innehåll framför varumärkesbyggande storytelling.",
+    "Team-sida är viktig när individuella behandlares legitimation och kompetens påverkar valet.",
+    "Prissida är särskilt relevant när patientavgifter, frånpriser eller frikort behöver förklaras tydligt."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

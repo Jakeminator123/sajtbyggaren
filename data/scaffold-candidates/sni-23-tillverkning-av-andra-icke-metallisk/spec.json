@@ -1,0 +1,266 @@
+{
+  "id": "sni-23-tillverkning-av-andra-icke-metallisk",
+  "label": "Tillverkning av andra icke-metalliska mineraliska produkter",
+  "description": "Scaffold för företag inom SNI 23 som tillverkar glas, keramik, betong, cement, kalk, gips, stenvaror, slipmedel eller liknande mineraliska produkter. Fokus ligger på tydlig presentation av produktområden, produktionskapacitet och kontaktvägar för offert, leveransfrågor eller teknisk dialog.",
+  "scaffoldVersion": "0.1.0",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "presentera produktområden och tillverkningskapacitet",
+    "bygga förtroende med fakta om verksamhet, kvalitet och leverans",
+    "göra det enkelt att kontakta företaget för offert eller förfrågan"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Positionera tillverkaren, visa huvudsakliga produktområden och leda besökaren till kontakt eller offertförfrågan."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "Presentera företagets produktkategorier, användningsområden och relevant produktinformation på ett tydligt sätt."
+    },
+    {
+      "id": "production",
+      "path": "/produktion",
+      "required": true,
+      "purpose": "Beskriva tillverkning, material, kapacitet och arbetssätt för att hjälpa kunder att bedöma om företaget passar deras behov."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Ge en enkel väg till kontakt med telefon, e-post, adress, öppettider och formulär för offert eller frågor."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "optional": true,
+      "when": "när företaget vill lyfta historia, anläggning, team eller ägarbild för ökat förtroende"
+    },
+    {
+      "id": "references",
+      "path": "/referenser",
+      "optional": true,
+      "when": "när det finns verkliga kundcase, leveransprojekt eller användningsexempel som kan visas utan att röja känslig information"
+    },
+    {
+      "id": "find-us",
+      "path": "/hitta-hit",
+      "optional": true,
+      "when": "när fysisk anläggning, fabrik, terminal eller hämtlager behöver en egen sida med karta och logistikinfo"
+    }
+  ],
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": [
+        "hero",
+        "product-summary",
+        "trust-proof",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "production-summary",
+        "application-areas",
+        "image-gallery",
+        "reviews",
+        "faq",
+        "opening-hours"
+      ],
+      "sectionOrderRules": [
+        "Hero must state what the company manufactures and include a primary contact CTA.",
+        "Product-summary must highlight concrete product families or material categories, not vague claims.",
+        "Trust-proof must use real business facts such as organisation details, references or clear process information.",
+        "If production-summary is present, it should appear before trust-proof.",
+        "Final CTA should invite contact for quote, specification dialogue or delivery questions without promising unavailable services."
+      ]
+    },
+    "products": {
+      "requiredSections": [
+        "products-intro",
+        "product-category-list",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "application-areas",
+        "pricing-overview",
+        "faq",
+        "image-gallery"
+      ],
+      "sectionOrderRules": [
+        "Products-intro must explain the scope of the offering in plain language.",
+        "Product-category-list items must be concrete and describe product type, common use or ordering basis when known.",
+        "Do not present products as an ecommerce checkout if the business primarily sells via enquiry.",
+        "Pricing-overview may only show honest price examples, ranges or request-for-quote messaging when exact pricing is not available."
+      ]
+    },
+    "production": {
+      "requiredSections": [
+        "production-intro",
+        "materials-and-process",
+        "capacity-and-delivery",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "quality-approach",
+        "image-gallery",
+        "faq",
+        "trust-proof"
+      ],
+      "sectionOrderRules": [
+        "Production-intro must connect the manufacturing setup to customer needs such as series, dimensions, finish or delivery.",
+        "Materials-and-process should describe actual materials or process steps at a high level without inventing technical certifications.",
+        "Capacity-and-delivery should stay factual and avoid unsupported lead-time promises.",
+        "If quality-approach is shown, it should focus on controls, consistency, documentation or experience only when supported by input data."
+      ]
+    },
+    "contact": {
+      "requiredSections": [
+        "contact-info",
+        "contact-form",
+        "contact-cta"
+      ],
+      "optionalSections": [
+        "opening-hours",
+        "map",
+        "pickup-or-delivery-info"
+      ],
+      "sectionOrderRules": [
+        "Contact-info must include real phone, email and address details when available.",
+        "Contact-form should be framed for quote requests, product questions or delivery enquiries.",
+        "If pickup-or-delivery-info is shown, it should clarify practical logistics such as loading, collection or reception times.",
+        "Map should appear after core contact details unless the page is very short."
+      ]
+    }
+  },
+  "qualityContract": {
+    "scorecardWeights": {
+      "business_fit": 1.2,
+      "trust_signals": 1.2,
+      "conversion_clarity": 1.1,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.0,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Scaffold must fit manufacturers of non-metallic mineral products rather than generic local services.",
+      "Products route must be a default route because the industry often needs a structured product presentation.",
+      "Production route must be a default route because manufacturing method, materials and capacity are central decision factors.",
+      "Contact route must support both direct contact details and form-based enquiries.",
+      "Copy structure must work for B2B-oriented manufacturers as well as mixed B2B/B2C operations.",
+      "All routes from routes.json are present.",
+      "No lorem ipsum or sample placeholder copy.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Do not model the site like a restaurant, salon or appointment-led service business.",
+      "Do not require ecommerce checkout, cart or consumer booking flows.",
+      "Do not imply certifications, test standards or environmental claims unless provided by source data.",
+      "Do not rely on testimonials as the only trust mechanism; factual company information must also carry trust."
+    ]
+  },
+  "compatibleDossiers": {
+    "comment": "Kandidat-rekommendationer härledda ur branschprofilen; verifiera mot riktiga Dossier-id före promotion.",
+    "required": [],
+    "recommended": [
+      "mailto-contact-form",
+      "map-embed",
+      "opening-hours",
+      "image-gallery",
+      "faq-accordion",
+      "reviews-display",
+      "trust-guarantees"
+    ],
+    "conditional": [],
+    "disallowedByDefault": [
+      "pricing-table-saas",
+      "dashboard-shell",
+      "auth-flow",
+      "checkout"
+    ]
+  },
+  "selectionProfile": {
+    "embeddingText": "Webbplatsstruktur för tillverkare inom andra icke-metalliska mineraliska produkter: produkter, produktkategorier, material, tillverkning, kapacitet, leverans, offertförfrågan, fabrik, anläggning, kontakt, referenser, teknisk dialog.",
+    "semanticSignals": [
+      "manufacturing",
+      "industrial-products",
+      "non-metallic-mineral-products",
+      "product-catalog",
+      "production-process",
+      "materials",
+      "capacity",
+      "delivery",
+      "b2b-contact",
+      "factory-location"
+    ],
+    "negativeSignals": [
+      "restaurant-menu",
+      "table-booking",
+      "clinic-treatments",
+      "event-ticketing",
+      "personal-portfolio",
+      "full-ecommerce-checkout"
+    ],
+    "llmClassificationHints": [
+      "Use this scaffold when the business manufactures or processes products such as glass, ceramics, concrete, cement, gypsum, stone or related mineral-based goods.",
+      "Prefer this scaffold when visitors need to evaluate product range and production capability before contacting the company.",
+      "Do not choose this scaffold for pure installers, retailers or consultants unless manufacturing is the primary business."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+  "variants": [
+    {
+      "id": "draft-default",
+      "enabled": false,
+      "label": "Draft Default",
+      "description": "Startvariant kopierad från referens-scaffoldens default så kandidaten kan förhandsgranskas; ersätts vid kurering.",
+      "tokens": {
+        "color": {
+          "background": "#fafaf9",
+          "foreground": "#1c1c1a",
+          "muted": "#6b6b66",
+          "border": "#e5e5e2",
+          "primary": "#1f3b5b",
+          "primaryForeground": "#fafaf9",
+          "accent": "#cdb98a",
+          "accentForeground": "#1c1c1a"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.2
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.5rem",
+          "lg": "0.75rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(72rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": [
+          "calm",
+          "trustworthy",
+          "local",
+          "premium-but-not-luxurious"
+        ]
+      }
+    }
+  ]
+}

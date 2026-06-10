@@ -1,0 +1,92 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "product-area-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "production-summary",
+      "applications",
+      "reviews",
+      "faq",
+      "certifications",
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "Hero must state what the company manufactures and include a primary contact CTA.",
+      "Product-area-summary must describe concrete product categories or application areas, not vague claims.",
+      "Trust-proof must focus on verifiable company facts, quality work, references or visible company details and should appear before the final CTA.",
+      "Do not present hazardous-use details, performance claims or compliance claims that the dossier cannot support.",
+      "Avoid repeating the same claims in hero, trust-proof and CTA."
+    ]
+  },
+  "product-areas": {
+    "requiredSections": [
+      "products-intro",
+      "product-category-list",
+      "applications",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Products-intro must connect the company's manufacturing role to the product areas offered.",
+      "Product-category-list items must be concrete categories, formulations or customer-facing product groups rather than generic 'high quality solutions'.",
+      "Applications may describe typical uses or industries served, but must stay high level and honest.",
+      "Contact CTA should invite product dialogue, quote requests or technical questions without implying unsupported guarantees."
+    ]
+  },
+  "production-and-quality": {
+    "requiredSections": [
+      "production-intro",
+      "process-overview",
+      "quality-and-safety",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "gallery",
+      "trust-proof",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Production-intro must explain the manufacturing setup or way of working in clear business language.",
+      "Process-overview should describe steps, capacity themes or collaboration flow at a non-sensitive level.",
+      "Quality-and-safety must avoid invented certifications, regulatory approvals or test results.",
+      "If trust-proof is shown here, it should complement rather than duplicate quality-and-safety content."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "gallery"
+    ],
+    "sectionOrderRules": [
+      "About-story must be specific to the company's history, focus or market role.",
+      "Team should only be shown when real people, roles or departments are available.",
+      "Trust-proof should use visible company facts such as organisation details, references or documented ways of working, never fabricated achievements."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map"
+    ],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and must not be placeholders.",
+      "Contact CTA should support straightforward business enquiries such as quote requests, product questions or visits.",
+      "Opening hours and map should only be shown when accurate business data is available."
+    ]
+  }
+}

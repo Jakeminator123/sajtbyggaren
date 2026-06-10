@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Presentera fotografen eller videografen, visa visuell stil direkt och leda vidare till portfolio eller kontakt."
+    },
+    {
+      "id": "portfolio",
+      "path": "/portfolio",
+      "required": true,
+      "purpose": "Visa utvalda case eller projekt som hjälper besökaren att bedöma stil, kvalitet och typ av uppdrag."
+    },
+    {
+      "id": "gallery",
+      "path": "/bildgalleri",
+      "required": true,
+      "purpose": "Visa ett bredare urval bilder eller stills i ett mer visuellt galleri-format."
+    },
+    {
+      "id": "about",
+      "path": "/om-mig",
+      "required": false,
+      "purpose": "Bygg förtroende genom att berätta vem som står bakom verksamheten, arbetssätt och specialisering."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Gör det enkelt att skicka förfrågan, beskriva uppdraget och ta kontakt via formulär, e-post eller telefon."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "when": "när verksamheten erbjuder flera tydliga typer av uppdrag som bröllop, porträtt, företag, event eller video"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "när fasta paket, startpriser eller prisexempel behöver visas öppet för att kvalificera förfrågningar"
+    },
+    {
+      "id": "faq",
+      "path": "/vanliga-fragor",
+      "when": "när kunder ofta behöver svar om leverans, bokning, ombokning, rättigheter eller förberedelser"
+    }
+  ]
+}

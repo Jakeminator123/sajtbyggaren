@@ -1,0 +1,94 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "service-summary",
+      "coverage-summary",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "reviews",
+      "opening-hours",
+      "team-teaser",
+      "faq",
+      "video-hero"
+    ],
+    "sectionOrderRules": [
+      "Hero must state the business type and primary service focus, and include a clear contact CTA.",
+      "Service summary must mention concrete delivery or courier tasks, not vague business claims.",
+      "Coverage summary should appear before the final contact CTA when service areas are known.",
+      "Trust proof must rely on real signals such as organisation number, F-tax status, references or clear operating details.",
+      "Sections should avoid repeating the same promise about speed or reliability in multiple blocks."
+    ]
+  },
+  "services": {
+    "requiredSections": [
+      "services-intro",
+      "service-list",
+      "service-process",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "pricing-table",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Services intro must connect the company to actual courier or postal services offered.",
+      "Service list items must be concrete examples such as expressbud, företagsleveranser, distribution or upphämtning where supported by content.",
+      "Service process should explain how booking, pickup, transport and delivery work in a simple sequence.",
+      "If pricing is shown, it must be presented as real example pricing, fixed pricing or request-a-quote guidance without invented figures."
+    ]
+  },
+  "coverage": {
+    "requiredSections": [
+      "coverage-intro",
+      "service-area",
+      "delivery-types",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "map-embed",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Coverage intro must explain where the company operates and how area affects availability or delivery setup.",
+      "Service area content should list actual cities, districts or regions only when known.",
+      "Delivery types must clarify whether the same service applies everywhere or differs by area, urgency or shipment type.",
+      "Map content should support the area description and not replace written coverage information."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "reviews",
+      "image-gallery"
+    ],
+    "sectionOrderRules": [
+      "About story must describe the company in specific terms relevant to transport, delivery or logistics work.",
+      "Team should only be shown when real people or roles are available.",
+      "Trust proof should focus on transparent company details and references rather than generic marketing language."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "mailto-contact-form",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "opening-hours",
+      "map-embed"
+    ],
+    "sectionOrderRules": [
+      "Contact info must include real contact paths such as phone, email or address and must not use placeholders.",
+      "The contact form should support straightforward booking or inquiry intent for delivery and courier assignments.",
+      "Opening hours and map should appear after the core contact options unless they are essential for visiting a physical location."
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Ge en trygg och tydlig överblick över verksamheten: vilka försäkrings-, återförsäkrings- eller pensionslösningar som erbjuds, vilka kundgrupper man vänder sig till, varför besökaren kan känna förtroende och hur nästa steg tas."
+    },
+    {
+      "id": "erbjudande",
+      "path": "/erbjudande",
+      "required": true,
+      "purpose": "Presentera produkt- och tjänsteområden strukturerat så att besökaren snabbt kan förstå om verksamheten arbetar med exempelvis sakförsäkring, livförsäkring, tjänstepension, återförsäkring eller kapitalförvaltning inom pensionsramen."
+    },
+    {
+      "id": "om-oss",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Beskriva bolaget, uppdraget, arbetssättet, risk- och ansvarsperspektivet samt den typ av kompetens och organisation som bär erbjudandet."
+    },
+    {
+      "id": "kontakt",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Erbjuda tydliga kontaktvägar för offert, rådgivning, partnerdialog eller allmän fråga, med formulär och direkt kontaktinformation."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "priser",
+      "path": "/priser",
+      "when": "verksamheten säljer standardiserade försäkringspaket, rådgivningstjänster eller abonnemang som kan presenteras öppet utan individuell riskprövning"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "många återkommande frågor finns om villkor på översiktlig nivå, skadeanmälan, pensionssparande, återköp, flytt eller hur processen fungerar"
+    },
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "namngivna rådgivare, specialister eller ledningspersoner stärker förtroendet och hjälper besökaren att förstå kompetensområden"
+    },
+    {
+      "id": "skador-och-arenden",
+      "path": "/skador-och-arenden",
+      "when": "verksamheten behöver samla information om skadeanmälan, pågående ärenden, ersättningsprocess eller vägledning till rätt kanal"
+    },
+    {
+      "id": "insikter",
+      "path": "/insikter",
+      "when": "bolaget publicerar marknadskommentarer, pensionsguider, riskråd eller förklarande innehåll som stödjer kundens beslutsprocess"
+    }
+  ]
+}

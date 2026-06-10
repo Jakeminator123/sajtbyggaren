@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../governance/schemas/scaffold.schema.json",
+  "id": "sni-37-avloppsrening",
+  "version": "0.1.0",
+  "label": "Avloppsrening",
+  "description": "Scaffold för företag inom avloppsrening med fokus på tjänster, process/kapacitet, driftinformation och tydlig kontaktväg för kommuner, fastighetsägare och verksamhetskunder.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "förklara renings- och driftstjänster tydligt",
+    "bygga förtroende genom konkret verksamhetsinformation",
+    "leda besökare till kontakt för frågor, uppdrag eller driftärenden"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": true,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}
