@@ -56,6 +56,21 @@ texten/innehållet hade drivit från dagens modell - åtgärdas i denna PR), ell
 kan hållas ärlig mot motorn ska den märkas legacy/diagnostic här hellre än att
 låtsas vara aktuell.
 
+### Maskinverifierat vy-register (governance-lås)
+
+Tabellen ovan är den mänskliga kartan. Den maskinläsbara sanningskällan är
+`governance/policies/backoffice-views.v1.json` (schema:
+`governance/schemas/backoffice-views.schema.json`): ett register där varje vy
+har `section`, `ownerSource` (ägande modul), `status`
+(`active`/`stale`/`legacy`/`diagnostic`), `readsFrom` (datakällor) och
+`lastVerified`. Sektion↔vy-kopplingen bor i `backoffice/view_registry.py` som
+både sidomenyn (`backoffice.py`) och registret läser.
+
+`tests/test_backoffice_registry.py` låser de två dubbelriktat: en vy som finns i
+koden men saknar entry = rött, och ett entry utan motsvarande vy i koden = rött.
+Samma disciplin som naming-dictionary + `check_term_coverage` redan har — en ny
+vy kan inte smyga in utan att registreras och statusbedömas.
+
 ## Vad som speglar dagens motor (och var)
 
 - `Golden Path`: read-only status i Översikt (senaste eval-summary) + Evals-vyn.

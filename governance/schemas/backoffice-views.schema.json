@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "backoffice-views.schema.json",
+  "title": "Backoffice Views Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["policyId", "version", "status", "purpose", "sections", "views"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^backoffice-views\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Canonical section labels in sidebar order. Every view.section must be one of these."
+    },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["view", "section", "ownerSource", "status", "readsFrom", "lastVerified"],
+        "properties": {
+          "view": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact UI label, identical to the key in the owning module's VIEWS dict."
+          },
+          "section": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sidebar section label. Must be present in the top-level sections array."
+          },
+          "ownerSource": {
+            "type": "string",
+            "pattern": "^backoffice\\.views\\.[a-z_]+$",
+            "description": "Dotted module path that owns the view (matches module __name__)."
+          },
+          "status": {
+            "enum": ["active", "stale", "legacy", "diagnostic"],
+            "description": "active = mirrors today's engine and reads a real data surface; diagnostic = runs live checks rather than reading a stored surface; stale/legacy = drifted/retirement candidate."
+          },
+          "readsFrom": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "Repo-relative data sources the view reads (e.g. governance/policies, data/runs, data/evals/summaries/golden-path)."
+          },
+          "lastVerified": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+            "description": "Date (YYYY-MM-DD) the entry was last checked against the code."
+          },
+          "note": {
+            "type": "string",
+            "description": "Optional short operator note (Swedish)."
+          }
+        }
+      }
+    }
+  }
+}
