@@ -61,8 +61,15 @@ def _metadata_int(metadata: dict[str, Any], key: str) -> int | None:
         return None
     if isinstance(value, int):
         return value
-    if isinstance(value, str) and value.strip().lstrip("-").isdigit():
-        return int(value.strip())
+    if isinstance(value, str):
+        # Extern granskning 2026-06-10 (F8): int() i en try/except i stället
+        # för isdigit-heuristiken - en patologisk sträng som "--5" passerade
+        # lstrip("-").isdigit() men fick int() att kasta, vilket kraschade
+        # grafvyn igen (samma symptom som fixen skulle döda).
+        try:
+            return int(value.strip())
+        except ValueError:
+            return None
     return None
 
 

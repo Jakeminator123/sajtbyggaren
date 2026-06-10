@@ -46,7 +46,15 @@ from .models import (
 
 _ADD_VERBS = (
     "lägg till", "lägg in", "lägg dit", "lägg",
+    # Infinitivformerna (extern granskning 2026-06-10, GPT-fynd 2): en artigt
+    # frågeformad edit ("kan du lägga till en FAQ-sektion?", "skulle du kunna
+    # lägga till en team-sektion?") bär "lägga till", inte imperativets "lägg
+    # till" — utan dem klassades en äkta section_add som answer-only question
+    # och byggde aldrig. Ordgräns-matchningen gör att "lägg" inte täcker
+    # "lägga" (a:et är ett ordtecken).
+    "lägga till", "lägga in", "lägga dit",
     "sätt in", "sätt dit", "sätt",
+    "sätta in", "sätta dit",
     "placera", "infoga", "addera", "inför", "introducera",
     "stoppa in", "få in", "ha en", "ha med", "vill ha", "vill lägga",
     "add", "insert", "place",

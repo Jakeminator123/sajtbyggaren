@@ -506,10 +506,18 @@ async function runPromptBuildOnce(
   // false (the bridge said so). The answer text comes from the existing
   // lib/openai.ts chat helper with an honest no-key fallback.
   if (applyResult && !applyResult.bridge.applied) {
-    const conversation = extractConversation(applyResult.decision);
+    // Reuse the conversation metadata extracted once above (extern granskning
+    // 2026-06-10, F5: the duplicate extractConversation call invited drift).
+    const conversation = conversationMeta;
+    // F4 (same review): the gate honours BOTH the kind set AND the explicit
+    // expectsAnswer signal, matching how use-followup-build + FloatingChat
+    // already read the contract — if the conductor ever marks a kind outside
+    // CONVERSATION_ANSWER_KINDS as answer-only, the server and the clients
+    // must agree (answer, not a silent legacy build).
     if (
       conversation &&
-      CONVERSATION_ANSWER_KINDS.has(conversation.conversationKind)
+      (CONVERSATION_ANSWER_KINDS.has(conversation.conversationKind) ||
+        conversation.expectsAnswer === true)
     ) {
       const answerText = await generateConversationAnswer(
         payload.prompt,

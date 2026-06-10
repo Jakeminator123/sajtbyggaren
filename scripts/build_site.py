@@ -1543,6 +1543,35 @@ def build_plan_artefakts(
 # ---------------------------------------------------------------------------
 
 
+def _followup_previous_run_dir(
+    runs_root: Path,
+    site_id: str,
+    prompt_meta: dict[str, Any] | None,
+) -> Path | None:
+    """Resolve the run the brief carry-forward (B180) should compare against.
+
+    B186: an EXPLICIT baseRunId ("Iterera från denna", written into the
+    prompt-meta sidecar by ``generate_followup``) must win over the rolling
+    latest run - the chain builds FROM the pinned base, so the brief-input
+    comparison must read the SAME base, not whatever run happens to be newest.
+    Falls back to ``latest_run_dir_for_site`` when no baseRunId is present or
+    the pinned run lacks a readable ``site-brief.json`` (then there is nothing
+    to carry forward from it anyway).
+    """
+    from packages.generation.followup.hero_headline_pin import (
+        latest_run_dir_for_site,
+    )
+
+    base_run_id = (
+        prompt_meta.get("baseRunId") if isinstance(prompt_meta, dict) else None
+    )
+    if isinstance(base_run_id, str) and base_run_id:
+        candidate = runs_root / base_run_id
+        if (candidate / "site-brief.json").is_file():
+            return candidate
+    return latest_run_dir_for_site(runs_root, site_id)
+
+
 def write_phase1_understand(
     run_dir: Path,
     trace: Trace,
@@ -1594,12 +1623,10 @@ def write_phase1_understand(
     # naturally resolves the PREVIOUS completed run.
     brief: dict | None = None
     if _prompt_meta_mode(prompt_meta) == "followup":
-        from packages.generation.followup.hero_headline_pin import (
-            latest_run_dir_for_site,
-        )
-
-        previous_run_dir = latest_run_dir_for_site(
-            run_dir.parent, dossier["siteId"]
+        # B186: an explicit baseRunId in the sidecar wins over the rolling
+        # latest run (see _followup_previous_run_dir).
+        previous_run_dir = _followup_previous_run_dir(
+            run_dir.parent, dossier["siteId"], prompt_meta
         )
         if previous_run_dir is not None:
             brief = reuse_previous_site_brief(trace.run_id, dossier, previous_run_dir)
@@ -3278,9 +3305,20 @@ def run_followup_chain(
     # iterating a follow-up from another site's run would read the wrong
     # artefakts (and pin the wrong hero headline). The auto-resolved path is
     # already siteId-filtered, so only validate the operator-supplied id.
+    # Extern granskning 2026-06-10 (F2): an UNVERIFIABLE base run (missing/
+    # malformed build-result.json -> _build_result_site_id None) must also be
+    # refused - skipping the check would let a broken/foreign run dir bypass
+    # the cross-site protection entirely. Honest stop over silent trust.
     if explicit_base_run_id:
         base_site_id = _build_result_site_id(runs_root / base_run_id)
-        if base_site_id is not None and base_site_id != site_id:
+        if base_site_id is None:
+            raise SystemExit(
+                f"Follow-up: baseRunId={base_run_id!r} kan inte verifieras "
+                "(build-result.json saknas/oläsbar eller saknar siteId). "
+                "Vägrar bygga vidare på en overifierbar run — välj en "
+                "komplett run eller utelämna baseRunId (auto-resolve)."
+            )
+        if base_site_id != site_id:
             raise SystemExit(
                 f"Follow-up: baseRunId={base_run_id!r} tillhör siteId="
                 f"{base_site_id!r}, inte {site_id!r}. Vägrar bygga vidare på en "
