@@ -5,9 +5,10 @@ Lägg till EN sanktionerad sektion på en befintlig route genom att MONTERA dess
 capability+dossier via apply-kedjan, så en följdprompt ("lägg till en
 FAQ-sektion") ger en ny immutabel version med sektionen monterad.
 
-> **SYNLIGT för faq + team (flippat 2026-06-09), MOUNT-ONLY för resten:**
-> section_add MONTERAR alltid capability + dossier i nästa version
-> (`requestedCapabilities` + `selectedDossiers.required`).
+> **SYNLIGT för faq + team (flippat 2026-06-09), öppettider (ADR 0038) och
+> galleri (ADR 0040); MOUNT-ONLY för resten:** section_add MONTERAR alltid
+> capability + dossier i nästa version (`requestedCapabilities` +
+> `selectedDossiers.required`).
 >
 > För `faq` och `team` (på scaffolden local-service-business) ytas sektionen
 > dessutom som en *grundad dedikerad route* (`/faq` via render_faq, `/team` via
@@ -20,11 +21,20 @@ FAQ-sektion") ger en ny immutabel version med sektionen monterad.
 > (mounted-but-no-content), aldrig en påhittad platshållare. På andra scaffolds
 > förblir faq/team mount-only tills deras renderare väljer in wizard-routes.
 >
-> För de övriga typerna (trust/garantier, recensioner, galleri, priser,
-> öppettider, karta, kontaktformulär) gäller fortfarande mount-only: dossiern
-> monteras men targeted-rendern visar INTE en ny sektion, så det blir ärligt
+> För `hours` (ADR 0038) och `gallery` (ADR 0040) renderas sektionen INLINE som
+> block på home via `directives.mountedSections`, på scaffolds local-service-
+> business + ecommerce-lite (ADR 0040). Positionsmålet ("överst"/"längst ner")
+> respekteras; för `gallery`, som ofta redan ligger i home-ordningen när
+> galleri-bilder finns, betyder en explicit position en FLYTT av den
+> befintliga sektionen (aldrig en dubblett). Grundat innehåll krävs
+> (öppettider i `contact.openingHours`, uppladdade bilder i `gallery`),
+> annars ärligt mount-only.
+>
+> För de övriga typerna (trust/garantier, recensioner, priser, karta,
+> kontaktformulär) gäller fortfarande mount-only: dossiern monteras men
+> targeted-rendern visar INTE en ny sektion, så det blir ärligt
 > `applied=true` men `appliedVisibleEffect=false`/`previewShouldRefresh=false`.
-> galleri/priser/karta kan följa samma dedikerad-route-mönster härnäst.
+> priser/karta kan följa samma inline-mönster härnäst.
 
 ## Sanktionerade sektionstyper
 Originalfyra: team, faq, garantier/trust, recensioner. Breddat 2026-06-08
@@ -75,5 +85,7 @@ en mount-only-montering rapporteras ärligt som "registrerad men syns inte än"
 ## Status
 supported — router + apply-väg + 9 typer + tester + verify_openclaw inne på
 `jakob-be` (se `../../action-registry.json`). Synlig render landad för `faq` +
-`team` på local-service-business (grundad dedikerad route); övriga sju typer är
-fortfarande mount-only (följd: galleri/priser/karta nästa).
+`team` på local-service-business (grundad dedikerad route), `hours` inline på
+home (ADR 0038) och `gallery` inline/flytt på home för local-service-business +
+ecommerce-lite (ADR 0040, 2026-06-10); övriga fem typer är fortfarande
+mount-only (följd: priser/karta nästa).

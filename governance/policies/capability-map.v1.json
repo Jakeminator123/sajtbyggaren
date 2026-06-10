@@ -37,7 +37,7 @@
     "gallery": {
       "dossiers": ["image-gallery"],
       "default": "image-gallery",
-      "comment": "image-gallery is a soft instructions-only Dossier (CSS-grid gallery). Mount-only via section_add today; render_section_gallery exists but visible preview surfacing is not guaranteed until the dedicated render-path lands."
+      "comment": "image-gallery is a soft instructions-only Dossier (CSS-grid gallery). Via section_add the gallery section renders INLINE on home (ADR 0040: local-service-business + ecommerce-lite), and an explicit position (top/bottom) MOVES the already-present home gallery section. Gated on grounded content: with no uploaded gallery images the capability stays honestly mount-only."
     },
     "hours": {
       "dossiers": ["opening-hours"],

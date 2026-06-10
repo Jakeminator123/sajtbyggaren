@@ -116,24 +116,35 @@ VISIBLE_SECTION_ROUTES: dict[str, dict[str, str]] = {
 # ``appliedVisibleEffect``.
 #
 # Only scaffolds in ``INLINE_SECTION_SCAFFOLDS`` get inline placements (slice 1:
-# local-service-business). On any other scaffold a section_add stays honestly
-# mount-only. Kept narrow on purpose: ``hours`` is the slice-1 type because it
-# had NO visible path before (it was mount-only) AND its renderer
-# (``render_section_hours_summary``) emits a self-contained, grounded home
-# ``<section>``. Capabilities that already reach a VISIBLE dedicated route
-# (``faq``/``team`` via ``VISIBLE_SECTION_ROUTES``) are deliberately NOT listed
-# here, so they keep their dedicated-page path and are never double-surfaced
-# (inline AND as a page). More capabilities join once each has a home-compatible
-# ``<section>`` renderer + grounded-content gate.
+# local-service-business; slice 4 / ADR 0040: + ecommerce-lite). On any other
+# scaffold a section_add stays honestly mount-only. Kept narrow on purpose:
+# ``hours`` is the slice-1 type because it had NO visible path before (it was
+# mount-only) AND its renderer (``render_section_hours_summary``) emits a
+# self-contained, grounded home ``<section>``. ``gallery`` is the slice-4 type
+# (ADR 0040): its renderer (``render_section_gallery``) is already part of the
+# default home order when gallery images exist, so the placement's job is to
+# MOVE the section to the operator's explicit position (top/bottom) — the
+# renderer treats an already-present section with an explicit position as a
+# move, never a duplicate. Capabilities that already reach a VISIBLE dedicated
+# route (``faq``/``team`` via ``VISIBLE_SECTION_ROUTES``) are deliberately NOT
+# listed here, so they keep their dedicated-page path and are never
+# double-surfaced (inline AND as a page). More capabilities join once each has
+# a home-compatible ``<section>`` renderer + grounded-content gate.
 INLINE_SECTION_PLACEMENTS: dict[str, dict[str, str]] = {
     "hours": {"sectionId": "hours-summary", "routeId": "home"},
+    "gallery": {"sectionId": "gallery", "routeId": "home"},
 }
 
 # Scaffolds whose home renderer composes its section order from the section list
 # (so an injected section actually renders). Mirrors the narrow-gate pattern of
 # ``_scaffold_emits_wizard_routes``; kept as an explicit allowlist so a new
 # scaffold opts in deliberately rather than inheriting inline injection silently.
-INLINE_SECTION_SCAFFOLDS: frozenset[str] = frozenset({"local-service-business"})
+# ecommerce-lite qualifies (ADR 0040) because its home goes through the SAME
+# ``render_home`` shim as local-service-business (it is not in
+# ``_DISPATCHED_SCAFFOLDS``), so the injection seam is already threaded.
+INLINE_SECTION_SCAFFOLDS: frozenset[str] = frozenset(
+    {"local-service-business", "ecommerce-lite"}
+)
 
 # Routes whose renderer reads ``directives.mountedSections`` and injects the
 # section inline (slice 1: only ``home`` via ``render_home``). The resolver only

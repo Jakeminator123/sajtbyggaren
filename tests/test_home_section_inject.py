@@ -1,4 +1,4 @@
-"""Visible section_add: home-page inline section injection (slice 0 + 1).
+"""Visible section_add: home-page inline section injection (slice 0 + 1 + 4).
 
 Locks the LSB home composition so the new ``directives.mountedSections``
 injection path stays behavior-preserving:
@@ -233,3 +233,146 @@ def test_home_already_present_section_not_duplicated():
     assert rendered.count(story_marker) == 1, (
         "A section already present in the home order must not be injected twice."
     )
+
+
+# ---------------------------------------------------------------------------
+# Slice 4 (ADR 0040): gallery as a movable inline section. ``gallery`` is part
+# of the default home order whenever the operator has gallery images, so a
+# section_add "lägg till galleri överst" must MOVE the section to the
+# requested slot (never duplicate it, never silently no-op the operator's
+# placement intent). The same seam works on ecommerce-lite, whose home goes
+# through the same render_home shim.
+# ---------------------------------------------------------------------------
+
+# Two images: with a non-empty company.story the home gallery section skips the
+# first image (the story section consumes it), so a single image would suppress
+# the section entirely and the move tests would assert against nothing.
+_GALLERY_ITEMS = [
+    {"filename": "verkstad-01.webp", "alt": "Verkstaden"},
+    {"filename": "verkstad-02.webp", "alt": "Penslar"},
+]
+
+
+def _gallery_dossier(scaffold_id: str = "local-service-business") -> dict[str, Any]:
+    dossier = _painter_dossier()
+    dossier["scaffoldId"] = scaffold_id
+    dossier["gallery"] = [dict(item) for item in _GALLERY_ITEMS]
+    return dossier
+
+
+@pytest.mark.tooling
+def test_home_gallery_move_top_lands_after_hero():
+    """ADR 0040: gallery + position=top MOVES the default mid-page gallery to
+    right after the hero — rendered exactly once, before the services summary."""
+    dossier = _gallery_dossier()
+    dossier["directives"] = {
+        "mountedSections": [
+            {"sectionId": "gallery", "routeId": "home", "position": "top"}
+        ]
+    }
+    rendered = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    gallery_idx = rendered.find("Ett urval från projekten")
+    services_idx = rendered.find("Inomhusmålning")
+    assert 0 < gallery_idx < services_idx, (
+        "position=top must move the gallery section after the hero and before "
+        "the services summary."
+    )
+    assert rendered.count("Ett urval från projekten") == 1, (
+        "A moved section must render exactly once (move, not duplicate)."
+    )
+
+
+@pytest.mark.tooling
+def test_home_gallery_move_bottom_lands_before_contact():
+    """ADR 0040: gallery + position=bottom moves the section to just before the
+    closing contact-cta (after the default mid-page slot)."""
+    dossier = _gallery_dossier()
+    dossier["directives"] = {
+        "mountedSections": [
+            {"sectionId": "gallery", "routeId": "home", "position": "bottom"}
+        ]
+    }
+    rendered = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    gallery_idx = rendered.find("Ett urval från projekten")
+    services_idx = rendered.find("Inomhusmålning")
+    cta_idx = rendered.rfind("Hör av dig")
+    assert 0 < services_idx < gallery_idx < cta_idx, (
+        "position=bottom must move the gallery section after the body and "
+        "before the closing contact-cta."
+    )
+    assert rendered.count("Ett urval från projekten") == 1
+
+
+@pytest.mark.tooling
+def test_home_gallery_without_position_keeps_default_slot():
+    """ADR 0038 duplicate gate preserved: a gallery directive WITHOUT an
+    explicit position must not move the already-present section — the home
+    output stays byte-identical to the no-directive baseline."""
+    dossier = _gallery_dossier()
+    baseline = render_home(
+        {**dossier, "directives": {}}, _HOME_ROUTES, variant_id=dossier["variantId"]
+    )
+    dossier["directives"] = {
+        "mountedSections": [{"sectionId": "gallery", "routeId": "home"}]
+    }
+    rendered = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    assert rendered == baseline, (
+        "Without an explicit position an already-present section must stay an "
+        "honest no-op (no move, no duplicate)."
+    )
+
+
+@pytest.mark.tooling
+def test_home_gallery_move_works_on_ecommerce_lite():
+    """ADR 0040 scaffold gate: ecommerce-lite home goes through the same
+    render_home shim, so the same move directive must work there too."""
+    dossier = _gallery_dossier(scaffold_id="ecommerce-lite")
+    dossier["directives"] = {
+        "mountedSections": [
+            {"sectionId": "gallery", "routeId": "home", "position": "top"}
+        ]
+    }
+    rendered = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    gallery_idx = rendered.find("Ett urval från projekten")
+    assert gallery_idx > 0, "gallery must render on ecommerce-lite home"
+    services_idx = rendered.find("Inomhusmålning")
+    assert gallery_idx < services_idx, (
+        "position=top must land the gallery before the body on ecommerce-lite."
+    )
+    assert rendered.count("Ett urval från projekten") == 1
+
+
+@pytest.mark.tooling
+def test_home_gallery_move_blocked_on_unsanctioned_scaffold():
+    """The (scaffoldId, routeId) allowlist still gates moves: the same grounded
+    move directive must be a no-op on a scaffold ADR 0040 has not sanctioned."""
+    dossier = _gallery_dossier(scaffold_id="agency-studio")
+    baseline = render_home(
+        {**dossier, "directives": {}}, _HOME_ROUTES, variant_id=dossier["variantId"]
+    )
+    dossier["directives"] = {
+        "mountedSections": [
+            {"sectionId": "gallery", "routeId": "home", "position": "top"}
+        ]
+    }
+    rendered = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    assert rendered == baseline
+
+
+@pytest.mark.tooling
+def test_home_gallery_move_without_images_is_no_op():
+    """Grounded-content gate: a gallery move with NO gallery images must not
+    inject or move anything (the renderer returns "" and the gate drops it)."""
+    dossier = _painter_dossier()  # painter-palma has no gallery images
+    assert not dossier.get("gallery")
+    baseline = render_home(
+        {**dossier, "directives": {}}, _HOME_ROUTES, variant_id=dossier["variantId"]
+    )
+    dossier["directives"] = {
+        "mountedSections": [
+            {"sectionId": "gallery", "routeId": "home", "position": "top"}
+        ]
+    }
+    rendered = render_home(dossier, _HOME_ROUTES, variant_id=dossier["variantId"])
+    assert rendered == baseline
+    assert "Ett urval från projekten" not in rendered

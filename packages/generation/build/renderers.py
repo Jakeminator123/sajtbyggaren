@@ -1505,8 +1505,15 @@ def _collect_home_icons(dossier: dict, dossier_routes: list[str]) -> list[str]:
 # must not import the followup layer. Parity is locked by
 # ``tests/test_section_directives.py`` so the two cannot silently drift.
 _INLINE_SECTION_ALLOWLIST: dict[tuple[str, str], frozenset[str]] = {
-    ("local-service-business", "home"): frozenset({"hours-summary"}),
+    ("local-service-business", "home"): frozenset({"hours-summary", "gallery"}),
+    ("ecommerce-lite", "home"): frozenset({"hours-summary", "gallery"}),
 }
+
+# Positions that may MOVE a section that is already part of the route's default
+# order (ADR 0040). Without an explicit position an already-present section
+# stays an honest no-op (the ADR 0038 duplicate gate), so old directives keep
+# byte-identical output.
+_MOVABLE_POSITIONS: frozenset[str] = frozenset({"top", "bottom", "before-contact"})
 
 
 def _mounted_section_ids_for_route(
@@ -1533,7 +1540,13 @@ def _mounted_section_ids_for_route(
       inject an arbitrary registered section);
     - ``sectionId`` has a registered renderer in ``_SECTION_RENDERERS``
       (``render_route_generic`` would SystemExit on an unknown id);
-    - the section is not already in ``existing_section_ids`` (no duplicate);
+    - the section is not already in ``existing_section_ids`` (no duplicate) —
+      UNLESS the entry carries an explicit position in ``_MOVABLE_POSITIONS``,
+      in which case it is a MOVE (ADR 0040): the id is returned so the caller
+      relocates the section to the requested slot instead of dropping the
+      operator's placement intent. The caller MUST remove a returned id from
+      its default order before inserting (``render_home`` does), so the
+      section still renders exactly once;
     - the section renders non-empty grounded content for this dossier (the
       renderer returns "" when the operator supplied no content).
 
@@ -1568,7 +1581,14 @@ def _mounted_section_ids_for_route(
             continue
         if section_id not in allowed:
             continue
-        if section_id in existing or section_id in seen:
+        if section_id in seen:
+            continue
+        position = entry.get("position")
+        if section_id in existing and position not in _MOVABLE_POSITIONS:
+            # Already in the default order and no explicit position: honest
+            # no-op (ADR 0038 duplicate gate). With an explicit position the
+            # entry is a MOVE (ADR 0040) and falls through; the caller removes
+            # the default occurrence before inserting.
             continue
         renderer = _SECTION_RENDERERS.get(section_id)
         if renderer is None:
@@ -1577,7 +1597,6 @@ def _mounted_section_ids_for_route(
         if not _call_section_renderer(renderer, dossier, render_kwargs).strip():
             continue
         seen.add(section_id)
-        position = entry.get("position")
         if position == "top":
             top_ids.append(section_id)
         else:
@@ -1674,6 +1693,13 @@ def render_home(
         existing_section_ids=[*section_order, "contact-cta"],
         render_kwargs=render_kwargs,
     )
+    # ADR 0040 move semantics: an id returned for a section that is already in
+    # the default order is a MOVE (explicit position), so the default
+    # occurrence is removed first — the section renders exactly once, at the
+    # operator's slot. Ids not in the default order pass through unchanged.
+    moved = {sid for sid in (*top_ids, *bottom_ids) if sid in section_order}
+    if moved:
+        section_order = [sid for sid in section_order if sid not in moved]
     if top_ids:
         # After hero (index 0), before the rest of the body.
         section_order[1:1] = top_ids

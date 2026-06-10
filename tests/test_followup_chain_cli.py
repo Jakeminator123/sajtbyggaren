@@ -594,6 +594,153 @@ def test_followup_chain_section_add_hours_position_top(
     )
 
 
+def _seed_example_with_gallery_init_build(
+    tmp_path: Path, example_filename: str, site_id: str
+) -> tuple[Path, Path, Path]:
+    """Like ``_seed_example_init_build`` but with two gallery assetRefs added,
+    so the home gallery section is grounded (ADR 0040 move tests). Two images
+    because a non-empty company.story consumes the first one (the home gallery
+    renderer skips it), and a single image would suppress the section. The
+    physical bytes are absent on purpose — ``copy_operator_uploads`` skips a
+    missing asset without aborting, and the renderer still emits the section
+    markup the move assertions need."""
+    from scripts.build_site import build
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "gen"
+    example = json.loads(
+        (REPO_ROOT / "examples" / example_filename).read_text(encoding="utf-8")
+    )
+    example["gallery"] = [
+        {
+            "assetId": f"TESTGALLERY{index}",
+            "filename": f"galleri-{index}.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 1000,
+            "role": "gallery",
+            "alt": f"Galleribild {index}",
+        }
+        for index in (1, 2)
+    ]
+    dossier_path = tmp_path / example_filename
+    dossier_path.write_text(
+        json.dumps(example, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    build(
+        dossier_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        prompt_inputs_dir=prompt_inputs,
+    )
+    return prompt_inputs, runs_dir, generated_dir
+
+
+def test_followup_chain_section_add_gallery_moves_to_top(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ADR 0040 (slice 4) move-proof: "lägg till en galleri-sektion överst" on
+    a site whose home ALREADY renders the gallery mid-page (grounded images)
+    must MOVE the section to right after the hero — rendered exactly once —
+    and report an honest appliedVisibleEffect=true on home."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_with_gallery_init_build(
+        tmp_path, "painter-palma.project-input.json", site_id
+    )
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    base_home = (builds[-1] / "app" / "page.tsx").read_text(encoding="utf-8")
+    # Baseline: gallery renders at its default mid-page slot (after services).
+    assert 0 < base_home.find("Inomhusmålning") < base_home.find(
+        "Ett urval från projekten"
+    )
+    base_pages = _newest_build_app_pages(generated_dir, site_id)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en galleri-sektion överst",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "section_add"
+    assert "gallery" in [c["capability"] for c in result["appliedCapabilities"]]
+    # The move changes home bytes -> honest visible effect, no new page.
+    assert result["appliedVisibleEffect"] is True, result
+    assert result["affectedRoutes"] == ["home"]
+    assert _newest_build_app_pages(generated_dir, site_id) == base_pages
+
+    v2_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    mounted = (v2_pi.get("directives") or {}).get("mountedSections") or []
+    assert any(
+        m.get("sectionId") == "gallery"
+        and m.get("routeId") == "home"
+        and m.get("position") == "top"
+        for m in mounted
+    ), mounted
+
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    home_markup = (builds[-1] / "app" / "page.tsx").read_text(encoding="utf-8")
+    gallery_idx = home_markup.find("Ett urval från projekten")
+    services_idx = home_markup.find("Inomhusmålning")
+    assert 0 < gallery_idx < services_idx, (
+        "position=top must MOVE the gallery section above the services summary."
+    )
+    assert home_markup.count("Ett urval från projekten") == 1, (
+        "the moved gallery must render exactly once (move, not duplicate)."
+    )
+
+
+def test_followup_chain_section_add_gallery_moves_on_ecommerce_lite(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ADR 0040 scaffold gate, E2E: the same gallery move works on the
+    ecommerce-lite scaffold (operator scenario 2026-06-10: drag-and-drop
+    "galleri överst" on the 1753-skincare site changed nothing because gallery
+    was mount-only outside local-service-business)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "atelje-bird"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_with_gallery_init_build(
+        tmp_path, "atelje-bird.project-input.json", site_id
+    )
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en galleri-sektion överst",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["appliedVisibleEffect"] is True, result
+    assert result["affectedRoutes"] == ["home"]
+
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    home_markup = (builds[-1] / "app" / "page.tsx").read_text(encoding="utf-8")
+    gallery_idx = home_markup.find("Ett urval från projekten")
+    assert gallery_idx > 0, "gallery must render on the ecommerce-lite home"
+    # The injected gallery image markup must precede the listing section.
+    listing_idx = home_markup.find("Vårt sortiment")
+    assert listing_idx > 0, "ecommerce-lite home must keep its listing section"
+    assert gallery_idx < listing_idx, (
+        "position=top must land the gallery before the product listing."
+    )
+    assert home_markup.count("Ett urval från projekten") == 1
+
+
 def test_followup_chain_section_add_unsupported_type_is_honest_no_op(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
