@@ -773,6 +773,10 @@ COMMON_WORDS = {
     # upp till studio-toasten. Inga canonical domänbegrepp — samma lokala
     # allowlist som AddModuleDialog/ModuleDef ovan.
     "FollowupVisibleEffect", "OnFollowupBuildDone",
+    # Specialist-pilot steg 1 (2026-06-10): strukturerad verktygs-intent
+    # från builder-dialoger (use-followup-build.ts). UI-lokal typ tills
+    # backend-dispatchen landar och kontraktet ev. kanoniseras.
+    "FollowupToolIntent",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",

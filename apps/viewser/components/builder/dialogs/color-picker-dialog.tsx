@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 
 import {
   useFollowupBuild,
+  type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
@@ -21,10 +22,14 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 /**
- * Byt primärfärg i sajten genom att skicka en strukturerad
- * follow-up-prompt. Vi gör inget magiskt på frontenden — backend-
- * pipelinen tolkar prompten ("ändra primärfärgen till #2D5F3F")
- * och uppdaterar Project Input + bygger om.
+ * Byt primärfärg i sajten. Dialogen skickar BÅDE en läsbar follow-up-
+ * prompt (fallback/logg) och en strukturerad ``toolIntent``
+ * (specialist-pilot, steg 1): vi har redan exakt hex-värde här, så
+ * backend ska inte behöva router-klassificera fritext + anropa
+ * styleDirectiveModel för att gissa sig tillbaka till samma hex.
+ * Backend utan toolIntent-stöd strippar fältet tyst och tolkar
+ * prompten som idag — beteendet är identiskt tills Jakobs dispatch
+ * landar.
  *
  * UX: 6 förvalda svatch-rutor för snabb iteration + native HTML
  * color input för fri lek. Båda uppdaterar samma `color`-state.
@@ -104,7 +109,13 @@ export function ColorPickerDialog({
   const handleSubmit = useCallback(async () => {
     if (!HEX_PATTERN.test(hexInput)) return;
     const prompt = `Ändra sajtens primärfärg till ${color}. Behåll övrig design intakt, men uppdatera knapp-, länk- och accentfärger så de matchar.`;
-    const result = await runFollowup(prompt);
+    // Strukturerad intent bredvid prompten — backend med specialist-
+    // dispatch går rakt till tema-pipelinen utan LLM-tolkning.
+    const toolIntent: FollowupToolIntent = {
+      tool: "theme_change",
+      params: { primaryColorHex: color },
+    };
+    const result = await runFollowup(prompt, { toolIntent });
     if (result.ok) onOpenChange(false);
   }, [color, hexInput, runFollowup, onOpenChange]);
 
