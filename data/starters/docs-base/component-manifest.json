@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../governance/schemas/component-manifest.schema.json",
+  "starterId": "docs-base",
+  "generatedBy": "scripts/generate_component_manifests.py",
+  "componentsJsonPresent": true,
+  "style": "base-nova",
+  "iconLibrary": "lucide",
+  "uiAlias": "@/components/ui",
+  "components": [
+    {
+      "name": "button",
+      "path": "components/ui/button.tsx"
+    }
+  ]
+}

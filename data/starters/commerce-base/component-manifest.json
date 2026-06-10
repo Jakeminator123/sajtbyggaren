@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../governance/schemas/component-manifest.schema.json",
+  "starterId": "commerce-base",
+  "generatedBy": "scripts/generate_component_manifests.py",
+  "componentsJsonPresent": true,
+  "style": "base-nova",
+  "iconLibrary": "lucide",
+  "uiAlias": "@/components/ui",
+  "components": []
+}

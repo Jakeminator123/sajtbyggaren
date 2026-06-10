@@ -46,6 +46,15 @@
             "comment": {
               "type": "string",
               "description": "Operator-facing note (e.g. 'No Dossier yet; resend-contact-form planned for Sprint 3')."
+            },
+            "components": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true,
+              "description": "Optional. shadcn component names (file stems under a Starter's components/ui/) that render/codegen may use for this capability. Each name must exist in at least one enabled Starter's component-manifest.json - scripts/governance_validate.py treats a reference to a missing component as a gate error (no silent fallback). Existing entries are unaffected; the field is additive."
             }
           }
         }
