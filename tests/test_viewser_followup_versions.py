@@ -57,25 +57,55 @@ def test_serialized_prompt_and_build_runners_clear_inflight_promises() -> None:
     (await + cleanup), INTE ``.finally(() => ...)``-callback som lätt
     skapar unhandled rejection.
 
+    Båda runners använder numera samma per-site Map-mönster:
+    registrera promise:n i Map:en FÖRE ``return await promise``, och
+    rensa entry:t i ``finally`` bara om promise:n fortfarande är den
+    aktiva (identity-guard via ``Map.get(...) === promise`` + delete),
+    så en samtidig caller som hunnit skriva en ny entry för samma
+    nyckel inte oavsiktligt nukas.
+
     NB: sentinel för build-runner.ts uppdaterades 2026-05-25 från
     ``inFlight = promise;`` (gammal global mutex) till
-    ``inFlight.set(siteId, promise);`` (ny per-siteId Map-mutex).
-    Reviewer-fynd Round 2 #5 — den globala varianten blockerade
-    orelaterade siteIds. Det dedikerade testet
+    ``inFlight.set(siteId, promise);`` (per-siteId Map-mutex),
+    reviewer-fynd Round 2 #5 — den globala varianten blockerade
+    orelaterade siteIds. B169 (2026-06) gav prompt-routen samma
+    mönster: ``promptInFlight.set(queueKey, promise);`` där queueKey
+    är siteId för follow-ups och en unik init-nyckel annars. Det
+    dedikerade testet
     ``test_build_runner_uses_per_site_mutex_not_global_inflight``
     i ``test_viewser_files.py`` låser den fullständiga Map-strukturen;
-    här bekräftar vi bara att rensningen sker via try/finally med en
-    ``await``-ad promise.
+    här bekräftar vi registrering-före-await + identity-guardad
+    cleanup via try/finally.
     """
-    for relative, sentinel in (
-        ("app/api/prompt/route.ts", "promptInFlight = promise;"),
-        ("lib/build-runner.ts", "inFlight.set(siteId, promise);"),
+    for relative, register_sentinel, cleanup_guard in (
+        (
+            "app/api/prompt/route.ts",
+            "promptInFlight.set(queueKey, promise);",
+            "if (promptInFlight.get(queueKey) === promise) {",
+        ),
+        (
+            "lib/build-runner.ts",
+            "inFlight.set(siteId, promise);",
+            "if (inFlight.get(siteId) === promise) {",
+        ),
     ):
         text = (VIEWSER_DIR / relative).read_text(encoding="utf-8")
-        assert sentinel in text, (
-            f"{relative} saknar ``{sentinel}``-sentinel. Sett:promise-"
-            "registreringen ska ske INNAN ``return await promise`` så "
-            "cleanup-grenen kan identitets-jämföra mot rätt instans."
+        assert register_sentinel in text, (
+            f"{relative} saknar ``{register_sentinel}``-sentinel. "
+            "Promise-registreringen i per-site-Map:en ska ske INNAN "
+            "``return await promise`` så cleanup-grenen kan "
+            "identitets-jämföra mot rätt instans."
         )
         assert "return await promise;" in text
+        assert text.index(register_sentinel) < text.index(
+            "return await promise;"
+        ), (
+            f"{relative}: Map-registreringen ``{register_sentinel}`` "
+            "måste ske FÖRE ``return await promise;``."
+        )
+        assert cleanup_guard in text, (
+            f"{relative} saknar identity-guard ``{cleanup_guard}`` i "
+            "cleanup-grenen — entry:t får bara raderas om promise:n "
+            "fortfarande är den aktiva."
+        )
         assert ".finally(() =>" not in text
