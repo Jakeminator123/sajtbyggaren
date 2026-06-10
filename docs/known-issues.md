@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (av 0), 7 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 15 aktiva, 2 misplaced (av 24 öppna), 7 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -667,7 +667,7 @@ samma kodmönster lever vidare här — därav posten:
   serverlogg). Fix: i arbetsträdet (ocommittad). Test: open
   (regressionstest på parameternamnet önskvärt).
 
-- **`B177` Medel** - Google Fonts-`@import` hamnar mitt i den BYGGDA
+- **`B177` Medel** (fixad 2026-06-10, slice 3-PR) - Google Fonts-`@import` hamnar mitt i den BYGGDA
   CSS-bundeln och ignoreras av webbläsaren ("An @import rule was
   ignored because it wasn't defined at the top of the stylesheet" i
   devtools på genererade sajter, t.ex. havre-ab-d15f42). #235-fixen
@@ -681,9 +681,22 @@ samma kodmönster lever vidare här — därav posten:
   stället för CSS-`@import` (uppföljning till #235, samma yta som
   ADR-fonthissningen). Källa: operatörsfynd 2026-06-10 devtools +
   verifiering mot `data/output/.generated/havre-ab-d15f42/builds/
-  20260610T050928Z/.next/static/css/`. Fix: open. Test: open.
+  20260610T050928Z/.next/static/css/`. **Fixad 2026-06-10** (slice 3-PR):
+  `variant_css` emitterar inte längre någon `@import` (token-only block);
+  ny `variant_google_fonts_href(variant, typography_overlay)` bygger URL:en
+  från SAMMA typografi som sätter `--font-display`/`--font-body`; `build()`
+  resolvar href:en och trådar den genom `write_pages` → `render_layout` som
+  lägger `<link rel="stylesheet">` i `<head>` (ordnings-oberoende av bundeln).
+  Golden-fixturen `painter-palma.nordic-trust.variant.css` regenererad (enbart
+  `@import`-raden bort). Verifierat e2e: painter-palma `layout.tsx` får `<link>`,
+  `globals.css` saknar `@import`. Fix:
+  `packages/generation/build/{tokens.py,renderers.py}` + `scripts/build_site.py`.
+  Test: `tests/test_build_media_rendering.py::test_layout_emits_font_stylesheet_link_when_href_provided`
+  + `::test_layout_omits_font_link_without_href` +
+  `tests/test_builder_smoke.py::test_variant_css_uses_typography_overlay_when_provided`
+  + golden parity-låset. Fix: `4ee85f3` (flytta till Stängda vid Steward-pass).
 
-- **`B178` Medel-Hög** (TYNGRE — dokumenterad, ej fixad) - Falsk
+- **`B178` Medel-Hög** (fixad 2026-06-10, slice 3-PR) - Falsk
   "Klart! v1 → v2" när en fri-text-ändring INTE landade. Operatörsfynd
   bacon-ab-ed861f run `20260610T052908.596Z-99a2a61b`: prompten
   "Denna text: En lugn och tydlig servicesajt… vill jag bara ska bli
@@ -708,7 +721,28 @@ samma kodmönster lever vidare här — därav posten:
   B155 (literal-ersättning träffar inte rubriker/fri formulering),
   slice 3 (ärlig dialogväg + roll-dispatch). Källa: operatörsfynd
   2026-06-10, verifierad mot run-artefakter + detektor-repro
-  (`_followup_requested_copy_replace(...) == False`). Fix: open. Test: open.
+  (`_followup_requested_copy_replace(...) == False`). **Fixad 2026-06-10**:
+  två delar i `packages/generation/followup/copy_directives.py`. (a) Ärlighet:
+  `_followup_requested_copy_replace` flaggar nu ÄVEN den ociterade
+  demonstrativa formen ("Denna text: X ska bli Y") som en replace-BEGÄRAN
+  (ny `_unquoted_anchor_replace_requested` + `_DEMONSTRATIVE_TEXT_ANCHORS`),
+  så ROW-3-guarden rapporterar ärlig `copy_directive_not_applied` no-op i
+  stället för falsk framgång — operatörens exakta hero-repro (H1 är inget
+  lagrat fält) ger nu no-op + ärlig signal. (b) Kapacitet (B155-delen): ny
+  ankar-ledd `_UNQUOTED_ANCHOR_REPLACE_RE` med bredare become-separator
+  (`ska bli`/`blir`/`så den blir`/`vill jag ska bli` + `till`/`to`) +
+  kolon-ankare, så formen APPLICERAS när OLD matchar lagrad copy. Alla gates
+  (additivt / target-keyword / substring-krav / leak-guard) hålls, så
+  stil-/sektions-följdprompter (utan demonstrativt ankare) aldrig misslästs
+  som copy-replace. Fix:
+  `packages/generation/followup/copy_directives.py`. Test:
+  `tests/test_followup_copy_directives.py::test_b178_*` (5 fall).
+  Kvarstår i B155 (egen uppföljning): hero-H1 som inte är ett lagrat fält kan
+  fortfarande bara rapporteras ärligt, inte ändras (kräver hero-target i
+  codegen); bredare/multi-field; service-LABEL-rename. Slice 3 deferrat (egen
+  slice): `editKind`→`role`-dispatch (rollvalet styr skill/prompt, inte bara
+  metadata), `expectsAnswer`-signal i decision-payloaden, FloatingChat-rollrad.
+  Fix: `b24e67e` (flytta till Stängda vid Steward-pass).
 
 - **`B179` Medel** (fixad 2026-06-10) - B175-recoveryns first-run-gren
   accepterade runs som uppstod upp till 5 s FÖRE requesten började.
