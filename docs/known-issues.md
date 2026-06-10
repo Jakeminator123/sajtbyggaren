@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 145 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 146 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -656,6 +656,35 @@ round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B173` Medel** (stängd 2026-06-10, hero-stabilisering, samma PR som
+  registreringen) - Hero-H1 fick NY text vid VARJE följdprompt trots att ingen
+  prompt gällde rubriken (tre gånger bevisat på painter-palma: färgändring,
+  öppettiders-tillägg, skämt-test). Rotorsak: den renderade H1:an kommer från
+  blueprintens `contentBlocks["home.hero"].headline` (härledd ur briefModel
+  `positioning.oneLiner`) som REGENERERAS av varje följdprompt-ombygge; den
+  befintliga operatörs-overriden `company.heroHeadline` (kontrakt heroHeadline
+  > blueprint > company.name, `fb9692d`) sattes bara av explicita
+  rubrik-ändringar, så en aldrig-redigerad rubrik saknade ankare och driftade.
+  Fix: `generate_followup` (scripts/prompt_to_project_input.py) pinnar nu
+  föregående versions FAKTISKT renderade H1 (blueprint-rubriken ur basrunens
+  `generation-package.json`, annars `company.name` - renderarens egen
+  fallback-kedja) som `company.heroHeadline` på merge-basen när fältet saknas.
+  Init-bygget orört (pinnen körs bara i följdprompt-flödet); explicit "byt
+  rubriken till X" (copy-directives/B155-literal/LLM-copy) skriver fortfarande
+  över pinnen via `_apply_copy_directives`-mirrorn; pinnen reproducerar
+  föregående H1 byte-för-byte och kan därför aldrig ensam flippa
+  `appliedVisibleEffect`; no-key-läget beter sig likadant (deterministiska
+  tester). Bonus: B155-literal-replace kan nu matcha den SYNLIGA hero-raden
+  (operatören citerar det hen ser). Kvarstående lucka (medveten scope-gräns):
+  KÖR-7-kedjan (`build_site.py --followup` / OpenClaw `--apply`) pinnar inte
+  själv - den ärver dock en redan satt pin byte-stabilt via apply:ns deepcopy.
+  Källa: operatörsfynd 2026-06-10, manuella klick-checkar /studio
+  painter-palma. Fix: `190f5de`. Test:
+  `tests/test_hero_headline_stability.py::test_followup_without_heading_intent_pins_previous_hero_headline`
+  + `::test_pin_alone_renders_hero_byte_identically`
+  + `::test_explicit_heading_change_wins_over_pin`
+  + `::test_init_generation_never_pins`
+  + `::test_base_run_id_pins_that_runs_headline`.
 - **`B164` Medel-Hög** (stängd 2026-06-10, bug-sweep round 2) - OpenClaw
   apply-bridge-fel EFTER att KÖR-7-kedjan skrivit Project Input/version gav
   tyst dubbelbygge. `runOpenClawFollowupApply` returnerar `null` vid timeout
