@@ -710,6 +710,30 @@ samma kodmönster lever vidare här — därav posten:
   2026-06-10, verifierad mot run-artefakter + detektor-repro
   (`_followup_requested_copy_replace(...) == False`). Fix: open. Test: open.
 
+- **`B179` Medel** (fixad 2026-06-10) - B175-recoveryns first-run-gren
+  accepterade runs som uppstod upp till 5 s FÖRE requesten började.
+  Villkoret `postBridgeLatestRun.mtimeMs >= requestStartMs -
+  FS_TIMESTAMP_ALLOWANCE_MS` (5_000) subtraherade ett platt bakåtfönster
+  från `requestStartMs`, vilket motsäger den uttalade avsikten "uppstod
+  UNDER requesten" och kunde re-surfa en genuint stale run (en run vars
+  mtime låg i 5-sekundersfönstret strax före request-start). Rotorsak:
+  fs-tidsstämpel-marginalen behövdes egentligen bara för att grova
+  filsystem (FAT/exFAT, äldre Unix) floorar mtime till hela sekunder och
+  kan runda en helt ny runs mtime ned i samma klock-tick som
+  `requestStartMs` — men ett platt bakåtfönster löser det fel och öppnar
+  ett stale-fönster. Fix: jämför mot `requestStartMs` FLOORAD till
+  fs-granulariteten (`FS_TIMESTAMP_GRANULARITY_MS`) i stället för att
+  subtrahera ett fönster — det tolererar bara sub-granularitets-rundningen
+  av själva request-start-instansen (< 1 tick), så en run skapad i en
+  tidigare tick avvisas korrekt. På normal dev-disk (NTFS/ext4/APFS,
+  sub-ms) blir det i praktiken `mtimeMs >= requestStartMs`. Per-site-mutexen
+  (B169) + `preBridgeLatestRun === null` gör dessutom att ingen klar stale
+  run för sajten kan existera i fönstret. Källa: kodgranskning 2026-06-10
+  (B175-uppföljning), verifierad mot route + test. Fix:
+  `apps/viewser/app/api/prompt/route.ts` (i arbetsträdet). Test:
+  `tests/test_viewser_api_prompt.py::test_b175_recovery_covers_first_completed_run`
+  (uppdaterad: låser floor-jämförelsen + förbjuder bakåtsubtraktion).
+
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
 Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna

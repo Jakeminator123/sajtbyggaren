@@ -468,15 +468,27 @@ def test_b175_recovery_covers_first_completed_run() -> None:
         "null — first-run-scenariot (B175) måste också kunna återvinnas."
     )
 
-    # 3. First-run-grenen: mtime-färskhetskravet med fs-marginal.
-    assert "postBridgeLatestRun.mtimeMs >=" in text, (
-        "route.ts: när preBridgeLatestRun är null måste recoveryn kräva att "
-        "post-runen uppstod UNDER requesten (mtime >= requestStart - marginal) "
-        "— annars kan en stale run re-surfas (B175)."
+    # 3. First-run-grenen: mtime-färskhetskravet jämfört mot requestStart
+    #    FLOORAD till fs-granularitet — aldrig mot requestStart MINUS ett platt
+    #    fönster (B175-followup-fix 2026-06-10: ett bakåtfönster admitterade
+    #    genuint STALE runs upp till 5 s före requesten, vilket motsäger
+    #    "uppstod UNDER requesten" och kunde re-surfa en stale run).
+    assert "postBridgeLatestRun.mtimeMs >= requestStartFloorMs" in text, (
+        "route.ts: när preBridgeLatestRun är null måste recoveryn jämföra mtime "
+        "mot requestStart FLOORAD till fs-granularitet (requestStartFloorMs) — "
+        "annars kan en stale run re-surfas (B175/B179)."
     )
-    assert "FS_TIMESTAMP_ALLOWANCE_MS" in text, (
-        "route.ts: mtime-jämförelsen behöver en liten fs-tidsstämpel-marginal "
-        "(grova fs-timestamps) — utan den missas legitima chain-runs (B175)."
+    assert "FS_TIMESTAMP_GRANULARITY_MS" in text, (
+        "route.ts: floor-jämförelsen behöver fs-granulariteten "
+        "(FS_TIMESTAMP_GRANULARITY_MS) för att tåla grova fs-timestamps utan "
+        "att admittera stale runs (B175/B179)."
+    )
+    # Lås bort regressionen: mtime får ALDRIG jämföras mot ett bakåtsubtraherat
+    # fönster (requestStartMs - <marginal>), som admitterade stale runs (B179).
+    assert "requestStartMs -" not in text, (
+        "route.ts: mtime-jämförelsen får inte subtrahera ett platt fönster från "
+        "requestStartMs (admitterar stale runs upp till fönstret) — floora i "
+        "stället till fs-granularitet (B179)."
     )
 
     # 4. Helpern måste exponera mtimeMs så jämförelsen alls är möjlig.
