@@ -46,6 +46,35 @@ import {
 export type FollowupVisibleEffect = "visible" | "registered" | "none" | "unknown";
 
 /**
+ * Strukturerad verktygs-intent (specialist-pilot, steg 1).
+ *
+ * När operatören använder ett verktyg i builder-menyn vet UI:t redan
+ * EXAKT vad som ska ändras (de klickade ju i färgväljaren) — då är det
+ * slöseri att låta backend-routern återklassificera en svensk fritext
+ * för att gissa sig tillbaka till samma sak. ``toolIntent`` skickas
+ * därför bredvid prompten så backend kan hoppa över klassificering +
+ * LLM-tolkning och gå rakt till rätt directive-pipeline.
+ *
+ * Kontraktet (inbox-meddelande till jakob-be 2026-06-10):
+ *   - Fritextprompten skickas ALLTID med som fallback/logg — dagens
+ *     backend (Zod-schemat är inte strict på toppnivån) strippar tyst
+ *     okända fält, så UI-halvan kan rullas ut före backend-halvan
+ *     utan beteendeförändring (samma pass-1/pass-2-mönster som
+ *     ``directives``-blocket i discovery-payloaden).
+ *   - Pilot: ``theme_change`` (färgväljaren) → ``apply_theme_directive``
+ *     utan styleDirectiveModel-anrop. Fler verktyg (variant_change,
+ *     section_add, content_import, asset_set) breddas i steg 2 och
+ *     läggs då till i unionen här.
+ */
+export type FollowupToolIntent = {
+  tool: "theme_change";
+  params: {
+    /** Giltig #RRGGBB-hex — dialogen validerar mot sitt HEX_PATTERN innan skick. */
+    primaryColorHex: string;
+  };
+};
+
+/**
  * Delad callback-typ för alla bygg-utlösande ytor (dialoger + BuilderShell).
  * ``visibleEffect`` är optionellt så befintliga 2-arg-anropare (FloatingChat,
  * init-vägen) fortsätter typchecka oförändrat.
@@ -182,7 +211,10 @@ export function useFollowupBuild({
   const clearError = useCallback(() => setError(null), []);
 
   const runFollowup = useCallback(
-    async (prompt: string): Promise<RunFollowupResult> => {
+    async (
+      prompt: string,
+      options?: { toolIntent?: FollowupToolIntent },
+    ): Promise<RunFollowupResult> => {
       const trimmed = prompt.trim();
       if (!trimmed) {
         const msg = "Prompten är tom.";
@@ -218,6 +250,11 @@ export function useFollowupBuild({
             // PI-snapshotet från den pinnade runen och versionsräkningen blir
             // max(latest, base) + 1. Utelämnas helt när ingen pin är aktiv.
             ...(baseRunId ? { baseRunId } : {}),
+            // Specialist-pilot: strukturerad verktygs-intent. Utelämnas helt
+            // för fritext-flöden (FloatingChat) — bara verktygs-dialoger med
+            // redan strukturerade parametrar sätter den. Backend utan stöd
+            // strippar fältet tyst (icke-strict Zod) och kör prompt-vägen.
+            ...(options?.toolIntent ? { toolIntent: options.toolIntent } : {}),
           }),
         });
         const payload = (await response.json()) as PromptApiResponse;
