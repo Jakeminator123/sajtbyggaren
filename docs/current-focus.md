@@ -6,35 +6,50 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-10, natt — post-merge-tåg #254/#256/#257/#259/#260 + #258 + #261)
+## Status nu (2026-06-10 ~06:00 — NATTPASSET STÄNGT, ny orchestrator tar över)
 
-**Git:** `jakob-be = d6e7177` (#261 mergad ovanpå #258, därefter
-cloud-grind-promptstädningen). `main = 7486145` (efter #255, docs-dedupe).
-`jakob-be` ligger åter FÖRE `main` — ny main-sync är ett kommande
-operatörsbeslut. Nattens mergade PRs på `jakob-be` (totalt **11 buggar
-stängda** i natt):
+**Git:** `jakob-be = 9a7c9f6` (rent träd, i sync med origin; enda lokala
+rest är operatörens otrackade `.cursor/rules`-fil). `main = 7486145`
+(efter #255). `jakob-be` ligger LÅNGT före `main` — **main-sync är nästa
+naturliga leveransfönster (operatörsbeslut)**. Enda öppna PR: **#156**
+(parkerad referens). Alla mergade PR-brancher städade (lokalt + remote).
 
-- **#254** bug-sweep round 1: B163 stale preview, B165 www-crawl,
-  B167 prune-portar, B168/B170/B171 OpenAI-env — 6 buggar stängda.
-- **#256** `fix(wizard)`: B166 — wizardens Hämta-knapp gör nu nested merge
-  (scrape-fält skrivs inte längre över).
-- **#257** hostad Viewser: ärlig 2A-degradering (read-only utan Python-vägar)
-  + gatad 2B sandbox-preview (blob-source). Sandbox-flaggan får ALDRIG
-  sättas utan Deployment Protection (Vercels åtkomstskydd) på projektet.
-- **#259** OpenClaw F1 slice 1: rollkontrakt + `ConversationKind`
-  (conductor-klassning av småprat/omdöme vs edit), 58 tester.
-- **#260** `fix(viewser)`: B164 dubbelbygge-recovery, B169 per-site-mutex,
-  B172 siteId-filtrerad runId — följdprompt-loopens robusthet.
-- **#258** `feat(backoffice)`: backoffice-grinden (cloud-lane) — governance-lås
-  för vy-registret, Idag-landningsvy + färskhetsbrickor, Loop-bevis-vy.
-  Mergad strax efter tåget (HEAD `3674475`).
-- **#261** B155: okvoterad literal-ersättning ("ändra X till Y") i
-  följdprompt. Mergad efter tåget (`f6ed39b`); rotorsak i
-  docs/gaps/GAP-followup-prompt-content-passthrough.md.
+**Nattens facit (16 PRs mergade, 13 buggar stängda B163–B175):**
+
+- **#252** main-sync (merge-tåget #238–#251+#225 till main, ren övertagning).
+- **#254** bug-sweep: B163 stale preview, B165 www-crawl, B167 prune-portar,
+  B168/B170/B171 OpenAI-env.
+- **#255** (main) AGENTS.md-dedupe. **#256** B166 wizard-Hämta nested merge.
+- **#257** hostad Viewser: ärlig 2A-degradering + gatad 2B sandbox-preview.
+  Live på jakob-be-previewen bakom SSO (Deployment Protection verifierad
+  med 401); prod väntar på main-sync. Sandbox-flaggan ALDRIG utan skydd.
+- **#258** backoffice-grind: vy-register-lås, Idag-vy, Loop-bevis.
+- **#259+#262** OpenClaw F1 slice 1+2: rollkontrakt + ConversationKind +
+  conductor-wiring — **smarta chatten är LIVE** (skämt/omdöme/fråga →
+  ärligt chat-svar utan bygge; operatörens skämt-test var beviset).
+- **#260** B164 dubbelbygge-recovery + B169 per-site-mutex + B172
+  siteId-filtrerad runId. **#267** B175: recoveryn täcker first-run
+  (mtime-färskhet när pre-bridge-run saknas).
+- **#261** B155-slice: okvoterad literal-ersättning (B155 hålls öppen för
+  kvarvarande targets). **#263** sandbox Tier 1: pre-built `.next`-upload
+  (~20 s/preview), OIDC-autorefresh, timings i preview-svaret (+ Scout-R1
+  trace-katalog-härdning direkt på jakob-be, `472e150`).
+- **#264** B173 hero-H1-pinning i BÅDA seams (generate_followup +
+  apply_patch_plan) — rubriken slutar drifta vid ombyggen.
+- **#265** B174: falska "Quality Gate flaggade något"-varningen —
+  rotorsaken var stdout-brus före bridge-JSON; nu sentinel-kontrakt
+  (`OPENCLAW_BRIDGE_JSON:`-rad) + robust bakifrån-parsning.
+- **#266** prune-on-dev-start: `npm run dev` städar gamla preview-byggen
+  automatiskt (port-guard + pointer-skydd + feltolerant, kill-switch
+  `VIEWSER_PRUNE_ON_DEV_START=0`).
 
 **Eval-resultat:** real-LLM Golden Path 2026-06-10 = **8.2/10** totalt
 (alla 4 case pass, gate go); deterministisk baseline 7.75. Dominant problem
-var `contact` i alla fyra case — det styrde B166-prioriteringen i natt.
+var `contact` i alla fyra case — det styrde B166-prioriteringen.
+Operatörens manuella klick-checkar bekräftade live: section_add synlig ✓,
+preview byter version ✓ (B163), tema → bara `--primary` (stylist-scope-
+fråga), hero-drift (→B173 fixad), falsk QG-varning (→B174 fixad),
+skämt byggde version (→#262 fixad).
 
 **Riktning (icke förhandlingsbar):** OpenClaw är en conductor/bridge på den
 befintliga in-repo-motorn — inte en ny parallell motor, inte extern Docker/
@@ -45,80 +60,67 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 [`docs/heavy-llm-flow/openclaw-2.0-conductor.md`](heavy-llm-flow/openclaw-2.0-conductor.md).
 `sajtmaskin` + `C:\Users\jakem\Desktop\openclaw` = strikt read-only (AGENTS.md).
 
-**Nästa prioriteringar (ny ordning efter nattens merge-tåg):**
+**Operatörsbeslut tagna i natt:** Vercel Sandbox = primär preview-adapter
+lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
 
-1. **F1 slice 2 — wira rollvalet i conductor-flödet:** PR **#262** är
-   öppen (conversation gate + role metadata; answer-only-vägen bevisad i
-   operatörens klick-check 5 nedan) — granska + merga. Plan:
-   `docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
-2. **Fix-slice: falsk QG-varning i FloatingChat** — "Quality Gate flaggade
-   något" visades på alla tre versioner i nattens klick-checkar trots
-   helgrön quality-result; spår: degraded-status i API-lagret, ej QG
-   (klick-check 3 nedan). B155/#261 är mergad och ute ur listan.
-3. **Vercel-deploy av 2A** (cloud-agent; Vercel-projektet
-   sajtbyggaren-viewser finns; Deployment Protection måste vara aktiv FÖRE
-   en eventuell sandbox-flagga). Backoffice-grinden #258 är INNE.
+**Nästa prioriteringar (för nästa orchestrator, i ordning):**
+
+1. **Main-sync-beslut (operatören):** `jakob-be` (16 PRs före `main`) är
+   helgrön och stabil — bra fönster. Efter sync: Vercel-agenten sätter
+   prod-env (`VIEWSER_ALLOWED_HOSTS` = prod-aliaset; sandbox-flaggan
+   ENDAST bakom Deployment Protection).
+2. **F1 slice 3 — section_builder-dispatch:** rollvalet ska styra
+   skill/prompt i kedjan (inte bara metadata), ärlig roll-rad i
+   FloatingChat, dialog-vägens konversationshantering
+   (use-followup-build visar generiskt fel för answer-only idag), samt
+   `expectsAnswer`-signal i decision-payloaden (Scout-fynd #262).
+3. **Stylist-scope-beslut (operatören):** "gör sajten mörkblå" mappar
+   bara `--primary` — beslutsunderlag med tre optioner ligger i
+   `docs/heavy-llm-flow/openclaw-2.0-conductor.md` (slice 3-kandidat;
+   option b möjliggjordes av #262:s answer-only-väg).
+4. **Sandbox-mätning + Tier 2:** mät #263:s verkliga tidsvinst (jämför
+   `timings` med/utan `VIEWSER_SANDBOX_UPLOAD_BUILT=0`); därefter Tier 2
+   (bas-snapshot P3 + sandbox-återanvändning — kräver liten ADR; lärdom
+   från #156-boten: `Sandbox.get()` behöver `resume: false` för att inte
+   återstarta utgångna sandboxar).
+5. **Starter-hygien-slice (kräver operatörs-OK, plattform-pins):**
+   `engines`-fält (Node, matcha Vercels 24), `allowScripts`-godkännande
+   för sharp (npm-varningar i genererade sajter), spåra transitiva
+   msw/unrs-resolver, samt beslut om docs-base/portfolio-base ska mappas
+   in i runtime (idag medvetet omappade i scaffold-kontraktet).
 
 **Öppna blockers / att-göra:**
 
 - **Manuella klick-checkar kvar (operatören):** #228 review-summary
-  (Ändra→steg-hopp) + #240 öppettider-inline i /studio + #245/#249
-  modul-dialogen (badges, en-modul-per-bygge, inaktiva sidzoner).
-  Täcks inte av automatiska tester.
-- **Main-sync-beslut:** `jakob-be` ligger nu före `main` igen efter nattens
-  merge-tåg; ny sync-PR är ett operatörsbeslut.
-- Branch-städning 2026-06-10: nattens mergade PR-brancher raderade
-  (remote: fix/viewser-prompt-robustness-b164-b169-b172,
-  feat/openclaw-f1-slice1-role-contracts, feat/viewser-hosted-vercel-sandbox
-  + cursor-spegel; lokalt: samma två feature-brancher). Kvar för
-  operatörsbeslut: `feat/viewser-ui-overhaul`/
-  `feat/viewser-router-decision-readiness` (Christophers stängda, ej
-  mergade), `cursor/gap-3a-offer-service-guard`,
-  `cursor/dossier-intake-v11-review-895d`, `feat/kor-5-repair-pass` (ingen
-  PR), `cursor/preview-runtime-adapters` (avsiktlig snapshot), samt lokala
-  `rescue/openclaw-f1-d76ad9c` (innehållet bedöms ha landat via #259+#260
-  men diffen mot PR-#259-HEAD var inte tom — behållen tills operatören
-  bekräftar).
+  (Ändra→steg-hopp) + #245/#249 modul-dialogen visuellt + manuell
+  1–10-score i Backoffice (Idag-vyn). Öppettider-checken är GODKÄND.
+- **Operatören bör starta om sin dev-server** så nattens fixar gäller
+  (B163/B164/B174-kedjan + prune-on-dev-start aktiveras vid omstart).
+- Branch-rester för operatörsbeslut (oförändrat): Christophers stängda
+  `feat/viewser-ui-overhaul`/`feat/viewser-router-decision-readiness`,
+  `cursor/gap-3a-offer-service-guard`, `cursor/dossier-intake-v11-review-895d`,
+  `feat/kor-5-repair-pass`, `cursor/preview-runtime-adapters` (avsiktlig
+  snapshot). Lokala `rescue/openclaw-f1-d76ad9c` är RADERAD (innehållet
+  verifierat landat via #259+#260).
+- B155 hålls öppen (kvarvarande targets: tjänst-label-rename, bredare
+  multi-field, route/element-targeting). B169-uppföljning för Christopher
+  noterad i msg-0061.
 
-**Operatörens klick-checkar 2026-06-10 natt (/studio, sajt painter-palma,
-sandbox-läge):**
-
-1. "gör sajten mörkblå" → tema applicerat korrekt (`#1e3a8a`) men bara
-   `--primary`/knappar — operatörsintentionen "hela sajten" träffas inte;
-   stylist-scope-fråga för F1.
-2. "lägg till en öppettider-sektion överst" → GODKÄND: synligt block efter
-   hero — första mänskliga beviset av ADR 0038.
-3. FALSK VARNING: FloatingChat sa "Quality Gate flaggade något" på alla
-   tre versioner trots helgrön quality-result. Rotorsak utreds
-   (degraded-status i API-lagret, ej QG) — fix-slice imorgon (prio 2).
-4. Hero-H1 byter text vid VARJE ombygge (3 ggr bevisat) —
-   heroHeadline-override saknas; kandidat: auto-pinna efter första bygget.
-5. "kan du dra ett skämt?" → byggde v6 + "Klart!" — beviset för F1
-   slice 2:s answer-only-väg (nu öppen som PR #262).
-
-**Pågående:** PR **#262** (F1 slice 2, från worktree `sb-wt-f1s2`) är
-öppen; sandbox Tier 1-smidighet pågår i worktree `sb-wt-sandbox-t1`
-(PR väntas; plan i agent-rapport: pre-built `.next`-upload +
-OIDC-autorefresh + timings).
-
-**Operatörsbeslut taget:** Vercel Sandbox = primär preview-adapter lokalt.
-
-Last verified state: `d6e7177` (2026-06-10 natt UTC+2; `jakob-be` HEAD efter
-#261-mergen (B155) och cloud-grind-promptstädningen, ovanpå nattens
-merge-tåg #254/#256/#257/#259/#260 + #258. `main = 7486145` efter #255 —
-`jakob-be` före `main`, sync väntar operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #254, #256, #257, #259, #260, #258,
-#261 (alla mergade till `jakob-be`), #255 (mergad till `main`), #253
-(stängd), #262 (öppen, F1 slice 2).
+Last verified state: `9a7c9f6` (2026-06-10 ~06:00 UTC+2; `jakob-be` HEAD
+efter #266+#267-mergarna + trace-katalog-härdningen `472e150` +
+markdown-lint-fixen `0bfdbbd`. Rent träd, i sync med origin, alla mergade
+PR-brancher städade lokalt+remote. `main = 7486145` — sync väntar
+operatörsbeslut).
+Nya PRs sedan föregående checkpoint: #262, #263, #264, #265, #266, #267
+(alla mergade till `jakob-be`).
 
 ## Öppna PR att känna till
 
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
   (publik POST utan auth/rate-limit kan starta sandboxar). Behålls som arkitektur-referens;
   görs om på färsk bas med auth/rate-limit designat från start när runtime-spåret väljs aktivt.
-- **#262** (`feat/openclaw-f1-slice2-conductor-wiring`): F1 slice 2 —
-  conductor wiring (conversation gate + role metadata). Öppnad av
-  worktree-agenten (sb-wt-f1s2); granska + merga (prio 1 ovan).
+  OBS: Vercel-botens accepterade fixar ligger på branchen (ofarligt; lärdomen
+  `Sandbox.get({resume:false})` är värdefull för Tier 2).
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 

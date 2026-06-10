@@ -9,24 +9,40 @@ Nya PRs sedan föregående checkpoint: #254, #256, #257, #259, #260, #258
 (alla mergade till `jakob-be`), #255 (docs-dedupe, mergad till `main`),
 #253 (stängd), #261 (öppen draft, B155).
 
-## CLOSING-ROUND HANDOFF 2026-06-10 (natt, runda 2) — ÖVERLÄMNING TILL NÄSTA AGENT
+## SLUTLIG CLOSING-ROUND 2026-06-10 ~06:00 — ÖVERLÄMNING TILL NÄSTA ORCHESTRATOR
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre ligger i arkivet —
 > verifiera alltid mot git/koden, aldrig mot äldre block.**
 >
-> **Git-läge (uppdaterat 2026-06-10 natt, runda 2):**
-> `origin/jakob-be = 3674475` efter nattens merge-tåg #254/#256/#257/#259/#260
-> (tåg-HEAD `5e6b008`) + #258-mergen strax därefter (alla mergade, CI grönt
-> per PR). `main = 7486145` (efter #255) —
-> `jakob-be` ligger åter FÖRE `main`; ny main-sync är ett operatörsbeslut.
-> Branch-städning gjord: nattens mergade PR-brancher raderade remote
-> (fix/viewser-prompt-robustness-b164-b169-b172,
-> feat/openclaw-f1-slice1-role-contracts, feat/viewser-hosted-vercel-sandbox
-> + dess cursor-spegel, SHA-verifierad) och lokalt (samma två
-> feature-brancher). Lokala `rescue/openclaw-f1-d76ad9c` BEHÅLLEN:
-> innehållet bedöms ha landat via #259+#260 (kodfilerna är identiska med
-> jakob-be) men diffen mot PR-#259-HEAD var inte tom — operatören bekräftar
-> innan radering.
+> **Git-läge:** `origin/jakob-be = 9a7c9f6`, rent träd, lokal = origin.
+> `main = 7486145`. `jakob-be` ligger 16 PRs före `main` — **main-sync är
+> nästa naturliga leveransfönster (operatörsbeslut; efter sync sätter
+> Vercel-agenten prod-env med Deployment Protection-villkoret)**.
+> Enda öppna PR: **#156** (parkerad arkitektur-referens; Vercel-botens
+> accepterade fixar ligger ofarligt på branchen — lärdomen
+> `Sandbox.get({resume:false})` är värdefull för Tier 2).
+> ALLA mergade PR-brancher städade lokalt+remote (inkl. cursor-speglar och
+> docs-dedupe-branchen). `rescue/openclaw-f1-d76ad9c` RADERAD efter
+> verifiering (innehållet landade via #259+#260). Kvarvarande lokala
+> brancher: `jakob-be`, `main`, `backup_100_BRA`, `feat/live-preview`.
+> Inga aktiva worktrees. Operatörens otrackade `.cursor/rules`-fil lämnad
+> (personlig regel; flytta till governance/rules om den ska bli permanent).
+>
+> **Nattens slutfacit: 16 PRs mergade (#252, #254–#267 utom stängda #253),
+> 13 buggar stängda (B163–B175).** Sen runda 2-blocket skrevs landade
+> dessutom: #261 (B155-slice okvoterad literal replace), #262 (F1 slice 2 —
+> SMARTA CHATTEN LIVE: skämt/omdöme/fråga → ärligt svar utan bygge),
+> #263 (sandbox Tier 1: pre-built .next ~20 s/preview + OIDC-autorefresh +
+> timings; + Scout-R1 trace-katalog-härdning `472e150` direkt på jakob-be),
+> #264 (B173 hero-H1-pinning i BÅDA seams — Scout fångade apply-gapet),
+> #265 (B174 falska QG-varningen: sentinel-kontrakt för bridge-JSON),
+> #266 (prune-on-dev-start: npm run dev städar gamla byggen säkert),
+> #267 (B175 first-run-recovery med mtime-färskhet).
+>
+> **Arbetssätt som fungerade i natt (rekommenderas):** Builder-agenter i
+> EGNA git-worktrees (aldrig branch-byte i delade huvudträdet) → PR mot
+> jakob-be → READ-ONLY Scout-granskning per PR → merge vid go + grön CI.
+> Scout-grinden fångade skarpa fel i 4 av 9 granskningar — behåll den.
 
 ### Vad som landade i natt (per tema)
 
@@ -63,33 +79,44 @@ Mergad strax efter tåget (HEAD `3674475`).
 totalt, alla 4 case pass, gate go; deterministisk baseline 7.75. Dominant
 problem `contact` i alla case → B166 togs först.
 
-### Lösa trådar (för dig, prioriterat)
+### Lösa trådar (för nästa orchestrator, prioriterat)
 
-1. **F1 slice 2 — wira rollvalet i conductor-flödet:**
-   `scripts/run_openclaw_followup.py` + `/api/prompt` answer-only för
-   konversations-kinds (småprat/omdöme svaras direkt utan bygge).
-   `route.ts` är ledig efter #260. Plan:
-   `docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
-2. **B155-slicen (okvoterad literal replace):** PR **#261** (draft, cloud)
-   öppnad mot `jakob-be` enligt godkänd plan — granska + merga när den
-   lämnar draft.
-3. **Vercel-deploy av 2A** (cloud-agent; Vercel-projektet
-   sajtbyggaren-viewser finns; Deployment Protection FÖRE eventuell
-   sandbox-flagga). Backoffice-grinden #258 är INNE.
-4. **Operatörens manuella klick-checkar** (täcks inte av tester):
-   /studio "lägg till en öppettider-sektion överst" på LSB-sajt med riktiga
-   öppettider → block efter hero; #228:s Ändra-knapp → steg-hopp;
-   kontrastfärg "gör sajten mörkblå"; modul-dialogen (#245/#249) visuellt.
-5. **Main-sync-beslut:** `jakob-be` före `main` igen efter nattens tåg;
-   ny sync-PR när operatören vill ha en officiell version.
+1. **Main-sync-beslut (operatören):** 16 PRs verifierade och gröna —
+   bra fönster. Efter sync: be Vercel-agenten sätta prod-env
+   (`VIEWSER_ALLOWED_HOSTS` = `sajtbyggaren-viewser.vercel.app`;
+   `VIEWSER_ENABLE_HOSTED_SANDBOX` ENDAST bakom Deployment Protection).
+   Hosted preview är redan live på jakob-be-previewen bakom SSO
+   (dokumenterat i #257-tråden).
+2. **F1 slice 3 — section_builder-dispatch:** rollvalet styr skill/prompt
+   i kedjan (idag bara metadata), ärlig roll-rad i FloatingChat,
+   dialog-vägens konversationshantering (use-followup-build),
+   `expectsAnswer`-signal (Scout-fynd #262). Plan + stylist-scope-
+   beslutsunderlag: `docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
+3. **Sandbox-mätning + Tier 2:** mät #263:s verkliga vinst (`timings`
+   med/utan `VIEWSER_SANDBOX_UPLOAD_BUILT=0` på painter-palma); därefter
+   bas-snapshot (P3) + sandbox-återanvändning (liten ADR; kom ihåg
+   `Sandbox.get({resume:false})`-lärdomen från #156-boten).
+4. **Operatörens kvarvarande klick-checkar:** #228 Ändra→steg-hopp,
+   modul-dialogen (#245/#249) visuellt, manuell 1–10-score i Backoffice
+   (Idag-vyn). Öppettider-checken GODKÄND i natt; mörkblå-checken gav
+   stylist-scope-frågan (punkt 2). OBS: operatören bör STARTA OM sin
+   dev-server så nattens fixar (B163/B164/B174 + prune-on-dev-start) gäller.
+5. **Starter-hygien-slice (kräver operatörs-OK, plattform-pins):**
+   `engines`-fält i starters, `allowScripts` för sharp, transitiv
+   msw-spårning, beslut om docs-base/portfolio-base ska runtime-mappas
+   (idag medvetet omappade — aktivering = governance-slice i
+   scaffold-kontraktet, inte bara filer på disk).
 6. **#156 hosted `/live`** — parkerad (säkerhet), arkitektur-referens; görs om
    på färsk bas med auth/rate-limit när runtime-spåret väljs aktivt.
 7. **Branch-rester för operatörsbeslut:** `cursor/gap-3a-offer-service-guard`,
    `cursor/dossier-intake-v11-review-895d`, `feat/kor-5-repair-pass` (ingen
    PR, ej bevisat mergade), `cursor/preview-runtime-adapters` (avsiktlig
    snapshot), Christophers stängda `feat/viewser-ui-overhaul`/
-   `feat/viewser-router-decision-readiness`, samt lokala
-   `rescue/openclaw-f1-d76ad9c` (se git-läget ovan).
+   `feat/viewser-router-decision-readiness`. (`rescue/openclaw-f1-d76ad9c`
+   är raderad efter verifiering.)
+8. **Christopher-koordinering:** msg-0060 (B166) + msg-0061 (#262 rörde
+   FloatingChat, heads-up B173/Tier 1, sandbox-primär, main-sync-avisering
+   kommer) väntar på kvittens. B169-uppföljning i hans lane noterad.
 
 ### Kända småsaker (inte buggar)
 
