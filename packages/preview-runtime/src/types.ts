@@ -88,6 +88,14 @@ export interface PreviewTimings {
   buildMs?: number;
   readyMs?: number;
   totalMs?: number;
+  /**
+   * True när previewn serverades genom att återanvända en redan varm sandbox
+   * (Tier 2, ADR 0041) i stället för att skapa en ny. Additivt fält: adaptrar
+   * utan återanvändning utelämnar det (eller sätter `false`). På återanvändning
+   * är `createMs` typiskt utelämnad — vinsten syns som `reused: true` + liten
+   * `installMs` i preview-svaret.
+   */
+  reused?: boolean;
 }
 
 /**

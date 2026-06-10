@@ -13,6 +13,7 @@ import { readRunFilesForStackblitz } from "./stackblitz-files";
 import {
   createSandboxPreview,
   hasVercelSandboxAuth,
+  isSandboxReuseEnabled,
   stopSandboxPreview,
 } from "./vercel-sandbox-runner";
 import {
@@ -93,7 +94,15 @@ export function installViewserPreviewRuntimeHandlers(): void {
         // session finns. Detta täcker re-select/re-POST utan rebuild; ett nytt
         // bygge stoppas dessutom redan av build-runner via
         // ``stopSandboxSessionForSite``.
-        await stopSandboxSessionForSite(siteId);
+        //
+        // Tier 2 (ADR 0041): i reuse-läge HOPPAR vi detta stopp — reuse-vägen
+        // äger livscykeln (återanslut + best-effort cleanup vid död handle), och
+        // att stoppa här skulle döda just den varma sandbox vi vill återanvända.
+        // Bakom samma default-AV-flagga, så när reuse är av är beteendet
+        // byte-identiskt med idag (stoppa ev. tidigare session som förr).
+        if (!isSandboxReuseEnabled()) {
+          await stopSandboxSessionForSite(siteId);
+        }
         const result = await createSandboxPreview({ siteId, runId: config.runId });
         if (result.status === "ready" && result.url) {
           recordSandboxSession(siteId, result.sandboxId ?? siteId, result.url);
