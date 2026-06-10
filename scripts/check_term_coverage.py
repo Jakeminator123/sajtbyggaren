@@ -398,6 +398,16 @@ COMMON_WORDS = {
     # helpers around read-only file scanning, not canonical domain terms.
     "DossierIntakeError", "DossierIntakeModelResolutionError",
     "DossierIntakeReviewModel", "IntakeScanCaps",
+    # Industry scaffold candidate generator implementation symbols
+    # (scripts/generate_scaffold_candidate.py). Scaffold and Industry Profile
+    # are already registered domain terms; these are local Python containers
+    # around scaffoldModel structured-output IO, spec normalisation and
+    # candidate folder writing - same treatment as the Variant*/Dossier*
+    # generator families above.
+    "IndustryScaffoldContext", "ScaffoldCandidateError",
+    "ScaffoldGenerationResult", "ScaffoldModelResolutionError",
+    "ScaffoldSpecCandidateModel", "SpecOptionalRouteModel",
+    "SpecRouteModel", "SpecRouteSectionsModel",
     # PowerShell parameter names + Cursor IDE tool names that appear in
     # operator docs and agent prompts under docs/agent-prompts/. Not
     # domain terms — PS standard verb/noun parameters + IDE tool labels.
