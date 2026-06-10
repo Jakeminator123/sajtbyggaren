@@ -8,11 +8,12 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 
 ## Status nu (2026-06-10 ~06:00 — NATTPASSET STÄNGT, ny orchestrator tar över)
 
-**Git:** `jakob-be = 9a7c9f6` (rent träd, i sync med origin; enda lokala
-rest är operatörens otrackade `.cursor/rules`-fil). `main = 7486145`
-(efter #255). `jakob-be` ligger LÅNGT före `main` — **main-sync är nästa
-naturliga leveransfönster (operatörsbeslut)**. Enda öppna PR: **#156**
-(parkerad referens). Alla mergade PR-brancher städade (lokalt + remote).
+**Git:** `main = jakob-be = 6ea53c0` (rent träd, i sync med origin).
+**Main-sync GJORD 2026-06-10 ~10:00** (operatörsbeslut verkställt): `jakob-be`
+tog över `main` via merge av mains 3 docs-only commits (#255 AGENTS-dedupe +
+steward-bump) + ren fast-forward → tom diff `main↔jakob-be`. Pre-sync-state
+sparad som `backup_150_BRA` (= `1560974`). Enda öppna PR: **#156** (parkerad
+referens). Alla mergade PR-brancher städade (lokalt + remote).
 
 **Nattens facit (16 PRs mergade, 13 buggar stängda B163–B175):**
 
@@ -117,21 +118,20 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   multi-field, route/element-targeting). B169-uppföljning för Christopher
   noterad i msg-0061.
 
-Last verified state: `2b970d9` (2026-06-10 ~09:45 UTC+2; `jakob-be` HEAD
-efter merge av PR #268 — B180 (brief carry-forward på följdbyggen, slut på
-copy-drift vid restyle), B181 (hälsningsfras kapar inte längre
-konversationsklassningen), B182 (OpenClaw-beslut auto-resolvar senaste run
-när baseRunId saknas) + snabb core-testlane (`python -m pytest -m core`,
-~1 min; `scripts/review_check.py --core`) och `docs/testing.md` med
-lane-tabell + testfamiljeklassificering. `main = 7486145` — sync väntar
-operatörsbeslut).
-Städat efter mergen: worktree `sajtbyggaren-wt-fixes` borttagen,
-PR-branchen raderad lokalt + remote, lokala `feat/live-preview` raderad
-(allt unikt innehåll redan på `jakob-be`; remote-branchen för parkerade
- #156 är kvar).
-Morgonpassets fynd (föregående checkpoint `01bab96`): B176 (fixad), B177
-(font-@import i byggd CSS, öppen), B178 (falsk framgång vid
-icke-applicerad fri-text-ändring, öppen, kopplad B155), B179 (fixad).
+Last verified state: `6ea53c0` (2026-06-10 ~10:00 UTC+2; `main = jakob-be`
+efter main-sync). Vägen hit: PR #268 (`2b970d9`) landade B180 (brief
+carry-forward på följdbyggen, slut på copy-drift vid restyle), B181
+(hälsningsfras kapar inte längre konversationsklassningen), B182
+(OpenClaw-beslut auto-resolvar senaste run när baseRunId saknas) + snabb
+core-testlane (`python -m pytest -m core`, ~1 min; `scripts/review_check.py
+--core`) och `docs/testing.md`. Därefter main-sync (`6ea53c0`): `jakob-be`
+tog över `main` (mains 3 docs-commits absorberade, AGENTS-dubblett borttagen
+per #255, ff → tom diff). Pre-sync sparad som `backup_150_BRA`.
+Städat tidigare: worktree `sajtbyggaren-wt-fixes` + PR-branchen + lokala
+`feat/live-preview` (allt unikt innehåll redan landat).
+Öppna buggar kvar: B177 (font-@import i byggd CSS), B178 (falsk framgång
+vid icke-applicerad fri-text-ändring, kopplad B155), B155 (literal-replace-
+targets). B176/B179 fixade i morgonpasset.
 
 ## Öppna PR att känna till
 
