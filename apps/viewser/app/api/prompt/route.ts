@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -12,7 +16,7 @@ import { runOpenClawFollowupApply } from "@/lib/openclaw-runner";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
 import { classifyMessage } from "@/lib/router-classify-runner";
 import { readRunChangeSet } from "@/lib/run-change-set";
-import { readAppliedCopyDirectives, readBuildResult } from "@/lib/runs";
+import { readAppliedCopyDirectives, readBuildResult, runsDir } from "@/lib/runs";
 
 // Operator-prototype: keep the prompt small enough that an accidental
 // 50 MB paste cannot wedge the build pipeline. The cap is generous for
@@ -129,7 +133,24 @@ const PromptPayloadSchema = z.object({
   }
 });
 
-let promptInFlight: Promise<unknown> | null = null;
+// B169: per-siteId mutex för prompt-flödet. Tidigare en enda global
+// ``let promptInFlight: Promise | null`` som serialiserade ALLA sajter i
+// processen — ett segt/hängande bygge på site A blockerade init/follow-up på
+// site B. Speglar build-runner.ts:s per-site Map-mönster (rad 23-40):
+//
+//   - Follow-ups keyas på ``siteId`` så två följdpromptar mot SAMMA sajt
+//     fortfarande serialiseras (versionsrace-skyddet: Phase 1 läser/bumpar
+//     ``meta.version`` + skriver PI-snapshot — det FÅR inte race:a).
+//   - Init-läget har ingen siteId vid API-gränsen (den genereras i Phase 1
+//     med en unik uuid-suffix, se ``prompt_to_project_input.slugify_site_id``),
+//     så två inits kan ALDRIG kollidera på siteId. De får en unik nyckel per
+//     request och kör därför parallellt i stället för att blockera varandra.
+//
+// ``finally``-grenen rensar entry:t bara om promise:n fortfarande är den
+// aktiva — så en samtidig follow-up (som hunnit skriva en ny entry för samma
+// siteId) inte oavsiktligt nukas. Samma försiktiga identity-guard som
+// build-runner.ts.
+const promptInFlight = new Map<string, Promise<unknown>>();
 
 // Read the raw `status` field from build-result.json without trusting
 // its type. build_site.py writes "ok" / "degraded" / "failed" / "skipped";
@@ -155,6 +176,76 @@ function extractAppliedVisibleEffect(
 }
 
 /**
+ * B164 helper: the freshest COMPLETED run on disk for a siteId, or null.
+ *
+ * "Completed" = the run-dir has a ``build-result.json`` (so we only ever treat
+ * a real, finished version as a recoverable one — never a half-written run-dir
+ * that the targeted render abandoned). We read run-dirs in mtime order and
+ * short-circuit at the first ``build-result.json`` whose ``siteId`` matches, so
+ * the common case (the site's latest run is among the most recently modified
+ * dirs) costs only a couple of reads. Unlike ``listRuns``' bounded global
+ * window this never misses the site's run, which matters for the
+ * before/after-bridge comparison in ``runPromptBuildOnce`` — a missed snapshot
+ * there could either silently re-double-build OR re-surface a stale run.
+ *
+ * Only ever called on the FOLLOW-UP path (twice per follow-up: once for the
+ * pre-bridge snapshot, once on the rare bridge-failure recovery), so the
+ * worst-case full scan is bounded and off the hot init path.
+ */
+async function latestCompletedRunForSite(
+  siteId: string,
+): Promise<{ runId: string; version: number | null } | null> {
+  const root = runsDir();
+  let entries;
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch {
+    // ENOENT (fresh env, no data/runs yet) or any read error → no run to find.
+    return null;
+  }
+  const dirs = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+  if (!dirs.length) return null;
+
+  const stats = await Promise.all(
+    dirs.map(async (name) => {
+      try {
+        const stat = await fs.stat(path.join(root, name));
+        return { name, mtimeMs: stat.mtimeMs };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  const live = stats.filter(
+    (entry): entry is { name: string; mtimeMs: number } => entry !== null,
+  );
+  if (!live.length) return null;
+  live.sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+  for (const { name } of live) {
+    let buildResult: Record<string, unknown>;
+    try {
+      buildResult = await readBuildResult(name);
+    } catch {
+      // No build-result.json (partial/aborted run) → not a completed version
+      // for any site; skip it and keep scanning older dirs.
+      continue;
+    }
+    if (buildResult.siteId === siteId) {
+      const rawVersion = buildResult.version;
+      const version =
+        typeof rawVersion === "number" && Number.isInteger(rawVersion)
+          ? rawVersion
+          : null;
+      return { runId: name, version };
+    }
+  }
+  return null;
+}
+
+/**
  * runPromptBuildOnce — kör Phase 1 (prompt → Project Input) och Phase 2
  * (build_site.py via runBuild) sekventiellt. Den frivilliga
  * `onPhase1Done`-callbacken bjuds in mellan faserna så stream-läget
@@ -177,6 +268,19 @@ async function runPromptBuildOnce(
   // run and skip the legacy build; otherwise we fall through to the unchanged
   // legacy copy/edit build path below. Init builds skip the bridge entirely so
   // init flow is byte-for-byte unchanged. Degrades to null on any failure.
+  // B164: snapshot the latest COMPLETED run for this site BEFORE the bridge
+  // runs. The KÖR-7 chain inside runOpenClawFollowupApply writes a new
+  // immutable version (PI snapshot + targeted render) BEFORE build_site.py
+  // finishes. If the bridge then fails LATE (timeout / exit!=0 / truncated
+  // stdout / parse-fail) runOpenClawFollowupApply returns null — and the legacy
+  // Phase 1+2 fallback below would silently build a SECOND version on top of
+  // the one the chain already landed. We capture the pre-bridge runId here and
+  // re-check after a null result (see the B164 recovery block below).
+  const preBridgeLatestRun =
+    payload.mode === "followup" && payload.siteId
+      ? await latestCompletedRunForSite(payload.siteId).catch(() => null)
+      : null;
+
   const applyResult =
     payload.mode === "followup" && payload.siteId
       ? await runOpenClawFollowupApply(payload.prompt, {
@@ -255,6 +359,93 @@ async function runPromptBuildOnce(
         // previewShouldRefresh + chain) so FloatingChat shows a restyle /
         // capability success line and refreshes the preview.
         bridge: applyResult.bridge,
+      };
+    }
+  }
+
+  // B164: the bridge returned null (timeout / exit!=0 / truncated stdout /
+  // parse-fail). BEFORE falling through to the legacy Phase 1+2 build — which
+  // would silently build a SECOND version on top of whatever the KÖR-7 chain
+  // may have already written — re-check whether a NEW completed run for this
+  // site appeared since the pre-bridge snapshot. If so, the chain DID land a
+  // version; re-surface THAT run with an honest degraded status instead of
+  // double-building. No retry and no second model call: a pure disk re-check.
+  // (A non-null applyResult with bridge.applied===false is a real no-op — the
+  // chain stopped at an honest gate BEFORE any build — so it is safe and we
+  // intentionally do NOT trigger recovery for it.)
+  if (
+    applyResult === null &&
+    payload.mode === "followup" &&
+    payload.siteId &&
+    preBridgeLatestRun !== null
+  ) {
+    const postBridgeLatestRun = await latestCompletedRunForSite(
+      payload.siteId,
+    ).catch(() => null);
+    if (
+      postBridgeLatestRun &&
+      postBridgeLatestRun.runId !== preBridgeLatestRun.runId
+    ) {
+      const recoveredRunId = postBridgeLatestRun.runId;
+      // Mirror B163: stop the preview so the next start picks up the chain's
+      // freshly published current.json instead of serving the old build dir.
+      // Idempotent + never fails the recovered response.
+      try {
+        await stopAndWaitPreviewServer(payload.siteId);
+      } catch {
+        // Preview-stop must never break the recovered response.
+      }
+      let recoveredBuildResult: Record<string, unknown> = {};
+      try {
+        recoveredBuildResult = await readBuildResult(recoveredRunId);
+      } catch {
+        recoveredBuildResult = {};
+      }
+      let recoveredCopyDirectives: Awaited<
+        ReturnType<typeof readAppliedCopyDirectives>
+      > = [];
+      try {
+        recoveredCopyDirectives = await readAppliedCopyDirectives(recoveredRunId);
+      } catch {
+        recoveredCopyDirectives = [];
+      }
+      let recoveredChangeSet: Awaited<ReturnType<typeof readRunChangeSet>> = null;
+      try {
+        recoveredChangeSet = await readRunChangeSet(
+          recoveredRunId,
+          payload.baseRunId ? { baseRunId: payload.baseRunId } : {},
+        );
+      } catch {
+        recoveredChangeSet = null;
+      }
+      const recoveredStatus = extractBuildStatus(recoveredBuildResult);
+      const recoveredLanded =
+        recoveredStatus === "ok" || recoveredStatus === "degraded";
+      return {
+        runId: recoveredRunId,
+        siteId: payload.siteId,
+        projectId: null,
+        version: postBridgeLatestRun.version,
+        briefSource: null,
+        // Honest degraded status: a version DID land but the apply bridge
+        // failed to report it, so we never present this as a clean success.
+        // A failed chain build stays "failed"; anything else is downgraded to
+        // "degraded" so the operator sees "Build klar med varning", not green.
+        buildStatus: recoveredStatus === "failed" ? "failed" : "degraded",
+        buildResult: recoveredBuildResult,
+        appliedCopyDirectives: recoveredCopyDirectives,
+        changeSet: recoveredChangeSet,
+        routerDecision: null,
+        openClawDecision: null,
+        // Distinct marker so FloatingChat/dialogs see the recovered apply: a
+        // version landed (applied) and the preview should refresh when the
+        // build completed, but the bridge itself degraded.
+        bridge: {
+          status: "degraded-recovered",
+          applied: recoveredLanded,
+          previewShouldRefresh: recoveredLanded,
+          chain: null,
+        },
       };
     }
   }
@@ -384,21 +575,35 @@ async function runPromptBuildSerially(
   payload: z.infer<typeof PromptPayloadSchema>,
   options?: { onPhase1Done?: () => void },
 ) {
-  while (promptInFlight) {
+  // B169: serialise per-siteId, not globally. Follow-ups key on the concrete
+  // siteId so two follow-ups for the SAME site still queue (Phase 1 version-
+  // bump race protection). Init has no siteId yet and generates a collision-
+  // free one in Phase 1, so each init gets a unique key and runs in parallel
+  // instead of blocking — and crucially never blocks a follow-up on another
+  // site. Mirrors build-runner.ts's per-site Map.
+  const queueKey = payload.siteId ?? `__init__:${randomUUID()}`;
+
+  // Vänta på pending prompt-build för EXAKT denna queueKey — andra sajter
+  // (och parallella inits) kör samtidigt. Läs om Map:en efter varje await så
+  // en follow-up som skrivit en ny entry medan vi väntade inte missas.
+  while (promptInFlight.has(queueKey)) {
     try {
-      await promptInFlight;
+      await promptInFlight.get(queueKey);
     } catch {
-      // Previous prompt failed; still allow the next operator request to run.
+      // Previous prompt for this site failed; still allow the next one to run.
     }
   }
 
   const promise = runPromptBuildOnce(payload, options);
-  promptInFlight = promise;
+  promptInFlight.set(queueKey, promise);
   try {
     return await promise;
   } finally {
-    if (promptInFlight === promise) {
-      promptInFlight = null;
+    // Rensa entry:t bara om promise:n FORTFARANDE är den aktiva — så en
+    // samtidig follow-up (som hunnit skriva en ny entry för samma siteId)
+    // inte oavsiktligt nukas. Speglar build-runner.ts:s identity-guard.
+    if (promptInFlight.get(queueKey) === promise) {
+      promptInFlight.delete(queueKey);
     }
   }
 }
