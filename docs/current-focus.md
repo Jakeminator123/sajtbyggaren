@@ -110,12 +110,14 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    governance-mappning). **Design-noten är skriven:**
    [`docs/heavy-llm-flow/komponentkatalog-design-not.md`](heavy-llm-flow/komponentkatalog-design-not.md)
    (tre lager: starter-manifest → capability-mappning → roll-uppslag via
-   shadcn-MCP). ALLA FYRA beslutspunkter avgjorda (operatörens delegation
-   2026-06-10): manifest under `data/starters/<id>/component-manifest.json`,
-   mappning = ny valfri nyckel i capability-map, EN ADR för hela kedjan,
-   pilot = faq-section → accordion. Noten är redo som underlag för
-   lager 1-slicen (manifest + ADR) så snart roll-dispatchen (köpunkt 2)
-   landat.
+   shadcn-MCP). **Lager 1+2 LANDADE via PR #275** (ADR 0040): manifest per
+   starter + `--check`-synk, additivt components-fält i capability-map v3
+   med gate-korskontroll, pilot faq-section → accordion (vendorerad nativ
+   accordion i marketing-base, noll nya beroenden), termerna registrerade
+   (naming-dictionary v30). **Lager 3 (roll-uppslag via shadcn-MCP) är nu
+   HELT oblockerat** — båda förutsättningarna klara (roll-dispatch #274 +
+   katalogen #275). OBS: ADR 0040 är taget — nästa lediga är 0041
+   (Tier 2-slicen i cloud-grind är instruerad att använda 0041).
 7. **Begreppssession (operatör + agent):** blueprint/variant/dossier/DNA
    m.fl. överlappar i dag och ingen av termerna finns i naming-dictionaryn.
    Utgå från ADR 0036 (blueprint-and-router-vocabulary), begrepps-PR:en
@@ -152,14 +154,17 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `4fe8523` (2026-06-10 ~12:45 UTC+2; `jakob-be` HEAD
-efter merge av PR #274 — F1 slice 3 roll-dispatch LANDAD: rollvalet styr
-section-add-dispatchen, `expectsAnswer`-signal genom hela kedjan, ärlig
-roll-rad i FloatingChat; Christopher aviserad via inbox `msg-0064` att
-#269-rebasen nu är actionable. Därefter docs-commit: inbox-msg +
-focus-bump. Lager 1+2-slicen för komponentkatalogen är nu helt
-oblockerad). Dagens facit efter main-syncen (`6ea53c0`, pre-sync sparad
-som `backup_150_BRA`):
+Last verified state: `d4a070a` (2026-06-10 ~13:40 UTC+2; `jakob-be` HEAD
+efter merge av PR #275 — komponentkatalog lager 1+2 LANDAD, ADR 0040.
+Tidigare i dag: #274 (F1 slice 3 roll-dispatch: rollvalet styr
+section-add-dispatchen, `expectsAnswer`, ärlig roll-rad), Christopher
+aviserad via `msg-0063`/`msg-0064`. Hygien-fix `58aec36`: add-module-
+dialog-låsen utbrutna till `tests/test_viewser_builder_dialogs.py`
+(1200-raders-taket; ytan syntes först i #275:s CI). Tier 2-slicen
+(sandbox warm-reuse, ADR 0041) kör i cloud-grind med operatörens svar:
+landa mekanism + minimal route-grind, reconcile-install, typad
+`reused`-flagga). Dagens facit efter main-syncen (`6ea53c0`, pre-sync
+sparad som `backup_150_BRA`):
 
 - **#270** slice 3-delar: B178 stängd (ociterad demonstrativ fri-text-replace
   → ärlig no-op i stället för falsk "Klart!"), B155-framsteg (ankar-ledd
