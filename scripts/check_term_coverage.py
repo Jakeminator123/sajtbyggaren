@@ -981,6 +981,7 @@ COMMON_WORDS = {
     "ErrorBoundaryState",
     "ErrorInfo",  # React-typ från `import type { ErrorInfo } from "react"`
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
+    "HostedNoticeBanner",  # lokal info-banner i apps/viewser/app/(console)/studio/page.tsx (hostad Vercel-notis)
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
     "ComparePreviewLoadError",  # lokal felkomponent i versions-tab/diff-view.tsx (modal-import-fallback)
@@ -1190,6 +1191,10 @@ COMMON_WORDS = {
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
     "SandboxStopResult",
+    # FAS 2B hostad artefaktkälla (apps/viewser/lib/generated-blob-source.ts):
+    # lokala TS-implementation-shapes för blob-snapshot-läsningen. Inte canonical
+    # domain terms — samma kategori som CollectedSource ovan.
+    "CollectedBlobSource", "BlobSdkListItem",
     # Heavy-LLM-flow run-plan docs (docs/heavy-llm-flow/, commit 8c0e7c4).
     # These docs were pushed directly to jakob-be without a CI run, so
     # term-coverage first surfaced them on later PRs. They are NOT canonical

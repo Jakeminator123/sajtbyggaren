@@ -99,6 +99,61 @@ def test_python_spawn_routes_fail_explicitly_on_hosted_vercel() -> None:
 
 
 @pytest.mark.tooling
+def test_hosted_disk_backed_routes_degrade_honestly() -> None:
+    """Hostat (VERCEL=1) får disk-/sandbox-beroende routes inte krascha eller
+    tyst returnera tomt — de ska degradera ärligt. Helpern måste exponera de
+    nya siblingsen, och de disk-läsande routerna måste konsultera
+    `isHostedVercelRuntime()`."""
+    helper = (VIEWSER_DIR / "lib" / "hosted-python-runtime.ts").read_text(encoding="utf-8")
+    for marker in (
+        "hostedFeatureUnavailable",
+        "isHostedSandboxPreviewEnabled",
+        "HOSTED_LOCAL_ONLY_NOTICE",
+        'process.env.VIEWSER_ENABLE_HOSTED_SANDBOX === "1"',
+    ):
+        assert marker in helper, f"hosted-python-runtime.ts saknar {marker}"
+
+    for relative in (
+        "app/api/runs/route.ts",
+        "app/api/runs/[runId]/files/route.ts",
+        "app/api/runs/[runId]/artifacts/route.ts",
+        "app/api/runs/[runId]/trace/route.ts",
+        "app/api/discovery-options/route.ts",
+    ):
+        text = (VIEWSER_DIR / relative).read_text(encoding="utf-8")
+        assert "isHostedVercelRuntime()" in text, (
+            f"{relative} måste degradera ärligt hostat (isHostedVercelRuntime)."
+        )
+
+
+@pytest.mark.tooling
+def test_preview_start_endpoint_is_gated_on_hosted_vercel() -> None:
+    """#156-läxan: preview-start (en bygg-lik sandbox-spawn) får inte vara en
+    publik, oautentiserad endpoint hostat. Routen måste gata via
+    `isHostedSandboxPreviewEnabled()` och svara ärligt med
+    `hostedFeatureUnavailable` när opt-in saknas."""
+    route = (VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "isHostedVercelRuntime()" in route
+    assert "isHostedSandboxPreviewEnabled()" in route
+    assert "hostedFeatureUnavailable(" in route
+    assert '"preview-start"' in route
+
+
+@pytest.mark.tooling
+def test_hosted_deploy_doc_and_env_documented() -> None:
+    """Hostad deploy-guide måste finnas och .env.example dokumentera de nya
+    hostade env-flaggorna (men aldrig deras värden)."""
+    assert (REPO_ROOT / "docs" / "hosted-viewser-deploy.md").exists(), (
+        "docs/hosted-viewser-deploy.md saknas (hostad deploy-guide)."
+    )
+    env_example = (VIEWSER_DIR / ".env.example").read_text(encoding="utf-8")
+    assert "VIEWSER_ENABLE_HOSTED_SANDBOX" in env_example
+    assert "VIEWSER_ALLOWED_HOSTS" in env_example
+
+
+@pytest.mark.tooling
 def test_viewser_legacy_dossier_picker_removed() -> None:
     """Operator-mentalmodellen kräver Project Input - inte Dossier - picker."""
     assert not (VIEWSER_DIR / "components" / "dossier-picker.tsx").exists()

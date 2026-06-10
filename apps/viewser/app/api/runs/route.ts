@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  HOSTED_LOCAL_ONLY_NOTICE,
+  isHostedVercelRuntime,
+} from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { listProjectInputs } from "@/lib/project-inputs";
 import { listRuns } from "@/lib/runs";
@@ -22,6 +26,18 @@ const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 export async function GET(request: Request) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
+
+  // Hosted Vercel has no persistent repo disk, so `data/runs/` does not exist.
+  // Return an empty-but-honest payload with a Swedish notice instead of a
+  // misleading empty list (or a 500 if the dir is missing), so the UI can tell
+  // the operator that run history + build run locally in this version.
+  if (isHostedVercelRuntime()) {
+    return NextResponse.json({
+      runs: [],
+      projectInputs: [],
+      hostedNotice: HOSTED_LOCAL_ONLY_NOTICE,
+    });
+  }
 
   const url = new URL(request.url);
   const siteIdRaw = url.searchParams.get("siteId");

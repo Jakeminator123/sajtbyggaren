@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  hostedFeatureUnavailable,
+  isHostedSandboxPreviewEnabled,
+  isHostedVercelRuntime,
+} from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import {
   getPreviewServer,
@@ -76,6 +81,15 @@ interface PreviewErrorBody {
   code: PreviewErrorCode;
   hint?: string;
 }
+
+// Hostad preview-start kör ``npm install`` + ``next build`` + ``next start`` i en
+// Vercel Sandbox och blockar POST:en tills den publika URL:en svarar (~28 s+
+// kallstart). En default-serverless-funktion (10 s) hinner inte. Vi höjer taket
+// till 300 s (Pro-plan; Hobby är hårt kapat till 60 s — se
+// docs/hosted-viewser-deploy.md för den ärliga begränsningen). Påverkar inte
+// lokal drift där samma route bara spawnar en lokal ``next start``.
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 interface PreviewStartOk {
   siteId: string;
@@ -261,6 +275,37 @@ export async function POST(
       code: "validation_error",
     };
     return NextResponse.json(body, { status: 400 });
+  }
+
+  // Hosted honesty + #156 guard: POST starts a build-like preview (local
+  // `next start`, or a Vercel Sandbox that runs `npm install` + `next build`).
+  // A public, unauthenticated POST that can spawn sandboxes is exactly the
+  // open-relay risk that parked PR #156. So on hosted Vercel the endpoint is
+  // gated 501 unless the operator has explicitly opted in
+  // (`VIEWSER_ENABLE_HOSTED_SANDBOX=1`) AND the deployment is protected
+  // (platform-level Vercel Deployment Protection — see the hosted deploy guide
+  // docs/hosted-viewser-deploy.md). The local-spawn path can never work hosted
+  // (no repo disk, no `next start` host process), so even when opted in we only
+  // allow the non-local (Vercel Sandbox) adapter hosted.
+  if (isHostedVercelRuntime()) {
+    if (!isHostedSandboxPreviewEnabled()) {
+      return hostedFeatureUnavailable(
+        "preview-start",
+        "Förhandsvisning startas lokalt i denna version. Den hostade " +
+          "sandbox-previewen är avstängd som standard (en publik bygg-/" +
+          "sandbox-endpoint utan auth tillåts inte). Operatören kan aktivera " +
+          "den bakom Vercel Deployment Protection via " +
+          "VIEWSER_ENABLE_HOSTED_SANDBOX=1.",
+      );
+    }
+    if (currentViewserRuntime().kind === "local") {
+      return hostedFeatureUnavailable(
+        "preview-start",
+        "Lokal preview (next start) kan inte köras på en hostad Vercel-" +
+          "funktion. Sätt VIEWSER_PREVIEW_MODE till Vercel Sandbox-läget för " +
+          "hostad förhandsvisning.",
+      );
+    }
   }
 
   const runtime = currentViewserRuntime();

@@ -38,6 +38,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { resolveGeneratedDir } from "./generated-dir";
+import {
+  blobPrefixForSite,
+  collectSourceFromBlob,
+  type CollectedBlobSource,
+} from "./generated-blob-source";
 
 const TTL_ENV = "VIEWSER_SANDBOX_SPIKE_TTL_MS";
 
@@ -451,15 +456,43 @@ export async function createSandboxPreview(
   }
   logs.push(`Auth-läge: ${credentials.mode}.`);
 
+  // Käll-filer: disk lokalt, blob hostat (FAS 2B, migrationsplanens G2). Disk-
+  // vägen är byte-identisk med tidigare. Blob-vägen aktiveras bara när ingen
+  // byggd sajt finns på disk — det normala fallet hostat på Vercel där det inte
+  // finns någon beständig repo-disk. En redan byggd sajt görs förhandsvisbar
+  // hostat genom att snapshotta dess generated-files till blob lokalt via
+  // scripts/snapshot-site-to-blob.mjs (icke-publik operatör-CLI, #156).
   const sourceDir = resolveSourceDir(request.siteId);
-  if (!sourceDir) {
-    return failed(
-      `Hittade ingen byggd sajt för siteId="${request.siteId}" under ` +
-        `${resolveGeneratedDir()}. Kör build_site.py först.`,
-      logs,
+  let collected: CollectedSource;
+  if (sourceDir) {
+    logs.push(`Käll-katalog: ${sourceDir}.`);
+    try {
+      collected = collectSource(sourceDir);
+    } catch (error) {
+      return failed(messageFromError(error), logs);
+    }
+  } else {
+    let fromBlob: CollectedBlobSource | null;
+    try {
+      fromBlob = await collectSourceFromBlob(request.siteId);
+    } catch (error) {
+      return failed(messageFromError(error), logs);
+    }
+    if (!fromBlob) {
+      return failed(
+        `Hittade ingen byggd sajt för siteId="${request.siteId}" — varken på ` +
+          `disk (${resolveGeneratedDir()}) eller som blob-snapshot ` +
+          `(${blobPrefixForSite(request.siteId)}). Kör build_site.py lokalt, ` +
+          "eller snapshotta sajten till blob med scripts/snapshot-site-to-blob.mjs.",
+        logs,
+      );
+    }
+    collected = fromBlob;
+    logs.push(
+      `Käll: blob-snapshot ${blobPrefixForSite(request.siteId)} ` +
+        `(${collected.files.length} filer).`,
     );
   }
-  logs.push(`Käll-katalog: ${sourceDir}.`);
 
   const sdk = await loadSandboxSdk();
   if (!sdk) {
@@ -472,12 +505,6 @@ export async function createSandboxPreview(
   }
   const { Sandbox } = sdk;
 
-  let collected: CollectedSource;
-  try {
-    collected = collectSource(sourceDir);
-  } catch (error) {
-    return failed(messageFromError(error), logs);
-  }
   logs.push(
     `Samlade ${collected.files.length} filer ` +
       `(${Math.round(collected.totalBytes / 1024)} kB) för upload.`,
