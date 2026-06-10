@@ -152,9 +152,14 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `44c9da8` (2026-06-10 ~11:50 UTC+2; `jakob-be` HEAD
-efter förmiddagens fyra merges). Dagens facit efter main-syncen (`6ea53c0`,
-pre-sync sparad som `backup_150_BRA`):
+Last verified state: `4fe8523` (2026-06-10 ~12:45 UTC+2; `jakob-be` HEAD
+efter merge av PR #274 — F1 slice 3 roll-dispatch LANDAD: rollvalet styr
+section-add-dispatchen, `expectsAnswer`-signal genom hela kedjan, ärlig
+roll-rad i FloatingChat; Christopher aviserad via inbox `msg-0064` att
+#269-rebasen nu är actionable. Därefter docs-commit: inbox-msg +
+focus-bump. Lager 1+2-slicen för komponentkatalogen är nu helt
+oblockerad). Dagens facit efter main-syncen (`6ea53c0`, pre-sync sparad
+som `backup_150_BRA`):
 
 - **#270** slice 3-delar: B178 stängd (ociterad demonstrativ fri-text-replace
   → ärlig no-op i stället för falsk "Klart!"), B155-framsteg (ankar-ledd
