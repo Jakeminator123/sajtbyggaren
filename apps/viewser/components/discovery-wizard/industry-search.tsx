@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Search } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PROFESSIONS } from "@/lib/professions";
 
@@ -21,18 +21,21 @@ import {
  * BRANSCH ("bilmekaniker", "rörmokare", "advokat") — inte i familjer.
  * Med fler kategorier i taxonomin kan utbudet aldrig visas som chips.
  *
- * Lösningen: ett sökfält ovanför familje-korten. Indexet byggs av tre
- * lager som alla redan finns i repot:
+ * Lösningen: ett sökfält ovanför familje-korten. Indexet byggs av fyra
+ * lager:
  *   1. PROFESSIONS (lib/professions.ts) — 20 yrken med family+kategori,
  *      samma data som driver /for/[yrke]-landningssidorna.
  *   2. WIZARD_CATEGORIES — 25 taxonomi-speglade kategorier.
  *   3. CATEGORY_SYNONYMS — vardagliga branschord per kategori.
+ *   4. /api/sni-search (ADR 0045) — server-side sök över hela SNI
+ *      2025-spegelns 1 882 etiketter, berikade med kategori (via
+ *      sni-discovery-map) och branschprofil-prefill
+ *      (industry-profiles.v1.json).
  *
  * Ett val sätter businessFamily + siteType (payload-kontraktet är
  * oförändrat — exakt samma fält som familje-kort + scrape-inferens
- * redan skriver). UI-cache: när taxonomin växer mot ~100 kategorier
- * ska indexet serveras via /api/discovery-options (inbox-topic
- * wizard-page-suggestions, msg-0056).
+ * redan skriver); SNI-träffar sätter dessutom answers.sniCode och
+ * förifyller funktions-/CTA-val från profilen.
  */
 
 export type IndustryMatch = {
@@ -46,7 +49,34 @@ export type IndustryMatch = {
   /** Normaliserade söknycklar (lowercase, åäö-vikta). */
   keywords: readonly string[];
   /** Yrkes-träffar rankas före kategori-träffar vid lika poäng. */
-  kind: "profession" | "category";
+  kind: "profession" | "category" | "sni";
+  /**
+   * SNI 2025-kod när träffen kom från /api/sni-search (ADR 0045).
+   * Följer med i answers.sniCode så backend kan slå upp branschprofilen.
+   */
+  sniCode?: string;
+  /** Profil-prefill från industry-profiles.v1.json (capabilities + CTA). */
+  profilePrefill?: {
+    primaryCta: string;
+    extraCapabilities: string[];
+  };
+};
+
+/** Svarsform från /api/sni-search. */
+type SniSearchResponse = {
+  matches?: {
+    code: string;
+    labelSv: string;
+    level: string;
+    wizardCategoryId: string;
+    profile: {
+      profileId: string;
+      curated: boolean;
+      primaryCta: string;
+      extraCapabilities: string[];
+      recommendedPages: string[];
+    } | null;
+  }[];
 };
 
 /**
@@ -238,6 +268,13 @@ function scoreEntry(entry: IndustryMatch, query: string): number {
 }
 
 const MAX_RESULTS = 7;
+/** Lokala (yrke/kategori) träffar får företräde; resten fylls med SNI. */
+const MAX_LOCAL_RESULTS = 4;
+const SNI_FETCH_DEBOUNCE_MS = 150;
+
+const VALID_CATEGORY_IDS = new Set<string>(
+  WIZARD_CATEGORIES.map((category) => category.id),
+);
 
 export function IndustrySearch({
   onPick,
@@ -248,12 +285,72 @@ export function IndustrySearch({
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [picked, setPicked] = useState<IndustryMatch | null>(null);
+  const [sniMatches, setSniMatches] = useState<IndustryMatch[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // SNI-branschsök (ADR 0045): hela SNI 2025-spegeln (1 882 etiketter) är
+  // för stor för klient-index, så den söks server-side via /api/sni-search
+  // med debounce. Fel/abort degraderar tyst — det lokala synonym-indexet
+  // fungerar oavsett.
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setSniMatches([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/sni-search?q=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal },
+        );
+        if (!response.ok) {
+          setSniMatches([]);
+          return;
+        }
+        const data = (await response.json()) as SniSearchResponse;
+        const familyLabelById = new Map<BusinessFamilyId, string>(
+          BUSINESS_FAMILIES.map((f) => [f.id, f.label]),
+        );
+        const mapped: IndustryMatch[] = [];
+        for (const hit of data.matches ?? []) {
+          if (!VALID_CATEGORY_IDS.has(hit.wizardCategoryId)) continue;
+          const category = hit.wizardCategoryId as WizardCategoryId;
+          const family = familyForCategory(category);
+          if (!family) continue;
+          mapped.push({
+            key: `sni:${hit.code}`,
+            label: hit.labelSv,
+            familyLabel: familyLabelById.get(family.id) ?? family.label,
+            family: family.id,
+            category,
+            keywords: [normalize(hit.labelSv)],
+            kind: "sni",
+            sniCode: hit.code,
+            profilePrefill: hit.profile
+              ? {
+                  primaryCta: hit.profile.primaryCta,
+                  extraCapabilities: hit.profile.extraCapabilities,
+                }
+              : undefined,
+          });
+        }
+        setSniMatches(mapped);
+      } catch {
+        // Abort eller nätfel — behåll senaste lokala träffarna.
+      }
+    }, SNI_FETCH_DEBOUNCE_MS);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   const results = useMemo(() => {
     const normalized = normalize(query.trim());
     if (normalized.length < 2) return [];
-    return index
+    const local = index
       .map((entry) => ({ entry, score: scoreEntry(entry, normalized) }))
       .filter((hit) => hit.score > 0)
       .sort((a, b) => {
@@ -263,9 +360,22 @@ export function IndustrySearch({
         }
         return a.entry.label.localeCompare(b.entry.label, "sv");
       })
-      .slice(0, MAX_RESULTS)
+      .slice(0, MAX_LOCAL_RESULTS)
       .map((hit) => hit.entry);
-  }, [index, query]);
+    // SNI-träffar fyller upp till MAX_RESULTS; dubbletter (samma label
+    // som en lokal träff, t.ex. "Restaurangverksamhet" vs "Restaurang")
+    // filtreras på normaliserad label-prefix.
+    const seen = new Set(local.map((entry) => normalize(entry.label)));
+    const merged = [...local];
+    for (const match of sniMatches) {
+      if (merged.length >= MAX_RESULTS) break;
+      const key = normalize(match.label);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(match);
+    }
+    return merged;
+  }, [index, query, sniMatches]);
 
   const pick = useCallback(
     (match: IndustryMatch) => {
@@ -353,7 +463,9 @@ export function IndustrySearch({
                   {match.label}
                 </span>
                 <span className="text-muted-foreground shrink-0 text-[11px]">
-                  {match.familyLabel}
+                  {match.kind === "sni" && match.sniCode
+                    ? `${match.familyLabel} · SNI ${match.sniCode}`
+                    : match.familyLabel}
                 </span>
               </button>
             </li>

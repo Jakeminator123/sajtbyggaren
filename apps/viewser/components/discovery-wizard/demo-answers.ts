@@ -47,6 +47,7 @@ function genbergPainter(): WizardAnswers {
       openingHours: "Mån-fre 07-17, helger efter överenskommelse",
     },
     businessFamily: "construction",
+    sniCode: "43.341",
     siteType: ["construction"],
     vibe: {
       vibeId: "warm-craft",
@@ -179,6 +180,7 @@ function lillaBageriet(): WizardAnswers {
       openingHours: "Tis-fre 07-17, lör 08-15, sön 09-14, mån stängt",
     },
     businessFamily: "restaurant",
+    sniCode: "56.110",
     siteType: ["restaurant"],
     vibe: {
       vibeId: "warm-bistro",
@@ -298,6 +300,7 @@ function norrlandsCbd(): WizardAnswers {
       openingHours: "Webbshop öppen dygnet runt. Kundtjänst mån-fre 09-17.",
     },
     businessFamily: "ecommerce",
+    sniCode: "47.752",
     siteType: ["ecommerce"],
     vibe: {
       vibeId: "earth-wellness",
