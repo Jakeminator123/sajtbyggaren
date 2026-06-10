@@ -6,12 +6,13 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-10, natt — post-merge-tåg #254/#256/#257/#259/#260 + #258)
+## Status nu (2026-06-10, natt — post-merge-tåg #254/#256/#257/#259/#260 + #258 + #261)
 
-**Git:** `origin/jakob-be = 3674475` (#258 mergad ovanpå nattens tåg-HEAD
-`5e6b008`). `main = 7486145` (efter #255, docs-dedupe). `jakob-be` ligger
-åter FÖRE `main` — ny main-sync är ett kommande operatörsbeslut. Nattens
-mergade PRs på `jakob-be` (totalt **10 buggar stängda** i natt):
+**Git:** `jakob-be = d6e7177` (#261 mergad ovanpå #258, därefter
+cloud-grind-promptstädningen). `main = 7486145` (efter #255, docs-dedupe).
+`jakob-be` ligger åter FÖRE `main` — ny main-sync är ett kommande
+operatörsbeslut. Nattens mergade PRs på `jakob-be` (totalt **11 buggar
+stängda** i natt):
 
 - **#254** bug-sweep round 1: B163 stale preview, B165 www-crawl,
   B167 prune-portar, B168/B170/B171 OpenAI-env — 6 buggar stängda.
@@ -27,6 +28,9 @@ mergade PRs på `jakob-be` (totalt **10 buggar stängda** i natt):
 - **#258** `feat(backoffice)`: backoffice-grinden (cloud-lane) — governance-lås
   för vy-registret, Idag-landningsvy + färskhetsbrickor, Loop-bevis-vy.
   Mergad strax efter tåget (HEAD `3674475`).
+- **#261** B155: okvoterad literal-ersättning ("ändra X till Y") i
+  följdprompt. Mergad efter tåget (`f6ed39b`); rotorsak i
+  docs/gaps/GAP-followup-prompt-content-passthrough.md.
 
 **Eval-resultat:** real-LLM Golden Path 2026-06-10 = **8.2/10** totalt
 (alla 4 case pass, gate go); deterministisk baseline 7.75. Dominant problem
@@ -43,15 +47,14 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
 
 **Nästa prioriteringar (ny ordning efter nattens merge-tåg):**
 
-1. **F1 slice 2 — wira rollvalet i conductor-flödet:**
-   `scripts/run_openclaw_followup.py` + `/api/prompt` answer-only för
-   konversations-kinds (småprat/omdöme svaras direkt utan bygge);
-   `route.ts` är nu ledig efter #260. Plan:
+1. **F1 slice 2 — wira rollvalet i conductor-flödet:** PR **#262** är
+   öppen (conversation gate + role metadata; answer-only-vägen bevisad i
+   operatörens klick-check 5 nedan) — granska + merga. Plan:
    `docs/heavy-llm-flow/openclaw-2.0-conductor.md`.
-2. **B155-slicen (okvoterad literal replace):** PR **#261** (draft, cloud)
-   är öppnad mot `jakob-be` enligt godkänd plan — granska + merga när den
-   lämnar draft. Rotorsak i
-   docs/gaps/GAP-followup-prompt-content-passthrough.md.
+2. **Fix-slice: falsk QG-varning i FloatingChat** — "Quality Gate flaggade
+   något" visades på alla tre versioner i nattens klick-checkar trots
+   helgrön quality-result; spår: degraded-status i API-lagret, ej QG
+   (klick-check 3 nedan). B155/#261 är mergad och ute ur listan.
 3. **Vercel-deploy av 2A** (cloud-agent; Vercel-projektet
    sajtbyggaren-viewser finns; Deployment Protection måste vara aktiv FÖRE
    en eventuell sandbox-flagga). Backoffice-grinden #258 är INNE.
@@ -77,22 +80,45 @@ Gateway i nuvarande fas, inte fri filpatch. In-repo-källan ENBART
   men diffen mot PR-#259-HEAD var inte tom — behållen tills operatören
   bekräftar).
 
-Last verified state: `3674475` (2026-06-10 natt UTC+2; `origin/jakob-be` HEAD
-efter nattens merge-tåg #254/#256/#257/#259/#260, post-merge-branchstädning
-och #258-mergen. `main = 7486145` efter #255 — `jakob-be` före `main`, sync
-väntar operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #254, #256, #257, #259, #260, #258
-(alla mergade till `jakob-be`), #255 (mergad till `main`), #253 (stängd),
-#261 (öppen draft, B155).
+**Operatörens klick-checkar 2026-06-10 natt (/studio, sajt painter-palma,
+sandbox-läge):**
+
+1. "gör sajten mörkblå" → tema applicerat korrekt (`#1e3a8a`) men bara
+   `--primary`/knappar — operatörsintentionen "hela sajten" träffas inte;
+   stylist-scope-fråga för F1.
+2. "lägg till en öppettider-sektion överst" → GODKÄND: synligt block efter
+   hero — första mänskliga beviset av ADR 0038.
+3. FALSK VARNING: FloatingChat sa "Quality Gate flaggade något" på alla
+   tre versioner trots helgrön quality-result. Rotorsak utreds
+   (degraded-status i API-lagret, ej QG) — fix-slice imorgon (prio 2).
+4. Hero-H1 byter text vid VARJE ombygge (3 ggr bevisat) —
+   heroHeadline-override saknas; kandidat: auto-pinna efter första bygget.
+5. "kan du dra ett skämt?" → byggde v6 + "Klart!" — beviset för F1
+   slice 2:s answer-only-väg (nu öppen som PR #262).
+
+**Pågående:** PR **#262** (F1 slice 2, från worktree `sb-wt-f1s2`) är
+öppen; sandbox Tier 1-smidighet pågår i worktree `sb-wt-sandbox-t1`
+(PR väntas; plan i agent-rapport: pre-built `.next`-upload +
+OIDC-autorefresh + timings).
+
+**Operatörsbeslut taget:** Vercel Sandbox = primär preview-adapter lokalt.
+
+Last verified state: `d6e7177` (2026-06-10 natt UTC+2; `jakob-be` HEAD efter
+#261-mergen (B155) och cloud-grind-promptstädningen, ovanpå nattens
+merge-tåg #254/#256/#257/#259/#260 + #258. `main = 7486145` efter #255 —
+`jakob-be` före `main`, sync väntar operatörsbeslut).
+Nya PRs sedan föregående checkpoint: #254, #256, #257, #259, #260, #258,
+#261 (alla mergade till `jakob-be`), #255 (mergad till `main`), #253
+(stängd), #262 (öppen, F1 slice 2).
 
 ## Öppna PR att känna till
 
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
   (publik POST utan auth/rate-limit kan starta sandboxar). Behålls som arkitektur-referens;
   görs om på färsk bas med auth/rate-limit designat från start när runtime-spåret väljs aktivt.
-- **#261** (`cursor/okvoterad-literal-ers-ttning-9de1`, draft): B155-slicen —
-  okvoterad literal-ersättning "ändra X till Y" i följdprompt. Cloud-lane;
-  granskas/mergas när den lämnar draft (prio 2 ovan).
+- **#262** (`feat/openclaw-f1-slice2-conductor-wiring`): F1 slice 2 —
+  conductor wiring (conversation gate + role metadata). Öppnad av
+  worktree-agenten (sb-wt-f1s2); granska + merga (prio 1 ovan).
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
