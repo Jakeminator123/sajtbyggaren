@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 
 import {
   useFollowupBuild,
+  type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
@@ -197,7 +198,22 @@ export function AssetUploaderDialog({
       `Referens: assetId=${uploadedRef.assetId}, filename=${uploadedRef.filename}, alt="${uploadedRef.alt ?? ""}".`,
       hint.trim() ? `Önskemål: ${hint.trim()}` : null,
     ].filter(Boolean);
-    const result = await runFollowup(promptParts.join("\n"));
+    // Strukturerad intent (specialist-dispatch steg 2): roll + assetId
+    // är exakta — backend slipper regex:a fram referensraden ur prompten.
+    // hint-fritexten följer med strukturerat; den kan kräva copy-
+    // specialisten och är det enda LLM-värdiga i detta verktyg.
+    const trimmedHint = hint.trim();
+    const toolIntent: FollowupToolIntent = {
+      tool: "asset_set",
+      params: {
+        role: uploadedRef.role,
+        assetId: uploadedRef.assetId,
+        filename: uploadedRef.filename,
+        ...(uploadedRef.alt ? { alt: uploadedRef.alt } : {}),
+        ...(trimmedHint ? { hint: trimmedHint } : {}),
+      },
+    };
+    const result = await runFollowup(promptParts.join("\n"), { toolIntent });
     if (result.ok) {
       handleClose(false);
     }

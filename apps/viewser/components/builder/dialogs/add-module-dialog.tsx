@@ -19,6 +19,7 @@ import { useCallback, useState } from "react";
 
 import {
   useFollowupBuild,
+  type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
@@ -253,7 +254,18 @@ export function AddModuleDialog({
       `Lägg till ${modulePromptNoun(placement.moduleId)} ` +
       `${positionClause(placement.positionId)}. ` +
       "Behåll övrig design, copy och struktur intakt.";
-    const result = await runFollowup(prompt);
+    // Strukturerad intent (specialist-dispatch steg 2): modul-id +
+    // position är redan exakta — promptformatet ovan är empiriskt
+    // router-säkert men med toolIntent slipper backend klassificera
+    // alls och kan gå rakt till section_add-pipelinen.
+    const toolIntent: FollowupToolIntent = {
+      tool: "section_add",
+      params: {
+        sectionType: placement.moduleId,
+        position: placement.positionId === "top" ? "top" : "bottom",
+      },
+    };
+    const result = await runFollowup(prompt, { toolIntent });
     if (result.ok) {
       setPlacements([]);
       onOpenChange(false);

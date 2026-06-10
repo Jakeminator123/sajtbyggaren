@@ -55,24 +55,69 @@ export type FollowupVisibleEffect = "visible" | "registered" | "none" | "unknown
  * därför bredvid prompten så backend kan hoppa över klassificering +
  * LLM-tolkning och gå rakt till rätt directive-pipeline.
  *
- * Kontraktet (inbox-meddelande till jakob-be 2026-06-10):
+ * Kontraktet (inbox msg-0062 + steg 2-not till jakob-be 2026-06-10):
  *   - Fritextprompten skickas ALLTID med som fallback/logg — dagens
  *     backend (Zod-schemat är inte strict på toppnivån) strippar tyst
  *     okända fält, så UI-halvan kan rullas ut före backend-halvan
  *     utan beteendeförändring (samma pass-1/pass-2-mönster som
  *     ``directives``-blocket i discovery-payloaden).
- *   - Pilot: ``theme_change`` (färgväljaren) → ``apply_theme_directive``
- *     utan styleDirectiveModel-anrop. Fler verktyg (variant_change,
- *     section_add, content_import, asset_set) breddas i steg 2 och
- *     läggs då till i unionen här.
+ *   - Verktyg → specialist-mapping (ROLE_CONTRACTS i
+ *     packages/generation/orchestration/openclaw/roles.py):
+ *       theme_change    → apply_theme_directive direkt (stylist, 0 LLM)
+ *       variant_change  → variant-resolvern via taxonomin (stylist, 0 LLM)
+ *       section_add     → section_builder-pipelinen (0 LLM)
+ *       content_import  → copyDirectiveModel extraktionsläge (copy, 1 LLM)
+ *       asset_set       → asset-sömmen (0 LLM; hint-texten kan behöva copy)
+ *   - Params är UI:ts redan strukturerade värden — backend ska aldrig
+ *     behöva härleda dem ur prompttexten igen, men re-validerar varje
+ *     fält i sina egna sömmar precis som idag (hex-check, taxonomi-id,
+ *     section-type-enum osv.).
  */
-export type FollowupToolIntent = {
-  tool: "theme_change";
-  params: {
-    /** Giltig #RRGGBB-hex — dialogen validerar mot sitt HEX_PATTERN innan skick. */
-    primaryColorHex: string;
-  };
-};
+export type FollowupToolIntent =
+  | {
+      tool: "theme_change";
+      params: {
+        /** Giltig #RRGGBB-hex — dialogen validerar mot sitt HEX_PATTERN innan skick. */
+        primaryColorHex: string;
+      };
+    }
+  | {
+      tool: "variant_change";
+      params: {
+        /** Discovery-taxonomins kategori-id — backend äger resolven till scaffold/variant. */
+        categoryId: string;
+      };
+    }
+  | {
+      tool: "section_add";
+      params: {
+        /** Stabilt modul-id ur AddModuleDialog:s katalog (= routerns sektionstyper). */
+        sectionType: string;
+        /** Samma två slots som routerns _POSITION_PHRASES parsar. */
+        position: "top" | "bottom";
+      };
+    }
+  | {
+      tool: "content_import";
+      params: {
+        /** URL:en operatören skrapade. */
+        sourceUrl: string;
+        /** Råa fält från /api/scrape-site — samma data som prompttexten serialiserar. */
+        fields: Record<string, unknown>;
+      };
+    }
+  | {
+      tool: "asset_set";
+      params: {
+        /** logo | hero | gallery — samma roller som AssetStore. */
+        role: string;
+        assetId: string;
+        filename: string;
+        alt?: string;
+        /** Operatörens fria önskemål — kan kräva copy-specialisten. */
+        hint?: string;
+      };
+    };
 
 /**
  * Delad callback-typ för alla bygg-utlösande ytor (dialoger + BuilderShell).
