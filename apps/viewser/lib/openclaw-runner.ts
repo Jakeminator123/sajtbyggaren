@@ -36,6 +36,68 @@ function pythonCommand(): string {
   return process.platform === "win32" ? "python" : "python3";
 }
 
+// B174: the stable stdout contract line scripts/run_openclaw_followup.py emits
+// as its FINAL line: `OPENCLAW_BRIDGE_JSON: {...}`. With --apply the KÖR-7
+// chain (scripts/build_site.build) writes human progress ("runId: ...",
+// "Copying starter ...", npm output) to the SAME stdout BEFORE the payload, so
+// the previous blind JSON.parse of the whole stream threw on EVERY successful
+// apply -> null -> /api/prompt's B164 recovery forced an unearned degraded
+// status.
+// Keep this literal in sync with BRIDGE_SENTINEL_PREFIX on the Python side.
+const BRIDGE_SENTINEL_PREFIX = "OPENCLAW_BRIDGE_JSON:";
+
+function parseJsonObjectCandidate(
+  candidate: string,
+): Record<string, unknown> | null {
+  const trimmed = candidate.trim();
+  if (!trimmed.startsWith("{")) return null;
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Not a clean JSON object line — the caller keeps scanning.
+  }
+  return null;
+}
+
+/**
+ * Extract the helper's payload JSON object from a possibly noisy stdout
+ * (B174). The payload is always the LAST thing the script prints, so both
+ * passes scan the lines BACKWARDS (mirrors build-runner.ts, which also never
+ * trusts build_site.py's stdout to be a single clean token):
+ *
+ *   1. sentinel pass — the explicit contract: the last line starting with
+ *      `OPENCLAW_BRIDGE_JSON:` whose remainder parses to an object;
+ *   2. bare-JSON fallback — backward compatible with the pre-sentinel format:
+ *      the last line that itself parses cleanly to a JSON object.
+ *
+ * ``isExpectedShape`` guards the heuristic fallback against tool noise that
+ * happens to be a JSON object (e.g. npm printing JSON progress lines).
+ * Returns ``null`` when nothing matches (empty stdout / pure garbage), so the
+ * callers' degrade-to-null contract is unchanged for genuine failures.
+ */
+function extractPayloadJson(
+  stdout: string,
+  isExpectedShape: (obj: Record<string, unknown>) => boolean,
+): Record<string, unknown> | null {
+  const lines = stdout.split(/\r?\n/);
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const line = lines[i].trim();
+    if (!line.startsWith(BRIDGE_SENTINEL_PREFIX)) continue;
+    const parsed = parseJsonObjectCandidate(
+      line.slice(BRIDGE_SENTINEL_PREFIX.length),
+    );
+    if (parsed && isExpectedShape(parsed)) return parsed;
+  }
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const parsed = parseJsonObjectCandidate(lines[i]);
+    if (parsed && isExpectedShape(parsed)) return parsed;
+  }
+  return null;
+}
+
 /**
  * OpenClaw Core V0's decision for one follow-up message. Shape mirrors
  * ``OpenClawDecision.model_dump()`` (packages/generation/orchestration/openclaw/
@@ -86,13 +148,22 @@ export async function runOpenClawFollowup(
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  const stdoutChunks: string[] = [];
+  const stdoutChunks: Buffer[] = [];
   let totalStdoutBytes = 0;
   const MAX_STREAM_BYTES = 256 * 1024;
   child.stdout.on("data", (chunk: Buffer) => {
-    if (totalStdoutBytes >= MAX_STREAM_BYTES) return;
+    stdoutChunks.push(chunk);
     totalStdoutBytes += chunk.byteLength;
-    stdoutChunks.push(chunk.toString("utf-8"));
+    // B174: the payload is the LAST stdout line (sentinel contract), so an
+    // overflowing stream must drop the OLDEST chunks. The previous cap kept
+    // the head and dropped the tail — i.e. exactly the payload.
+    while (
+      stdoutChunks.length > 1 &&
+      totalStdoutBytes - stdoutChunks[0].byteLength >= MAX_STREAM_BYTES
+    ) {
+      totalStdoutBytes -= stdoutChunks[0].byteLength;
+      stdoutChunks.shift();
+    }
   });
   // stderr is intentionally drained but ignored: a decision failure must never
   // surface as a 500 on the prompt route — it just yields null.
@@ -118,18 +189,18 @@ export async function runOpenClawFollowup(
 
   if (timedOut || exitCode !== 0) return null;
 
-  const stdout = stdoutChunks.join("").trim();
+  const stdout = Buffer.concat(stdoutChunks).toString("utf-8").trim();
   if (!stdout) return null;
 
-  try {
-    const parsed: unknown = JSON.parse(stdout);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as OpenClawDecisionPayload;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  // B174: extract the decision robustly instead of a blind JSON.parse on the
+  // whole stream. The decision payload always carries the ``action`` string
+  // (OpenClawDecision.model_dump()), which guards the bare-JSON fallback.
+  const parsed = extractPayloadJson(
+    stdout,
+    (obj) => typeof obj.action === "string",
+  );
+  if (!parsed) return null;
+  return parsed as OpenClawDecisionPayload;
 }
 
 // The action-bridge build runs npm install + a targeted Next.js build inside the
@@ -230,13 +301,22 @@ export async function runOpenClawFollowupApply(
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  const stdoutChunks: string[] = [];
+  const stdoutChunks: Buffer[] = [];
   let totalStdoutBytes = 0;
   const MAX_STREAM_BYTES = 512 * 1024;
   child.stdout.on("data", (chunk: Buffer) => {
-    if (totalStdoutBytes >= MAX_STREAM_BYTES) return;
+    stdoutChunks.push(chunk);
     totalStdoutBytes += chunk.byteLength;
-    stdoutChunks.push(chunk.toString("utf-8"));
+    // B174: --apply shares stdout with build()'s npm/progress noise and the
+    // bridge payload is the LAST line, so an overflowing stream must drop the
+    // OLDEST chunks (the previous head-keeping cap dropped the payload).
+    while (
+      stdoutChunks.length > 1 &&
+      totalStdoutBytes - stdoutChunks[0].byteLength >= MAX_STREAM_BYTES
+    ) {
+      totalStdoutBytes -= stdoutChunks[0].byteLength;
+      stdoutChunks.shift();
+    }
   });
   child.stderr.on("data", () => {});
 
@@ -264,24 +344,31 @@ export async function runOpenClawFollowupApply(
 
   if (timedOut || exitCode !== 0) return null;
 
-  const stdout = stdoutChunks.join("").trim();
+  const stdout = Buffer.concat(stdoutChunks).toString("utf-8").trim();
   if (!stdout) return null;
 
-  try {
-    const parsed: unknown = JSON.parse(stdout);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    const obj = parsed as Record<string, unknown>;
-    const decision = obj.decision;
-    if (!decision || typeof decision !== "object" || Array.isArray(decision)) {
-      return null;
-    }
-    return {
-      decision: decision as OpenClawDecisionPayload,
-      bridge: coerceBridge(obj.bridge),
-    };
-  } catch {
+  // B174 root-cause fix: the chain prints human progress ("runId: ...",
+  // "Copying starter ...", npm output) to the SAME stdout BEFORE the bridge
+  // JSON, so the previous blind JSON.parse of the whole stream threw on EVERY
+  // successful apply and the B164 recovery forced an unearned degraded status.
+  // Extract the payload robustly instead; the expected-shape guard requires
+  // the ``decision`` object so npm JSON noise can never be mistaken for it.
+  const obj = extractPayloadJson(
+    stdout,
+    (candidate) =>
+      Boolean(
+        candidate.decision &&
+          typeof candidate.decision === "object" &&
+          !Array.isArray(candidate.decision),
+      ),
+  );
+  if (!obj) return null;
+  const decision = obj.decision;
+  if (!decision || typeof decision !== "object" || Array.isArray(decision)) {
     return null;
   }
+  return {
+    decision: decision as OpenClawDecisionPayload,
+    bridge: coerceBridge(obj.bridge),
+  };
 }

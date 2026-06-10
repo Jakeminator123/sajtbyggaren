@@ -14,8 +14,10 @@ schema-stable ``OpenClawDecision`` JSON so apps/viewser can shell to
                           never fakes a success)
 
 Guarantees (inherited from OpenClaw Core V0 + classify_message.py):
-    - READ-ONLY. Prints JSON to stdout; no disk write, no build, no preview,
-      no shell, no network, no ``current.json`` mutation.
+    - READ-ONLY. Prints the payload JSON as the final stdout line behind the
+      ``OPENCLAW_BRIDGE_JSON:`` sentinel prefix (B174 contract with
+      apps/viewser/lib/openclaw-runner.ts); no disk write, no build, no
+      preview, no shell, no network, no ``current.json`` mutation.
     - DETERMINISTIC. ``classify_message`` (KÖR-6a) + the pure ``decide``; no
       LLM, no ``OPENAI_API_KEY``, no per-prompt cost.
     - HONEST. An edit instruction returns ``action_bridge_missing`` rather than
@@ -74,6 +76,17 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Make packages/ importable when running this script directly.
 sys.path.insert(0, str(REPO_ROOT))
+
+# B174: the stable stdout contract line apps/viewser/lib/openclaw-runner.ts
+# scans for. With --apply the KÖR-7 chain (scripts/build_site.build) prints
+# human progress ("runId: ...", "Copying starter ...", npm output) to the SAME
+# stdout BEFORE the payload, so emitting bare JSON made the runner's blind
+# JSON.parse throw on every successful apply (-> /api/prompt's B164 recovery
+# forced an unearned degraded status). main() therefore emits the payload as
+# the FINAL stdout line behind this sentinel prefix; the TS runner looks for
+# it first and keeps a backwards bare-JSON line scan for the old format.
+# Keep this literal in sync with BRIDGE_SENTINEL_PREFIX in openclaw-runner.ts.
+BRIDGE_SENTINEL_PREFIX = "OPENCLAW_BRIDGE_JSON:"
 
 # The conductor conversation kinds the dispatcher answers itself (F1 slice 2).
 # ``edit`` keeps the unchanged chain flow and ``other`` falls through to the
@@ -350,23 +363,23 @@ def main() -> int:
         if not args.site_id:
             print("--apply requires --site-id.", file=sys.stderr)
             return 1
-        print(
-            apply_followup_to_json(
-                args.message,
-                site_id=args.site_id,
-                base_run_id=args.base_run_id,
-                do_build=not args.skip_build,
-            )
-        )
-        return 0
-
-    print(
-        decide_to_json(
+        payload = apply_followup_to_json(
             args.message,
             site_id=args.site_id,
             base_run_id=args.base_run_id,
+            do_build=not args.skip_build,
         )
+        # B174: the chain above may have printed build progress to stdout;
+        # the sentinel line marks which line IS the contract payload.
+        print(f"{BRIDGE_SENTINEL_PREFIX} {payload}")
+        return 0
+
+    payload = decide_to_json(
+        args.message,
+        site_id=args.site_id,
+        base_run_id=args.base_run_id,
     )
+    print(f"{BRIDGE_SENTINEL_PREFIX} {payload}")
     return 0
 
 

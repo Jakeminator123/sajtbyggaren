@@ -413,6 +413,77 @@ def test_openclaw_runner_apply_bridge_seam() -> None:
 
 
 @pytest.mark.tooling
+def test_openclaw_runner_extracts_bridge_json_from_noisy_stdout() -> None:
+    """B174: ``--apply`` delar stdout med ``build_site.build()``:s mänskliga
+    progress ("runId: ...", "Copying starter ...", npm-output) som skrivs FÖRE
+    bridge-JSON:en. Den gamla blinda ``JSON.parse(stdout)`` kastade därför på
+    VARJE lyckad apply -> ``null`` -> route:ns B164-recovery tvingade en falsk
+    degraded/QG-varning trots grön build.
+
+    Locks:
+      1. Runnern har en backwards-skannande ``extractPayloadJson``-hjälpare
+         (sista raden vinner — payloaden är alltid det SISTA scriptet skriver).
+      2. Sentinel-kontraktet ``OPENCLAW_BRIDGE_JSON:`` finns och är byte-
+         identiskt mellan TS-runnern och Python-seamen (run_openclaw_followup
+         skriver payloaden bakom prefixet; runnern letar efter det först).
+      3. Bare-JSON-fallbacken för det gamla formatet finns kvar
+         (bakåtkompatibel: gammal Python-output parsas fortfarande).
+      4. Ingen blind ``JSON.parse(stdout)`` finns kvar i runnern.
+      5. Stream-cappen behåller SVANSEN (payloaden är sist) — head-keeping
+         skulle tappa exakt payloaden vid overflow.
+    """
+    runner_text = (VIEWSER_DIR / "lib" / "openclaw-runner.ts").read_text(
+        encoding="utf-8"
+    )
+    script_text = (
+        VIEWSER_DIR.parent.parent / "scripts" / "run_openclaw_followup.py"
+    ).read_text(encoding="utf-8")
+
+    sentinel = 'BRIDGE_SENTINEL_PREFIX = "OPENCLAW_BRIDGE_JSON:"'
+    assert f"const {sentinel}" in runner_text, (
+        "openclaw-runner.ts måste definiera sentinel-prefixet "
+        "OPENCLAW_BRIDGE_JSON: (B174-kontraktet med Python-seamen)."
+    )
+    assert sentinel in script_text, (
+        "run_openclaw_followup.py måste definiera SAMMA sentinel-prefix som "
+        "TS-runnern (byte-identiskt literal) och skriva payloaden bakom det."
+    )
+    assert "BRIDGE_SENTINEL_PREFIX}" in script_text and "print(f" in script_text, (
+        "run_openclaw_followup.py:main() måste skriva payloaden på en EGEN "
+        "slutrad bakom sentinel-prefixet."
+    )
+
+    assert "function extractPayloadJson(" in runner_text, (
+        "Runnern måste extrahera payloaden via extractPayloadJson i stället "
+        "för blind JSON.parse på hela stdout."
+    )
+    extract_start = runner_text.index("function extractPayloadJson(")
+    extract_body = runner_text[
+        extract_start : runner_text.index("export type OpenClawDecisionPayload")
+    ]
+    assert "lines.length - 1" in extract_body and "i -= 1" in extract_body, (
+        "extractPayloadJson måste skanna stdout-raderna BAKIFRÅN — payloaden "
+        "är alltid det sista scriptet skriver."
+    )
+    assert "parseJsonObjectCandidate(lines[i])" in extract_body, (
+        "Bare-JSON-fallbacken (gamla formatet utan sentinel) måste finnas kvar "
+        "så en äldre Python-sida fortfarande parsas."
+    )
+
+    assert "JSON.parse(stdout)" not in runner_text, (
+        "Blind JSON.parse på hela stdout-strömmen får inte återinföras — det "
+        "är exakt B174-regressionen (progress-brus före JSON -> throw -> null "
+        "-> falsk degraded via B164-recovery)."
+    )
+
+    # Stream-cappen: tail-keeping (shift äldsta chunken), inte head-keeping.
+    assert "stdoutChunks.shift()" in runner_text, (
+        "Stdout-cappen måste droppa de ÄLDSTA chunkarna vid overflow — "
+        "payloaden ligger sist i strömmen, head-keeping tappar exakt den."
+    )
+
+
+@pytest.mark.tooling
 def test_prompt_route_exposes_openclaw_decision() -> None:
     """Skiva 1b (action bridge): ``/api/prompt`` måste ruta follow-ups genom
     OpenClaw-apply-bryggan och, när den materialiserade en ändring, exponera
