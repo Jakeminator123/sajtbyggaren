@@ -7,6 +7,7 @@
   "sections": [
     "Status",
     "Governance",
+    "Identitet",
     "LLM Engine",
     "Building Blocks",
     "Runs",
@@ -99,6 +100,15 @@
       "status": "active",
       "readsFrom": ["governance/decisions"],
       "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Identitet (SOUL)",
+      "section": "Identitet",
+      "ownerSource": "backoffice.views.identity",
+      "status": "active",
+      "readsFrom": ["docs/openclaw-workspace"],
+      "lastVerified": "2026-06-10",
+      "note": "Redigerbar dirigent-konstitution (chatt-persona, path-låst till SOUL.md) + read-only TOOLS (sanktionerade actions). Chatt-personan laddar SOUL server-side. ADR 0044."
     },
     {
       "view": "Mindmap",

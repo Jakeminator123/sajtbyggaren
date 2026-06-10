@@ -21,6 +21,7 @@ from backoffice.views import (
     engine_runs,
     evals,
     governance,
+    identity,
     llm_engine,
     maintenance,
     playground,
@@ -33,6 +34,7 @@ from backoffice.views import (
 SECTION_MODULES = {
     "Status": status,
     "Governance": governance,
+    "Identitet": identity,
     "LLM Engine": llm_engine,
     "Building Blocks": building_blocks,
     "Runs": engine_runs,
