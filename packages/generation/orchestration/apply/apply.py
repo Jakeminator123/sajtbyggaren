@@ -49,6 +49,13 @@ from packages.generation.followup.hero_headline_pin import (
     latest_run_dir_for_site,
     pin_previous_hero_headline,
 )
+from packages.generation.followup.section_content_overrides import (
+    build_section_override_key,
+    derive_section_edit,
+    parse_section_content_field,
+    render_section_override_text,
+    section_base_text,
+)
 
 from ..patch import PatchPlan
 from .mapping import classify_patch
@@ -254,23 +261,57 @@ def apply_patch_plan(
 
     # 3. Map every patch onto an existing Project Input field. All-or-nothing:
     #    if any patch has no existing home, write nothing and report the gap.
+    #
+    #    Two mapped shapes have a home today:
+    #    - a capability-backed component_add -> requestedCapabilities (classify_patch).
+    #    - a copy_change against a whitelisted section text field
+    #      (contentBlocks.<route>.<section>.<headline|subheadline|body>) ->
+    #      directives.sectionContentOverrides (ADR 0043). The new copy is derived
+    #      from the follow-up prompt here (deterministic, guarded), since the
+    #      planner deliberately leaves a copy_change value=None. A whitelisted
+    #      target whose copy cannot be derived stays an honest no-op.
     capabilities: list[AppliedCapability] = []
     unmapped: list[UnmappedPatch] = []
+    # (routeId, sectionId, field, operation, value) for each derivable override.
+    override_edits: list[tuple[str, str, str, str, str]] = []
     for patch in plan.patches:
         capability, reason = classify_patch(patch)
         if capability is not None:
             capabilities.append(
                 AppliedCapability(patchField=patch.field, capability=capability)
             )
-        else:
+            continue
+        parsed = parse_section_content_field(patch.field)
+        if parsed is not None:
+            route_id, section_id, leaf = parsed
+            edit = derive_section_edit(leaf, follow_up_prompt)
+            if edit is not None:
+                operation, value = edit
+                override_edits.append((route_id, section_id, leaf, operation, value))
+                continue
             unmapped.append(
                 UnmappedPatch(
                     patchField=patch.field,
                     op=patch.op,
                     value=patch.value,
-                    reason=reason or "okänd anledning",
+                    reason=(
+                        f"copy_change {patch.field!r} träffar ett vitlistat "
+                        "sektionstextfält men ingen ny text kunde härledas ur "
+                        "följdprompten (planeraren uppfinner aldrig copy). Ange "
+                        "den nya texten explicit (t.ex. ... till \"X\") — ärlig "
+                        "no-op tills dess."
+                    ),
                 )
             )
+            continue
+        unmapped.append(
+            UnmappedPatch(
+                patchField=patch.field,
+                op=patch.op,
+                value=patch.value,
+                reason=reason or "okänd anledning",
+            )
+        )
 
     if unmapped:
         return _trace(
@@ -479,6 +520,42 @@ def apply_patch_plan(
 
         theme_applied = apply_theme_directive(merged, theme_directive)
 
+    # ADR 0043 section content overrides: map each derivable copy_change onto
+    # directives.sectionContentOverrides on the NEW version. The map LIVES in
+    # Project Input and is carried forward by the deep-copy merge (it survives
+    # brief reuse B180 + the hero pin B173); this apply only adds/updates its
+    # own keys, never clearing a prior section edit. Render-time precedence
+    # (override wins over the regenerated blueprint copy) lives in
+    # packages/generation/build, mirroring the company.heroHeadline pin.
+    applied_overrides: list[str] = []
+    if override_edits:
+        overrides_directives = merged.get("directives")
+        if not isinstance(overrides_directives, dict):
+            overrides_directives = {}
+            merged["directives"] = overrides_directives
+        existing = overrides_directives.get("sectionContentOverrides")
+        overrides = dict(existing) if isinstance(existing, dict) else {}
+        for route_id, section_id, field, operation, value in override_edits:
+            key = build_section_override_key(route_id, section_id, field)
+            # An "include" appends to the CURRENT effective copy: a prior
+            # override for this exact field if one is carried forward, else the
+            # structured Project Input copy the renderer reads.
+            prior = overrides.get(key)
+            base = (
+                prior
+                if isinstance(prior, str) and prior.strip()
+                else section_base_text(merged, route_id, section_id, field)
+            )
+            text = render_section_override_text(
+                field, operation, value, base_text=base
+            )
+            if text is None:
+                continue
+            overrides[key] = text
+            applied_overrides.append(key)
+        if overrides:
+            overrides_directives["sectionContentOverrides"] = overrides
+
     _validate_against_schema(merged)
 
     # 5c. section_add visible surfacing (the section_builder's visible-render
@@ -574,6 +651,7 @@ def apply_patch_plan(
         "appliedCapabilities": [entry.model_dump() for entry in capabilities],
         "themeApplied": theme_applied,
         "sectionRoutesSurfaced": list(surfaced_routes),
+        "sectionContentOverrides": list(applied_overrides),
     }
     meta["projectDna"] = _build_project_dna_snapshot(
         merged,
@@ -596,6 +674,13 @@ def apply_patch_plan(
         f"Applicerade {len(capabilities)} capability-patch(ar) som "
         f"requestedCapabilities i ny version v{next_version}.",
     ]
+    if applied_overrides:
+        notes.append(
+            f"Applicerade {len(applied_overrides)} sektionscopy-override(s) "
+            f"({', '.join(applied_overrides)}) i directives."
+            "sectionContentOverrides; renderaren låter dem vinna över "
+            "blueprint-copyn."
+        )
     if theme_applied:
         notes.append(
             f"Applicerade restyle (brand/tone) i v{next_version} från "

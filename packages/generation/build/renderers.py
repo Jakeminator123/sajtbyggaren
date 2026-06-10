@@ -40,6 +40,7 @@ from typing import Any
 from packages.generation.build.blueprint_render import (
     RenderBlueprint,
     apply_blueprint_to_dossier,
+    resolve_section_content_override,
 )
 from packages.generation.build.contact_placeholders import (
     is_placeholder_address_lines,
@@ -700,6 +701,21 @@ def render_section_hero(
     hero_override = company.get("heroHeadline")
     if isinstance(hero_override, str) and hero_override.strip():
         hero_headline = hero_override.strip()
+    # ADR 0043: an explicit operator section-content override
+    # (directives.sectionContentOverrides["home.hero.headline"/.subheadline])
+    # wins over BOTH the regenerated blueprint copy and the heroHeadline pin so
+    # "ändra texten i hero-sektionen till X" is visible in the H1 and survives a
+    # rebuild. Absent on init/most builds, so the no-override path is unchanged.
+    hero_headline_override = resolve_section_content_override(
+        dossier, "hero", "headline"
+    )
+    if hero_headline_override is not None:
+        hero_headline = hero_headline_override
+    hero_subheadline_override = resolve_section_content_override(
+        dossier, "hero", "subheadline"
+    )
+    if hero_subheadline_override is not None:
+        hero_subheadline = hero_subheadline_override
     spel_cta = (
         '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
         if "/spel" in dossier_routes
@@ -1266,14 +1282,21 @@ def render_section_about_story(dossier: dict) -> str:
     byte-identical to the inline implementation.
     """
     company = dossier["company"]
+    # ADR 0043: an operator section-content override wins over the template copy
+    # (the about-page H1 + story card). Absent on init/most builds, so the
+    # no-override path renders byte-identically.
+    about_headline = resolve_section_content_override(dossier, "about-story", "headline")
+    about_body = resolve_section_content_override(dossier, "about-story", "body")
+    headline = about_headline if about_headline is not None else company["name"]
+    body = about_body if about_body is not None else company["story"]
     return (
         '          <header className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Om oss</p>\n'
-        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(company["name"])}</h1>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(headline)}</h1>\n'
         "          </header>\n"
         '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
         '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/20" />\n'
-        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
+        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(body)}</p>\n'
         "          </div>\n"
     )
 
@@ -3008,6 +3031,12 @@ def _render_home_story_section(dossier: dict) -> str:
     """
     company = dossier.get("company") or {}
     story = company.get("story")
+    # ADR 0043: an operator section-content override for the home story body
+    # wins over (and can force-render) the company.story copy. Absent on init/
+    # most builds, so the no-override path renders byte-identically.
+    story_override = resolve_section_content_override(dossier, "story", "body")
+    if story_override is not None:
+        story = story_override
     if not isinstance(story, str) or not story.strip():
         return ""
     safe_story = _jsx_safe_string(story.strip())
