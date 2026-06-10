@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/sni-discovery-map.schema.json",
   "policyId": "sni-discovery-map.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
-  "purpose": "Operatörens handstyrda översättning från SNI 2025-prefix (huvudgrupp / grupp) till en kandidat wizardCategoryId i discovery-taxonomy.v1.json. SNI är en branschsignal i V1 — Backoffice diagnostiserar mappningen read-only; ingen runtime-konsumtion av SNI sker än.",
+  "purpose": "Operatörens handstyrda översättning från SNI 2025-prefix (huvudgrupp / grupp) till en kandidat wizardCategoryId i discovery-taxonomy.v1.json. Version 2 (ADR 0045) täcker alla 87 huvudgrupper så varje SNI-kod resolvar till en kategori; SNI är fortsatt en branschsignal som aldrig väljer scaffold/variant/starter/Dossier direkt. Runtime-konsumtion sker via Discovery Resolver (answers.sniCode) enligt ADR 0045; Backoffice diagnostiserar mappningen read-only.",
   "principles": [
     "SNI 2025 är branschsignal, inte runtime-sanning.",
     "SNI får aldrig välja starterId, scaffoldId, variantId eller Dossier direkt.",
@@ -13,6 +13,231 @@
   ],
   "referenceTaxonomy": "data/taxonomies/sni/sni-2025.v1.json",
   "divisionMappings": [
+    {
+      "sniCode": "01",
+      "labelSv": "Jordbruk och jakt samt stödverksamhet i anslutning härtill",
+      "wizardCategoryId": "business",
+      "confidence": "medium",
+      "notesSv": "Lantbruk/jakt — lokal verksamhetspresentation; gårdsbutik kan peka mot ecommerce via wizardens svar."
+    },
+    {
+      "sniCode": "02",
+      "labelSv": "Skogsbruk",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "03",
+      "labelSv": "Fiske och vattenbruk",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "05",
+      "labelSv": "Kolutvinning",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "06",
+      "labelSv": "Utvinning av råpetroleum och naturgas",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "07",
+      "labelSv": "Utvinning av metallmalmer",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "08",
+      "labelSv": "Annan utvinning av mineral",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "09",
+      "labelSv": "Stödverksamhet avseende utvinning",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "10",
+      "labelSv": "Livsmedelsframställning",
+      "wizardCategoryId": "food",
+      "confidence": "medium",
+      "notesSv": "Livsmedelsproducent — mat/catering-kategorin täcker producent-presentation; ren webshop avgörs av wizardens svar."
+    },
+    {
+      "sniCode": "11",
+      "labelSv": "Framställning av drycker",
+      "wizardCategoryId": "food",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "12",
+      "labelSv": "Tobaksvarutillverkning",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "13",
+      "labelSv": "Textilvarutillverkning",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "14",
+      "labelSv": "Tillverkning av kläder",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "15",
+      "labelSv": "Tillverkning av läder- och skinnvaror och liknande varor av andra material",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "16",
+      "labelSv": "Tillverkning av trä och varor av trä och kork, utom möbler: tillverkning av varor av halm, rotting o.d.",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "17",
+      "labelSv": "Pappers- och pappersvarutillverkning",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "18",
+      "labelSv": "Grafisk produktion och reproduktion av inspelningar",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "19",
+      "labelSv": "Tillverkning av stenkolsprodukter och raffinerade petroleumprodukter",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "20",
+      "labelSv": "Tillverkning av kemikalier och kemiska produkter",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "21",
+      "labelSv": "Tillverkning av farmaceutiska basprodukter och läkemedel",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "22",
+      "labelSv": "Tillverkning av gummi- och plastvaror",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "23",
+      "labelSv": "Tillverkning av andra icke-metalliska mineraliska produkter",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "24",
+      "labelSv": "Stål- och metallframställning",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "25",
+      "labelSv": "Tillverkning av metallvaror utom maskiner och apparater",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "26",
+      "labelSv": "Tillverkning av datorer, elektronikvaror och optik",
+      "wizardCategoryId": "tech",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "27",
+      "labelSv": "Tillverkning av elapparatur",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "28",
+      "labelSv": "Tillverkning av övriga maskiner",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "29",
+      "labelSv": "Tillverkning av motorfordon, släpfordon och påhängsvagnar",
+      "wizardCategoryId": "business",
+      "confidence": "medium",
+      "notesSv": "Fordonstillverkning är industri — auto-kategorin är reserverad för handel/verkstad (478/953-overrides)."
+    },
+    {
+      "sniCode": "30",
+      "labelSv": "Tillverkning av andra transportmedel",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "31",
+      "labelSv": "Tillverkning av möbler",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "32",
+      "labelSv": "Annan tillverkning",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "33",
+      "labelSv": "Reparation, underhåll och installation av maskiner och utrustning",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "35",
+      "labelSv": "El-, gas- och ångförsörjning samt luftkonditionering",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "36",
+      "labelSv": "Vattenförsörjning",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "37",
+      "labelSv": "Avloppsrening",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "38",
+      "labelSv": "Insamling av avfall, återvinning och bortskaffande",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "39",
+      "labelSv": "Sanering, efterbehandling av jord och vatten samt annan verksamhet för föroreningsbekämpning",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
     {
       "sniCode": "41",
       "labelSv": "Byggande av bostadshus och andra byggnader",
@@ -32,11 +257,48 @@
       "confidence": "high"
     },
     {
+      "sniCode": "46",
+      "labelSv": "Parti- och provisionshandel",
+      "wizardCategoryId": "business",
+      "confidence": "medium",
+      "notesSv": "Partihandel är B2B-presentation; webshop-behov avgörs av wizardens svar, inte av SNI."
+    },
+    {
       "sniCode": "47",
       "labelSv": "Detaljhandel",
       "wizardCategoryId": "ecommerce",
       "confidence": "medium",
       "notesSv": "Detaljhandel kan vara fysisk butik utan webshop; wizardens svar avgör om e-handel faktiskt är aktuell."
+    },
+    {
+      "sniCode": "49",
+      "labelSv": "Landtransport; transport i rörsystem",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "50",
+      "labelSv": "Sjötransport",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "51",
+      "labelSv": "Lufttransport",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "52",
+      "labelSv": "Magasinering, varulagring och stödverksamhet avseende transport",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "53",
+      "labelSv": "Post- och kurirverksamhet",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
     },
     {
       "sniCode": "55",
@@ -51,6 +313,32 @@
       "confidence": "high"
     },
     {
+      "sniCode": "58",
+      "labelSv": "Förlagsverksamhet",
+      "wizardCategoryId": "blog",
+      "confidence": "medium",
+      "notesSv": "Förlag/utgivning mappar mot blogg/magasin-kategorin."
+    },
+    {
+      "sniCode": "59",
+      "labelSv": "Film-, video- och tv-programverksamhet, ljudinspelning och musikutgivning",
+      "wizardCategoryId": "photo",
+      "confidence": "medium",
+      "notesSv": "Film/video/tv mappar mot foto/video; 592-override skiljer ut musikutgivning."
+    },
+    {
+      "sniCode": "60",
+      "labelSv": "Planering, radio- och tv-sändning, nyhetsbyråer och annan distribution av medieinnehåll",
+      "wizardCategoryId": "blog",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "61",
+      "labelSv": "Telekommunikation",
+      "wizardCategoryId": "tech",
+      "confidence": "medium"
+    },
+    {
       "sniCode": "62",
       "labelSv": "Dataprogrammering, datakonsultverksamhet o.d.",
       "wizardCategoryId": "tech",
@@ -63,10 +351,36 @@
       "confidence": "high"
     },
     {
+      "sniCode": "64",
+      "labelSv": "Finansiell verksamhet utom försäkrings- och pensionsfondsverksamhet",
+      "wizardCategoryId": "accounting",
+      "confidence": "medium",
+      "notesSv": "Finansiella tjänster mappar mot ekonomi-kategorin tills en dedikerad finans-kategori finns."
+    },
+    {
+      "sniCode": "65",
+      "labelSv": "Försäkrings-, återförsäkrings- och pensionsfondsverksamhet utom obligatorisk socialförsäkring",
+      "wizardCategoryId": "accounting",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "66",
+      "labelSv": "Stödverksamhet avseende finansiella tjänster och försäkringsverksamhet",
+      "wizardCategoryId": "accounting",
+      "confidence": "medium"
+    },
+    {
       "sniCode": "68",
       "labelSv": "Fastighetsverksamhet",
       "wizardCategoryId": "realestate",
       "confidence": "high"
+    },
+    {
+      "sniCode": "69",
+      "labelSv": "Juridisk och ekonomisk konsultverksamhet",
+      "wizardCategoryId": "legal",
+      "confidence": "medium",
+      "notesSv": "Säkerhetsnät för koden 69 själv; 691 (legal) och 692 (accounting) overrides är de skarpa mappningarna."
     },
     {
       "sniCode": "70",
@@ -81,8 +395,39 @@
       "confidence": "medium"
     },
     {
+      "sniCode": "72",
+      "labelSv": "Vetenskaplig forskning och utveckling",
+      "wizardCategoryId": "consulting",
+      "confidence": "medium"
+    },
+    {
       "sniCode": "73",
       "labelSv": "Reklamverksamhet, marknadsundersökningar och PR",
+      "wizardCategoryId": "consulting",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "74",
+      "labelSv": "Annan verksamhet inom juridik, ekonomi, vetenskap och teknik",
+      "wizardCategoryId": "consulting",
+      "confidence": "medium",
+      "notesSv": "Övrig juridik/ekonomi/vetenskap/teknik; 742-override skiljer ut fotoverksamhet."
+    },
+    {
+      "sniCode": "75",
+      "labelSv": "Veterinärverksamhet",
+      "wizardCategoryId": "healthcare",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "77",
+      "labelSv": "Uthyrning och leasing",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "78",
+      "labelSv": "Arbetsförmedling, bemanning och annan personalrelaterad verksamhet",
       "wizardCategoryId": "consulting",
       "confidence": "medium"
     },
@@ -91,6 +436,31 @@
       "labelSv": "Resebyrå- och researrangörsverksamhet samt annan boknings- och reserelaterad verksamhet",
       "wizardCategoryId": "travel",
       "confidence": "high"
+    },
+    {
+      "sniCode": "80",
+      "labelSv": "Säkerhets- och bevakningsverksamhet",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "81",
+      "labelSv": "Fastighetsrelaterad stödverksamhet samt skötsel och underhåll av grönytor",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "82",
+      "labelSv": "Kontorstjänster och annan stödverksamhet till företag",
+      "wizardCategoryId": "business",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "84",
+      "labelSv": "Offentlig förvaltning och försvar; obligatorisk socialförsäkring",
+      "wizardCategoryId": "other",
+      "confidence": "low",
+      "notesSv": "Offentlig förvaltning är ingen typisk småföretagskund; catch-all tills behov uppstår."
     },
     {
       "sniCode": "85",
@@ -124,6 +494,18 @@
       "confidence": "medium"
     },
     {
+      "sniCode": "91",
+      "labelSv": "Biblioteks-, arkiv- och museiverksamhet m.m.",
+      "wizardCategoryId": "nonprofit",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "92",
+      "labelSv": "Spel- och vadhållningsverksamhet",
+      "wizardCategoryId": "business",
+      "confidence": "low"
+    },
+    {
       "sniCode": "93",
       "labelSv": "Sport-, fritids- och nöjesverksamhet",
       "wizardCategoryId": "fitness",
@@ -137,11 +519,36 @@
       "confidence": "high"
     },
     {
+      "sniCode": "95",
+      "labelSv": "Reparation och underhåll av datorer, hushållsartiklar och varor för personligt bruk samt motorfordon och motorcyklar",
+      "wizardCategoryId": "business",
+      "confidence": "medium",
+      "notesSv": "Reparationstjänster; 953-override skiljer ut fordonsverkstäder till auto."
+    },
+    {
       "sniCode": "96",
       "labelSv": "Konsumenttjänster",
       "wizardCategoryId": "salon",
       "confidence": "medium",
       "notesSv": "Huvudgrupp 96 spänner över hår-/skönhetsvård, tvätteri och andra konsumenttjänster. 962 salon override är mer specifik."
+    },
+    {
+      "sniCode": "97",
+      "labelSv": "Förvärvsarbete i hushåll",
+      "wizardCategoryId": "other",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "98",
+      "labelSv": "Hushållens produktion av diverse varor och tjänster för eget bruk",
+      "wizardCategoryId": "other",
+      "confidence": "low"
+    },
+    {
+      "sniCode": "99",
+      "labelSv": "Verksamhet vid internationella organisationer, utländska ambassader o.d.",
+      "wizardCategoryId": "other",
+      "confidence": "low"
     }
   ],
   "groupOverrides": [
@@ -164,6 +571,13 @@
       "labelSv": "Restaurangverksamhet och mobil restaurangverksamhet",
       "wizardCategoryId": "restaurant",
       "confidence": "high"
+    },
+    {
+      "sniCode": "592",
+      "labelSv": "Ljudinspelning och musikutgivning",
+      "wizardCategoryId": "music",
+      "confidence": "high",
+      "notesSv": "Ljudinspelning och musikutgivning hör till musik-kategorin, inte foto/video-defaulten för 59."
     },
     {
       "sniCode": "681",
@@ -252,10 +666,38 @@
       "confidence": "high"
     },
     {
+      "sniCode": "961",
+      "labelSv": "Tvätteriverksamhet",
+      "wizardCategoryId": "business",
+      "confidence": "medium",
+      "notesSv": "Tvätteri är konsumentservice utan salongs-behov; bryter salon-defaulten för 96."
+    },
+    {
       "sniCode": "962",
       "labelSv": "Hår- och skönhetsvård, dagspa o.d.",
       "wizardCategoryId": "salon",
       "confidence": "high"
+    },
+    {
+      "sniCode": "963",
+      "labelSv": "Begravningsverksamhet",
+      "wizardCategoryId": "business",
+      "confidence": "medium",
+      "notesSv": "Begravningsverksamhet bryter salon-defaulten för 96."
+    },
+    {
+      "sniCode": "964",
+      "labelSv": "Förmedling avseende konsumenttjänster",
+      "wizardCategoryId": "business",
+      "confidence": "low",
+      "notesSv": "Förmedling av konsumenttjänster bryter salon-defaulten för 96."
+    },
+    {
+      "sniCode": "969",
+      "labelSv": "Övriga konsumenttjänster",
+      "wizardCategoryId": "business",
+      "confidence": "medium",
+      "notesSv": "Övriga konsumenttjänster bryter salon-defaulten för 96."
     }
   ]
 }

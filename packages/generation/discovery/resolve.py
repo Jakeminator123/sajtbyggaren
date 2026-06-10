@@ -51,11 +51,19 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from .industry_profiles import (
+    IndustryProfile,
+    resolve_industry_profile,
+)
 from .models import (
     DiscoveryDecision,
     FallbackWarning,
     FieldSourceLiteral,
     SelectionSource,
+)
+from .sni_map import (
+    normalize_sni_code,
+    resolve_sni_discovery_category,
 )
 from .taxonomy import (
     DEFAULT_TAXONOMY_PATH,
@@ -372,6 +380,27 @@ def resolve_discovery(
     warnings: list[FallbackWarning] = []
 
     # ------------------------------------------------------------------
+    # Steg 1b — SNI-branschsignal (ADR 0045)
+    # ------------------------------------------------------------------
+    # ``answers.sniCode`` kommer från wizardens branschsök. Signalen är
+    # mjuk: (a) när operatören INTE valt någon kategori härleds
+    # kategorivalet deterministiskt via sni-discovery-map (wizardens
+    # explicita siteType-val vinner alltid), (b) huvudgruppens
+    # branschprofil berikar capabilities + planner-kontext längre ner.
+    # Utan sniCode (eller utan träff) är flödet byte-identiskt med idag.
+    sni_code, sni_category_id, industry_profile = _resolve_sni_signal(answers)
+    if not category_ids and sni_category_id is not None:
+        category_ids = [sni_category_id]
+    elif industry_profile is not None and (
+        industry_profile.wizardCategoryId not in category_ids
+    ):
+        # Gate 2: operatören har EXPLICIT valt kategorier som inte täcker
+        # profilens kategori (t.ex. bygg-SNI men siteType=["restaurant"]).
+        # Det explicita valet vinner — profilen får inte berika med fel
+        # branschinnehåll. sniCode behålls för spårbarhet i decision.
+        industry_profile = None
+
+    # ------------------------------------------------------------------
     # Steg 2 — matcha kategorier mot taxonomi
     # ------------------------------------------------------------------
     matched_categories: list[TaxonomyCategory] = []
@@ -561,10 +590,12 @@ def resolve_discovery(
         primary_category=primary_category,
         field_sources=field_sources,
         capability_map=resolved_capability_map,
+        industry_profile=industry_profile,
     )
     warnings.extend(capability_result["warnings"])
 
     _apply_cta_field(project_input, answers, field_sources)
+    _apply_industry_profile_planner_context(project_input, industry_profile)
 
     # ------------------------------------------------------------------
     # Steg 6 — bygg ``DiscoveryDecision``
@@ -634,6 +665,10 @@ def resolve_discovery(
         selectionSource=selection_source,
         operatorReviewRequired=operator_review_required,
         rationale=rationale,
+        sniCode=sni_code,
+        industryProfileId=(
+            industry_profile.profileId if industry_profile is not None else None
+        ),
     )
     return project_input, decision
 
@@ -663,6 +698,87 @@ def apply_discovery_overrides(
 # ---------------------------------------------------------------------------
 # Field-mappers (private)
 # ---------------------------------------------------------------------------
+
+
+def _resolve_sni_signal(
+    answers: dict[str, Any],
+) -> tuple[str | None, str | None, IndustryProfile | None]:
+    """Tolka ``answers.sniCode`` (ADR 0045) till en mjuk branschsignal.
+
+    Returnerar ``(normalizedSniCode, sniCategoryId, industryProfile)``:
+
+    - ``normalizedSniCode`` — digit-only-koden, för decision-spårbarhet.
+    - ``sniCategoryId`` — kategorin från sni-discovery-map med full
+      prefix-specificitet (grupp-override slår huvudgrupps-default,
+      t.ex. 963 begravning -> business trots att huvudgrupp 96 -> salon).
+    - ``industryProfile`` — huvudgruppens profil, MEN bara när profilens
+      ``wizardCategoryId`` matchar den resolvade kategorin. Gaten hindrar
+      att en grupp-override-bransch (963) berikas med fel branschinnehåll
+      (salongs-profilen för 96).
+
+    Trasig/tom/okänd kod ger ``(None, None, None)`` utan exception —
+    flödet är då byte-identiskt med pre-0045.
+    """
+    raw = answers.get("sniCode")
+    if not isinstance(raw, str) or not raw.strip():
+        return (None, None, None)
+    normalized = normalize_sni_code(raw)
+    if not normalized or not normalized.isdigit() or len(normalized) < 2:
+        return (None, None, None)
+
+    match = resolve_sni_discovery_category(raw)
+    category_id = match.wizardCategoryId
+    if category_id is None:
+        return (None, None, None)
+
+    profile = resolve_industry_profile(raw)
+    if profile is not None and profile.wizardCategoryId != category_id:
+        profile = None
+    return (normalized, category_id, profile)
+
+
+def _apply_industry_profile_planner_context(
+    project_input: dict[str, Any],
+    industry_profile: IndustryProfile | None,
+) -> None:
+    """Appendera branschprofilens copy-kontext till ``directives.notesForPlanner``.
+
+    ADR 0045: copyAngle + trustSignals + toneHints når planningModel via
+    den redan plumbade notesForPlanner-sömmen (briefModel-integration är
+    en senare slice). Operatörens egen fritext vinner alltid — bransch-
+    kontexten läggs sist och bara om den ryms inom schemats 1024-tecken-
+    tak; annars droppas den hellre än att operatörstext trunkeras.
+    """
+    if industry_profile is None:
+        return
+    parts: list[str] = [
+        f"Bransch (SNI {industry_profile.sniCode}, {industry_profile.labelSv}):"
+        f" {industry_profile.copyAngle}"
+    ]
+    if industry_profile.trustSignals:
+        parts.append("Trust: " + ", ".join(industry_profile.trustSignals) + ".")
+    if industry_profile.toneHints:
+        parts.append("Ton: " + ", ".join(industry_profile.toneHints) + ".")
+    context = " ".join(parts)
+
+    existing_directives = project_input.get("directives")
+    existing_notes = ""
+    if isinstance(existing_directives, dict):
+        raw_notes = existing_directives.get("notesForPlanner")
+        if isinstance(raw_notes, str):
+            existing_notes = raw_notes.strip()
+
+    combined = f"{existing_notes}\n{context}".strip() if existing_notes else context
+    if len(combined) > _MAX_NOTES_FOR_PLANNER_CHARS:
+        # Operatörstext först; skippa branschkontext när budget saknas.
+        if existing_notes:
+            return
+        combined = context[:_MAX_NOTES_FOR_PLANNER_CHARS]
+
+    if isinstance(existing_directives, dict):
+        existing_directives["notesForPlanner"] = combined
+    else:
+        project_input["directives"] = {"notesForPlanner": combined}
 
 
 def _collect_category_ids(answers: dict[str, Any]) -> list[str]:
@@ -1460,6 +1576,7 @@ def _resolve_capabilities(
     primary_category: TaxonomyCategory | None,
     field_sources: dict[str, FieldSourceLiteral],
     capability_map: dict[str, dict[str, Any]],
+    industry_profile: IndustryProfile | None = None,
 ) -> dict[str, list[FallbackWarning]]:
     """Bygg ``requestedCapabilities`` med fieldSources och warnings.
 
@@ -1506,6 +1623,13 @@ def _resolve_capabilities(
     taxonomy_caps: list[str] = []
     if primary_category is not None:
         taxonomy_caps = list(primary_category.requestedCapabilities)
+    # ADR 0045: branschprofilens extraCapabilities utökar kategorins
+    # taxonomy-caps med samma source-label ("taxonomy" — båda är
+    # policy-härledda governance-signaler, inte operatörsval). De läggs
+    # EFTER kategorins caps så kategorin behåller företräde i ordningen,
+    # och de passerar samma gap/unknown-klassificering nedanför.
+    if industry_profile is not None:
+        taxonomy_caps.extend(industry_profile.extraCapabilities)
 
     combined: list[str] = []
     seen: set[str] = set()

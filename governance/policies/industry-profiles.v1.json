@@ -1,0 +1,2828 @@
+{
+  "$schema": "../schemas/industry-profiles.schema.json",
+  "policyId": "industry-profiles.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "En branschprofil per SNI-huvudgrupp (ADR 0045) som beskriver vad branschens hemsida behöver — extra capabilities, rekommenderade sidor, copy-vinkel, trust-signaler, primär CTA och bildspråk. Profilen berikar kategorins discovery-taxonomy-defaults; den väljer aldrig scaffold/variant/starter/Dossier. Konsumeras av Discovery Resolver (answers.sniCode) och wizardens branschsök-prefill.",
+  "principles": [
+    "Profilen är en mjuk berikning — Discovery Taxonomy äger fortsatt scaffold/variant/starter/capabilities-grunden.",
+    "wizardCategoryId i profilen måste matcha sni-discovery-map-resolutionen för samma huvudgrupp (testlåst).",
+    "extraCapabilities använder bara canonical slugs ur capability-map.v1.json (testlåst).",
+    "curated: false betyder ärligt skelett med kategori-defaults; ingen påhittad branschkunskap.",
+    "Kurering sker i policy-JSON i batchar per SNI-avdelning; generatorn skriver aldrig över befintliga profiler."
+  ],
+  "referenceTaxonomy": "data/taxonomies/sni/sni-2025.v1.json",
+  "divisionProfiles": [
+    {
+      "profileId": "sni-01",
+      "sniCode": "01",
+      "labelSv": "Jordbruk och jakt samt stödverksamhet i anslutning härtill",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Gårdens berättelse och produkter — närproducerat med ansikte.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "KRAV / EU-ekologiskt",
+        "Gårdsförsäljning",
+        "Öppen gård"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Gårdsbutik",
+        "Om gården",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "gården och markerna",
+        "djur och odling",
+        "produkter"
+      ]
+    },
+    {
+      "profileId": "sni-02",
+      "sniCode": "02",
+      "labelSv": "Skogsbruk",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-03",
+      "sniCode": "03",
+      "labelSv": "Fiske och vattenbruk",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-05",
+      "sniCode": "05",
+      "labelSv": "Kolutvinning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-06",
+      "sniCode": "06",
+      "labelSv": "Utvinning av råpetroleum och naturgas",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-07",
+      "sniCode": "07",
+      "labelSv": "Utvinning av metallmalmer",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-08",
+      "sniCode": "08",
+      "labelSv": "Annan utvinning av mineral",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-09",
+      "sniCode": "09",
+      "labelSv": "Stödverksamhet avseende utvinning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-10",
+      "sniCode": "10",
+      "labelSv": "Livsmedelsframställning",
+      "wizardCategoryId": "food",
+      "curated": true,
+      "copyAngle": "Hantverk och råvaror i fokus — från recept till leverans.",
+      "toneHints": [
+        "aptitlig",
+        "personlig"
+      ],
+      "trustSignals": [
+        "Egenkontroll livsmedel",
+        "Lokala råvaror",
+        "Återförsäljare"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "menu",
+        "contact-form",
+        "gallery"
+      ],
+      "recommendedPages": [
+        "Produkter",
+        "Återförsäljare",
+        "Om oss / Om mig",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "produktionen",
+        "färdiga produkter i närbild"
+      ]
+    },
+    {
+      "profileId": "sni-11",
+      "sniCode": "11",
+      "labelSv": "Framställning av drycker",
+      "wizardCategoryId": "food",
+      "curated": false,
+      "copyAngle": "Råvaror och hantverk — visa maten, förenkla beställningen.",
+      "toneHints": [
+        "aptitlig",
+        "personlig"
+      ],
+      "trustSignals": [
+        "Egenkontroll livsmedel",
+        "Allergihantering",
+        "Lokala råvaror"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "menu",
+        "contact-form",
+        "gallery"
+      ],
+      "recommendedPages": [
+        "Meny / Matsedel",
+        "Bildgalleri",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "mat i närbild",
+        "tillagning"
+      ]
+    },
+    {
+      "profileId": "sni-12",
+      "sniCode": "12",
+      "labelSv": "Tobaksvarutillverkning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-13",
+      "sniCode": "13",
+      "labelSv": "Textilvarutillverkning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-14",
+      "sniCode": "14",
+      "labelSv": "Tillverkning av kläder",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-15",
+      "sniCode": "15",
+      "labelSv": "Tillverkning av läder- och skinnvaror och liknande varor av andra material",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-16",
+      "sniCode": "16",
+      "labelSv": "Tillverkning av trä och varor av trä och kork, utom möbler: tillverkning av varor av halm, rotting o.d.",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Trähantverk med precision — visa materialkänslan och referensjobben.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Certifierat virke",
+        "Referensprojekt",
+        "Leveranstider"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verkstaden",
+        "träets detaljer"
+      ]
+    },
+    {
+      "profileId": "sni-17",
+      "sniCode": "17",
+      "labelSv": "Pappers- och pappersvarutillverkning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-18",
+      "sniCode": "18",
+      "labelSv": "Grafisk produktion och reproduktion av inspelningar",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Från fil till färdigt tryck — kvalitet, upplagor och snabba svar.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Provtryck",
+        "Miljömärkt tryck",
+        "Leveranstider"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Portfolio / Case",
+        "Begär offert"
+      ],
+      "imageryHints": [
+        "pressar och produktion",
+        "trycksaker i närbild"
+      ]
+    },
+    {
+      "profileId": "sni-19",
+      "sniCode": "19",
+      "labelSv": "Tillverkning av stenkolsprodukter och raffinerade petroleumprodukter",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-20",
+      "sniCode": "20",
+      "labelSv": "Tillverkning av kemikalier och kemiska produkter",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-21",
+      "sniCode": "21",
+      "labelSv": "Tillverkning av farmaceutiska basprodukter och läkemedel",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-22",
+      "sniCode": "22",
+      "labelSv": "Tillverkning av gummi- och plastvaror",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-23",
+      "sniCode": "23",
+      "labelSv": "Tillverkning av andra icke-metalliska mineraliska produkter",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-24",
+      "sniCode": "24",
+      "labelSv": "Stål- och metallframställning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-25",
+      "sniCode": "25",
+      "labelSv": "Tillverkning av metallvaror utom maskiner och apparater",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-26",
+      "sniCode": "26",
+      "labelSv": "Tillverkning av datorer, elektronikvaror och optik",
+      "wizardCategoryId": "tech",
+      "curated": false,
+      "copyAngle": "Produktnyttan först, teknisk trovärdighet direkt efter.",
+      "toneHints": [
+        "modern",
+        "självsäker"
+      ],
+      "trustSignals": [
+        "Referenskunder",
+        "Säkerhet & GDPR",
+        "Uptime / support"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "faq-section",
+        "newsletter-subscribe"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "FAQ",
+        "Nyhetsbrev",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "produkt-screenshots",
+        "teamet bakom"
+      ]
+    },
+    {
+      "profileId": "sni-27",
+      "sniCode": "27",
+      "labelSv": "Tillverkning av elapparatur",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-28",
+      "sniCode": "28",
+      "labelSv": "Tillverkning av övriga maskiner",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-29",
+      "sniCode": "29",
+      "labelSv": "Tillverkning av motorfordon, släpfordon och påhängsvagnar",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-30",
+      "sniCode": "30",
+      "labelSv": "Tillverkning av andra transportmedel",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-31",
+      "sniCode": "31",
+      "labelSv": "Tillverkning av möbler",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Möbler med hantverkskänsla — material, mått och beställningsväg.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Massivt material",
+        "Måttanpassning",
+        "Referenskunder"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "möbler i miljö",
+        "verkstadsdetaljer"
+      ]
+    },
+    {
+      "profileId": "sni-32",
+      "sniCode": "32",
+      "labelSv": "Annan tillverkning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-33",
+      "sniCode": "33",
+      "labelSv": "Reparation, underhåll och installation av maskiner och utrustning",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Maskinerna ska rulla — snabb service, tydliga avtal.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Servicetekniker med certifikat",
+        "Jourservice",
+        "Serviceavtal"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Serviceavtal",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "tekniker i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-35",
+      "sniCode": "35",
+      "labelSv": "El-, gas- och ångförsörjning samt luftkonditionering",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-36",
+      "sniCode": "36",
+      "labelSv": "Vattenförsörjning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-37",
+      "sniCode": "37",
+      "labelSv": "Avloppsrening",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-38",
+      "sniCode": "38",
+      "labelSv": "Insamling av avfall, återvinning och bortskaffande",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Återvinning som gör skillnad — enkla flöden för hämtning och sortering.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Miljötillstånd",
+        "Spårbarhet",
+        "Avfallstrappan"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Hämtning / Beställning",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "sorterings- och återvinningsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-39",
+      "sniCode": "39",
+      "labelSv": "Sanering, efterbehandling av jord och vatten samt annan verksamhet för föroreningsbekämpning",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-41",
+      "sniCode": "41",
+      "labelSv": "Byggande av bostadshus och andra byggnader",
+      "wizardCategoryId": "construction",
+      "curated": true,
+      "copyAngle": "Byggprojekt från grund till nyckel — referenser och trygg process.",
+      "toneHints": [
+        "rak",
+        "pålitlig"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Försäkring & garantier",
+        "ID06",
+        "Referensprojekt"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "gallery",
+        "guarantees"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Tjänster",
+        "Begär offert",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "pågående byggen",
+        "färdiga hus"
+      ]
+    },
+    {
+      "profileId": "sni-42",
+      "sniCode": "42",
+      "labelSv": "Anläggningsarbeten",
+      "wizardCategoryId": "construction",
+      "curated": true,
+      "copyAngle": "Anläggning med maskinkraft — kapacitet, referenser, snabb offert.",
+      "toneHints": [
+        "rak",
+        "pålitlig"
+      ],
+      "trustSignals": [
+        "Maskinpark",
+        "Trafikverket-erfarenhet",
+        "Försäkring & garantier"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "gallery",
+        "guarantees"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Tjänster",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "maskiner i arbete",
+        "färdig mark och vägar"
+      ]
+    },
+    {
+      "profileId": "sni-43",
+      "sniCode": "43",
+      "labelSv": "Specialiserad bygg- och anläggningsverksamhet",
+      "wizardCategoryId": "construction",
+      "curated": true,
+      "copyAngle": "Specialisthantverk — visa yrkesbeviset och de senaste jobben.",
+      "toneHints": [
+        "rak",
+        "pålitlig"
+      ],
+      "trustSignals": [
+        "Behörigheter (el/VVS)",
+        "Säker Vatten / branschregler",
+        "Garantier",
+        "ID06"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "gallery",
+        "guarantees"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Portfolio / Case",
+        "Begär offert"
+      ],
+      "imageryHints": [
+        "hantverkare i arbete",
+        "före/efter"
+      ]
+    },
+    {
+      "profileId": "sni-46",
+      "sniCode": "46",
+      "labelSv": "Parti- och provisionshandel",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Sortiment och leveranssäkerhet för företagskunder — B2B utan friktion.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Leveranssäkerhet",
+        "Sortimentbredd",
+        "Återförsäljaravtal"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Sortiment",
+        "Bli kund",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "lager och logistik",
+        "produkter"
+      ]
+    },
+    {
+      "profileId": "sni-47",
+      "sniCode": "47",
+      "labelSv": "Detaljhandel",
+      "wizardCategoryId": "ecommerce",
+      "curated": true,
+      "copyAngle": "Butikens utbud med köpkänsla — oavsett om köpet sker online eller i butik.",
+      "toneHints": [
+        "säljande",
+        "tydlig"
+      ],
+      "trustSignals": [
+        "Trygg betalning",
+        "Öppet köp / byten",
+        "Kundrecensioner"
+      ],
+      "primaryCta": "Köp nu",
+      "extraCapabilities": [
+        "payments",
+        "gallery",
+        "reviews"
+      ],
+      "recommendedPages": [
+        "Webshop / Produkter",
+        "Butik & öppettider",
+        "Kundrecensioner"
+      ],
+      "imageryHints": [
+        "produkter i enhetligt ljus",
+        "butiksmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-49",
+      "sniCode": "49",
+      "labelSv": "Landtransport; transport i rörsystem",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Transporter i tid — kapacitet, områden och enkel bokningsväg.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Trafiktillstånd",
+        "Försäkrat gods",
+        "Punktlighet"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Områden",
+        "Begär offert"
+      ],
+      "imageryHints": [
+        "fordon på väg",
+        "lastning"
+      ]
+    },
+    {
+      "profileId": "sni-50",
+      "sniCode": "50",
+      "labelSv": "Sjötransport",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-51",
+      "sniCode": "51",
+      "labelSv": "Lufttransport",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-52",
+      "sniCode": "52",
+      "labelSv": "Magasinering, varulagring och stödverksamhet avseende transport",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-53",
+      "sniCode": "53",
+      "labelSv": "Post- och kurirverksamhet",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-55",
+      "sniCode": "55",
+      "labelSv": "Hotell- och logiverksamhet",
+      "wizardCategoryId": "hotel",
+      "curated": true,
+      "copyAngle": "Vistelsen säljer sig visuellt — rum, läge och enkel bokning.",
+      "toneHints": [
+        "välkomnande",
+        "lugn"
+      ],
+      "trustSignals": [
+        "Recensionsbetyg",
+        "Avbokningsvillkor",
+        "Frukost & faciliteter"
+      ],
+      "primaryCta": "Boka tid",
+      "extraCapabilities": [
+        "booking",
+        "gallery",
+        "location",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Rum & Priser",
+        "Bokning online",
+        "Bildgalleri",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "rum i dagsljus",
+        "frukost och gemensamma ytor",
+        "omgivningen"
+      ]
+    },
+    {
+      "profileId": "sni-56",
+      "sniCode": "56",
+      "labelSv": "Restaurang-, catering- och barverksamhet",
+      "wizardCategoryId": "restaurant",
+      "curated": true,
+      "copyAngle": "Atmosfär och meny i centrum — boka bord eller beställ direkt.",
+      "toneHints": [
+        "varm",
+        "inbjudande"
+      ],
+      "trustSignals": [
+        "Aktuella öppettider",
+        "Allergiinformation",
+        "Gästrecensioner"
+      ],
+      "primaryCta": "Boka tid",
+      "extraCapabilities": [
+        "menu",
+        "booking",
+        "hours",
+        "location",
+        "gallery"
+      ],
+      "recommendedPages": [
+        "Meny / Matsedel",
+        "Bokning online",
+        "Karta / Hitta hit",
+        "Bildgalleri"
+      ],
+      "imageryHints": [
+        "signaturrätter",
+        "lokalens kvällsljus"
+      ]
+    },
+    {
+      "profileId": "sni-58",
+      "sniCode": "58",
+      "labelSv": "Förlagsverksamhet",
+      "wizardCategoryId": "blog",
+      "curated": true,
+      "copyAngle": "Utgivningen i fokus — titlar, författare och prenumeration.",
+      "toneHints": [
+        "redaktionell"
+      ],
+      "trustSignals": [
+        "Utgivningslista",
+        "Recensioner / priser"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "newsletter-subscribe",
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Titlar / Utgivning",
+        "Nyhetsbrev",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "omslag i grid"
+      ]
+    },
+    {
+      "profileId": "sni-59",
+      "sniCode": "59",
+      "labelSv": "Film-, video- och tv-programverksamhet, ljudinspelning och musikutgivning",
+      "wizardCategoryId": "photo",
+      "curated": true,
+      "copyAngle": "Showreel först — låt produktionerna tala, gör förfrågan enkel.",
+      "toneHints": [
+        "visuell",
+        "personlig"
+      ],
+      "trustSignals": [
+        "Showreel",
+        "Produktionslista",
+        "Samarbetspartners"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "gallery",
+        "pricing",
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Tjänster",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "stillbilder ur produktioner",
+        "bakom kulisserna"
+      ]
+    },
+    {
+      "profileId": "sni-60",
+      "sniCode": "60",
+      "labelSv": "Planering, radio- och tv-sändning, nyhetsbyråer och annan distribution av medieinnehåll",
+      "wizardCategoryId": "blog",
+      "curated": false,
+      "copyAngle": "Innehållet är produkten — läsbarhet och prenumeration först.",
+      "toneHints": [
+        "redaktionell"
+      ],
+      "trustSignals": [
+        "Publiceringsrytm",
+        "Om redaktionen"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "newsletter-subscribe",
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Blogg / Nyheter",
+        "Nyhetsbrev",
+        "Om oss / Om mig"
+      ],
+      "imageryHints": [
+        "artikelbilder med enhetlig ton"
+      ]
+    },
+    {
+      "profileId": "sni-61",
+      "sniCode": "61",
+      "labelSv": "Telekommunikation",
+      "wizardCategoryId": "tech",
+      "curated": false,
+      "copyAngle": "Produktnyttan först, teknisk trovärdighet direkt efter.",
+      "toneHints": [
+        "modern",
+        "självsäker"
+      ],
+      "trustSignals": [
+        "Referenskunder",
+        "Säkerhet & GDPR",
+        "Uptime / support"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "faq-section",
+        "newsletter-subscribe"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "FAQ",
+        "Nyhetsbrev",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "produkt-screenshots",
+        "teamet bakom"
+      ]
+    },
+    {
+      "profileId": "sni-62",
+      "sniCode": "62",
+      "labelSv": "Dataprogrammering, datakonsultverksamhet o.d.",
+      "wizardCategoryId": "tech",
+      "curated": true,
+      "copyAngle": "Teknisk spets utan floskler — vad ni bygger, för vem, med vilket resultat.",
+      "toneHints": [
+        "modern",
+        "självsäker"
+      ],
+      "trustSignals": [
+        "Referenskunder",
+        "Certifieringar (ISO/moln)",
+        "Säkerhet & GDPR"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "faq-section",
+        "newsletter-subscribe"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Portfolio / Case",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "teamet i arbete",
+        "produkt-screenshots"
+      ]
+    },
+    {
+      "profileId": "sni-63",
+      "sniCode": "63",
+      "labelSv": "Datainfrastruktur, databehandling, hosting och annan informationsverksamhet",
+      "wizardCategoryId": "tech",
+      "curated": false,
+      "copyAngle": "Produktnyttan först, teknisk trovärdighet direkt efter.",
+      "toneHints": [
+        "modern",
+        "självsäker"
+      ],
+      "trustSignals": [
+        "Referenskunder",
+        "Säkerhet & GDPR",
+        "Uptime / support"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "faq-section",
+        "newsletter-subscribe"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "FAQ",
+        "Nyhetsbrev",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "produkt-screenshots",
+        "teamet bakom"
+      ]
+    },
+    {
+      "profileId": "sni-64",
+      "sniCode": "64",
+      "labelSv": "Finansiell verksamhet utom försäkrings- och pensionsfondsverksamhet",
+      "wizardCategoryId": "accounting",
+      "curated": true,
+      "copyAngle": "Finansiell trygghet — tillstånd, process och personlig rådgivning.",
+      "toneHints": [
+        "saklig",
+        "trygg"
+      ],
+      "trustSignals": [
+        "Finansinspektionens tillstånd",
+        "Ansvarsförsäkring",
+        "Sekretess"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "pricing",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Prislista",
+        "FAQ",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "rådgivningsmöte",
+        "lugn kontorsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-65",
+      "sniCode": "65",
+      "labelSv": "Försäkrings-, återförsäkrings- och pensionsfondsverksamhet utom obligatorisk socialförsäkring",
+      "wizardCategoryId": "accounting",
+      "curated": false,
+      "copyAngle": "Ordning och proaktivitet — visa vad kunden slipper tänka på.",
+      "toneHints": [
+        "saklig",
+        "trygg"
+      ],
+      "trustSignals": [
+        "Auktoriserad redovisningskonsult",
+        "SRF/FAR-medlemskap",
+        "Digitala arbetssätt"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "pricing",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Prislista",
+        "FAQ",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "rådgivningsmöte",
+        "lugn kontorsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-66",
+      "sniCode": "66",
+      "labelSv": "Stödverksamhet avseende finansiella tjänster och försäkringsverksamhet",
+      "wizardCategoryId": "accounting",
+      "curated": false,
+      "copyAngle": "Ordning och proaktivitet — visa vad kunden slipper tänka på.",
+      "toneHints": [
+        "saklig",
+        "trygg"
+      ],
+      "trustSignals": [
+        "Auktoriserad redovisningskonsult",
+        "SRF/FAR-medlemskap",
+        "Digitala arbetssätt"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "pricing",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Prislista",
+        "FAQ",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "rådgivningsmöte",
+        "lugn kontorsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-68",
+      "sniCode": "68",
+      "labelSv": "Fastighetsverksamhet",
+      "wizardCategoryId": "realestate",
+      "curated": true,
+      "copyAngle": "Objekt och områdeskännedom i fokus — personlig mäklare nära.",
+      "toneHints": [
+        "förtroendeingivande",
+        "lokal"
+      ],
+      "trustSignals": [
+        "Registrerad fastighetsmäklare",
+        "Områdesstatistik",
+        "Nöjda säljare"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "gallery",
+        "team-section"
+      ],
+      "recommendedPages": [
+        "Bildgalleri",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "objektfoton i dagsljus",
+        "kvartersbilder"
+      ]
+    },
+    {
+      "profileId": "sni-69",
+      "sniCode": "69",
+      "labelSv": "Juridisk och ekonomisk konsultverksamhet",
+      "wizardCategoryId": "legal",
+      "curated": true,
+      "copyAngle": "Specialisering och sekretess — rätt byrå för rätt ärende.",
+      "toneHints": [
+        "saklig",
+        "förtroendeingivande"
+      ],
+      "trustSignals": [
+        "Advokatsamfundet / auktorisation",
+        "Specialisering",
+        "Sekretess"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "team-section",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Rättsområden",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "kontorsmiljö",
+        "rådgivningsmöte"
+      ],
+      "notesSv": "Huvudgruppen spänner över juridik (691) och redovisning (692); profilen följer legal-defaulten medan 692-företag fångas av accounting-kategorin via group-override."
+    },
+    {
+      "profileId": "sni-70",
+      "sniCode": "70",
+      "labelSv": "Verksamheter som utövas av huvudkontor samt konsultverksamhet avseende företag",
+      "wizardCategoryId": "consulting",
+      "curated": true,
+      "copyAngle": "Strategisk rådgivning med mätbara resultat — case före löften.",
+      "toneHints": [
+        "professionell",
+        "koncis"
+      ],
+      "trustSignals": [
+        "Kundcase med resultat",
+        "Seniora konsulter",
+        "Branschexpertis"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "team-section",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "workshops",
+        "presentationer"
+      ]
+    },
+    {
+      "profileId": "sni-71",
+      "sniCode": "71",
+      "labelSv": "Arkitekt- och teknisk konsultverksamhet; teknisk provning och analys",
+      "wizardCategoryId": "consulting",
+      "curated": true,
+      "copyAngle": "Teknisk precision — projekt, behörigheter och tydlig process.",
+      "toneHints": [
+        "professionell",
+        "koncis"
+      ],
+      "trustSignals": [
+        "Certifierade ingenjörer/arkitekter",
+        "Referensprojekt",
+        "Ansvarsförsäkring"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "team-section",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Tjänster",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "ritningar och modeller",
+        "färdiga projekt"
+      ]
+    },
+    {
+      "profileId": "sni-72",
+      "sniCode": "72",
+      "labelSv": "Vetenskaplig forskning och utveckling",
+      "wizardCategoryId": "consulting",
+      "curated": false,
+      "copyAngle": "Expertis och resultat — kundcase som bevis, enkel offertväg.",
+      "toneHints": [
+        "professionell",
+        "koncis"
+      ],
+      "trustSignals": [
+        "Kundcase med resultat",
+        "Branschexpertis",
+        "Referenskunder"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "team-section",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "arbetsmöten",
+        "resultatpresentationer"
+      ]
+    },
+    {
+      "profileId": "sni-73",
+      "sniCode": "73",
+      "labelSv": "Reklamverksamhet, marknadsundersökningar och PR",
+      "wizardCategoryId": "consulting",
+      "curated": true,
+      "copyAngle": "Kreativitet som konverterar — visa kampanjer och resultat.",
+      "toneHints": [
+        "professionell",
+        "koncis"
+      ],
+      "trustSignals": [
+        "Kundcase med resultat",
+        "Utmärkelser",
+        "Långa kundrelationer"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "team-section",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "kampanjmaterial",
+        "byråmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-74",
+      "sniCode": "74",
+      "labelSv": "Annan verksamhet inom juridik, ekonomi, vetenskap och teknik",
+      "wizardCategoryId": "consulting",
+      "curated": false,
+      "copyAngle": "Expertis och resultat — kundcase som bevis, enkel offertväg.",
+      "toneHints": [
+        "professionell",
+        "koncis"
+      ],
+      "trustSignals": [
+        "Kundcase med resultat",
+        "Branschexpertis",
+        "Referenskunder"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "team-section",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "arbetsmöten",
+        "resultatpresentationer"
+      ]
+    },
+    {
+      "profileId": "sni-75",
+      "sniCode": "75",
+      "labelSv": "Veterinärverksamhet",
+      "wizardCategoryId": "healthcare",
+      "curated": true,
+      "copyAngle": "Djurens trygghet först — legitimerad vård och enkel tidsbokning.",
+      "toneHints": [
+        "lugn",
+        "omhändertagande"
+      ],
+      "trustSignals": [
+        "Legitimerad veterinär",
+        "Akuttider",
+        "Försäkringsdirekt"
+      ],
+      "primaryCta": "Boka tid",
+      "extraCapabilities": [
+        "booking",
+        "contact-form",
+        "hours",
+        "location",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Bokning online",
+        "Behandlingar",
+        "Akut hjälp",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "djur och personal",
+        "kliniken"
+      ]
+    },
+    {
+      "profileId": "sni-77",
+      "sniCode": "77",
+      "labelSv": "Uthyrning och leasing",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-78",
+      "sniCode": "78",
+      "labelSv": "Arbetsförmedling, bemanning och annan personalrelaterad verksamhet",
+      "wizardCategoryId": "consulting",
+      "curated": false,
+      "copyAngle": "Expertis och resultat — kundcase som bevis, enkel offertväg.",
+      "toneHints": [
+        "professionell",
+        "koncis"
+      ],
+      "trustSignals": [
+        "Kundcase med resultat",
+        "Branschexpertis",
+        "Referenskunder"
+      ],
+      "primaryCta": "Begär offert",
+      "extraCapabilities": [
+        "contact-form",
+        "team-section",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Vårt team",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "arbetsmöten",
+        "resultatpresentationer"
+      ]
+    },
+    {
+      "profileId": "sni-79",
+      "sniCode": "79",
+      "labelSv": "Resebyrå- och researrangörsverksamhet samt annan boknings- och reserelaterad verksamhet",
+      "wizardCategoryId": "travel",
+      "curated": true,
+      "copyAngle": "Resan börjar på sajten — inspiration först, trygghet i villkoren.",
+      "toneHints": [
+        "inspirerande",
+        "trygg"
+      ],
+      "trustSignals": [
+        "Resegaranti (Kammarkollegiet)",
+        "Paketreselagen",
+        "Resenärsomdömen"
+      ],
+      "primaryCta": "Boka tid",
+      "extraCapabilities": [
+        "booking",
+        "gallery",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Resor / Upplevelser",
+        "Bildgalleri",
+        "FAQ",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "resmål i naturligt ljus",
+        "resenärer på plats"
+      ]
+    },
+    {
+      "profileId": "sni-80",
+      "sniCode": "80",
+      "labelSv": "Säkerhets- och bevakningsverksamhet",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Trygghet dygnet runt — auktorisation, snabb utryckning, tydliga avtal.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Auktorisation (länsstyrelsen)",
+        "Certifierad personal",
+        "Jour dygnet runt"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Avtal & priser",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "personal i uniform",
+        "teknik och larm"
+      ]
+    },
+    {
+      "profileId": "sni-81",
+      "sniCode": "81",
+      "labelSv": "Fastighetsrelaterad stödverksamhet samt skötsel och underhåll av grönytor",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Skötsel som syns — fasta avtal, pålitliga team, fina resultat.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Kollektivavtal",
+        "Försäkring",
+        "Referensuppdrag"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Avtal",
+        "Begär offert"
+      ],
+      "imageryHints": [
+        "välskötta fastigheter och grönytor"
+      ]
+    },
+    {
+      "profileId": "sni-82",
+      "sniCode": "82",
+      "labelSv": "Kontorstjänster och annan stödverksamhet till företag",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-84",
+      "sniCode": "84",
+      "labelSv": "Offentlig förvaltning och försvar; obligatorisk socialförsäkring",
+      "wizardCategoryId": "other",
+      "curated": false,
+      "copyAngle": "Tydlighet före allt — vad verksamheten gör och hur man hör av sig.",
+      "toneHints": [
+        "neutral"
+      ],
+      "trustSignals": [
+        "Organisationsnummer synligt"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-85",
+      "sniCode": "85",
+      "labelSv": "Utbildning",
+      "wizardCategoryId": "education",
+      "curated": true,
+      "copyAngle": "Resultat och pedagogik — kursutbud med tydlig väg till anmälan.",
+      "toneHints": [
+        "pedagogisk",
+        "uppmuntrande"
+      ],
+      "trustSignals": [
+        "Behöriga lärare",
+        "Kursresultat / omdömen",
+        "Tydlig kursplan"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Kurser / Program",
+        "Anmälan",
+        "FAQ",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "undervisning i miljö",
+        "elever/deltagare"
+      ]
+    },
+    {
+      "profileId": "sni-86",
+      "sniCode": "86",
+      "labelSv": "Hälso- och sjukvård",
+      "wizardCategoryId": "healthcare",
+      "curated": true,
+      "copyAngle": "Trygghet och tillgänglighet före allt — boka enkelt, känn dig sedd.",
+      "toneHints": [
+        "lugn",
+        "omhändertagande"
+      ],
+      "trustSignals": [
+        "Legitimerad personal",
+        "Patientsäkerhet",
+        "Sekretess",
+        "Vårdgaranti"
+      ],
+      "primaryCta": "Boka tid",
+      "extraCapabilities": [
+        "booking",
+        "contact-form",
+        "hours",
+        "location",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Bokning online",
+        "Behandlingar",
+        "Priser & frikort",
+        "FAQ"
+      ],
+      "imageryHints": [
+        "ljusa kliniklokaler",
+        "personal i patientmöte"
+      ]
+    },
+    {
+      "profileId": "sni-87",
+      "sniCode": "87",
+      "labelSv": "Vård och omsorg med boende",
+      "wizardCategoryId": "healthcare",
+      "curated": false,
+      "copyAngle": "Trygghet och tillgänglighet före allt — boka enkelt, känn dig sedd.",
+      "toneHints": [
+        "lugn",
+        "omhändertagande"
+      ],
+      "trustSignals": [
+        "Legitimerad personal",
+        "Patientsäkerhet",
+        "Sekretess"
+      ],
+      "primaryCta": "Boka tid",
+      "extraCapabilities": [
+        "booking",
+        "contact-form",
+        "hours",
+        "location",
+        "faq-section"
+      ],
+      "recommendedPages": [
+        "Bokning online",
+        "Behandlingar",
+        "FAQ",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "ljusa lokaler",
+        "personal i möte med patient"
+      ]
+    },
+    {
+      "profileId": "sni-88",
+      "sniCode": "88",
+      "labelSv": "Öppna sociala insatser",
+      "wizardCategoryId": "nonprofit",
+      "curated": false,
+      "copyAngle": "Uppdraget främst — visa vad engagemang och stöd leder till.",
+      "toneHints": [
+        "engagerande",
+        "transparent"
+      ],
+      "trustSignals": [
+        "Organisationsnummer",
+        "90-konto",
+        "Årsredovisning"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "newsletter-subscribe"
+      ],
+      "recommendedPages": [
+        "Om oss / Om mig",
+        "Engagera dig",
+        "Nyhetsbrev"
+      ],
+      "imageryHints": [
+        "verksamheten i fält",
+        "medlemmar"
+      ]
+    },
+    {
+      "profileId": "sni-90",
+      "sniCode": "90",
+      "labelSv": "Konstnärligt skapande och scenkonst",
+      "wizardCategoryId": "portfolio",
+      "curated": true,
+      "copyAngle": "Konstnärskapet i centrum — verk, scenframträdanden och aktuella datum.",
+      "toneHints": [
+        "personlig",
+        "avskalad"
+      ],
+      "trustSignals": [
+        "Utställningar / uppsättningar",
+        "Press / recensioner",
+        "Stipendier"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "gallery",
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Portfolio / Case",
+        "Om oss / Om mig",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "verk och scenbilder i hög upplösning"
+      ]
+    },
+    {
+      "profileId": "sni-91",
+      "sniCode": "91",
+      "labelSv": "Biblioteks-, arkiv- och museiverksamhet m.m.",
+      "wizardCategoryId": "nonprofit",
+      "curated": false,
+      "copyAngle": "Uppdraget främst — visa vad engagemang och stöd leder till.",
+      "toneHints": [
+        "engagerande",
+        "transparent"
+      ],
+      "trustSignals": [
+        "Organisationsnummer",
+        "90-konto",
+        "Årsredovisning"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "newsletter-subscribe"
+      ],
+      "recommendedPages": [
+        "Om oss / Om mig",
+        "Engagera dig",
+        "Nyhetsbrev"
+      ],
+      "imageryHints": [
+        "verksamheten i fält",
+        "medlemmar"
+      ]
+    },
+    {
+      "profileId": "sni-92",
+      "sniCode": "92",
+      "labelSv": "Spel- och vadhållningsverksamhet",
+      "wizardCategoryId": "business",
+      "curated": false,
+      "copyAngle": "Tydlig presentation av tjänster och en enkel väg till kontakt.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "F-skattsedel",
+        "Organisationsnummer synligt",
+        "Referenser"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Tjänster",
+        "Kontaktformulär",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö",
+        "medarbetare i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-93",
+      "sniCode": "93",
+      "labelSv": "Sport-, fritids- och nöjesverksamhet",
+      "wizardCategoryId": "fitness",
+      "curated": true,
+      "copyAngle": "Energi och gemenskap — sänk tröskeln till första passet.",
+      "toneHints": [
+        "energisk",
+        "peppande"
+      ],
+      "trustSignals": [
+        "Certifierade instruktörer",
+        "Prova-på-erbjudande",
+        "Medlemsomdömen"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "pricing",
+        "booking",
+        "contact-form",
+        "hours"
+      ],
+      "recommendedPages": [
+        "Schema / Pass",
+        "Prislista",
+        "Bokning online",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "träning i rörelse",
+        "gemenskap efter passet"
+      ]
+    },
+    {
+      "profileId": "sni-94",
+      "sniCode": "94",
+      "labelSv": "Intressebevakning; religiös verksamhet",
+      "wizardCategoryId": "nonprofit",
+      "curated": true,
+      "copyAngle": "Uppdraget främst — visa vad medlemskap och engagemang leder till.",
+      "toneHints": [
+        "engagerande",
+        "transparent"
+      ],
+      "trustSignals": [
+        "Organisationsnummer",
+        "Årsredovisning",
+        "Demokratisk styrning"
+      ],
+      "primaryCta": "Registrera dig",
+      "extraCapabilities": [
+        "contact-form",
+        "newsletter-subscribe"
+      ],
+      "recommendedPages": [
+        "Om oss / Om mig",
+        "Bli medlem",
+        "Nyhetsbrev"
+      ],
+      "imageryHints": [
+        "medlemmar i aktivitet"
+      ]
+    },
+    {
+      "profileId": "sni-95",
+      "sniCode": "95",
+      "labelSv": "Reparation och underhåll av datorer, hushållsartiklar och varor för personligt bruk samt motorfordon och motorcyklar",
+      "wizardCategoryId": "business",
+      "curated": true,
+      "copyAngle": "Laga istället för slänga — snabb felsökning, ärliga priser.",
+      "toneHints": [
+        "förtroendeingivande",
+        "rak"
+      ],
+      "trustSignals": [
+        "Garanti på reparationer",
+        "Originaldelar",
+        "Snabb återkoppling"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form",
+        "hours",
+        "location"
+      ],
+      "recommendedPages": [
+        "Tjänster",
+        "Prislista",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "verkstadsbänk i arbete"
+      ]
+    },
+    {
+      "profileId": "sni-96",
+      "sniCode": "96",
+      "labelSv": "Konsumenttjänster",
+      "wizardCategoryId": "salon",
+      "curated": true,
+      "copyAngle": "Resultat och stämning — visa arbetet, gör bokningen självklar.",
+      "toneHints": [
+        "personlig",
+        "varm"
+      ],
+      "trustSignals": [
+        "Certifierade behandlare",
+        "Hygienrutiner",
+        "Kundomdömen"
+      ],
+      "primaryCta": "Boka tid",
+      "extraCapabilities": [
+        "booking",
+        "pricing",
+        "gallery",
+        "hours"
+      ],
+      "recommendedPages": [
+        "Bokning online",
+        "Prislista",
+        "Bildgalleri",
+        "Karta / Hitta hit"
+      ],
+      "imageryHints": [
+        "behandling i närbild",
+        "salongsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-97",
+      "sniCode": "97",
+      "labelSv": "Förvärvsarbete i hushåll",
+      "wizardCategoryId": "other",
+      "curated": false,
+      "copyAngle": "Tydlighet före allt — vad verksamheten gör och hur man hör av sig.",
+      "toneHints": [
+        "neutral"
+      ],
+      "trustSignals": [
+        "Organisationsnummer synligt"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-98",
+      "sniCode": "98",
+      "labelSv": "Hushållens produktion av diverse varor och tjänster för eget bruk",
+      "wizardCategoryId": "other",
+      "curated": false,
+      "copyAngle": "Tydlighet före allt — vad verksamheten gör och hur man hör av sig.",
+      "toneHints": [
+        "neutral"
+      ],
+      "trustSignals": [
+        "Organisationsnummer synligt"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö"
+      ]
+    },
+    {
+      "profileId": "sni-99",
+      "sniCode": "99",
+      "labelSv": "Verksamhet vid internationella organisationer, utländska ambassader o.d.",
+      "wizardCategoryId": "other",
+      "curated": false,
+      "copyAngle": "Tydlighet före allt — vad verksamheten gör och hur man hör av sig.",
+      "toneHints": [
+        "neutral"
+      ],
+      "trustSignals": [
+        "Organisationsnummer synligt"
+      ],
+      "primaryCta": "Kontakta oss",
+      "extraCapabilities": [
+        "contact-form"
+      ],
+      "recommendedPages": [
+        "Startsida / Hero",
+        "Kontaktformulär"
+      ],
+      "imageryHints": [
+        "verksamhetsmiljö"
+      ]
+    }
+  ]
+}

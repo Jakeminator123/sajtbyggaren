@@ -66,13 +66,26 @@ def test_unmapped_non_catch_all_categories_are_flagged_not_fatal() -> None:
     assert status == "missing_mapping"
 
 
-@pytest.mark.parametrize("category_id", ["business", "landing", "other"])
-def test_unmapped_catch_all_categories_keep_runtime_or_taxonomy_status(
+@pytest.mark.parametrize(
+    ("category_id", "expect_sni_mappings"),
+    [("business", True), ("landing", False), ("other", True)],
+)
+def test_catch_all_categories_keep_runtime_or_taxonomy_status(
     category_id: str,
+    expect_sni_mappings: bool,
 ) -> None:
+    """Catch-all-kategorier ska aldrig flaggas som missing_mapping.
+
+    Sedan full SNI-täckning (ADR 0045) har business + other LEGITIMA
+    mappningar (t.ex. SNI 64-66 finans -> business, 01-03 jordbruk ->
+    other) — bara landing står avsiktligt utan SNI-mappning (den nås
+    via wizardens explicita val, inte via bransch)."""
     row = _rows_by_category()[category_id]
 
-    assert row["sniMappingCount"] == 0
+    if expect_sni_mappings:
+        assert row["sniMappingCount"] > 0
+    else:
+        assert row["sniMappingCount"] == 0
     assert row["coverageStatus"] != "missing_mapping"
     assert "missing_sni_mapping" not in row["attentionReasons"]
     assert "add_sni_mapping" not in row["recommendedActions"]

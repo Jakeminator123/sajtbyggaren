@@ -204,7 +204,11 @@ def test_resolver_matches_expected_categories(
 
 @pytest.mark.parametrize(
     "value",
-    ["", "   ", "foo", "A", "Z", "00", "99", None, "-1", "abc123"],
+    # "44" och "45" är hål i SNI 2025-serien (ingen huvudgrupp finns) —
+    # de förblir unknown även efter v2:s fulla 87-gruppstäckning
+    # (ADR 0045). "99" och "abc123" togs bort ur listan när v2 gav dem
+    # träffar ("abc123" normaliseras till "123" och prefix-matchar 12).
+    ["", "   ", "foo", "A", "Z", "00", "44", "45", None, "-1", "abc"],
 )
 def test_resolver_unknown_codes_return_match_without_exception(value: str | None) -> None:
     match = sni.resolve_sni_discovery_category(value)
@@ -259,3 +263,59 @@ def test_resolver_falls_through_to_division_when_group_override_absent() -> None
     assert match.matchedLevel == "division"
     assert match.matchedSniCode == "56"
     assert match.wizardCategoryId == "restaurant"
+
+
+# ---------------------------------------------------------------------------
+# Full täckning (ADR 0045)
+# ---------------------------------------------------------------------------
+
+SNI_TAXONOMY_PATH = (
+    REPO_ROOT / "data" / "taxonomies" / "sni" / "sni-2025.v1.json"
+)
+
+
+def test_every_sni_code_resolves_to_known_category() -> None:
+    """ADR 0045 fas 1: 0 unknown över hela SNI 2025-spegeln.
+
+    Varje division/group/class/subclass-item (1 860 st; section-bokstäverna
+    A-V är medvetet utanför — de bär ingen sifferkod att prefix-matcha) ska
+    resolva till en wizardCategoryId som finns i discovery-taxonomy.v1.json.
+    Testet är regressionen som hindrar att en framtida SNI-uppdatering
+    (nya huvudgrupper) tyst återinför unknown-hål.
+    """
+    items = json.loads(SNI_TAXONOMY_PATH.read_text(encoding="utf-8"))["items"]
+    taxonomy = load_discovery_taxonomy()
+    known = taxonomy.known_category_ids()
+    discovery_map = sni.load_sni_discovery_map()
+
+    unresolved: list[tuple[str, str, str | None]] = []
+    for item in items:
+        if item["level"] == "section":
+            continue
+        match = sni.resolve_sni_discovery_category(
+            item["code"], sni_map=discovery_map
+        )
+        if match.wizardCategoryId is None or match.wizardCategoryId not in known:
+            unresolved.append((item["code"], item["labelSv"], match.wizardCategoryId))
+
+    assert unresolved == [], (
+        f"{len(unresolved)} SNI-koder saknar känd kategori, "
+        f"första 10: {unresolved[:10]}"
+    )
+
+
+def test_every_sni_division_has_explicit_mapping() -> None:
+    """Alla 87 huvudgrupper ska ha en explicit divisionMappings-rad.
+
+    Täckningstestet ovan skulle tekniskt passera även om en division
+    bara täcks via gruppnivå-overrides, men då resolvar själva
+    divisionskoden (t.ex. "69") till unknown i Backoffice-diagnostiken.
+    Explicit rad per huvudgrupp är därför ett separat kontrakt.
+    """
+    items = json.loads(SNI_TAXONOMY_PATH.read_text(encoding="utf-8"))["items"]
+    division_codes = {i["code"] for i in items if i["level"] == "division"}
+    mapped = {row["sniCode"] for row in _policy()["divisionMappings"]}
+
+    assert division_codes - mapped == set()
+    # Inga föräldralösa rader som pekar på huvudgrupper utanför SNI 2025.
+    assert mapped - division_codes == set()

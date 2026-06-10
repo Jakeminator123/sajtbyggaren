@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "industry-profiles.schema.json",
+  "title": "Industry Profiles",
+  "description": "Schema för governance/policies/industry-profiles.v1.json (ADR 0045). En branschprofil per SNI-huvudgrupp beskriver vad branschens hemsida behöver — extra capabilities, rekommenderade sidor, copy-vinkel, trust-signaler, primär CTA och bildspråk. Profilen är en mjuk berikning ovanpå kategorins discovery-taxonomy-defaults; den får aldrig välja scaffold, variant, starter eller Dossier direkt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "divisionProfiles"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": {
+      "type": "string",
+      "pattern": "^industry-profiles\\.v[0-9]+$"
+    },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": {
+      "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"]
+    },
+    "purpose": { "type": "string", "minLength": 1 },
+    "principles": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "referenceTaxonomy": {
+      "type": "string",
+      "description": "Relativ path till SNI 2025-referensen (data/taxonomies/sni/sni-2025.v1.json)."
+    },
+    "divisionProfiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/divisionProfile" }
+    }
+  },
+  "$defs": {
+    "divisionProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileId",
+        "sniCode",
+        "labelSv",
+        "wizardCategoryId",
+        "curated",
+        "copyAngle",
+        "primaryCta",
+        "extraCapabilities",
+        "recommendedPages",
+        "trustSignals"
+      ],
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "pattern": "^sni-[0-9]{2}$",
+          "description": "Stabil identitet, sni-<huvudgrupp>. Skrivs till DiscoveryDecision.industryProfileId för spårbarhet."
+        },
+        "sniCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2}$",
+          "description": "SNI-huvudgrupp i tvåsiffrig digit-only form."
+        },
+        "labelSv": { "type": "string", "minLength": 1 },
+        "wizardCategoryId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Måste vara identisk med vad sni-discovery-map.v1.json resolvar för samma huvudgrupp (testlåst i tests/test_industry_profiles.py) — profilen får inte smyg-omdirigera kategorivalet."
+        },
+        "curated": {
+          "type": "boolean",
+          "description": "false = deterministiskt skelett med kategori-defaults från scripts/generate_industry_profiles.py; true = operatörs-kurerat branschinnehåll. Ärlig markör för hur långt kureringen kommit."
+        },
+        "copyAngle": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Branschens copy-vinkel på svenska. Appenderas som planner-kontext via directives.notesForPlanner."
+        },
+        "toneHints": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "trustSignals": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Branschens trust-byggare (certifikat, legitimationer, branschförbund, garantier) på svenska."
+        },
+        "primaryCta": {
+          "type": "string",
+          "enum": [
+            "Boka tid",
+            "Kontakta oss",
+            "Köp nu",
+            "Begär offert",
+            "Registrera dig",
+            "Ring oss",
+            "Ladda ner"
+          ],
+          "description": "Samma etiketter som wizardens CTA-val så profilen kan förifylla answers.primaryCta utan översättningstabell."
+        },
+        "extraCapabilities": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "description": "Canonical capability-slugs som utökar kategorins requestedCapabilities. Varje slug måste finnas i capability-map.v1.json (testlåst)."
+        },
+        "recommendedPages": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Sidor/sektioner branschen typiskt behöver, samma fria svenska etikettformat som discovery-taxonomy.v1.json recommendedPages."
+        },
+        "imageryHints": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "notesSv": { "type": "string" },
+        "starterId": false,
+        "scaffoldId": false,
+        "variantId": false,
+        "dossierId": false,
+        "selectedDossiers": false
+      }
+    }
+  }
+}
