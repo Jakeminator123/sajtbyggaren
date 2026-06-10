@@ -480,7 +480,15 @@ function collectSource(rootDir: string, includeBuiltNext = false): CollectedSour
           // skippas precis som förr.
           if (!(includeBuiltNext && relPath === ".next")) continue;
         }
-        if (includeBuiltNext && relPath === ".next/cache") continue;
+        // ``.next/trace`` täcks även som KATALOG (Scout-R1, #263): fil-grenen
+        // nedan fångar bara trace-som-fil, och en trace-katalogs innehåll
+        // (".next/trace/<fil>") skulle annars passera exakt-matchningen.
+        if (
+          includeBuiltNext &&
+          (relPath === ".next/cache" || relPath === ".next/trace")
+        ) {
+          continue;
+        }
         walk(path.join(absDir, entry.name), relPath);
         continue;
       }
