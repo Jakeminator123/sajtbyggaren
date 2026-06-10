@@ -25,6 +25,8 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 POLICIES_DIR = REPO_ROOT / "governance" / "policies"
 SCHEMAS_DIR = REPO_ROOT / "governance" / "schemas"
+STARTERS_DIR = REPO_ROOT / "data" / "starters"
+COMPONENT_MANIFEST_FILENAME = "component-manifest.json"
 
 
 def load_json(path: Path) -> dict:
@@ -122,6 +124,64 @@ def cross_check_naming_dictionary(policies: dict[str, dict]) -> list[str]:
     return errors
 
 
+def cross_check_capability_components(policies: dict[str, dict]) -> list[str]:
+    """Säkerställ att varje capability-map components-namn finns i minst en
+    enabled Starters component-manifest.json (Component Catalog lager 2).
+
+    En mappning till en komponent som saknas i alla enabled Starters manifest
+    är ett gate-fel, inte en tyst fallback (ADR 0040). Per-Starter-upplösning
+    (vilken Starter som bär komponenten för ett visst bygge) är ett lager-3-
+    problem; här krävs bara att komponenten är vendorerad någonstans.
+    """
+    capability_map = policies.get("capability-map.v1.json")
+    if not capability_map:
+        # capability-map saknas eller validerade inte mot sitt schema - då har
+        # schema-steget redan rapporterat felet.
+        return []
+
+    registry = policies.get("starter-registry.v1.json")
+    if not registry:
+        return ["starter-registry.v1.json saknas - kan inte korskontrollera komponenter"]
+
+    enabled_ids = [
+        starter["id"]
+        for starter in registry.get("starters", [])
+        if starter.get("enabled", True)
+    ]
+
+    available: set[str] = set()
+    errors: list[str] = []
+    for starter_id in enabled_ids:
+        manifest_path = STARTERS_DIR / starter_id / COMPONENT_MANIFEST_FILENAME
+        if not manifest_path.exists():
+            errors.append(
+                f"data/starters/{starter_id}/{COMPONENT_MANIFEST_FILENAME} saknas - "
+                "kör 'python scripts/generate_component_manifests.py' och committa"
+            )
+            continue
+        try:
+            manifest = load_json(manifest_path)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{manifest_path.name} ({starter_id}): ogiltig JSON: {exc}")
+            continue
+        for component in manifest.get("components", []):
+            name = component.get("name")
+            if name:
+                available.add(name)
+
+    for slug, entry in capability_map.get("capabilities", {}).items():
+        for component_name in entry.get("components", []) or []:
+            if component_name not in available:
+                errors.append(
+                    f"capability-map.v1.json -> capabilities/{slug}/components: "
+                    f"komponenten '{component_name}' saknas i alla enabled Starters "
+                    "component-manifest.json (vendorera komponenten eller ta bort "
+                    "mappningen)"
+                )
+
+    return errors
+
+
 def main() -> int:
     if not POLICIES_DIR.exists():
         print(f"Hittar inte {POLICIES_DIR}", file=sys.stderr)
@@ -139,6 +199,9 @@ def main() -> int:
 
     cross_errs = cross_check_naming_dictionary(policies)
     all_errors.extend(cross_errs)
+
+    component_errs = cross_check_capability_components(policies)
+    all_errors.extend(component_errs)
 
     if all_errors:
         print("Governance-validering misslyckades:\n")

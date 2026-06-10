@@ -1,0 +1,7 @@
+{
+  "$schema": "../../../governance/schemas/component-manifest.schema.json",
+  "starterId": "saas-base",
+  "generatedBy": "scripts/generate_component_manifests.py",
+  "componentsJsonPresent": false,
+  "components": []
+}
