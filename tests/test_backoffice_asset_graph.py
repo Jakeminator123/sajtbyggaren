@@ -408,6 +408,52 @@ def test_asset_graph_lists_dossier_candidates(
     assert dossier_node["intakeRecommendedClass"] == "soft"
 
 
+def test_asset_graph_source_file_count_is_arrow_safe(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A candidate WITHOUT a sourceFileCount must get None, never '' - a column
+    that mixes int with an empty string breaks Streamlit's Arrow serialization
+    and crashes the Backoffice graph view (operator report 2026-06-10:
+    pyarrow ArrowInvalid 'Could not convert ... to int64' on sourceFileCount).
+    The whole node table must serialize to Arrow without raising.
+    """
+    candidates_dir = tmp_path / "dossier-candidates"
+    # Candidate WITH an integer sourceFileCount.
+    with_count = candidates_dir / "soft" / "with-count" / "manifest.json"
+    with_count.parent.mkdir(parents=True)
+    with_count.write_text(
+        json.dumps({"id": "with-count", "capability": "faq-section"}),
+        encoding="utf-8",
+    )
+    (with_count.parent / "meta.json").write_text(
+        json.dumps({"source": "mock", "sourceFileCount": 3}),
+        encoding="utf-8",
+    )
+    # Legacy candidate with NO meta.json -> provenance must default to None.
+    no_meta = candidates_dir / "soft" / "legacy" / "manifest.json"
+    no_meta.parent.mkdir(parents=True)
+    no_meta.write_text(json.dumps({"id": "legacy"}), encoding="utf-8")
+    monkeypatch.setattr(asset_graph, "DOSSIER_CANDIDATES_DIR", candidates_dir)
+
+    graph = asset_graph.build_graph()
+    by_id = {
+        node["id"]: node
+        for node in graph["nodes"]
+        if node["type"] == "dossier-candidate"
+    }
+    assert by_id["soft/with-count"]["sourceFileCount"] == 3
+    # The fix: absent -> None (nullable column), NOT "" (string in an int column).
+    assert by_id["soft/legacy"]["sourceFileCount"] is None
+
+    # Reproduce the exact crash path: the full node table must serialize to
+    # Arrow (this is what st.dataframe does under the hood).
+    pd = pytest.importorskip("pandas")
+    pa = pytest.importorskip("pyarrow")
+    frame = pd.DataFrame(graph["nodes"])
+    pa.Table.from_pandas(frame)
+
+
 def test_asset_graph_lists_hard_dossier_candidates(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
