@@ -70,11 +70,14 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    helgrön och stabil — bra fönster. Efter sync: Vercel-agenten sätter
    prod-env (`VIEWSER_ALLOWED_HOSTS` = prod-aliaset; sandbox-flaggan
    ENDAST bakom Deployment Protection).
-2. **F1 slice 3 — section_builder-dispatch:** rollvalet ska styra
-   skill/prompt i kedjan (inte bara metadata), ärlig roll-rad i
-   FloatingChat, dialog-vägens konversationshantering
-   (use-followup-build visar generiskt fel för answer-only idag), samt
-   `expectsAnswer`-signal i decision-payloaden (Scout-fynd #262).
+2. **F1 slice 3 — section_builder-dispatch (PÅGÅR i cloud-grind):**
+   rollvalet ska styra skill/prompt i kedjan (inte bara metadata), ärlig
+   roll-rad i FloatingChat, samt `expectsAnswer`-signal i decision-payloaden
+   (Scout-fynd #262). Dialog-vägens answer-only-hantering landade redan i
+   #270 (use-followup-build ytlägger svaret i stället för "HTTP 200
+   misslyckades"). OBS koordinering: Christophers #269 (toolIntent-pilot,
+   UI-halva) rör samma söm (use-followup-build + /api/prompt-dispatch) —
+   se "Öppna PR" nedan.
 3. **Stylist-scope-beslut (operatören):** "gör sajten mörkblå" mappar
    bara `--primary` — beslutsunderlag med tre optioner ligger i
    `docs/heavy-llm-flow/openclaw-2.0-conductor.md` (slice 3-kandidat;
@@ -94,7 +97,11 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    `components.json` per starter), men brief/plan/codegen-kedjan är inte
    komponent-medveten — LLM-flödet kan inte välja/referera komponenter.
    Slice: exponera komponentkatalogen för kedjan (registry/manifest +
-   governance-mappning). Börja med kort design-not innan bygge.
+   governance-mappning). **Design-noten är skriven:**
+   [`docs/heavy-llm-flow/komponentkatalog-design-not.md`](heavy-llm-flow/komponentkatalog-design-not.md)
+   (tre lager: starter-manifest → capability-mappning → roll-uppslag via
+   shadcn-MCP; 4 beslutspunkter väntar operatören). Lager 3 förutsätter
+   roll-dispatchen (köpunkt 2).
 7. **Begreppssession (operatör + agent):** blueprint/variant/dossier/DNA
    m.fl. överlappar i dag och ingen av termerna finns i naming-dictionaryn.
    Utgå från ADR 0036 (blueprint-and-router-vocabulary), begrepps-PR:en
@@ -123,23 +130,44 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `6ea53c0` (2026-06-10 ~10:00 UTC+2; `main = jakob-be`
-efter main-sync). Vägen hit: PR #268 (`2b970d9`) landade B180 (brief
-carry-forward på följdbyggen, slut på copy-drift vid restyle), B181
-(hälsningsfras kapar inte längre konversationsklassningen), B182
-(OpenClaw-beslut auto-resolvar senaste run när baseRunId saknas) + snabb
-core-testlane (`python -m pytest -m core`, ~1 min; `scripts/review_check.py
---core`) och `docs/testing.md`. Därefter main-sync (`6ea53c0`): `jakob-be`
-tog över `main` (mains 3 docs-commits absorberade, AGENTS-dubblett borttagen
-per #255, ff → tom diff). Pre-sync sparad som `backup_150_BRA`.
-Städat tidigare: worktree `sajtbyggaren-wt-fixes` + PR-branchen + lokala
-`feat/live-preview` (allt unikt innehåll redan landat).
-Öppna buggar kvar: B177 (font-@import i byggd CSS), B178 (falsk framgång
-vid icke-applicerad fri-text-ändring, kopplad B155), B155 (literal-replace-
-targets). B176/B179 fixade i morgonpasset.
+Last verified state: `44c9da8` (2026-06-10 ~11:50 UTC+2; `jakob-be` HEAD
+efter förmiddagens fyra merges). Dagens facit efter main-syncen (`6ea53c0`,
+pre-sync sparad som `backup_150_BRA`):
+
+- **#270** slice 3-delar: B178 stängd (ociterad demonstrativ fri-text-replace
+  → ärlig no-op i stället för falsk "Klart!"), B155-framsteg (ankar-ledd
+  ociterad replace appliceras), B177 stängd (variantfont via `<link>` i
+  layout-head i stället för bundle-ignorerad CSS-import), answer-only-svar
+  i dialoger (use-followup-build).
+- **#271** backoffice-grafvyn Arrow-krasch fixad (sourceFileCount
+  int|None i stället för blandad int/tomsträng).
+- **#272** delade canvases (begreppskarta + openclaw-flöde, Steward-ägda)
+  + sync-skript + steward-workflow-steg. Operatörens lokala kopior var
+  byte-identiska och städades; `sync_canvases.py` körd (redan i synk).
+  Canvas-worktreet `sajtbyggaren-wt-canvases` borttaget.
+- **#273** B183–B185 stängda (failed-run som följdbas, borttagna
+  operator-noter i brief-reuse, cross-site baseRunId); B186 öppen
+  (brief-reuse nycklar på senaste run, inte explicit baseRunId).
+
+Alla mergade brancher städade (lokalt + remote). `main` är kvar på
+`6ea53c0` — nästa main-sync tar med förmiddagens fyra merges
+(operatörsbeslut). Roll-dispatch-slicen (köpunkt 2) kör i cloud-grind.
+Öppna buggar kvar: B155 (kvarvarande targets), B186 + misplaced-poster
+som väntar Steward-flytt (B176–B179-rundan, B183–B185).
 
 ## Öppna PR att känna till
 
+- **#269** (`christopher → jakob-be`): toolIntent v1-pilot (strukturerad
+  specialist-intent från färgväljaren, UI-halva). **Vänta med merge:** (a) PR:en
+  är hela `christopher`-branchen (23 filer, +2805 — bär även en hel
+  preview-inspector-lane + playwright-beroende utöver de ~4 toolIntent-filerna),
+  (b) den blev CONFLICTING efter förmiddagens merges (#272 rör samma
+  `docs/agent-inbox.jsonl`, #270 rör samma `use-followup-build.ts`) och behöver
+  Christophers rebase, (c) backend-halvan (schema-fält + dispatch-bypass i
+  `/api/prompt`) finns inte än och samma söm byggs JUST NU av
+  roll-dispatch-slicen i cloud-grind — landa den först, sedan rebasar
+  Christopher och toolIntent-dispatchen läggs OVANPÅ roll-dispatchen
+  (toolIntent = deterministisk genväg in i samma specialist-/rollmappning).
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
   (publik POST utan auth/rate-limit kan starta sandboxar). Behålls som arkitektur-referens;
   görs om på färsk bas med auth/rate-limit designat från start när runtime-spåret väljs aktivt.
