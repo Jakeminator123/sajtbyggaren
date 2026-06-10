@@ -2,7 +2,9 @@
 
 > Status: design-not, plan-only — ingen kod i denna not. Första steget av
 > köpunkt 6 i `docs/current-focus.md` ("börja med kort design-not innan
-> bygge"). Beslutspunkterna längst ner är operatörens.
+> bygge"). Alla fyra beslutspunkter är avgjorda (operatörens delegation
+> 2026-06-10) — noten är därmed redo som underlag för lager 1-slicen
+> (manifest + ADR) så snart roll-dispatch-slicen landat.
 
 ## Problemet
 
@@ -22,6 +24,14 @@ Ett genererat manifest per starter som listar vendorerade komponenter
 skript (samma mönster som rules-speglarna: källa på disk, genererad artefakt,
 synk-check i CI). Exponeras för planeringen via starter-registryt så
 `produce_site_plan` kan läsa vilka komponenter målstartern faktiskt har.
+
+Beslutad placering (beslutspunkt 1, avgjord på operatörens delegation
+2026-06-10): manifestet bor under `data/starters/<id>/component-manifest.json`
+— hos startern det beskriver, inte under `governance/`. Motivering: det är en
+genererad inventering härledd ur starterns egna filer (samma katalog som
+källan), medan `governance/` bär kontrakt och policys som människor beslutar.
+Synk-checken i CI (manifest matchar disk) ger samma drift-skydd som
+rules-speglarna får, utan att blanda genererat innehåll in i governance-trädet.
 
 - Inga LLM-anrop; ren disk-scan.
 - Manifestet är ett kontrakt: planen får bara referera komponenter som finns.
@@ -65,14 +75,21 @@ få add-kommandon. Tre hårda regler:
 - Roll-dispatchen (köpunkt 2, F1 slice 3) är en förutsättning för lager 3 —
   rollvalet måste styra beteende innan rollen kan ges verktyg.
 
-## Beslutspunkter
+## Beslutspunkter — alla avgjorda (operatörens delegation 2026-06-10)
 
-1. **(operatören)** Var manifestet bor: under `data/starters/<id>/` (nära
-   källan) eller under `governance/` (nära kontrakten)?
-2. Beslutad (agent på operatörens delegation, 2026-06-10): mappningen i
-   lager 2 = ny valfri nyckel i `capability-map.v1.json` (se motivering under
-   lager 2 ovan).
-3. **(operatören)** ADR-omfång: en ADR för hela kedjan (manifest + mappning +
-   roll-uppslag) eller en per lager?
-4. **(operatören)** Första capability att pilota (förslag: faq-section →
-   accordion, minsta yta med tydlig synlig effekt).
+1. Beslutad: manifestet bor under `data/starters/<id>/component-manifest.json`
+   (nära källan det genereras ur; `governance/` hålls till kontrakt/policys —
+   se motivering under lager 1).
+2. Beslutad: mappningen i lager 2 = ny valfri nyckel i
+   `capability-map.v1.json` (se motivering under lager 2).
+3. Beslutad: EN ADR för hela kedjan (manifest + mappning + roll-uppslag).
+   Motivering: de tre lagren är en sammanhängande design med ett gemensamt
+   varför — tre separata ADR:er skulle splittra motiveringen och tvinga
+   korsreferenser. Varje lager-slice refererar samma ADR; ADR:n skrivs i
+   lager 1-slicen och registrerar samtidigt termerna (komponentkatalog,
+   komponent-manifest) i naming-dictionaryn.
+4. Beslutad: pilot-capability = faq-section → accordion. Motivering: minsta
+   yta med tydligast synlig effekt — faq-section är redan en stödd
+   section_add-capability med faq-accordion-dossiern monterad, så piloten
+   testar bara den NYA länken (capability → komponent → render), inte
+   sektion-mekaniken i sig.

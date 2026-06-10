@@ -100,10 +100,12 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    governance-mappning). **Design-noten är skriven:**
    [`docs/heavy-llm-flow/komponentkatalog-design-not.md`](heavy-llm-flow/komponentkatalog-design-not.md)
    (tre lager: starter-manifest → capability-mappning → roll-uppslag via
-   shadcn-MCP). Beslutspunkt 2 är AVGJORD (mappningen = ny valfri nyckel i
-   capability-map, agent på operatörens delegation); 3 beslutspunkter kvar
-   hos operatören (manifestets plats, ADR-omfång, pilot-capability).
-   Lager 3 förutsätter roll-dispatchen (köpunkt 2).
+   shadcn-MCP). ALLA FYRA beslutspunkter avgjorda (operatörens delegation
+   2026-06-10): manifest under `data/starters/<id>/component-manifest.json`,
+   mappning = ny valfri nyckel i capability-map, EN ADR för hela kedjan,
+   pilot = faq-section → accordion. Noten är redo som underlag för
+   lager 1-slicen (manifest + ADR) så snart roll-dispatchen (köpunkt 2)
+   landat.
 7. **Begreppssession (operatör + agent):** blueprint/variant/dossier/DNA
    m.fl. överlappar i dag och ingen av termerna finns i naming-dictionaryn.
    Utgå från ADR 0036 (blueprint-and-router-vocabulary), begrepps-PR:en
@@ -151,16 +153,18 @@ pre-sync sparad som `backup_150_BRA`):
   operator-noter i brief-reuse, cross-site baseRunId); B186 öppen
   (brief-reuse nycklar på senaste run, inte explicit baseRunId).
 
-Alla mergade brancher städade (lokalt + remote). `main` är kvar på
-`6ea53c0` — nästa main-sync tar med förmiddagens fyra merges
-(operatörsbeslut). Roll-dispatch-slicen (köpunkt 2) kör i cloud-grind
-(operatörens GO 2026-06-10 ~12:00 efter faktakontroll; justeringar
-skickade: färsk bas, None-säker skill-lookup, minimal
-use-followup-build-yta). Christopher aviserad via inbox `msg-0063`
-(#269-rebase + ordning + utbrytningsförslag). Öppna buggar kvar: B155
-(kvarvarande targets), B186 + misplaced-poster som väntar Steward-flytt
-(B176–B179-rundan, B183–B185). Senaste docs-commit efter `44c9da8`:
-focus/design-not-bump + inbox-msg + beslutspunkt 2 avgjord.
+Alla mergade brancher städade (lokalt + remote). **Main-sync nr 2 GJORD
+2026-06-10 ~12:10** (operatörsbeslut): `main` fast-forwardad till `jakob-be`
+igen — förmiddagens fyra merges (#270–#273) + docs-commits (canvases-bump,
+design-not med alla 4 beslutspunkter avgjorda, inbox msg-0063) är nu på
+`main`. Tom diff `main↔jakob-be` verifierad. OBS: steward-auto-bump-
+workflowet på `main` kan lägga en auto-commit (canvas-fakta/HEAD-bump) —
+nästa agent ff-synkar i så fall `jakob-be` mot den. Roll-dispatch-slicen
+(köpunkt 2) kör i cloud-grind (operatörens GO ~12:00; justeringar skickade:
+färsk bas, None-säker skill-lookup, minimal use-followup-build-yta).
+Christopher aviserad via inbox `msg-0063` (#269-rebase + ordning +
+utbrytningsförslag). Öppna buggar kvar: B155 (kvarvarande targets), B186 +
+misplaced-poster som väntar Steward-flytt (B176–B179-rundan, B183–B185).
 
 ## Öppna PR att känna till
 
