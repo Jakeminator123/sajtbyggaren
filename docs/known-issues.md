@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 5 misplaced (av 28 öppna), 7 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 158 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -654,7 +654,67 @@ samma kodmönster lever vidare här — därav posten:
 
 ### Operatörsfynd 2026-06-10 morgon (havre-ab-sessionen)
 
-- **`B176` Medel** - `POST /api/chat` gav 502 på varje anrop ("Fråga
+Alla fyra fynd (B176–B179) är stängda och flyttade till Stängda-sektionen (Steward-pass 2026-06-10).
+
+### Brief-reuse/latest-run-härdning 2026-06-10 (agent-triage, diff-verifierad)
+
+B183–B185 är stängda och flyttade till Stängda-sektionen (Steward-pass 2026-06-10); B186 nedan är kvar öppen.
+
+- **`B186` Låg** - brief-reuse-beslutet i `write_phase1_understand` nycklar på
+  `latest_run_dir_for_site(...)` (senaste run), inte på en ev. explicit
+  baseRunId. På en "Iterera från denna"-följd (pinnad äldre bas) jämförs
+  brief-inputen alltså mot SENASTE runens brief, inte den pinnade basens. Liten
+  semantisk inkonsekvens (kedjan bygger från baseRunId men brief-reuse läser
+  latest). Lågt sannolik effekt (latest och bas har oftast samma maskade input),
+  men fixen kräver att baseRunId trådas in i `write_phase1_understand` →
+  deferrad som egen uppföljning. Källa: agent-triage 2026-06-10, diff-verifierad.
+  Fix: open. Test: open.
+
+## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
+
+Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna
+granskningsagenter verifierade dem mot kod (jakob-be @ 2dbe3f9). Sex
+fixades direkt i bug-sweep round 1 (`65e5cec`, se Stängda). Fyra
+bekräftade men ofixade registrerades här (B164/B166/B169/B172); resten var
+redan kända (B119/B155/B89), avsiktliga (recommendedPages-halvwire,
+msg-0058) eller medvetna fallbacks (change-set-baseline). **Alla fyra är nu
+stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
+round 2); se Stängda-sektionen.
+
+## Stängda - regression-test säkrar fixet
+
+- **`B183` Medel** (stängd 2026-06-10) - latest-run-resolvers (`scripts/build_site.py:_latest_run_id_for_site`
+  + `packages/generation/followup/hero_headline_pin.py:latest_run_dir_for_site`)
+  plockade nyaste run med matchande siteId UTAN att filtrera på `status`. En
+  genuint `failed`-run skriver också `build-result.json` (med partiella/trasiga
+  artefakter), så den kunde bli basen en följdprompt itererar från / pinnar
+  hero-rubriken ur. Fix: hoppa över `status == "failed"`. `skipped`
+  (`--skip-build`) behåller fulla artefakter och förblir en giltig bas
+  (dev/eval-snabbläge), så den exkluderas medvetet INTE. Källa: agent-triage
+  2026-06-10, diff-verifierad i koden. Fix: `ac36f4d` (flytta till Stängda vid
+  Steward-pass). Test:
+  `tests/test_hero_headline_stability.py::test_latest_run_dir_skips_failed_runs`.
+
+- **`B184` Medel** (stängd 2026-06-10) - brief carry-forward (B180,
+  `reuse_previous_site_brief`) regenererade vid TILLAGD operator-/mood-not men
+  en BORTTAGEN direktiv-not levde tyst vidare: den återanvända briefens kreativa
+  copy var formad av noten, så en byte-stabil reuse behöll den slopade
+  instruktionens påverkan. Fix: omvänd guard - en `Operator: `/`Visual mood: `-
+  prefix i föregående brief som nya Project Input inte längre injicerar →
+  regenerera. Källa: agent-triage 2026-06-10, diff-verifierad. Fix: `ac36f4d`
+ . Test:
+  `tests/test_brief_carry_forward.py::test_removed_operator_directive_regenerates`.
+
+- **`B185` Låg-Medel** (stängd 2026-06-10) - `run_followup_chain` tog emot en
+  explicit baseRunId ("Iterera från denna") utan att validera att den tillhör
+  samma siteId → en följdprompt kunde iterera från en annan sajts run (fel
+  artefakter, fel hero-pin). Fix: same-site-guard på den operatörs-angivna
+  baseRunId:n (auto-resolve-vägen är redan siteId-filtrerad). Källa: agent-triage
+  2026-06-10, diff-verifierad. Fix: `ac36f4d` (flytta till Stängda vid
+  Steward-pass). Test:
+  `tests/test_followup_chain_cli.py::test_followup_chain_rejects_cross_site_base_run_id`.
+
+- **`B176` Medel** (stängd 2026-06-10, morgonpasset) - `POST /api/chat` gav 502 på varje anrop ("Fråga
   utan att bygga"-dialogen + modul-flödet): OpenAI svarade
   `400 Unsupported parameter: 'max_tokens' is not supported with this
   model. Use 'max_completion_tokens' instead.` — gpt-5.x-modeller
@@ -664,10 +724,10 @@ samma kodmönster lever vidare här — därav posten:
   parameterbyte till `max_completion_tokens` (accepteras även av äldre
   chat-modeller). Verifierad live mot dev-servern (200 + svar,
   model=gpt-5.4). Källa: operatörsfynd 2026-06-10 (devtools 502 +
-  serverlogg). Fix: i arbetsträdet (ocommittad). Test: open
-  (regressionstest på parameternamnet önskvärt).
+  serverlogg). Fix: `ced8ca0`. Test: open
+  (regressionstest på parameternamnet önskvärt — uppföljning).
 
-- **`B177` Medel** (fixad 2026-06-10, slice 3-PR) - Google Fonts-`@import` hamnar mitt i den BYGGDA
+- **`B177` Medel** (stängd 2026-06-10, slice 3-PR #270) - Google Fonts-`@import` hamnar mitt i den BYGGDA
   CSS-bundeln och ignoreras av webbläsaren ("An @import rule was
   ignored because it wasn't defined at the top of the stylesheet" i
   devtools på genererade sajter, t.ex. havre-ab-d15f42). #235-fixen
@@ -694,9 +754,9 @@ samma kodmönster lever vidare här — därav posten:
   Test: `tests/test_build_media_rendering.py::test_layout_emits_font_stylesheet_link_when_href_provided`
   + `::test_layout_omits_font_link_without_href` +
   `tests/test_builder_smoke.py::test_variant_css_uses_typography_overlay_when_provided`
-  + golden parity-låset. Fix: `4ee85f3` (flytta till Stängda vid Steward-pass).
+  + golden parity-låset. Fix: `4ee85f3`.
 
-- **`B178` Medel-Hög** (fixad 2026-06-10, slice 3-PR) - Falsk
+- **`B178` Medel-Hög** (stängd 2026-06-10, slice 3-PR #270) - Falsk
   "Klart! v1 → v2" när en fri-text-ändring INTE landade. Operatörsfynd
   bacon-ab-ed861f run `20260610T052908.596Z-99a2a61b`: prompten
   "Denna text: En lugn och tydlig servicesajt… vill jag bara ska bli
@@ -742,9 +802,9 @@ samma kodmönster lever vidare här — därav posten:
   codegen); bredare/multi-field; service-LABEL-rename. Slice 3 deferrat (egen
   slice): `editKind`→`role`-dispatch (rollvalet styr skill/prompt, inte bara
   metadata), `expectsAnswer`-signal i decision-payloaden, FloatingChat-rollrad.
-  Fix: `b24e67e` (flytta till Stängda vid Steward-pass).
+  Fix: `b24e67e`.
 
-- **`B179` Medel** (fixad 2026-06-10) - B175-recoveryns first-run-gren
+- **`B179` Medel** (stängd 2026-06-10) - B175-recoveryns first-run-gren
   accepterade runs som uppstod upp till 5 s FÖRE requesten började.
   Villkoret `postBridgeLatestRun.mtimeMs >= requestStartMs -
   FS_TIMESTAMP_ALLOWANCE_MS` (5_000) subtraherade ett platt bakåtfönster
@@ -763,66 +823,10 @@ samma kodmönster lever vidare här — därav posten:
   sub-ms) blir det i praktiken `mtimeMs >= requestStartMs`. Per-site-mutexen
   (B169) + `preBridgeLatestRun === null` gör dessutom att ingen klar stale
   run för sajten kan existera i fönstret. Källa: kodgranskning 2026-06-10
-  (B175-uppföljning), verifierad mot route + test. Fix:
-  `apps/viewser/app/api/prompt/route.ts` (i arbetsträdet). Test:
+  (B175-uppföljning), verifierad mot route + test. Fix: `01bab96`
+  (`apps/viewser/app/api/prompt/route.ts`). Test:
   `tests/test_viewser_api_prompt.py::test_b175_recovery_covers_first_completed_run`
   (uppdaterad: låser floor-jämförelsen + förbjuder bakåtsubtraktion).
-
-### Brief-reuse/latest-run-härdning 2026-06-10 (agent-triage, diff-verifierad)
-
-- **`B183` Medel** (fixad 2026-06-10) - latest-run-resolvers (`scripts/build_site.py:_latest_run_id_for_site`
-  + `packages/generation/followup/hero_headline_pin.py:latest_run_dir_for_site`)
-  plockade nyaste run med matchande siteId UTAN att filtrera på `status`. En
-  genuint `failed`-run skriver också `build-result.json` (med partiella/trasiga
-  artefakter), så den kunde bli basen en följdprompt itererar från / pinnar
-  hero-rubriken ur. Fix: hoppa över `status == "failed"`. `skipped`
-  (`--skip-build`) behåller fulla artefakter och förblir en giltig bas
-  (dev/eval-snabbläge), så den exkluderas medvetet INTE. Källa: agent-triage
-  2026-06-10, diff-verifierad i koden. Fix: `ac36f4d` (flytta till Stängda vid
-  Steward-pass). Test:
-  `tests/test_hero_headline_stability.py::test_latest_run_dir_skips_failed_runs`.
-
-- **`B184` Medel** (fixad 2026-06-10) - brief carry-forward (B180,
-  `reuse_previous_site_brief`) regenererade vid TILLAGD operator-/mood-not men
-  en BORTTAGEN direktiv-not levde tyst vidare: den återanvända briefens kreativa
-  copy var formad av noten, så en byte-stabil reuse behöll den slopade
-  instruktionens påverkan. Fix: omvänd guard - en `Operator: `/`Visual mood: `-
-  prefix i föregående brief som nya Project Input inte längre injicerar →
-  regenerera. Källa: agent-triage 2026-06-10, diff-verifierad. Fix: `ac36f4d`
-  (flytta till Stängda vid Steward-pass). Test:
-  `tests/test_brief_carry_forward.py::test_removed_operator_directive_regenerates`.
-
-- **`B185` Låg-Medel** (fixad 2026-06-10) - `run_followup_chain` tog emot en
-  explicit baseRunId ("Iterera från denna") utan att validera att den tillhör
-  samma siteId → en följdprompt kunde iterera från en annan sajts run (fel
-  artefakter, fel hero-pin). Fix: same-site-guard på den operatörs-angivna
-  baseRunId:n (auto-resolve-vägen är redan siteId-filtrerad). Källa: agent-triage
-  2026-06-10, diff-verifierad. Fix: `ac36f4d` (flytta till Stängda vid
-  Steward-pass). Test:
-  `tests/test_followup_chain_cli.py::test_followup_chain_rejects_cross_site_base_run_id`.
-
-- **`B186` Låg** - brief-reuse-beslutet i `write_phase1_understand` nycklar på
-  `latest_run_dir_for_site(...)` (senaste run), inte på en ev. explicit
-  baseRunId. På en "Iterera från denna"-följd (pinnad äldre bas) jämförs
-  brief-inputen alltså mot SENASTE runens brief, inte den pinnade basens. Liten
-  semantisk inkonsekvens (kedjan bygger från baseRunId men brief-reuse läser
-  latest). Lågt sannolik effekt (latest och bas har oftast samma maskade input),
-  men fixen kräver att baseRunId trådas in i `write_phase1_understand` →
-  deferrad som egen uppföljning. Källa: agent-triage 2026-06-10, diff-verifierad.
-  Fix: open. Test: open.
-
-## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
-
-Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna
-granskningsagenter verifierade dem mot kod (jakob-be @ 2dbe3f9). Sex
-fixades direkt i bug-sweep round 1 (`65e5cec`, se Stängda). Fyra
-bekräftade men ofixade registrerades här (B164/B166/B169/B172); resten var
-redan kända (B119/B155/B89), avsiktliga (recommendedPages-halvwire,
-msg-0058) eller medvetna fallbacks (change-set-baseline). **Alla fyra är nu
-stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
-round 2); se Stängda-sektionen.
-
-## Stängda - regression-test säkrar fixet
 
 - **`B180` Medel** (stängd 2026-06-10, samma PR som registreringen) -
   Följdprompter regenererade Site Brief ⇒ copy-drift på HELA sajten.
