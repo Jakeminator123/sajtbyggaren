@@ -13,6 +13,7 @@ export type {
   PreviewRuntimeConfig,
   PreviewRuntimeKind,
   PreviewSession,
+  PreviewTimings,
 } from "./types";
 
 export {

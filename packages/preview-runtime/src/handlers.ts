@@ -1,4 +1,4 @@
-import type { PreviewFile, PreviewRuntimeConfig } from "./types";
+import type { PreviewFile, PreviewRuntimeConfig, PreviewTimings } from "./types";
 
 interface localPreviewStartResult {
   siteId: string;
@@ -30,6 +30,8 @@ interface vercelSandboxStartResult {
   /** Pedagogisk text när `status === "failed"`. */
   error?: string;
   logs?: string[];
+  /** Fas-timing (ms) från runnerns cold-start-mätning (B6-light). */
+  timings?: PreviewTimings;
 }
 
 interface vercelSandboxPreviewRuntimeHandlers {

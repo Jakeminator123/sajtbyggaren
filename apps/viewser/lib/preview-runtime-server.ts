@@ -104,6 +104,9 @@ export function installViewserPreviewRuntimeHandlers(): void {
           sessionId: result.sandboxId,
           error: result.error,
           logs: result.logs,
+          // B6-light: runnerns fas-timing (createMs/installMs/buildMs/...)
+          // följer med upp så POST /api/preview kan visa var tiden går.
+          timings: result.timings,
         };
       },
       stop: async (sessionId) => {

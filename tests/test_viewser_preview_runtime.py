@@ -6,7 +6,7 @@ import re
 
 import pytest
 
-from tests.support.viewser import VIEWSER_DIR
+from tests.support.viewser import REPO_ROOT, VIEWSER_DIR
 
 
 @pytest.mark.tooling
@@ -901,4 +901,69 @@ def test_vercel_sandbox_runner_refreshes_oidc_token_before_sandbox_create() -> N
         "Runnern måste adoptera en fräschare token från .env.vercel.local in i "
         "process.env — ensureVercelEnvLocalLoaded fyller bara tomma nycklar en "
         "gång per process och räcker inte efter en refresh."
+    )
+
+
+@pytest.mark.tooling
+def test_preview_post_response_exposes_sandbox_timings() -> None:
+    """B6-light: runnern mäter redan createMs/uploadMs/installMs/buildMs/
+    readyMs/totalMs — kedjan upp till ``POST /api/preview/<siteId>``-svaret
+    ska exponera timings-objektet (additivt fält) så UI/operatör kan se var
+    cold-start-tiden går (och verifiera pre-built-vinsten i B3).
+
+    Kedjan har fyra länkar som alla låses:
+      1. ``PreviewResult`` (packages/preview-runtime) har ett additivt
+         ``timings?: PreviewTimings``-fält.
+      2. Adaptern (adapters/vercel-sandbox.ts) mappar ``info.timings`` vidare.
+      3. DI-wiringen (preview-runtime-server.ts) skickar runnerns
+         ``result.timings`` in i adaptern.
+      4. Routen lägger ``timings: result.timings`` i POST-svaret
+         (``PreviewStartOk``). local-next-grenen är OFÖRÄNDRAD (den svarar
+         via ``startPreviewServer`` precis som förr).
+    """
+    types_text = (
+        REPO_ROOT / "packages" / "preview-runtime" / "src" / "types.ts"
+    ).read_text(encoding="utf-8")
+    adapter_text = (
+        REPO_ROOT / "packages" / "preview-runtime" / "src" / "adapters" / "vercel-sandbox.ts"
+    ).read_text(encoding="utf-8")
+    wiring_text = (VIEWSER_DIR / "lib" / "preview-runtime-server.ts").read_text(
+        encoding="utf-8"
+    )
+    route_text = (
+        VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    # Lock 1: additivt timings-fält i PreviewResult.
+    assert re.search(r"timings\?:\s*PreviewTimings", types_text), (
+        "packages/preview-runtime/src/types.ts: PreviewResult måste ha ett "
+        "additivt ``timings?: PreviewTimings``-fält (B6-light)."
+    )
+    assert "interface PreviewTimings" in types_text, (
+        "packages/preview-runtime/src/types.ts saknar PreviewTimings-interfacet."
+    )
+
+    # Lock 2: adaptern släpper igenom runnerns timing.
+    assert "timings: info.timings" in adapter_text, (
+        "adapters/vercel-sandbox.ts måste mappa handler-resultatets timings "
+        "in i PreviewResult — annars dör kedjan i adapterlagret."
+    )
+
+    # Lock 3: DI-wiringen skickar runnerns timings till adaptern.
+    assert "timings: result.timings" in wiring_text, (
+        "preview-runtime-server.ts vercelSandbox.start måste returnera "
+        "``timings: result.timings`` från createSandboxPreview."
+    )
+
+    # Lock 4: routen exponerar timings i POST-svaret, additivt.
+    assert re.search(r"timings\?:\s*PreviewTimings", route_text), (
+        "route.ts PreviewStartOk måste ha det additiva timings-fältet."
+    )
+    assert "timings: result.timings" in route_text, (
+        "route.ts POST-svaret (icke-lokala adaptrar) måste inkludera "
+        "``timings: result.timings`` så operatören ser var cold-start-tiden går."
+    )
+    # local-next-grenen oförändrad (svarar via startPreviewServer som förr).
+    assert "await startPreviewServer(siteId)" in route_text, (
+        "local-next-grenen ska vara orörd av timings-exponeringen."
     )

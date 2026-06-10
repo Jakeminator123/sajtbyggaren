@@ -84,6 +84,7 @@ export const vercelSandboxRuntime: PreviewRuntime = {
         },
         previewUrl: info.url,
         logs: info.logs,
+        timings: info.timings,
       };
     } catch (error) {
       const message = messageFromError(error);
