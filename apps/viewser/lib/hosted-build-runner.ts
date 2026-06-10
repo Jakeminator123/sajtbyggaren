@@ -188,13 +188,36 @@ fail() {
   exit 1
 }
 
-# Fas 1: Python-beroenden. ensurepip ar best-effort for minimala images.
+# Fas 1: Python-runtime + beroenden. node24-imagens default-python3 ar 3.9,
+# men pipen kraver >= 3.11 (bl.a. "from datetime import UTC"). Valj basta
+# tillgangliga moderna python, annars installera via dnf (AL2023-basen har
+# python3.11-paketet). Status-heredocs nedan ar medvetet 3.9-kompatibla och
+# kor plain python3.
 post_status "installing" "" ""
-python3 -m pip --version >/dev/null 2>&1 \\
-  || python3 -m ensurepip --upgrade >/dev/null 2>&1 \\
+PYTHON_BIN=""
+for cand in python3.13 python3.12 python3.11; do
+  if command -v "$cand" >/dev/null 2>&1; then PYTHON_BIN="$cand"; break; fi
+done
+if [ -z "$PYTHON_BIN" ]; then
+  if python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
+    PYTHON_BIN="python3"
+  fi
+fi
+if [ -z "$PYTHON_BIN" ]; then
+  sudo dnf install -y python3.11 >/dev/null 2>&1 \\
+    || dnf install -y python3.11 >/dev/null 2>&1 \\
+    || true
+  command -v python3.11 >/dev/null 2>&1 && PYTHON_BIN="python3.11"
+fi
+if [ -z "$PYTHON_BIN" ]; then
+  fail "Ingen python >= 3.11 i sandboxen (python3 ar $(python3 --version 2>&1))."
+fi
+echo "hosted-build: anvander $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))."
+"$PYTHON_BIN" -m pip --version >/dev/null 2>&1 \\
+  || "$PYTHON_BIN" -m ensurepip --upgrade >/dev/null 2>&1 \\
   || true
-python3 -m pip install --quiet -r requirements.txt \\
-  || python3 -m pip install --quiet --user -r requirements.txt \\
+"$PYTHON_BIN" -m pip install --quiet -r requirements.txt \\
+  || "$PYTHON_BIN" -m pip install --quiet --user -r requirements.txt \\
   || fail "pip install -r requirements.txt misslyckades i sandboxen."
 
 # Fas 2: prompt -> Project Input. Foljdlage kraver tidigare run-state
@@ -202,10 +225,10 @@ python3 -m pip install --quiet -r requirements.txt \\
 # failar arligt har tills den persistensen landar (separat spar).
 post_status "project-input" "" ""
 if [ "$FOLLOWUP_MODE" = "1" ]; then
-  PI_OUT=$(python3 scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" 2>&1) \\
+  PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" 2>&1) \\
     || fail "prompt_to_project_input (followup) misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
 else
-  PI_OUT=$(python3 scripts/prompt_to_project_input.py "$PROMPT_TEXT" --site-id "$SITE_ID" 2>&1) \\
+  PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --site-id "$SITE_ID" 2>&1) \\
     || fail "prompt_to_project_input misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
 fi
 DOSSIER_PATH=$(printf '%s\\n' "$PI_OUT" | sed -n 's/^dossierPath: //p' | head -n 1)
@@ -216,7 +239,7 @@ fi
 # Fas 3: deterministiska byggaren (npm install + next build kors dar inne av
 # build_site.py sjalv — Quality Gate far riktiga build-status-signaler).
 post_status "building" "" ""
-BUILD_OUT=$(python3 scripts/build_site.py --dossier "$DOSSIER_PATH" --generated-dir "$GENERATED_DIR" 2>&1) \\
+BUILD_OUT=$("$PYTHON_BIN" scripts/build_site.py --dossier "$DOSSIER_PATH" --generated-dir "$GENERATED_DIR" 2>&1) \\
   || fail "build_site.py misslyckades: $(printf '%s' "$BUILD_OUT" | tail -c 600)"
 
 # Aktiv immutable build via current.json — samma pekar-kontrakt som lokalt.
