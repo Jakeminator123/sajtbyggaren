@@ -810,6 +810,32 @@ def test_followup_chain_rejects_cross_site_base_run_id(
         )
 
 
+def test_followup_chain_rejects_unverifiable_base_run_id(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Extern granskning 2026-06-10 (F2): en explicit baseRunId vars
+    build-result.json saknas/är oläsbar fick tidigare PASSERA cross-site-
+    guarden (None hoppade över kontrollen). Nu vägras en overifierbar bas
+    ärligt i stället för att tyst lita på en trasig/främmande run-dir."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    prompt_inputs, runs_dir, generated_dir, _base = _seed_init_build(tmp_path)
+    # En run-dir utan build-result.json = overifierbart ägarskap.
+    broken_run = runs_dir / "20990101T000000.000Z-deadbeef"
+    broken_run.mkdir()
+    with pytest.raises(SystemExit, match="overifierbar"):
+        run_followup_chain(
+            SITE_ID,
+            CAPABILITY_FOLLOWUP,
+            base_run_id=broken_run.name,
+            do_build=False,
+            runs_dir=runs_dir,
+            generated_dir=generated_dir,
+            output_dir=prompt_inputs,
+        )
+
+
 def test_followup_chain_is_mock_safe_without_key(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

@@ -454,6 +454,27 @@ def test_asset_graph_source_file_count_is_arrow_safe(
     pa.Table.from_pandas(frame)
 
 
+def test_metadata_int_never_raises_on_pathological_strings() -> None:
+    """Extern granskning 2026-06-10 (F8): "--5" passerade den gamla
+    lstrip("-").isdigit()-heuristiken men fick int() att kasta ValueError -
+    samma kraschsymptom som fixen skulle döda. Nu try/except: alla
+    icke-parsebara strängar ger None, giltiga ger int."""
+    cases = {
+        "3": 3,
+        " -7 ": -7,
+        "--5": None,
+        "-": None,
+        "": None,
+        "1.5": None,
+        "abc": None,
+    }
+    for raw, expected in cases.items():
+        assert asset_graph._metadata_int({"k": raw}, "k") == expected, raw
+    assert asset_graph._metadata_int({"k": True}, "k") is None
+    assert asset_graph._metadata_int({"k": 9}, "k") == 9
+    assert asset_graph._metadata_int({}, "k") is None
+
+
 def test_asset_graph_lists_hard_dossier_candidates(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

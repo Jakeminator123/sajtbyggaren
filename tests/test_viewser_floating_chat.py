@@ -563,7 +563,9 @@ def test_prompt_route_conversation_gate_answers_without_build() -> None:
         )
 
     # 2. Gaten ligger före Phase 1 så inget bygge kan starta för en konversation.
-    gate_idx = text.index("extractConversation(applyResult.decision)")
+    # (B190: gaten återanvänder den redan extraherade conversationMeta i
+    # stället för ett andra extractConversation-anrop — ankaret följer med.)
+    gate_idx = text.index("const conversation = conversationMeta;")
     phase1_idx = text.index("await runPromptToProjectInput(")
     assert gate_idx < phase1_idx, (
         "route.ts: konversations-gaten måste ligga FÖRE Phase 1 "
@@ -655,6 +657,29 @@ def test_floating_chat_renders_conversation_answer_honestly() -> None:
     assert 'variant: "info"' in branch_body, (
         "Konversations-svaret ska visas som en neutral info-bubbla, inte som "
         "en success-rad (inget byggdes)."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_gate_honours_expects_answer() -> None:
+    """B190 (extern granskning 2026-06-10, F4+F5): conversation-grinden i
+    /api/prompt måste hedra BÅDE kind-mängden och den explicita
+    ``expectsAnswer``-signalen (som use-followup-build + FloatingChat redan
+    läser), och återanvända den redan extraherade ``conversationMeta`` i
+    stället för ett andra extractConversation-anrop."""
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "CONVERSATION_ANSWER_KINDS.has(conversation.conversationKind)" in text, (
+        "Grinden ska fortsatt läsa kind-mängden (källåset från F1 slice 2)."
+    )
+    assert "conversation.expectsAnswer === true" in text, (
+        "Grinden måste OCKSÅ hedra expectsAnswer — annars divergerar servern "
+        "från klienternas kontraktsläsning (B190)."
+    )
+    assert "const conversation = conversationMeta;" in text, (
+        "Grind-blocket ska återanvända conversationMeta (F5 — inget andra "
+        "extractConversation-anrop i samma scope)."
     )
 
 

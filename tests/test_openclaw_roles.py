@@ -449,3 +449,48 @@ def test_message_kind_type_still_has_exactly_eight_values():
     import typing
 
     assert set(typing.get_args(MessageKind)) == _LOCKED_ROUTER_KINDS
+
+
+# --- 2026-06-10 (extern granskning, GPT-fynd 2): frågeformade edits ----------
+#
+# En artigt frågeformad edit ("kan du lägga till en FAQ-sektion?") klassades
+# som answer-only question i stället för edit, eftersom routerns _ADD_VERBS
+# bara bar imperativformerna ("lägg till") - infinitivets "lägga till"
+# (ordgräns: "lägg" matchar inte "lägga") föll igenom till ?-grenen. En
+# användare som BAD om en sektion fick ett chat-svar och inget bygge.
+
+
+@pytest.mark.parametrize(
+    ("message", "expected_edit_kind"),
+    [
+        ("kan du lägga till en FAQ-sektion?", "section_add"),
+        ("skulle du kunna lägga till en team-sektion?", "section_add"),
+        ("kan du göra sajten mörkblå?", "visual_style"),
+        ("kan du ändra rubriken till Ny rubrik?", "copy_change"),
+    ],
+)
+def test_question_formed_edits_classify_as_edit(
+    message: str, expected_edit_kind: str
+):
+    """Edit vinner över frågetecknet: en frågeformad edit bygger, svaras inte."""
+    decision = classify_conversation(message)
+    assert decision.conversationKind == "edit", message
+    assert decision.editKind == expected_edit_kind, message
+    assert decision.expectsAnswer is False, message
+
+
+@pytest.mark.parametrize(
+    ("message", "expected_kind"),
+    [
+        # Genuina frågor/småprat får INTE bli edits av infinitiv-tillägget.
+        ("vad är en FAQ-sektion?", "question"),
+        ("hej, hur är läget?", "small_talk"),
+        ("vad tycker du om sajten?", "site_opinion"),
+    ],
+)
+def test_genuine_conversation_stays_answer_only_after_infinitive_verbs(
+    message: str, expected_kind: str
+):
+    decision = classify_conversation(message)
+    assert decision.conversationKind == expected_kind, message
+    assert decision.expectsAnswer is True, message

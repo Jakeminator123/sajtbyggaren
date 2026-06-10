@@ -251,6 +251,72 @@ def test_removed_operator_directive_regenerates(monkeypatch, tmp_path):
     assert reuse_previous_site_brief("run-new", without_directive, run_dir) is None
 
 
+def test_prose_mentioning_operator_prefix_does_not_force_regen(
+    monkeypatch, tmp_path
+):
+    """Extern granskning 2026-06-10 (F3): removed-notes-guarden detekterade
+    'förra briefen hade en operator-not' via rått substring-test - fri
+    brief-prosa som bara NÄMNER strängen "Operator: " mitt i ett block
+    tvingade då en onödig regenerering (= copy-driften B180 dödade).
+    Nu prefix-matchas per BLOCK (notesForPlanner är \\n\\n-separerade block)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    base = _dossier()
+    previous = _previous_mock_brief(base)
+    # Prosa som nämner prefixet MITT i ett block - inget strukturerat
+    # operator-block (inget block BÖRJAR med prefixet).
+    previous["notesForPlanner"] = (
+        "Planera tonen varsamt. Kommentar: Operator: -prefixet används av "
+        "byggaren för direktiv.\n\nÖvrig planeringsnot."
+    )
+    run_dir = _write_previous_run(tmp_path, previous)
+
+    carried = reuse_previous_site_brief("run-new", base, run_dir)
+    assert carried is not None, (
+        "prosa som nämner prefixet får inte tolkas som en borttagen "
+        "operator-not (onödig regen = copy-drift)"
+    )
+    assert carried["positioning"]["oneLiner"] == SENTINEL
+
+
+def test_explicit_base_run_id_wins_over_latest_for_brief_reuse(
+    monkeypatch, tmp_path
+):
+    """B186: brief-reuse ska jämföra mot den PINNADE basen (baseRunId i
+    prompt-meta-sidecaren), inte mot senaste run - kedjan bygger från basen,
+    så brief-jämförelsen måste läsa samma bas."""
+    import json as _json
+
+    from scripts.build_site import _followup_previous_run_dir
+
+    runs_root = tmp_path / "runs"
+    runs_root.mkdir()
+    # Äldre pinnad bas (med site-brief) + nyare run (latest, med build-result).
+    base_run = runs_root / "run-base"
+    base_run.mkdir()
+    (base_run / "site-brief.json").write_text("{}", encoding="utf-8")
+    newer_run = runs_root / "run-newer"
+    newer_run.mkdir()
+    (newer_run / "build-result.json").write_text(
+        _json.dumps({"siteId": SITE_ID, "status": "ok"}), encoding="utf-8"
+    )
+    import os as _os
+    import time as _time
+
+    _os.utime(base_run, (_time.time() - 100, _time.time() - 100))
+
+    # Med pinnad baseRunId: basen vinner över nyare latest.
+    pinned = _followup_previous_run_dir(
+        runs_root, SITE_ID, {"baseRunId": "run-base"}
+    )
+    assert pinned == base_run
+    # Utan baseRunId (eller när basen saknar site-brief): latest-fallback.
+    assert _followup_previous_run_dir(runs_root, SITE_ID, None) == newer_run
+    assert (
+        _followup_previous_run_dir(runs_root, SITE_ID, {"baseRunId": "saknas"})
+        == newer_run
+    )
+
+
 def test_missing_or_malformed_previous_brief_regenerates(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     dossier = _dossier()
