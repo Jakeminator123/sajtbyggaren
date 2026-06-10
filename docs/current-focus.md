@@ -82,11 +82,14 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    bara `--primary` — beslutsunderlag med tre optioner ligger i
    `docs/heavy-llm-flow/openclaw-2.0-conductor.md` (slice 3-kandidat;
    option b möjliggjordes av #262:s answer-only-väg).
-4. **Sandbox-mätning + Tier 2:** mät #263:s verkliga tidsvinst (jämför
-   `timings` med/utan `VIEWSER_SANDBOX_UPLOAD_BUILT=0`); därefter Tier 2
-   (bas-snapshot P3 + sandbox-återanvändning — kräver liten ADR; lärdom
-   från #156-boten: `Sandbox.get()` behöver `resume: false` för att inte
-   återstarta utgångna sandboxar).
+4. **Tier 2-beslut på verklig användningsdata (NEDGRADERAD från manuell
+   mätning, operatörsbeslut 2026-06-10):** ingen separat mätövning —
+   #263 loggar redan `timings` automatiskt i varje preview-svar, så
+   datat samlas av sig självt vid verklig användning. Tier 2
+   (bas-snapshot P3 + sandbox-återanvändning, kräver liten ADR; lärdom
+   från #156-boten: `Sandbox.get()` behöver `resume: false`) byggs först
+   när sandbox-previewen upplevs långsam i praktiken — då finns
+   timings-datat att besluta på.
 5. **Starter-hygien-slice (kräver operatörs-OK, plattform-pins):**
    `engines`-fält (Node, matcha Vercels 24), `allowScripts`-godkännande
    för sharp (npm-varningar i genererade sajter), spåra transitiva
@@ -116,9 +119,17 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
 
 **Öppna blockers / att-göra:**
 
-- **Manuella klick-checkar kvar (operatören):** #228 review-summary
-  (Ändra→steg-hopp) + #245/#249 modul-dialogen visuellt + manuell
-  1–10-score i Backoffice (Idag-vyn). Öppettider-checken är GODKÄND.
+- **Manuella klick-checkar PENSIONERADE (operatörsbeslut 2026-06-10):**
+  i stället för manuell verifiering är beteendena nu test-låsta —
+  #228 Ändra→steg-hopp via
+  `tests/test_viewser_wizard.py::test_review_summary_andra_links_are_wired_to_step_jump`,
+  #245/#249 modul-dialogens ärliga synlighets-badges via
+  `tests/test_viewser_floating_chat.py::test_add_module_dialog_renders_honest_effect_badges`
+  (+ befintliga katalog-ärlighetslåset). Det manuella 1–10-scorecardet i
+  Backoffice är en VALFRI journalfunktion (inget i motorn/evals-gaten
+  beror på att det fylls i — kvalitetssignalen är den automatiska
+  Golden Path-evalen); funktionen finns kvar men nags inte längre.
+  Öppettider-checken var redan GODKÄND.
 - **Operatören bör starta om sin dev-server** så nattens fixar gäller
   (B163/B164/B174-kedjan + prune-on-dev-start aktiveras vid omstart).
 - Branch-rester för operatörsbeslut (oförändrat): Christophers stängda

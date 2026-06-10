@@ -763,3 +763,39 @@ def test_asset_dropzone_keeps_partial_uploads() -> None:
     assert "if (uploaded.length > 0) onUploaded(uploaded);" in text, (
         "Partiellt misslyckad batch ska ändå lyfta de redan uppladdade filerna."
     )
+
+
+@pytest.mark.tooling
+def test_review_summary_andra_links_are_wired_to_step_jump() -> None:
+    """Ersätter den manuella klick-checken från #228 (operatörsbeslut
+    2026-06-10: manuella checkar pensioneras, beteendet låses i test).
+    Granska-radernas "Ändra"-länk ska hoppa till rätt wizard-steg
+    (onJumpToStep) eller öppna rätt mer-info-tab (onOpenMoreInfo), och
+    wizarden ska tråda in sina riktiga callbacks — annars är länken död
+    och operatören fastnar på Bilder-steget."""
+    summary = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "review-summary.tsx"
+    ).read_text(encoding="utf-8")
+    for wiring in (
+        "onEdit: () => onJumpToStep(0)",
+        "onEdit: () => onJumpToStep(1)",
+        "onEdit: () => onJumpToStep(2)",
+        'onEdit: () => onOpenMoreInfo("contact")',
+        'onEdit: () => onOpenMoreInfo("about")',
+    ):
+        assert wiring in summary, (
+            f"review-summary saknar Ändra-wiring {wiring!r} — länken vore död."
+        )
+    assert "onClick={item.onEdit}" in summary, (
+        "Ändra-knappen måste anropa radens onEdit-callback."
+    )
+    wizard = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
+    ).read_text(encoding="utf-8")
+    assert "onJumpToStep={goToStep}" in wizard, (
+        "Wizarden måste tråda goToStep in i ReviewSummary (annars hoppar "
+        "Ändra-länken ingenstans)."
+    )
+    assert "onOpenMoreInfo={openMoreInfo}" in wizard, (
+        "Wizarden måste tråda openMoreInfo in i ReviewSummary."
+    )

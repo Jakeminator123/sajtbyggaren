@@ -688,6 +688,31 @@ def test_add_module_dialog_only_offers_backend_mountable_modules() -> None:
 
 
 @pytest.mark.tooling
+def test_add_module_dialog_renders_honest_effect_badges() -> None:
+    """Ersätter den manuella visuella checken från #245/#249 (operatörsbeslut
+    2026-06-10: manuella checkar pensioneras, beteendet låses i test).
+    Varje modulkort ska bära en ärlig synlighets-badge per ModuleEffect
+    (inline / route / registered) så operatören aldrig luras tro att en
+    mount-only-modul blir synlig direkt."""
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "dialogs" / "add-module-dialog.tsx"
+    ).read_text(encoding="utf-8")
+    assert 'type ModuleEffect = "inline" | "route" | "registered";' in text, (
+        "ModuleEffect-unionen (inline/route/registered) är ärlighetskontraktet "
+        "för modulkortens synlighets-badge."
+    )
+    assert "EFFECT_BADGES[mod.effect]" in text, (
+        "Varje modulkort måste rendera sin effect-badge (EFFECT_BADGES) — "
+        "annars syns ingen ärlig synlighetsmarkering i dialogen."
+    )
+    for effect in ('effect: "inline"', 'effect: "route"', 'effect: "registered"'):
+        assert effect in text, (
+            f"Modulkatalogen ska klassa moduler med {effect!r} så badgen "
+            "speglar verkligt utfall."
+        )
+
+
+@pytest.mark.tooling
 def test_floating_chat_renders_openclaw_decision_honestly() -> None:
     """Skiva 1b (UI half): FloatingChat måste rendera OpenClaw-beslutet ärligt
     och preempta FÖRE routerDecision (rikare superset), med samma
