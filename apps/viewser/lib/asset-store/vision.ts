@@ -176,7 +176,8 @@ export async function classifyAsset(args: {
     const completion = await client.chat.completions.create({
       model: VISION_MODEL,
       temperature: 0.2,
-      max_tokens: 200,
+      // B176: gpt-5.x avvisar `max_tokens` (400); ersättaren funkar brett.
+      max_completion_tokens: 200,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTIONS },

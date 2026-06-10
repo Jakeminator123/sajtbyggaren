@@ -88,6 +88,17 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    för sharp (npm-varningar i genererade sajter), spåra transitiva
    msw/unrs-resolver, samt beslut om docs-base/portfolio-base ska mappas
    in i runtime (idag medvetet omappade i scaffold-kontraktet).
+6. **Komponent-medvetet LLM-flöde via shadcn (operatörsprio 2026-06-10):**
+   starters vendorerar redan shadcn-komponenter (CLI i devDependencies,
+   `components.json` per starter), men brief/plan/codegen-kedjan är inte
+   komponent-medveten — LLM-flödet kan inte välja/referera komponenter.
+   Slice: exponera komponentkatalogen för kedjan (registry/manifest +
+   governance-mappning). Börja med kort design-not innan bygge.
+7. **Begreppssession (operatör + agent):** blueprint/variant/dossier/DNA
+   m.fl. överlappar i dag och ingen av termerna finns i naming-dictionaryn.
+   Utgå från ADR 0036 (blueprint-and-router-vocabulary), begrepps-PR:en
+   #246 och `governance/policies/naming-dictionary.v1.json`; utfall =
+   ADR + dictionary-poster.
 
 **Öppna blockers / att-göra:**
 

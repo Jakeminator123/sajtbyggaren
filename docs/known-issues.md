@@ -366,6 +366,15 @@ integrate christopher-ui discovery and asset workflow`, merge
   kvarvarande: byte av tjänst-namn/label (schemat har bara `services[].summary`),
   bredare/multi-target replace och väg B/C. Test: `tests/test_followup_copy_directives.py`
   (okvoterade fall + ärlig no-op + tvetydig reason + end-to-end).
+  Operatörsfynd 2026-06-10 (bacon-ab, se B178): den okvoterade slicen ovan
+  matchar bara "ändra X till Y" mot SPARADE copy-fält. En prompt som citerar
+  hela gammeltexten i en lång mening utan citattecken ("Denna text: <hela
+  hero-meningen> … vill jag bara ska bli JAKOB") träffar varken den citerade
+  vägen (`_QUOTED_SPAN_RE` kräver citattecken) eller exakt-delsträngs-vägen
+  (hero-H1 lagras inte som ett matchbart copy-fält), så ändringen no-op:ar
+  TYST och full-rebuilden rapporterar ändå `appliedVisibleEffect=true`. Detta
+  är den konkreta repron bakom B178 — håll B155 + B178 ihopkopplade tills
+  fri-text-replace + ärlig avvisning täcker fallet.
 
 - **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
   renderar företagets logo via Next.js `Image` utan ett komplett aspekt-
@@ -642,6 +651,64 @@ samma kodmönster lever vidare här — därav posten:
   review av PR #131 (2026-05-27). Vid implementation: ersätt eller
   komplettera chunk-grep med browser-baserad assertion. Källa: extern
   review 2026-05-27 (PR #131). Fix: open. Test: open.
+
+### Operatörsfynd 2026-06-10 morgon (havre-ab-sessionen)
+
+- **`B176` Medel** - `POST /api/chat` gav 502 på varje anrop ("Fråga
+  utan att bygga"-dialogen + modul-flödet): OpenAI svarade
+  `400 Unsupported parameter: 'max_tokens' is not supported with this
+  model. Use 'max_completion_tokens' instead.` — gpt-5.x-modeller
+  accepterar inte längre `max_tokens` i chat.completions. Två
+  call-sites: `apps/viewser/lib/openai.ts:chatWithOpenAi` och
+  `apps/viewser/lib/asset-store/vision.ts:classifyImage`. Fix:
+  parameterbyte till `max_completion_tokens` (accepteras även av äldre
+  chat-modeller). Verifierad live mot dev-servern (200 + svar,
+  model=gpt-5.4). Källa: operatörsfynd 2026-06-10 (devtools 502 +
+  serverlogg). Fix: i arbetsträdet (ocommittad). Test: open
+  (regressionstest på parameternamnet önskvärt).
+
+- **`B177` Medel** - Google Fonts-`@import` hamnar mitt i den BYGGDA
+  CSS-bundeln och ignoreras av webbläsaren ("An @import rule was
+  ignored because it wasn't defined at the top of the stylesheet" i
+  devtools på genererade sajter, t.ex. havre-ab-d15f42). #235-fixen
+  hissar importen korrekt till toppen av KÄLLANS `app/globals.css`,
+  men Next bundlar `next/font` (Geist `@font-face`) + globals till EN
+  produktion-stylesheet där importen landar ~3,8 kB in i filen →
+  CSS-spec säger ignorera → variantens typsnitt (t.ex. Playfair
+  Display + Inter för artisan-market) laddas aldrig i byggda sajter;
+  tyst fallback till systemfonter. Fix-skiss: codegen levererar fonter
+  via `<link rel="stylesheet">` i layout-head eller `next/font` i
+  stället för CSS-`@import` (uppföljning till #235, samma yta som
+  ADR-fonthissningen). Källa: operatörsfynd 2026-06-10 devtools +
+  verifiering mot `data/output/.generated/havre-ab-d15f42/builds/
+  20260610T050928Z/.next/static/css/`. Fix: open. Test: open.
+
+- **`B178` Medel-Hög** (TYNGRE — dokumenterad, ej fixad) - Falsk
+  "Klart! v1 → v2" när en fri-text-ändring INTE landade. Operatörsfynd
+  bacon-ab-ed861f run `20260610T052908.596Z-99a2a61b`: prompten
+  "Denna text: En lugn och tydlig servicesajt… vill jag bara ska bli
+  JAKOB" gav `status=ok`, `appliedVisibleEffect=true`
+  (`reason=visible_files_changed`), v1→v2 — men H1:n står oförändrad i
+  `generated-files/app/page.tsx` ("En lugn och tydlig servicesajt…"),
+  "JAKOB" finns ingenstans. Rotorsak i tre lager: (1) prompten gick INTE
+  via OpenClaw-targeted-vägen (`provenance.source=None`,
+  `buildSource=scripts/build_site.py`) utan föll till legacy full
+  Phase 1+2-rebuild; (2) `understand` regenererar copy från fakta varje
+  bygge → bytes ändras även när operatörens intent inte fångas →
+  fil-diffen `appliedVisibleEffect=visible_files_changed` blir `true`;
+  (3) ROW-3-ärlighetsguarden (`_detect_followup_applied_visible_effect`
+  → `copy_directive_not_applied`) fångar exakt detta MEN bara när
+  `_followup_requested_copy_replace` returnerar `true`, vilket KRÄVER en
+  citerad span (`_QUOTED_SPAN_RE`, copy_directives.py:1097). Operatörens
+  ocietarade fri-text-formulering ("Denna text: X … ska bli Y") matchar
+  inte → guarden tystnar → falsk framgång. Fix-skiss (egen slice + tester,
+  helst worktree/PR/Scout): bredda replace-intent-detektionen till
+  ocietarad "ändra/byt denna text: <gammal> till/så den blir <ny>" och
+  rapportera ärlig no-op när ingen copyDirective applicerades. Cross-ref:
+  B155 (literal-ersättning träffar inte rubriker/fri formulering),
+  slice 3 (ärlig dialogväg + roll-dispatch). Källa: operatörsfynd
+  2026-06-10, verifierad mot run-artefakter + detektor-repro
+  (`_followup_requested_copy_replace(...) == False`). Fix: open. Test: open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
