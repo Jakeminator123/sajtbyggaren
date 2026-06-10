@@ -222,6 +222,11 @@ misplaced-poster som väntar Steward-flytt (B176–B179-rundan, B183–B185).
 
 ## Öppna PR att känna till
 
+- **#280** (`chgenberg → jakob-be`): SNI-branschberedskap — full SNI-täckning
+  + 87 branschprofiler + wizard-branschsök, **ADR 0045** (numret är därmed
+  TAGET; model-tuning-slicen renumreras till 0046, generativ omskrivning
+  till 0047 — se handoff-liggaren). VÄNTAR GRANSKNING (stor: 21 filer,
+  governance + discovery + wizard).
 - **#269** (`christopher → jakob-be`): toolIntent v1-pilot (strukturerad
   specialist-intent från färgväljaren, UI-halva). **Vänta med merge:** (a) PR:en
   är hela `christopher`-branchen (23 filer, +2805 — bär även en hel

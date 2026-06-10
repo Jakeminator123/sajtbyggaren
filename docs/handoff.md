@@ -1,18 +1,56 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-10 natt UTC+2, steward post-merge checkpoint efter nattens
-merge-tåg #254/#256/#257/#259/#260 (10 buggar stängda) + branch-städning.
-Verifierad `origin/jakob-be` är `3674475` (#258 mergad ovanpå tåg-HEAD
-`5e6b008`); `main` är `7486145` (efter #255).
+**Datum:** 2026-06-10 ~17:00 UTC+2, dagpassets checkpoint efter 10 mergade
+PR:ar (#270–#279 utom parkerade) + två main-syncar. Verifierad
+`origin/jakob-be = origin/main` (identiska, se Last verified i
+`docs/current-focus.md`).
 
-Nya PRs sedan föregående checkpoint: #254, #256, #257, #259, #260, #258
-(alla mergade till `jakob-be`), #255 (docs-dedupe, mergad till `main`),
-#253 (stängd), #261 (öppen draft, B155).
+## DAGPASSET 2026-06-10 ~17:00 — ÖVERLÄMNING (AUKTORITATIVT BLOCK)
 
-## SLUTLIG CLOSING-ROUND 2026-06-10 ~06:00 — ÖVERLÄMNING TILL NÄSTA ORCHESTRATOR
+> **Detta är det ENDA auktoritativa blocket. Allt äldre (inkl. nattens
+> closing-round nedan) är historik — verifiera alltid mot git/koden.**
+>
+> **Git:** `main = jakob-be` (tom diff, hålls i sync löpande i dag; två
+> formella main-syncar + direkta docs-pushar). Pre-sync-backup:
+> `backup_150_BRA`. Rent träd, inga worktrees, alla mergade brancher städade.
+>
+> **Dagens facit (10 PR:ar + direkta commits):** #270 slice 3-delar
+> (B177 fonter via `<link>`, B178 ärlig fri-text, answer-only i dialoger),
+> #271 backoffice Arrow-fix, #272 delade canvases (Steward-ägda),
+> #273 B183–B185, #274 F1 slice 3 roll-dispatch (+`expectsAnswer`+roll-rad),
+> #275 komponentkatalog lager 1+2 (ADR 0040), #276 Tier 2 sandbox-reuse
+> (ADR 0041, opt-in `VIEWSER_SANDBOX_REUSE`), #277 toolIntent-pilot UI
+> (Christophers utbrytning), #278 ADR 0043 sektionstext-utföraren
+> ("ändra texten i hero-sektionen till X" ger nu synlig ändring),
+> #279 ADR 0044 SOUL i runtime + Backoffice-identitetsvy. Direkta commits:
+> extern granskning processad (B186–B191 fixade), B193 roll-minne i chatten,
+> B187 frågeformade edits, Steward-pass (0 misplaced), manuella
+> klick-checkar pensionerade till källås, komponentkatalog-design-not
+> (alla 4 beslutspunkter avgjorda).
+>
+> **ADR-nummerliggare (kollisionsrisk vid parallella agenter!):** 0040
+> komponentkatalog (mergad), 0041 Tier 2 (mergad), 0042 RESERVERAD lager 3
+> (ev. i cloud), 0043 sektionstext (mergad), 0044 SOUL (mergad), 0045 TAGEN
+> av öppna PR #280 (Christophers SNI-branschberedskap), 0046 RESERVERAD
+> model-tuning, 0047 RESERVERAD generativ sektionsomskrivning.
+>
+> **Öppet/pågående:** PR #280 (Christophers SNI + 87 branschprofiler +
+> wizard-branschsök — VÄNTAR GRANSKNING), #269 (numera enbart
+> inspector-lanen, väntar Christophers rebase), #156 (parkerad, säkerhet).
+> Ev. cloud-agenter i flykt: lager 3 (ADR 0042), model-tuning (ska
+> RENUMRERAS till 0046), generativ omskrivning (0047), compound-prompt-
+> ärlighet (ingen ADR). B192 öppen (answer-only rött i dialog-vägen,
+> deferrad bakom #269).
+>
+> **Operatörens kvarvarande manuella:** dev-server-omstart; live-test av
+> sektionstext-ändring + SOUL-chatt med riktig nyckel; Tier 2-mätning
+> (`VIEWSER_SANDBOX_REUSE=1`, kolla `reused: true`).
+>
+> Kön + detaljer: `docs/current-focus.md` (alltid först).
 
-> **Detta är det ENDA auktoritativa blocket. Allt äldre ligger i arkivet —
-> verifiera alltid mot git/koden, aldrig mot äldre block.**
+## Föregående checkpoint (natten 2026-06-10 ~06:00) — HISTORIK
+
+> Nattens closing-round, ersatt av dagblocket ovan.
 >
 > **Git-läge:** `origin/jakob-be = 9a7c9f6`, rent träd, lokal = origin.
 > `main = 7486145`. `jakob-be` ligger 16 PRs före `main` — **main-sync är
