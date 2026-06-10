@@ -32,6 +32,7 @@ texten/innehållet hade drivit från dagens modell - åtgärdas i denna PR), ell
 | Governance / Page Quality Traits | `page-quality-traits.v1.json` | aktiv | Kvalitetsvikter och gate-trösklar. |
 | Governance / Rules | `governance/rules` | aktiv | Mänskliga regler (speglas till `.cursor/rules/`). |
 | Governance / ADR | `governance/decisions` | aktiv | Beslutslogg. |
+| Identitet / Identitet (SOUL) | `docs/openclaw-workspace/SOUL.md` + `TOOLS.md` | aktiv | Redigerbar dirigent-konstitution (chatt-persona, path-låst till SOUL.md) + read-only sanktionerade actions. Chatt-personan laddar SOUL server-side (ADR 0044). |
 | LLM Engine / Mindmap | 7 policies | aktiv | Diagram av hela kedjan (inkl. `project-dna`, embedding). |
 | LLM Engine / Init Flow | `engine-run.v1.json` m.fl. | aktiv | Init-flödesdiagram. |
 | LLM Engine / Follow-up Flow | `project-dna.v1.json` m.fl. | aktiv | Follow-up/versionerings-flödet (`Project DNA`). |

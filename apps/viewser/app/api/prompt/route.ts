@@ -18,6 +18,7 @@ import { runPromptToProjectInput } from "@/lib/prompt-runner";
 import { classifyMessage } from "@/lib/router-classify-runner";
 import { readRunChangeSet } from "@/lib/run-change-set";
 import { readAppliedCopyDirectives, readBuildResult, runsDir } from "@/lib/runs";
+import { loadSoulBaseLines } from "@/lib/soul";
 
 // Operator-prototype: keep the prompt small enough that an accidental
 // 50 MB paste cannot wedge the build pipeline. The cap is generous for
@@ -288,6 +289,22 @@ async function latestChangeSnippet(
   return `Senaste byggda version av sajten är ${versionLabel}.${promptPart}`;
 }
 
+// ADR 0044: defensive fallback persona base, used when
+// docs/openclaw-workspace/SOUL.md is missing/unreadable (loadSoulBaseLines
+// returns null). These are exactly the hardcoded lines the chat persona used
+// before SOUL became the single source of truth, so a missing/unreadable file
+// degrades to today's behaviour rather than to an empty persona.
+const CONVERSATION_SOUL_FALLBACK_LINES: ReadonlyArray<string> = [
+  "Du är OpenClaw, dirigenten i Sajtbyggaren — operatörens chattassistent.",
+  "Svara kort, vänligt och ärligt på svenska.",
+];
+
+// Safe ceiling for the assembled system message. lib/openai.ts throws over
+// MAX_INPUT_CHARS_PER_MESSAGE (8000); we stay comfortably under it and, on
+// overflow (e.g. a large site_opinion context snippet), drop the SOUL base —
+// never the dynamic honesty lines.
+const CONVERSATION_SYSTEM_SAFE_CHARS = 7800;
+
 /**
  * F1 slice 2: generate the honest chat answer for a conversation kind via the
  * EXISTING lib/openai.ts chat helper. Never throws: no key → the honest
@@ -295,6 +312,10 @@ async function latestChangeSnippet(
  * plain chat copy — it never claims a site change THIS turn (the gate
  * guarantees no build ran), but it MAY reference the build history snippet as
  * facts so the dispatcher never contradicts what the build roles just did.
+ *
+ * ADR 0044: the persona base is loaded from docs/openclaw-workspace/SOUL.md and
+ * the honest dynamic lines are appended AFTER it, so SOUL controls only the
+ * chat persona/tone and can never override the honesty contract.
  */
 async function generateConversationAnswer(
   prompt: string,
@@ -307,9 +328,14 @@ async function generateConversationAnswer(
   }
   const contextSnippet = conversationContextSnippet(decision);
   const historySnippet = await latestChangeSnippet(siteId);
-  const systemLines = [
-    "Du är OpenClaw, dirigenten i Sajtbyggaren — operatörens chattassistent.",
-    "Svara kort, vänligt och ärligt på svenska.",
+  // ADR 0044: persona-basen kommer från docs/openclaw-workspace/SOUL.md
+  // (server-side, cacheas per process, trunkeras). Vid läsfel/saknad fil
+  // faller vi tillbaka på de hårdkodade raderna nedan. De DYNAMISKA
+  // ärlighetsraderna byggs separat och läggs EFTER basen så de ALLTID vinner —
+  // SOUL-texten kan aldrig redigera bort "inget ändrat i DENNA tur",
+  // roll-minnet eller site_opinion-grundningen.
+  const soulBaseLines = loadSoulBaseLines() ?? CONVERSATION_SOUL_FALLBACK_LINES;
+  const dynamicLines = [
     "Du har INTE ändrat sajten i DENNA tur: påstå aldrig att något byggts " +
       "eller ändrats nu.",
     // Roll-minnet: historiken är fakta från artefakterna, inte ett påstående
@@ -330,9 +356,19 @@ async function generateConversationAnswer(
       : "Om frågan gäller sajtens detaljer och du saknar kontext: säg det " +
         "ärligt i stället för att gissa.",
   ];
+  // SOUL-basen FÖRST, de dynamiska ärlighetsraderna EFTER (de vinner). Skulle
+  // den sammansatta systemprompten ändå spränga lib/openai.ts:s 8000-teckenstak
+  // (t.ex. ett stort site_opinion-kontextsnitt) släpper vi SOUL-basen — aldrig
+  // de dynamiska raderna — så anropet aldrig kastar och ärligheten finns kvar.
+  const systemLines = [...soulBaseLines, ...dynamicLines];
+  const combinedSystem = systemLines.join("\n");
+  const systemContent =
+    combinedSystem.length > CONVERSATION_SYSTEM_SAFE_CHARS
+      ? dynamicLines.join("\n")
+      : combinedSystem;
   try {
     const { message } = await chatWithOpenAi([
-      { role: "system", content: systemLines.join("\n") },
+      { role: "system", content: systemContent },
       { role: "user", content: prompt.slice(0, 8000) },
     ]);
     return message.content;
