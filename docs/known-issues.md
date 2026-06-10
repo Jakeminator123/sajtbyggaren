@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 164 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 165 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -686,6 +686,22 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B193` Medel** (stängd 2026-06-10, samma dag som operatörsfyndet) -
+  rollerna delade inget minne i chatten: dirigenten svarade "jag ändrade
+  inget i den här turen" direkt EFTER att stylisten byggt v2 (operatörens
+  snickesnackarn-session) — tekniskt sant men kontextlöst, så systemet såg
+  ut att motsäga sig självt. Rotorsak: `generateConversationAnswer`
+  (`apps/viewser/app/api/prompt/route.ts`) hade ingen bygghistorik alls i
+  systemprompten. Fix: ny `latestChangeSnippet(siteId)` läser senaste
+  KOMPLETTA runens version + ändringsprompt (via B164-helpern
+  `latestCompletedRunForSite` + runens `input.json`, defensiv på alla
+  läsfel) och trådas in som refererbara FAKTA — medan ärlighetslinjen
+  "du har inte ändrat något i DENNA tur" kvarstår. Utan historik: ärlig
+  fallback-rad. Källa: operatörsfynd + read-only-granskning 2026-06-10
+  ("chatten motsäger sig själv", prioriterad 1:a). Fix:
+  `apps/viewser/app/api/prompt/route.ts`. Test:
+  `tests/test_viewser_api_prompt.py::test_conversation_answer_carries_build_history_memory`.
 
 - **`B187` Medel** (stängd 2026-06-10, extern granskning samma dag) - en
   frågeformad section_add ("kan du lägga till en FAQ-sektion?", "skulle du
