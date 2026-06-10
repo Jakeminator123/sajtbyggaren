@@ -55,7 +55,20 @@ som saknas i startern är ett gate-fel, inte en tyst fallback).
 
 Rollerna (`section_builder`, `stylist`) får använda shadcn-MCP-servern som
 uppslagsverktyg när de planerar en ändring: söka registryt, hämta exempel,
-få add-kommandon. Tre hårda regler:
+få add-kommandon.
+
+> Konceptbevis finns (operatörens lokala labb, gitignorat:
+> `övrigt/shadcn-mcp-lab/`): en GPT-agent med shadcn-MCP:ns verktyg
+> (`search_items_in_registries` → `view_items_in_registries` →
+> `get_item_examples_from_registries`) hämtar RIKTIG komponentkod ur
+> registryt och levererar ett strukturerat artefakt-objekt (pydantic-typad
+> TSX + metadata om använda registry-items) — 5 lyckade körningar
+> 2026-06-10 (produktkort, countdown, diagram m.m.). Labbet bevisar
+> verktygs-flödet; produktifieringen MÅSTE dock gå genom reglerna nedan
+> (vendorering via granskad PR + capability-mappning), aldrig labbet
+> mönster "agent skriver TSX direkt" mot en kundsajt.
+
+Tre hårda regler:
 
 - MCP-uppslaget är ett byggtids-/agentverktyg. Den genererade sajten får
   aldrig ett runtime-beroende på MCP:n.
