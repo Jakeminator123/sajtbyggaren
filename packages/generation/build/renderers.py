@@ -233,6 +233,7 @@ def render_layout(
     scaffold_default_routes: list[dict] | None = None,
     contact_path: str | None = None,
     extra_routes: list[dict] | None = None,
+    font_stylesheet_href: str | None = None,
 ) -> str:
     """Whole-file layout.tsx with sticky header and footer.
 
@@ -454,6 +455,16 @@ def render_layout(
         "};\n"
         "\n"
     )
+    # B177: load the variant webfont via a <link rel="stylesheet"> in <head>
+    # (order-independent of the bundle) instead of a CSS @import that Next would
+    # bundle mid-file and the browser would ignore. The href is builder-derived
+    # from the variant registry (no customer input); the double-quote guard keeps
+    # the JSX attribute well-formed even if a future query carried one.
+    font_stylesheet_link = ""
+    if font_stylesheet_href and '"' not in font_stylesheet_href:
+        font_stylesheet_link = (
+            f'        <link rel="stylesheet" href="{font_stylesheet_href}" />\n'
+        )
 
     return (
         'import type { Metadata, Viewport } from "next";\n'
@@ -501,10 +512,11 @@ def render_layout(
         "      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}\n"
         "    >\n"
         # Sprint 1.1 — preconnect + dns-prefetch till Google Fonts.
-        # ``variant_css`` skickar ett ``@import url(fonts.googleapis.com)``
-        # in i globals.css; preconnect:en låter browsern öppna TCP +
-        # TLS-handskakningar parallellt med HTML-parsningen, vilket
-        # raderar 300-700 ms från LCP enligt webvitals.
+        # B177: variantens webfont laddas nu via ``<link rel="stylesheet">``
+        # nedan (inte längre via ett ``@import`` i globals.css som Next
+        # bundlade mitt i filen och browsern ignorerade). Preconnect:en låter
+        # browsern öppna TCP + TLS-handskakningar parallellt med HTML-
+        # parsningen, vilket raderar 300-700 ms från LCP enligt webvitals.
         #
         # `crossOrigin="anonymous"` på `fonts.gstatic.com` är obligatoriskt
         # eftersom font-filerna serveras med CORS — utan attributet öppnar
@@ -520,6 +532,7 @@ def render_layout(
         '        <link rel="preconnect" href="https://fonts.googleapis.com" />\n'
         '        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />\n'
         '        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />\n'
+        f"{font_stylesheet_link}"
         '        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
         + _js_string_literal(_render_structured_data_jsonld(dossier))
         + " }} />\n"
@@ -5495,6 +5508,7 @@ def write_pages(
     extra_routes: list[dict] | None = None,
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
+    font_stylesheet_href: str | None = None,
 ) -> list[str]:
     """Write every page declared in ``scaffold_routes["defaultRoutes"]``.
 
@@ -5621,6 +5635,7 @@ def write_pages(
             scaffold_default_routes=default_routes,
             contact_path=contact_route["path"],
             extra_routes=sanitized_extras or None,
+            font_stylesheet_href=font_stylesheet_href,
         ),
     )
     # Sprint 1.2 — branded 404 + error pages. Skrivs alltid (de har

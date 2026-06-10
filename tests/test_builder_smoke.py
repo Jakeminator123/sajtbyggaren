@@ -908,16 +908,28 @@ def test_typography_overlay_different_wizard_tags_yield_different_palettes() -> 
 def test_variant_css_uses_typography_overlay_when_provided(
     nordic_trust_variant: dict,
 ) -> None:
-    """När typography_overlay-kwargen ges ska font-import + body+heading-
-    regler reflektera overlay, inte variant-defaulten."""
-    from scripts.build_site import _typography_overlay_for_tone, variant_css
+    """När typography_overlay-kwargen ges ska body+heading-reglerna reflektera
+    overlay, inte variant-defaulten. B177: webfonten laddas inte längre via ett
+    CSS-``@import`` (den ``+``-kodade google-querystringen finns nu i layout-
+    ``<link>``-href:en, se ``variant_google_fonts_href``), så CSS:en bär bara
+    ``--font-display``-token-namnet."""
+    from scripts.build_site import (
+        _typography_overlay_for_tone,
+        variant_css,
+        variant_google_fonts_href,
+    )
 
     overlay = _typography_overlay_for_tone({"tone": {"primary": "bold"}})
     assert overlay is not None
     css = variant_css(nordic_trust_variant, typography_overlay=overlay)
 
-    assert "Space+Grotesk" in css
+    # B177: no @import in the CSS anymore - the variant block is token-only.
+    assert "@import" not in css
     assert "--font-display: 'Space Grotesk'" in css
+    # The +-encoded Google Fonts query moved to the layout <link> href.
+    href = variant_google_fonts_href(nordic_trust_variant, typography_overlay=overlay)
+    assert href is not None
+    assert "Space+Grotesk" in href
 
 
 @pytest.mark.tooling

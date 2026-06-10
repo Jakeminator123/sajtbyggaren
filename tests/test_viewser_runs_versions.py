@@ -980,6 +980,38 @@ def test_followup_build_hook_supports_global_lock_and_base_run_id() -> None:
 
 
 @pytest.mark.tooling
+def test_followup_build_hook_surfaces_answer_only_reply() -> None:
+    """Slice 3 (frontend): en dialog-prompt som backenden besvarar UTAN att
+    bygga (conversation gate: small_talk / site_opinion / question) returnerar
+    HTTP 200 med ``runId: null`` + ``answerText``. Före fixen föll det i
+    ``!payload.runId``-grenen och visade det generiska "Prompt-anropet
+    misslyckades (HTTP 200)". Hooken måste i stället ytlägga den ärliga
+    svarstexten (samma kontrakt som FloatingChat) och markera den som ett svar,
+    inte ett fel.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "use-followup-build.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "answerText?: string | null;" in text, (
+        "PromptApiResponse måste känna till conversation-gate-fältet answerText."
+    )
+    assert 'typeof payload.answerText === "string"' in text, (
+        "runFollowup måste detektera answer-only-svaret (runId null + answerText)."
+    )
+    assert "isAnswer: true" in text, (
+        "Answer-only-grenen måste returnera isAnswer-diskriminatorn så svaret "
+        "kan renderas som info, inte som ett rött fel."
+    )
+    # The answer-only branch must run BEFORE the generic !runId failure guard,
+    # otherwise the honest reply is masked by the HTTP-failure message.
+    answer_idx = text.index('typeof payload.answerText === "string"')
+    failure_idx = text.index("Prompt-anropet misslyckades")
+    assert answer_idx < failure_idx, (
+        "Answer-only-grenen måste ligga före den generiska !runId-felgrenen."
+    )
+
+
+@pytest.mark.tooling
 def test_builder_shell_threads_lock_and_base_run_id_into_dialogs() -> None:
     """C1 + C2: BuilderShell måste skicka både det globala isBuilding-låset och
     den aktiva baseRunId-pinnen till alla bygg-utlösande dialoger (variant/

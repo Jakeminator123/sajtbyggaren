@@ -689,14 +689,14 @@ def variant_css(
     # vi tillbaka till ``_typography_for_variant`` och CSS-outputen
     # blir byte-identisk med innan denna kwarg infördes.
     typography = typography_overlay if typography_overlay else _typography_for_variant(variant)
-    # Google Fonts import — placed in @import at the top of the variant
-    # block. `&display=swap` ensures the page renders with fallback fonts
-    # while the webfont loads, avoiding FOIT. We use Google's HTTPS CDN
-    # which is reliable enough for the MVP; a future iteration may swap
-    # to `next/font/google` for self-hosting + zero FOUC.
-    font_import = (
-        f"@import url('https://fonts.googleapis.com/css2?{typography['google_query']}');\n"
-    )
+    # B177: the variant webfont is NO LONGER loaded via a CSS ``@import`` here.
+    # Next bundles ``next/font`` ``@font-face`` rules ahead of globals.css, so an
+    # ``@import`` that lands mid-bundle is ignored by the browser ("@import rules
+    # must precede all rules") and the variant fonts silently fell back to system
+    # fonts. The font is now loaded via a ``<link rel="stylesheet">`` in the Next
+    # layout ``<head>`` (see ``variant_google_fonts_href`` + ``render_layout``),
+    # which is order-independent of the bundle. ``--font-display`` / ``--font-body``
+    # below still name the families so the cascade is unchanged once loaded.
     motion_level = (
         tokens.get("motion", {}).get("level", "subtle")
         if isinstance(tokens.get("motion"), dict)
@@ -728,8 +728,7 @@ def variant_css(
         )
 
     return (
-        font_import
-        + ":root {\n"
+        ":root {\n"
         f"  --background: {color['background']};\n"
         f"  --foreground: {color['foreground']};\n"
         f"  --muted: {color['muted']};\n"
@@ -844,3 +843,25 @@ def variant_css(
         "}\n"
         + motion_block
     )
+
+
+def variant_google_fonts_href(
+    variant: dict,
+    *,
+    typography_overlay: dict[str, str] | None = None,
+) -> str | None:
+    """Full Google Fonts stylesheet URL for a variant's typography, or ``None``.
+
+    Returned for the Next layout to load via ``<link rel="stylesheet">`` in
+    ``<head>`` instead of a CSS ``@import`` inside the bundled globals.css (B177):
+    Next bundles ``next/font`` ``@font-face`` rules ahead of globals, so a
+    mid-bundle ``@import`` is ignored by the browser. The query is resolved from
+    the SAME typography object ``variant_css`` uses (tone overlay when present,
+    else the variant default), so the loaded fonts always match
+    ``--font-display`` / ``--font-body``. ``None`` when no ``google_query``.
+    """
+    typography = typography_overlay if typography_overlay else _typography_for_variant(variant)
+    query = typography.get("google_query") if isinstance(typography, dict) else None
+    if not query:
+        return None
+    return f"https://fonts.googleapis.com/css2?{query}"

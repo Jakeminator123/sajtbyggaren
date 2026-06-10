@@ -97,6 +97,12 @@ type PromptApiResponse = {
   // Saknas båda (äldre payload/init) → readFollowupVisibleEffect → "unknown".
   buildResult?: Record<string, unknown>;
   bridge?: Record<string, unknown>;
+  // Conversation gate (small_talk / site_opinion / question): the backend
+  // answered WITHOUT building, so there is no runId. ``answerText`` carries the
+  // honest reply; FloatingChat already renders this, the dialogs did not (they
+  // showed a generic "HTTP 200 misslyckades" instead). Typed defensively.
+  answerText?: string | null;
+  conversation?: Record<string, unknown>;
   error?: string;
 };
 
@@ -108,7 +114,12 @@ export type RunFollowupResult =
       outcome: PromptBuildOutcome;
       visibleEffect: FollowupVisibleEffect;
     }
-  | { ok: false; error: string };
+  // Answer-only (conversation gate): no build ran, but it is NOT a failure.
+  // ``isAnswer`` lets a caller render ``error`` as an info reply rather than a
+  // red error; callers that only branch on ``ok`` keep their current behaviour
+  // (dialog stays open) but now surface the real answer instead of a fake HTTP
+  // failure.
+  | { ok: false; error: string; isAnswer?: boolean };
 
 /**
  * Härleder ``FollowupVisibleEffect`` ur /api/prompt-svaret med samma
@@ -198,6 +209,20 @@ export function useFollowupBuild({
           }),
         });
         const payload = (await response.json()) as PromptApiResponse;
+        // Answer-only conversation gate: HTTP 200, no runId, an honest reply in
+        // ``answerText``. Surface the reply (not a generic failure) so a question
+        // asked from a dialog reads as an answer, matching FloatingChat. The
+        // dialog stays open (no build to apply); ``isAnswer`` marks it non-error.
+        if (
+          response.ok &&
+          !payload.runId &&
+          typeof payload.answerText === "string" &&
+          payload.answerText.trim()
+        ) {
+          const answer = payload.answerText.trim();
+          setError(answer);
+          return { ok: false, error: answer, isAnswer: true };
+        }
         if (!response.ok || !payload.runId) {
           const msg =
             payload.error ??
