@@ -1584,7 +1584,7 @@ round 2); se Stängda-sektionen.
   `"kontakt@example.se"`, `"Adress lämnas på förfrågan"`) i Project
   Input.contact när briefModel returnerade tomma kontaktfält OCH
   operatören inte fyllt fälten i wizarden OCH scrape inte kördes.
-  Discovery Resolver markerade då fieldSources["contact.phone"]="brief"
+  Discovery Resolver markerade då `fieldSources["contact.phone"]="brief"`
   eftersom värdet var icke-tomt — tekniskt sant men semantiskt fel.
   Effekten var att sajten renderade `+46 8 000 00 00` /
   `kontakt@example.se` / `Adress lämnas på förfrågan` publikt utan
