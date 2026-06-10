@@ -17,16 +17,42 @@ Public API:
     decide(router, context) -> OpenClawDecision          # the V0 core
     orchestrate(message, ...) -> OpenClawDecision         # classify+assemble+decide
     OpenClawDecision, OpenClawAction, PatchPlanRequest, ToolCall
+
+F1 slice 1 (conductor role contracts + conversation classification):
+    ROLE_CONTRACTS, RoleContract, Role, RoleDirectiveKind
+    contract_for_role(role) / role_for_edit_kind(edit_kind)
+    classify_conversation(message, ...) -> ConversationDecision
+    ConversationDecision, ConversationKind
 """
 
 from .core import decide, orchestrate
 from .models import OpenClawAction, OpenClawDecision, PatchPlanRequest, ToolCall
+from .roles import (
+    ROLE_CONTRACTS,
+    ConversationDecision,
+    ConversationKind,
+    Role,
+    RoleContract,
+    RoleDirectiveKind,
+    classify_conversation,
+    contract_for_role,
+    role_for_edit_kind,
+)
 
 __all__ = [
+    "ROLE_CONTRACTS",
+    "ConversationDecision",
+    "ConversationKind",
     "OpenClawAction",
     "OpenClawDecision",
     "PatchPlanRequest",
+    "Role",
+    "RoleContract",
+    "RoleDirectiveKind",
     "ToolCall",
+    "classify_conversation",
+    "contract_for_role",
     "decide",
     "orchestrate",
+    "role_for_edit_kind",
 ]
