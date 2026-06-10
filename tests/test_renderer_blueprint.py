@@ -45,11 +45,13 @@ from packages.generation.build.renderers import (  # noqa: E402
     render_faq,
     render_home,
     render_menu,
+    render_section_about_story,
     render_section_contact_cta,
     render_section_faq,
     render_section_hero,
     render_section_product_grid,
     render_section_service_list,
+    render_section_story,
     render_section_treatment_list,
     render_section_trust_proof,
 )
@@ -415,6 +417,127 @@ def test_hero_headline_override_wins_without_blueprint():
     )
     assert "Jakobs kakor" in hero
     assert f'>{dossier["company"]["name"]}<' not in hero
+
+
+# ---------------------------------------------------------------------------
+# ADR 0043: directives.sectionContentOverrides win over blueprint copy
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_section_content_override_wins_in_hero():
+    """A directives.sectionContentOverrides entry for the hero headline +
+    subheadline wins over both the blueprint copy AND the heroHeadline pin."""
+    dossier = _dossier("keramik-ehandel")
+    dossier["company"]["heroHeadline"] = "Pinnad gammal H1"
+    dossier["directives"] = {
+        "sectionContentOverrides": {
+            "home.hero.headline": "Operatörens nya H1",
+            "home.hero.subheadline": "Operatörens nya underrubrik",
+        }
+    }
+    blueprint = RenderBlueprint(
+        content_blocks={
+            "home.hero": {
+                "headline": "Blueprintrubrik",
+                "subheadline": "Blueprintunderrubrik",
+            }
+        }
+    )
+    hero = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=blueprint,
+    )
+    assert "Operatörens nya H1" in hero
+    assert "Operatörens nya underrubrik" in hero
+    assert "Blueprintrubrik" not in hero
+    assert "Pinnad gammal H1" not in hero
+
+
+@pytest.mark.tooling
+def test_section_content_override_about_story_headline_and_body():
+    dossier = _dossier("elektriker-malmo")
+    dossier["directives"] = {
+        "sectionContentOverrides": {
+            "about.about-story.headline": "Vår resa",
+            "about.about-story.body": "Vi har 30 års erfarenhet av elinstallationer.",
+        }
+    }
+    block = render_section_about_story(dossier)
+    assert "Vår resa" in block
+    assert "Vi har 30 års erfarenhet av elinstallationer." in block
+    # The template copy (company.name / company.story) is replaced.
+    assert "En kort, generisk berättelse om företaget." not in block
+
+
+@pytest.mark.tooling
+def test_section_content_override_home_story_body_force_renders():
+    """A home-story body override renders even when company.story is empty
+    (the operator's edit forces the section to appear)."""
+    dossier = _dossier("elektriker-malmo")
+    dossier["company"]["story"] = ""
+    dossier["directives"] = {
+        "sectionContentOverrides": {
+            "home.story.body": "Vi nämner nu vår 30-åriga erfarenhet.",
+        }
+    }
+    section = render_section_story(dossier)
+    assert "Vi nämner nu vår 30-åriga erfarenhet." in section
+
+
+@pytest.mark.tooling
+def test_section_content_override_absent_is_byte_identical():
+    """No override (or a non-matching one) renders byte-identically to today."""
+    dossier = _dossier("elektriker-malmo")
+    base = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=None,
+    )
+    dossier_with_empty = _dossier("elektriker-malmo")
+    dossier_with_empty["directives"] = {"sectionContentOverrides": {}}
+    empty = render_section_hero(
+        dossier_with_empty,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier_with_empty["variantId"],
+        blueprint=None,
+    )
+    assert base == empty
+
+
+@pytest.mark.tooling
+def test_section_content_override_ambiguous_suffix_is_ignored():
+    """Two addresses matching the same section/field suffix -> no override
+    (never silently guess), so the template copy is kept."""
+    dossier = _dossier("elektriker-malmo")
+    dossier["directives"] = {
+        "sectionContentOverrides": {
+            "home.hero.headline": "Zzzambigett",
+            "services.hero.headline": "Zzzambigtva",
+        }
+    }
+    hero = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=None,
+    )
+    # >1 address matches the same section/field suffix -> never guess.
+    assert "Zzzambigett" not in hero
+    assert "Zzzambigtva" not in hero
+    # Falls back to company.name (no override applied for the ambiguous suffix).
+    assert dossier["company"]["name"] in hero
 
 
 @pytest.mark.tooling
