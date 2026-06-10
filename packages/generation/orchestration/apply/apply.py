@@ -43,6 +43,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+# Stdlib-only shared module (B173) - importing it pulls in no brief/discovery
+# chain, so the top-level import keeps ``import ...apply`` as light as before.
+from packages.generation.followup.hero_headline_pin import (
+    latest_run_dir_for_site,
+    pin_previous_hero_headline,
+)
+
 from ..patch import PatchPlan
 from .mapping import classify_patch
 from .models import (
@@ -310,6 +317,23 @@ def apply_patch_plan(
         previous_meta = existing_meta
         previous_version = latest_version
         next_version = latest_version + 1
+
+    # 4b. B173 hero-headline carry-forward: pin the previously RENDERED hero H1
+    #     onto the merge base when the operator never set an explicit
+    #     heroHeadline. Without this, the targeted rebuild regenerates the
+    #     brief (positioning.oneLiner -> blueprint headline) and the H1 drifts
+    #     on EVERY apply-driven follow-up (the /studio OpenClaw apply-bridge
+    #     path, which never goes through generate_followup - Scout-fynd på PR
+    #     #264, painter-palma). Same shared seam + cap/fallback rules as
+    #     generate_followup; an already-set explicit heroHeadline is never
+    #     touched, and a site with no completed run is left unpinned.
+    base_run_dir = (
+        # Path already validated by read_base_run_snapshot (pattern + resolve).
+        (runs_dir / base_run_id).resolve()
+        if base_run_id is not None
+        else latest_run_dir_for_site(runs_dir, site_id)
+    )
+    pin_previous_hero_headline(previous_pi, run_dir=base_run_dir)
 
     # 5. Build the candidate Project Input: a copy of the prior version with the
     #    patch's capability slugs added to requestedCapabilities. The existing

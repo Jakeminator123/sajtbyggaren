@@ -66,6 +66,12 @@ from packages.generation.discovery.resolve import (  # noqa: E402
 )
 from packages.generation.followup import copy_directives as _copy_directives  # noqa: E402
 from packages.generation.followup import theme_directives as _theme_directives  # noqa: E402
+from packages.generation.followup.hero_headline_pin import (  # noqa: E402
+    latest_run_dir_for_site as _latest_run_dir_for_site,
+)
+from packages.generation.followup.hero_headline_pin import (  # noqa: E402
+    pin_previous_hero_headline as _pin_previous_hero_headline,
+)
 from packages.generation.followup.text import (  # noqa: E402
     _contains_any,
     _contains_any_word,
@@ -3539,6 +3545,16 @@ def generate(
     return project_input, meta, project_input_path, meta_path
 
 
+# Hero-headline carry-forward (B173): the pin helpers live in the shared
+# module ``packages/generation/followup/hero_headline_pin.py`` (imported at
+# the top as ``_pin_previous_hero_headline`` / ``_latest_run_dir_for_site``)
+# because BOTH follow-up version creators need them — ``generate_followup``
+# below (the legacy Phase 1+2 prompt follow-up) and the KÖR-7 apply step
+# (``packages/generation/orchestration/apply``, the /studio OpenClaw
+# apply-bridge path that never calls generate_followup). See the module
+# docstring for the full root-cause + honesty contract.
+
+
 def generate_followup(
     prompt: str,
     *,
@@ -3580,6 +3596,8 @@ def generate_followup(
         base_version = base_meta["version"]
         previous_version = base_version
         next_version = max(latest_version, base_version) + 1
+        # Path already validated by read_base_run_snapshot (pattern + resolve).
+        base_run_dir: Path | None = (runs_dir / base_run_id).resolve()
     else:
         previous_project_input = read_existing_project_input(
             site_id, output_dir=output_dir
@@ -3587,6 +3605,11 @@ def generate_followup(
         previous_meta_for_dna = existing_meta
         previous_version = latest_version
         next_version = latest_version + 1
+        base_run_dir = _latest_run_dir_for_site(runs_dir, site_id)
+    # B173: carry the previously RENDERED hero H1 into the merge base so the
+    # big headline stays stable when briefModel regenerates positioning at the
+    # rebuild. Explicit heading edits later in the merge still overwrite it.
+    _pin_previous_hero_headline(previous_project_input, run_dir=base_run_dir)
     now = datetime.now(UTC).isoformat(timespec="seconds")
     meta_overrides: dict[str, Any] = {
         "originalPrompt": existing_meta.get("originalPrompt", prompt),

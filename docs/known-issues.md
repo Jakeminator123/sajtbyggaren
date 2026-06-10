@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 145 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 146 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -656,6 +656,45 @@ round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B173` Medel** (stängd 2026-06-10, hero-stabilisering, samma PR som
+  registreringen) - Hero-H1 fick NY text vid VARJE följdprompt trots att ingen
+  prompt gällde rubriken (tre gånger bevisat på painter-palma: färgändring,
+  öppettiders-tillägg, skämt-test). Rotorsak: den renderade H1:an kommer från
+  blueprintens `contentBlocks["home.hero"].headline` (härledd ur briefModel
+  `positioning.oneLiner`) som REGENERERAS av varje följdprompt-ombygge; den
+  befintliga operatörs-overriden `company.heroHeadline` (kontrakt heroHeadline
+  > blueprint > company.name, `fb9692d`) sattes bara av explicita
+  rubrik-ändringar, så en aldrig-redigerad rubrik saknade ankare och driftade.
+  Fix: en delad pin-modul
+  (`packages/generation/followup/hero_headline_pin.py`, stdlib-only) pinnar
+  föregående versions FAKTISKT renderade H1 (blueprint-rubriken ur basrunens
+  `generation-package.json`, annars `company.name` - renderarens egen
+  fallback-kedja) som `company.heroHeadline` på merge-basen när fältet saknas,
+  i BÅDA följdprompt-seamsen: (1) `generate_followup`
+  (scripts/prompt_to_project_input.py, legacy Phase 1+2-vägen) och (2)
+  `apply_patch_plan` (packages/generation/orchestration/apply/apply.py, steg
+  4b - KÖR-7-kedjan bakom `run_followup_chain`/OpenClaw apply-bridgen som
+  /studio-följdprompter går genom och som ALDRIG anropar generate_followup;
+  Scout-fynd på PR #264 - utan denna seam fick painter-palma aldrig pinnen).
+  Init-bygget orört (ingen pin utan tidigare run); explicit "byt rubriken
+  till X" (copy-directives/B155-literal/LLM-copy) skriver fortfarande över
+  pinnen via `_apply_copy_directives`-mirrorn och apply rör aldrig ett redan
+  satt fält; pinnen reproducerar föregående H1 byte-för-byte och kan därför
+  aldrig ensam flippa `appliedVisibleEffect`; no-key-läget beter sig likadant
+  (deterministiska tester, inkl. mock-no-key-integration över riktiga
+  `run_followup_chain`). Bonus: B155-literal-replace kan nu matcha den
+  SYNLIGA hero-raden (operatören citerar det hen ser). Källa: operatörsfynd
+  2026-06-10, manuella klick-checkar /studio painter-palma; apply-seam-luckan
+  verifierad av Scout-granskning av PR #264. Fix: `190f5de` +
+  apply-seam `4cb0c3c`. Test:
+  `tests/test_hero_headline_stability.py::test_followup_without_heading_intent_pins_previous_hero_headline`
+  + `::test_pin_alone_renders_hero_byte_identically`
+  + `::test_explicit_heading_change_wins_over_pin`
+  + `::test_init_generation_never_pins`
+  + `::test_base_run_id_pins_that_runs_headline`
+  + `::test_apply_patch_plan_theme_directive_pins_previous_hero_headline`
+  + `::test_apply_patch_plan_does_not_overwrite_existing_explicit_hero_headline`
+  + `::test_followup_chain_restyle_pins_previous_hero_headline_end_to_end`.
 - **`B164` Medel-Hög** (stängd 2026-06-10, bug-sweep round 2) - OpenClaw
   apply-bridge-fel EFTER att KÖR-7-kedjan skrivit Project Input/version gav
   tyst dubbelbygge. `runOpenClawFollowupApply` returnerar `null` vid timeout
