@@ -99,7 +99,9 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    m.fl. överlappar i dag och ingen av termerna finns i naming-dictionaryn.
    Utgå från ADR 0036 (blueprint-and-router-vocabulary), begrepps-PR:en
    #246 och `governance/policies/naming-dictionary.v1.json`; utfall =
-   ADR + dictionary-poster.
+   ADR + dictionary-poster. Underlag finns nu som interaktiva canvases i
+   `docs/canvases/` (begreppskarta + openclaw-flöde, Steward-ägda; se
+   `docs/canvases/README.md`).
 
 **Öppna blockers / att-göra:**
 
@@ -117,6 +119,9 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
 - B155 hålls öppen (kvarvarande targets: tjänst-label-rename, bredare
   multi-field, route/element-targeting). B169-uppföljning för Christopher
   noterad i msg-0061.
+- **Delade canvases:** efter pull av canvas-PR:en kör båda operatörerna
+  `python scripts/sync_canvases.py` en gång så att begreppskartan och
+  openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
 Last verified state: `6ea53c0` (2026-06-10 ~10:00 UTC+2; `main = jakob-be`
 efter main-sync). Vägen hit: PR #268 (`2b970d9`) landade B180 (brief

@@ -85,3 +85,22 @@ jobs:
           git add docs/current-focus.md docs/handoff.md
           git commit -m "$commit_title"
           git push origin HEAD:main
+
+      - name: Refresh canvas facts
+        if: steps.trivial.outputs.skip != 'true'
+        env:
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          python scripts/update_canvas_facts.py
+
+          if git diff --quiet -- docs/canvases/; then
+            echo "Canvas facts already match main; no commit needed."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/canvases/
+          git commit -m "docs(steward-auto): refresh canvas facts for ${MERGE_SHA:0:7}"
+          git push origin HEAD:main
