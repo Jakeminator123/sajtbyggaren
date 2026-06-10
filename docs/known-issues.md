@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 0), 5 unknown, 142 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 145 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -639,41 +639,51 @@ samma kodmönster lever vidare här — därav posten:
 Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna
 granskningsagenter verifierade dem mot kod (jakob-be @ 2dbe3f9). Sex
 fixades direkt i bug-sweep round 1 (`65e5cec`, se Stängda). Fyra
-bekräftade men ofixade registreras här; resten var redan kända
-(B119/B155/B89), avsiktliga (recommendedPages-halvwire, msg-0058) eller
-medvetna fallbacks (change-set-baseline).
-
-- **`B164` Medel-Hög** - OpenClaw apply-bridge-fel EFTER att kedjan skrivit
-  Project Input/version ger tyst dubbelbygge. `runOpenClawFollowupApply`
-  returnerar `null` vid timeout (10 min)/exit!=0/trunkerad stdout/parse-fel
-  (`apps/viewser/lib/openclaw-runner.ts:244-285`), och
-  `app/api/prompt/route.ts` faller då tyst till legacy Phase 1+2 — som
-  bygger en ANDRA version ovanpå chain-versionen som redan landade
-  (`build_site.py` KÖR-7 skriver PI före targeted render). Kräver
-  fel-efter-apply-timing; vanlig no-op (`applied=false`) är säker.
-  Förslag: detektera nyligen skriven version för siteId före legacy-fallback,
-  eller returnera strukturerat fel i stället för tyst fallback (hänger ihop
-  med #7 bridge-null-diagnostik). Källa: extern RO-granskning 2026-06-09,
-  verifierad 2026-06-10. Fix: open. Test: open.
-- **`B169` Medel** - Global `promptInFlight`-mutex i `/api/prompt`
-  (`route.ts:131,366-386`) serialiserar ALLA sajter i processen — ett
-  långsamt bygge på site A blockerar init/follow-up på site B.
-  `build-runner.ts:23-40` fixade redan samma antipattern med per-site-mutex.
-  Byt till `Map<siteId, Promise>`; kräver uppdatering av source-lock-testet
-  som låser globala kön (`tests/test_viewser_api_prompt.py:191-203`).
-  Serialisering per site ska bevaras (versionsrace-skyddet). Källa: extern
-  RO-granskning 2026-06-09, verifierad 2026-06-10. Fix: open. Test: open.
-- **`B172` Låg-Medel** - `detectLatestRunIdByMtime`
-  (`apps/viewser/lib/build-runner.ts:147-175`) saknar siteId-filter: på
-  SUCCESS med trunkerad stdout (ingen `runId:`-rad) plockas globalt nyaste
-  run under `data/runs/` — ett parallellt bygge på annan site kan ge fel
-  runId i `/api/prompt`-svaret. Failure-vägen är redan skyddad (B42).
-  Fix: filtrera kandidater på siteId (läs `build-result.json`/run-meta)
-  innan mtime-val. Källa: extern RO-granskning 2026-06-09, verifierad
-  2026-06-10. Fix: open. Test: open.
+bekräftade men ofixade registrerades här (B164/B166/B169/B172); resten var
+redan kända (B119/B155/B89), avsiktliga (recommendedPages-halvwire,
+msg-0058) eller medvetna fallbacks (change-set-baseline). **Alla fyra är nu
+stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
+round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B164` Medel-Hög** (stängd 2026-06-10, bug-sweep round 2) - OpenClaw
+  apply-bridge-fel EFTER att KÖR-7-kedjan skrivit Project Input/version gav
+  tyst dubbelbygge. `runOpenClawFollowupApply` returnerar `null` vid timeout
+  (10 min)/exit!=0/trunkerad stdout/parse-fel, och `app/api/prompt/route.ts`
+  föll då tyst till legacy Phase 1+2 — som byggde en ANDRA version ovanpå
+  chain-versionen som redan landat (`build_site.py` KÖR-7 skriver PI före
+  targeted render). Fix: route:n snapshot:ar senaste KLARA run för siteId
+  (`latestCompletedRunForSite`) FÖRE bridge-anropet och jämför mot senaste run
+  EFTER ett `applyResult === null`. Dök en ny runId upp landade kedjan en
+  version → den re-surfas med ärlig degraded-status (bridge-markör
+  `degraded-recovered`) i stället för att dubbelbygga. En vanlig no-op
+  (`applied=false`) triggar INTE recovery (kedjan stannade vid en ärlig gate
+  före bygget). Ingen retry, ingen ny modellroll. Källa: extern RO-granskning
+  2026-06-09, verifierad 2026-06-10. Fix: `e35eef8`. Test:
+  `tests/test_viewser_api_prompt.py::test_b164_prompt_route_recovers_chain_version_on_bridge_failure`.
+- **`B169` Medel** (stängd 2026-06-10, bug-sweep round 2) - Global
+  `promptInFlight`-mutex i `/api/prompt` serialiserade ALLA sajter i
+  processen — ett långsamt/hängande bygge på site A blockerade init/follow-up
+  på site B. `build-runner.ts` hade redan fixat samma antipattern med en
+  per-site-mutex. Fix: bytt till `Map<string, Promise>` keyat på siteId
+  (`queueKey = payload.siteId ?? __init__:<uuid>`); follow-ups serialiseras
+  per sajt (versionsrace-skyddet bevaras), inits får en unik nyckel och kör
+  parallellt. Source-lock-testet som låste den globala kön byttes medvetet ut
+  mot per-site-låsning. Källa: extern RO-granskning 2026-06-09, verifierad
+  2026-06-10. Fix: `e35eef8`. Test:
+  `tests/test_viewser_api_prompt.py::test_b169_prompt_route_uses_per_site_mutex_not_global_inflight`.
+- **`B172` Låg-Medel** (stängd 2026-06-10, bug-sweep round 2) -
+  `detectLatestRunIdByMtime` (`apps/viewser/lib/build-runner.ts`) saknade
+  siteId-filter: på SUCCESS med trunkerad stdout (ingen `runId:`-rad) plockades
+  globalt nyaste run under `data/runs/`, så ett parallellt bygge på annan site
+  kunde ge fel runId i `/api/prompt`-svaret. Fix: funktionen tar nu en
+  `siteId`-parameter och filtrerar kandidater på `build-result.json`:s siteId
+  i mtime-ordning innan valet; success-vägen anropar
+  `detectLatestRunIdByMtime(siteId)`. Failure-vägen (B42) är oförändrad.
+  Källa: extern RO-granskning 2026-06-09, verifierad 2026-06-10. Fix:
+  `e35eef8`. Test:
+  `tests/test_viewser_api_prompt.py::test_b172_detect_latest_run_filters_by_site_id`.
 - **`B166` Medel** (stängd 2026-06-10, operatörsbeslut efter eval-rundan —
   dominant problem `contact`) - Shallow merge vid wizardens "Hämta från
   webbplats": scrape-patchen byggdes fält-för-fält på toppnivå
