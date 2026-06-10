@@ -34,7 +34,7 @@ Filerna är markerade med `pytestmark = pytest.mark.core` och valda för
 att en grön kärnlane ska betyda "kärnloopen fungerar": router →
 kontext → patch → apply → riktad render, OpenClaw-besluten, följdprompt-
 direktiven (tema/copy/sektion), versionering, hero-/brief-stabilitet
-(B173/B176), builder-smoke med route-emission, codegen → quality gate →
+(B173/B180), builder-smoke med route-emission, codegen → quality gate →
 repair, schemalåsen för artefakter och projektinput, samt
 prompt-till-projektinput och /api/prompt-seamen.
 

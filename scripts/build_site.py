@@ -1585,7 +1585,7 @@ def write_phase1_understand(
         payload_path="input.json",
     )
 
-    # B176: a follow-up build whose brief input is unchanged carries the
+    # B180: a follow-up build whose brief input is unchanged carries the
     # previous run's Site Brief forward instead of re-rolling briefModel -
     # otherwise ALL brief-derived copy (about-story, hero subheadline, quick
     # facts) drifts on every pure restyle/section/capability follow-up. The
@@ -1609,7 +1609,7 @@ def write_phase1_understand(
                     "done",
                     (
                         "Site Brief carried forward from previous run "
-                        f"{previous_run_dir.name} (unchanged brief input, B176)"
+                        f"{previous_run_dir.name} (unchanged brief input, B180)"
                     ),
                 )
     if brief is None:

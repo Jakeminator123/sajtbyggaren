@@ -374,7 +374,7 @@ def test_cli_apply_conversation_emits_sentinel_payload(monkeypatch, capsys):
 
 
 # ---------------------------------------------------------------------------
-# B178: a site-scoped question WITHOUT an explicit baseRunId auto-resolves the
+# B182: a site-scoped question WITHOUT an explicit baseRunId auto-resolves the
 # site's latest completed run (read-only) so the context payload is populated.
 # /api/prompt normally sends no baseRunId, so before the fix a site_opinion
 # question got an empty context despite runs on disk.
@@ -400,7 +400,7 @@ def _file_snapshot(root) -> set[str]:
 
 
 @pytest.mark.tooling
-def test_b178_site_opinion_without_base_run_gets_populated_context(
+def test_B182_site_opinion_without_base_run_gets_populated_context(
     monkeypatch, tmp_path
 ):
     """A site_opinion decision without baseRunId reads the site's latest run:
@@ -417,7 +417,7 @@ def test_b178_site_opinion_without_base_run_gets_populated_context(
 
     context = payload["context"]
     assert context["runId"] == "run-volt-1"
-    assert context["payload"], "context payload must not be empty (B178)"
+    assert context["payload"], "context payload must not be empty (B182)"
     assert "siteBrief" in context["payload"]
     assert payload["conversation"]["conversationKind"] == "site_opinion"
     # Read-only guarantee: the decision created no files anywhere in the tree.
@@ -425,7 +425,7 @@ def test_b178_site_opinion_without_base_run_gets_populated_context(
 
 
 @pytest.mark.tooling
-def test_b178_resolution_filters_on_site_id(monkeypatch, tmp_path):
+def test_B182_resolution_filters_on_site_id(monkeypatch, tmp_path):
     """The newest run on disk belongs to ANOTHER site - the resolver must skip
     it and pick the newest run that actually belongs to the asked site."""
     import os
@@ -446,7 +446,7 @@ def test_b178_resolution_filters_on_site_id(monkeypatch, tmp_path):
 
 
 @pytest.mark.tooling
-def test_b178_explicit_base_run_id_still_wins(monkeypatch, tmp_path):
+def test_B182_explicit_base_run_id_still_wins(monkeypatch, tmp_path):
     """An explicit baseRunId ('Iterera från denna') is forwarded verbatim and
     never overridden by the auto-resolver."""
     import os
@@ -471,7 +471,7 @@ def test_b178_explicit_base_run_id_still_wins(monkeypatch, tmp_path):
 
 
 @pytest.mark.tooling
-def test_b178_no_runs_on_disk_keeps_honest_empty_context(monkeypatch, tmp_path):
+def test_B182_no_runs_on_disk_keeps_honest_empty_context(monkeypatch, tmp_path):
     """Without any completed run the context stays honestly empty (the same
     missing-run_id note as before the fix) - nothing is invented."""
     runs_dir = tmp_path / "runs"

@@ -174,7 +174,7 @@ def _conversation_answer_decision(
 
 
 def _latest_run_id(site_id: str) -> str | None:
-    """Resolve the site's newest completed run id, read-only (B178).
+    """Resolve the site's newest completed run id, read-only (B182).
 
     /api/prompt normally sends NO ``baseRunId`` (only "Iterera från denna"
     does), so without this lookup a site_opinion/site_review question got an
@@ -208,7 +208,7 @@ def _decide(message: str, *, site_id: str | None, base_run_id: str | None):
     if site_id:
         context_kwargs["site_id"] = site_id
     if base_run_id is None and site_id:
-        # B178: auto-resolve the latest completed run (read-only) so a
+        # B182: auto-resolve the latest completed run (read-only) so a
         # site-scoped question without an explicit baseRunId still gets a
         # populated context. No runs on disk -> the assembler keeps today's
         # honest empty context + missing-run_id note.

@@ -18,7 +18,7 @@ keep resolving):
     project_input_to_brief_prompt(dossier) -> str
         Deterministic briefModel input restated from a Project Input.
     reuse_previous_site_brief(run_id, dossier, previous_run_dir) -> dict | None
-        B176 carry-forward: reuse the previous run's Site Brief on a follow-up
+        B180 carry-forward: reuse the previous run's Site Brief on a follow-up
         build whose brief input is unchanged (masked comparison), so a pure
         restyle/section/capability follow-up never re-rolls the creative copy.
 
@@ -211,7 +211,7 @@ def project_input_to_brief_prompt(dossier: dict) -> str:
     )
 
 
-# --- B176: Site Brief carry-forward on follow-up builds ---------------------
+# --- B180: Site Brief carry-forward on follow-up builds ---------------------
 #
 # Every build (init AND follow-up) used to call briefModel anew, so all
 # brief-derived copy (about-story, hero subheadline, "quick facts", ...)

@@ -319,7 +319,7 @@ def classify_conversation(
     without ``OPENAI_API_KEY`` (the optional ``model_fallback`` only lets the
     router half consult ``routerModel``, which is itself no-key safe).
 
-    Branch order matters (B177): a ``bug_report`` / ``reference_analysis``
+    Branch order matters (B181): a ``bug_report`` / ``reference_analysis``
     is guarded to ``other`` right after the edit passthrough (those kinds
     have their own downstream handling and must never be relabelled by a
     greeting or a trailing question mark), and the site-opinion branch runs
@@ -354,7 +354,7 @@ def classify_conversation(
             ),
         )
 
-    # 2. Guard (B177): bug_report / reference_analysis have their own
+    # 2. Guard (B181): bug_report / reference_analysis have their own
     #    downstream handling (plan_only in OpenClaw Core V0) and must never be
     #    relabelled as chit-chat or a plain question just because the operator
     #    greeted ("hallå, sidan funkar inte") or ended with a question mark.
@@ -366,7 +366,7 @@ def classify_conversation(
             source,
         )
 
-    # 3. Opinion / omdöme about the site. Checked BEFORE small talk (B177) so
+    # 3. Opinion / omdöme about the site. Checked BEFORE small talk (B181) so
     #    a greeting + opinion ("hej, vad tycker du om sajten?") keeps its site
     #    context instead of being answered as chit-chat.
     if router.messageKind == "site_review" or (

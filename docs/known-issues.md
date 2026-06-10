@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (av 0), 7 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -747,7 +747,7 @@ round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
 
-- **`B176` Medel** (stängd 2026-06-10, samma PR som registreringen) -
+- **`B180` Medel** (stängd 2026-06-10, samma PR som registreringen) -
   Följdprompter regenererade Site Brief ⇒ copy-drift på HELA sajten.
   Repro (volt-watt, riktig briefModel-nyckel): en ren färgändring
   ("gör sajten mörkblå") via `run_followup_chain` ändrade om-oss-stycket,
@@ -783,7 +783,7 @@ round 2); se Stängda-sektionen.
   källparitet, fältuppfräschning, schema, mock-no-key-integration över
   riktiga `run_followup_chain` för restyle + section_add, namn-ändring
   regenererar).
-- **`B177` Medel** (stängd 2026-06-10, samma PR som registreringen) -
+- **`B181` Medel** (stängd 2026-06-10, samma PR som registreringen) -
   Hälsningsfras kapade konversationsklassningen: "hej, vad tycker du om
   sajten?" → `small_talk` i stället för `site_opinion` (chatten tappade
   sajtkontexten — /api/prompt skickar bara context-snippet för
@@ -801,13 +801,13 @@ round 2); se Stängda-sektionen.
   småpratsexempel ("dra ett skämt", "hej, hur är läget?", "tjena, vad
   heter du?") gröna. Källa: cloud-agent-repro 2026-06-10, verifierad mot
   kod lokalt. Fix: `0e7d30e`. Test:
-  `tests/test_openclaw_roles.py::test_b177_greeting_plus_opinion_is_site_opinion`
-  + `::test_b177_greeting_plus_bug_report_is_other`
-  + `::test_b177_bug_report_label_is_greeting_invariant`
-  + `::test_b177_question_mark_does_not_relabel_bug_report`
-  + `::test_b177_question_mark_does_not_relabel_reference`
-  + `::test_b177_pure_greeting_is_still_small_talk`.
-- **`B178` Medel** (stängd 2026-06-10, samma PR som registreringen) -
+  `tests/test_openclaw_roles.py::test_b181_greeting_plus_opinion_is_site_opinion`
+  + `::test_b181_greeting_plus_bug_report_is_other`
+  + `::test_b181_bug_report_label_is_greeting_invariant`
+  + `::test_b181_question_mark_does_not_relabel_bug_report`
+  + `::test_b181_question_mark_does_not_relabel_reference`
+  + `::test_b181_pure_greeting_is_still_small_talk`.
+- **`B182` Medel** (stängd 2026-06-10, samma PR som registreringen) -
   OpenClaw-beslut fick TOM sajtkontext utan explicit baseRunId:
   `decide_to_json("vad tycker du om sajten?", site_id=...)` gav
   `context.payload == {}` + noten "missing required 'run_id'" trots
@@ -821,10 +821,10 @@ round 2); se Stängda-sektionen.
   explicit `baseRunId` vinner fortfarande, och utan runs på disk behålls
   dagens ärliga tomma kontext. Källa: cloud-agent-repro 2026-06-10,
   verifierad mot kod lokalt. Fix: `fc667e8`. Test:
-  `tests/test_run_openclaw_followup.py::test_b178_site_opinion_without_base_run_gets_populated_context`
-  + `::test_b178_resolution_filters_on_site_id`
-  + `::test_b178_explicit_base_run_id_still_wins`
-  + `::test_b178_no_runs_on_disk_keeps_honest_empty_context`.
+  `tests/test_run_openclaw_followup.py::test_b182_site_opinion_without_base_run_gets_populated_context`
+  + `::test_b182_resolution_filters_on_site_id`
+  + `::test_b182_explicit_base_run_id_still_wins`
+  + `::test_b182_no_runs_on_disk_keeps_honest_empty_context`.
 - **`B175` Medel** (stängd 2026-06-10, samma PR som registreringen) -
   B164-recoveryn täckte inte first-run-scenariot: gaten i
   `apps/viewser/app/api/prompt/route.ts` krävde `preBridgeLatestRun !== null`,

@@ -1,4 +1,4 @@
-"""Site Brief carry-forward across follow-up rebuilds (B176).
+"""Site Brief carry-forward across follow-up rebuilds (B180).
 
 Repro (volt-watt, 2026-06-10, real briefModel key): a pure colour restyle
 ("gör sajten mörkblå") changed the about-story, the hero subheadline and the
@@ -46,7 +46,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = REPO_ROOT / "examples" / "painter-palma.project-input.json"
 SITE_ID = "painter-palma"
 SCAFFOLD = {"id": "local-service-business"}
-SENTINEL = "SENTINEL-POSITIONING-B176-skall-overleva-carry-forward"
+SENTINEL = "SENTINEL-POSITIONING-B180-skall-overleva-carry-forward"
 
 
 def _dossier() -> dict[str, Any]:
