@@ -223,6 +223,56 @@ def test_reference_is_not_misread_as_edit_or_conversation():
 
 
 # ---------------------------------------------------------------------------
+# 3b. B177: greeting/question-mark must never hijack the classification
+# ---------------------------------------------------------------------------
+
+
+def test_b177_greeting_plus_opinion_is_site_opinion():
+    """A polite opinion ("hej, vad tycker du om sajten?") keeps its site
+    context: site_opinion, never small_talk (the greeting cue must not win)."""
+    decision = classify_conversation("hej, vad tycker du om sajten?")
+    assert decision.conversationKind == "site_opinion"
+    assert decision.role == "router"
+
+
+def test_b177_greeting_plus_bug_report_is_other():
+    """A greeted bug report ("hallå, sidan funkar inte") is never answered as
+    chit-chat: bug_report has its own downstream handling -> other."""
+    decision = classify_conversation("hallå, sidan funkar inte")
+    assert decision.messageKind == "bug_report"
+    assert decision.conversationKind == "other"
+
+
+def test_b177_bug_report_label_is_greeting_invariant():
+    """The same bug report classifies identically with and without a greeting
+    (the B177 repro: only the greeting flipped the label)."""
+    plain = classify_conversation("sidan funkar inte")
+    greeted = classify_conversation("hallå, sidan funkar inte")
+    assert plain.messageKind == greeted.messageKind == "bug_report"
+    assert plain.conversationKind == greeted.conversationKind == "other"
+
+
+def test_b177_question_mark_does_not_relabel_bug_report():
+    """A '?'-terminated bug report stays 'other' (never the question branch)."""
+    decision = classify_conversation("varför funkar inte sidan?")
+    assert decision.messageKind == "bug_report"
+    assert decision.conversationKind == "other"
+
+
+def test_b177_question_mark_does_not_relabel_reference():
+    """A '?'-terminated reference stays 'other' (never the question branch)."""
+    decision = classify_conversation("samma klocka som på aftonbladet.se?")
+    assert decision.messageKind == "reference_analysis"
+    assert decision.conversationKind == "other"
+
+
+def test_b177_pure_greeting_is_still_small_talk():
+    """A greeting without site/opinion content keeps its small-talk label."""
+    decision = classify_conversation("hallå, hur mår du?")
+    assert decision.conversationKind == "small_talk"
+
+
+# ---------------------------------------------------------------------------
 # 4. No-key parity + determinism (mirrors briefModel)
 # ---------------------------------------------------------------------------
 

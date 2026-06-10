@@ -318,6 +318,13 @@ def classify_conversation(
     chit-chat without a build. Pure and deterministic; identical with or
     without ``OPENAI_API_KEY`` (the optional ``model_fallback`` only lets the
     router half consult ``routerModel``, which is itself no-key safe).
+
+    Branch order matters (B177): a ``bug_report`` / ``reference_analysis``
+    is guarded to ``other`` right after the edit passthrough (those kinds
+    have their own downstream handling and must never be relabelled by a
+    greeting or a trailing question mark), and the site-opinion branch runs
+    BEFORE the small-talk branch so a polite "hej, vad tycker du om sajten?"
+    keeps its site context instead of being answered as chit-chat.
     """
     ctx = context or RouterContext()
     router = (
@@ -347,15 +354,21 @@ def classify_conversation(
             ),
         )
 
-    # 2. Small talk / jokes / greetings.
-    if _any_word(text, _SMALL_TALK_CUES):
+    # 2. Guard (B177): bug_report / reference_analysis have their own
+    #    downstream handling (plan_only in OpenClaw Core V0) and must never be
+    #    relabelled as chit-chat or a plain question just because the operator
+    #    greeted ("hallå, sidan funkar inte") or ended with a question mark.
+    if router.messageKind in ("bug_report", "reference_analysis"):
         return _conversation(
-            "small_talk", router,
-            "Chit-chat/joke - the dispatcher answers, no build.",
+            "other", router,
+            f"Non-edit router kind ({router.messageKind}) with dedicated "
+            "downstream handling - never relabelled by greeting/question mark.",
             source,
         )
 
-    # 3. Opinion / omdöme about the site.
+    # 3. Opinion / omdöme about the site. Checked BEFORE small talk (B177) so
+    #    a greeting + opinion ("hej, vad tycker du om sajten?") keeps its site
+    #    context instead of being answered as chit-chat.
     if router.messageKind == "site_review" or (
         _any_word(text, _OPINION_CUES) and _any_word(text, _SITE_WORDS)
     ):
@@ -366,7 +379,15 @@ def classify_conversation(
             source,
         )
 
-    # 4. Plain question (router answer/discovery, or a literal '?').
+    # 4. Small talk / jokes / greetings.
+    if _any_word(text, _SMALL_TALK_CUES):
+        return _conversation(
+            "small_talk", router,
+            "Chit-chat/joke - the dispatcher answers, no build.",
+            source,
+        )
+
+    # 5. Plain question (router answer/discovery, or a literal '?').
     if router.messageKind in ("answer_only", "component_discovery") or raw.strip().endswith("?"):
         return _conversation(
             "question", router,
@@ -374,7 +395,7 @@ def classify_conversation(
             source,
         )
 
-    # 5. Other (unclear, bug_report, reference_analysis, ...).
+    # 6. Other (unclear, ...).
     return _conversation(
         "other", router,
         f"Non-edit, non-conversational router kind ({router.messageKind}) - "
