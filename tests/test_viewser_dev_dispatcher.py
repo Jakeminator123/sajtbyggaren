@@ -25,6 +25,7 @@ reasonable proxy for behavioral correctness.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -597,4 +598,191 @@ def test_dispatcher_env_parser_expands_variable_references() -> None:
         "`[A-Za-z_][A-Za-z0-9_]*` (POSIX shell convention). Without the "
         "character-class anchor, a value like `$1.50` could be treated as "
         "a reference to `$1` and silently mangled."
+    )
+
+
+# --------------------------------------------------------------------------
+# Source-locks for prune-on-dev-start (retention-städning vid `npm run dev`).
+#
+# Operator request 2026-06-10: `.generated/<siteId>/` accumulates preview
+# builds (retention is opt-in since PR #250 and the operator never sets caps
+# manually — 20+ directories piled up overnight). The dispatcher therefore
+# runs `scripts/prune_generated_previews.py --apply` ONCE at startup, BEFORE
+# next is spawned, so the prune script's own port guard (3000 + the
+# 4100-4199 preview range, B167) is not tripped by our own dev server.
+#
+# Three properties are locked:
+#
+#   1. The prune call happens before the next-spawn and is shell-free
+#      (same DEP0190 discipline as the next-spawn itself) with --apply and
+#      a timeout so a hung prune cannot block dev start.
+#   2. Kill-switch: VIEWSER_PRUNE_ON_DEV_START=0 disables the prune
+#      entirely (default ON), with an honest Swedish log line.
+#   3. Fault tolerance: no code path inside the prune helper may stop the
+#      dev start (no process.exit), and the call site is wrapped in
+#      try/catch as a last line of defence.
+#
+# Like the rest of this file these are textual source-locks — no real
+# spawns, no real deletions.
+# --------------------------------------------------------------------------
+
+
+def test_dispatcher_runs_prune_before_next_spawn_and_shell_free() -> None:
+    """The prune call must run with --apply, shell-free, before next spawns.
+
+    Ordering matters: the prune script refuses to run while port 3000 is
+    in use, so pruning AFTER `next dev` is up would always self-block on
+    our own dev server and silently turn the feature into a no-op.
+
+    Shell-free matters: spawning the venv python via a shell string would
+    re-open the DEP0190 injection surface the next-spawn was specifically
+    rebuilt to avoid. The venv binary is invoked directly with an argv
+    array instead.
+    """
+    source = _load_dispatcher_source()
+    assert "prune_generated_previews.py" in source, (
+        "dev.mjs must invoke scripts/prune_generated_previews.py at dev "
+        "start — it is the only sanctioned deletion path for old preview "
+        "builds (port-guard + current-pointer protection live there)."
+    )
+    assert ".venv" in source, (
+        "dev.mjs must call the prune script via the repo-root venv python "
+        "(.venv/Scripts/python.exe on Windows, .venv/bin/python on Unix), "
+        "matching how the rest of the repo invokes Python tooling."
+    )
+
+    prune_call = source.index("runPruneOnDevStart();")
+    next_spawn = source.index("const child = existsSync(nextBin)")
+    assert prune_call < next_spawn, (
+        "dev.mjs must call runPruneOnDevStart() BEFORE spawning next. "
+        "Pruning after the spawn always trips the prune script's own "
+        "port-3000 guard on our own dev server, making the cleanup a "
+        "permanent no-op."
+    )
+
+    spawn_block_match = re.search(r"spawnSync\(VENV_PYTHON,[\s\S]*?\}\);", source)
+    assert spawn_block_match, (
+        "dev.mjs must spawn the prune script via "
+        "`spawnSync(VENV_PYTHON, [...])` — a direct binary + argv array, "
+        "never a shell string."
+    )
+    spawn_block = spawn_block_match.group(0)
+    assert '"--apply"' in spawn_block, (
+        "The prune spawn must pass --apply; without it the script is "
+        "dry-run-only and never deletes anything (the default caps "
+        "keep-per-site 3 / keep-total 10 are intentionally NOT overridden "
+        "here — they belong to the script)."
+    )
+    assert "shell: false" in spawn_block, (
+        "The prune spawn must use `shell: false` (DEP0190 discipline). "
+        "A shell-string spawn re-opens the injection surface the "
+        "next-spawn was rebuilt to close."
+    )
+    assert "timeout: PRUNE_TIMEOUT_MS" in spawn_block, (
+        "The prune spawn must carry a timeout so a hung prune (e.g. an "
+        "rmtree stuck on a locked node_modules) cannot block dev start "
+        "indefinitely."
+    )
+    assert "--keep-per-site" not in source and "--keep-total" not in source, (
+        "dev.mjs must NOT override the prune script's retention caps — "
+        "the defaults (keep-per-site 3, keep-total 10) are owned by "
+        "scripts/prune_generated_previews.py and shared by every caller."
+    )
+
+
+def test_dispatcher_prune_kill_switch() -> None:
+    """VIEWSER_PRUNE_ON_DEV_START=0 must disable the prune (default ON)."""
+    source = _load_dispatcher_source()
+    assert "mergedEnv.VIEWSER_PRUNE_ON_DEV_START" in source, (
+        "dev.mjs must read VIEWSER_PRUNE_ON_DEV_START from the same merged "
+        "env chain as VIEWSER_PREVIEW_MODE so the operator can set the "
+        "kill-switch in .env.local instead of every shell."
+    )
+    assert '?? "1"' in source, (
+        "The kill-switch must default to ON (`?? \"1\"`). The whole point "
+        "of the feature is zero-config cleanup — defaulting to OFF "
+        "re-creates the 20-directories-overnight problem."
+    )
+    assert "Städning av: VIEWSER_PRUNE_ON_DEV_START=0" in source, (
+        "Disabling the prune must produce an honest Swedish log line "
+        "(`Städning av: VIEWSER_PRUNE_ON_DEV_START=0`) so the operator "
+        "can tell a disabled prune apart from a failed one."
+    )
+
+
+def test_dispatcher_prune_is_fault_tolerant() -> None:
+    """A failing/hung prune must NEVER stop the dev start.
+
+    The prune script legitimately exits non-zero (SystemExit) when its
+    live-target guard finds a listener on 3000/41xx — e.g. an orphan
+    preview server. That is an expected condition, not a reason to deny
+    the operator their dev server. Locked properties:
+
+      1. No `process.exit` inside the prune helper — every failure path
+         logs honestly (`Städning skippad: <orsak>`) and returns.
+      2. The 60s timeout is a named constant.
+      3. The call site is wrapped in try/catch as a last line of defence
+         against unexpected throws in the helper itself.
+    """
+    source = _load_dispatcher_source()
+    helper_start = source.index("function runPruneOnDevStart")
+    call_site = source.index("runPruneOnDevStart();")
+    assert helper_start < call_site, (
+        "runPruneOnDevStart must be defined before its call site — the "
+        "slice below relies on that ordering."
+    )
+    helper_body = source[helper_start:call_site]
+
+    assert "process.exit" not in helper_body, (
+        "runPruneOnDevStart must never call process.exit — a failed or "
+        "blocked prune (port-guard SystemExit, missing venv, timeout) is "
+        "logged and dev start continues. Exiting here would let a stale "
+        "orphan preview server brick `npm run dev` entirely."
+    )
+    assert "Städning skippad" in helper_body, (
+        "Every failure path in runPruneOnDevStart must log an honest "
+        "Swedish `Städning skippad: <orsak>` line so the operator knows "
+        "why nothing was cleaned."
+    )
+    assert "result.error" in helper_body and "result.status !== 0" in helper_body, (
+        "runPruneOnDevStart must handle BOTH spawnSync failure shapes: "
+        "`result.error` (spawn/timeout failure) and a non-zero "
+        "`result.status` (the script's own SystemExit, e.g. the "
+        "live-target guard). Missing either path turns that failure into "
+        "an unlogged silent no-op or an uncaught crash."
+    )
+
+    assert "PRUNE_TIMEOUT_MS = 60_000" in source, (
+        "The prune timeout must be the named constant PRUNE_TIMEOUT_MS "
+        "(60s) so it is greppable and tunable; inlining the magic number "
+        "obscures the policy."
+    )
+
+    assert re.search(r"try\s*\{\s*runPruneOnDevStart\(\);\s*\}\s*catch", source), (
+        "The runPruneOnDevStart() call site must be wrapped in try/catch "
+        "so even an unexpected throw inside the helper cannot stop the "
+        "dev start (feltolerans-låset)."
+    )
+
+
+def test_dispatcher_prune_respects_dry_run_env_semantics() -> None:
+    """The dispatcher must not tamper with the script's dry-run env override.
+
+    `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true` neutralises --apply
+    INSIDE the prune script (its documented semantics). The dispatcher
+    must pass the operator's env through untouched and merely log
+    honestly when the script reports a forced dry-run — never strip or
+    override the variable to force deletion.
+    """
+    source = _load_dispatcher_source()
+    assert "SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN tvingar dry-run" in source, (
+        "dev.mjs must log honestly when the prune script's dry-run env "
+        "override neutralised --apply, so the operator is not misled "
+        "into thinking cleanup happened."
+    )
+    assert "SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN:" not in source, (
+        "dev.mjs must never set/override SAJTBYGGAREN_PREVIEW_RETENTION_"
+        "DRY_RUN in the spawned env (an `VAR:`-style key in an env object "
+        "literal) — the variable's semantics belong to "
+        "scripts/prune_generated_previews.py and the operator."
     )
