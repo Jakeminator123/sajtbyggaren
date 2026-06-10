@@ -70,14 +70,21 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    helgrön och stabil — bra fönster. Efter sync: Vercel-agenten sätter
    prod-env (`VIEWSER_ALLOWED_HOSTS` = prod-aliaset; sandbox-flaggan
    ENDAST bakom Deployment Protection).
-2. **F1 slice 3 — section_builder-dispatch (PÅGÅR i cloud-grind):**
-   rollvalet ska styra skill/prompt i kedjan (inte bara metadata), ärlig
-   roll-rad i FloatingChat, samt `expectsAnswer`-signal i decision-payloaden
-   (Scout-fynd #262). Dialog-vägens answer-only-hantering landade redan i
-   #270 (use-followup-build ytlägger svaret i stället för "HTTP 200
-   misslyckades"). OBS koordinering: Christophers #269 (toolIntent-pilot,
-   UI-halva) rör samma söm (use-followup-build + /api/prompt-dispatch) —
-   se "Öppna PR" nedan.
+2. **F1 slice 3 — section_builder-dispatch (IMPLEMENTERAD på en cloud-grind
+   PR-branch, väntar review/merge):** `run_followup_chain` väljer numera
+   section-add via den klassade rollen (`skill_for_edit_kind ==
+   SECTION_ADD_SKILL`, läser `RoleContract.skill`) i stället för rå `editKind`
+   — beteende-ekvivalent, bara section_add berörs. `ConversationDecision` bär
+   en `expectsAnswer`-signal (Scout-fynd #262) som /api/prompt +
+   use-followup-build + FloatingChat kortsluter answer-only på, och FloatingChat
+   renderar en ärlig roll-rad ur `payload.conversation`. Stylist/copy lämnades
+   medvetet utanför (egna slices; ekvivalensbeviset gäller bara section_add).
+   Dialog-vägens answer-only-hantering landade redan i #270 (use-followup-build
+   ytlägger svaret i stället för "HTTP 200 misslyckades"); roll-raden visas
+   ENDAST i FloatingChat (dialog-vägen saknar meddelandetråd). OBS koordinering:
+   Christophers #269 (toolIntent-pilot, UI-halva) rör samma söm
+   (use-followup-build + /api/prompt-dispatch) — denna slice höll
+   use-followup-build-ändringen minimal/additiv — se "Öppna PR" nedan.
 3. **Stylist-scope-beslut (operatören):** "gör sajten mörkblå" mappar
    bara `--primary` — beslutsunderlag med tre optioner ligger i
    `docs/heavy-llm-flow/openclaw-2.0-conductor.md` (slice 3-kandidat;
