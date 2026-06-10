@@ -1,10 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs). Verifierad `main` är `1cc8a92`.
+**Datum:** 2026-06-10 UTC, steward-auto efter PR #255 — docs(agents): dedupe Cloud VM preview-mode-gotchan i AGENTS.md. Verifierad `main` är `298aeed`.
 
-Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
-2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
-recommendedPages-API m.m. (15 PRs).
+Nya PRs sedan föregående checkpoint: PR #255 — docs(agents): dedupe Cloud VM
+preview-mode-gotchan i AGENTS.md.
 
 ## CLOSING-ROUND HANDOFF 2026-06-10 (natt) — ÖVERLÄMNING TILL NÄSTA AGENT
 
@@ -121,3 +120,11 @@ versionshistoriken finns kvar via `git log --follow docs/handoff.md`.
 Nya PRs sedan föregående checkpoint (ALLA mergade till `jakob-be`, ej `main`):
 #238, #239, #240, #241, #242, #243, #244, #245, #246, #247, #248, #249, #250,
 #251 samt #225 — femton stycken, ett i taget med alla guards + CI gröna per PR.
+
+### 2026-06-10 UTC — handoff.md före `1cc8a92`
+
+**Datum:** 2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs). Verifierad `main` är `1cc8a92`.
+
+Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
+2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
+recommendedPages-API m.m. (15 PRs).

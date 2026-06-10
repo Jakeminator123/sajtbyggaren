@@ -98,10 +98,9 @@ tema-applicering med en kontrastfärg (t.ex. "gör sajten mörkblå") i eval-fas
 landat plan-only och gated i `docs/heavy-llm-flow/openclaw-f1-readiness.md`
 (`6e08ce9`; ingen runtime-kod; gated på synlig section_add + refaktor-beslut).
 
-Last verified state: `1cc8a92` (2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs)).
-Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
-2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
-recommendedPages-API m.m. (15 PRs).
+Last verified state: `298aeed` (2026-06-10 UTC, steward-auto efter PR #255 — docs(agents): dedupe Cloud VM preview-mode-gotchan i AGENTS.md).
+Nya PRs sedan föregående checkpoint: PR #255 — docs(agents): dedupe Cloud VM
+preview-mode-gotchan i AGENTS.md.
 
 ## Öppna PR att känna till
 
@@ -170,3 +169,10 @@ kvällens/nattens merge-tåg, FEMTON PR:ar: #238 (`d7b87a4`), #239 (`924f1d3`),
 `main` = `16278c1`, sync till main väntar operatörsbeslut — deltat är MYCKET STORT,
 en main-sync bör övervägas snarast). Post-merge-sanity: governance 19/19, rules_sync OK,
 ruff 0, sviter gröna. Encoding-skan repo-brett (995 textfiler): inga UTF-8-fel/BOM/mojibake.
+
+### 2026-06-10 UTC — current-focus.md före `1cc8a92`
+
+Last verified state: `1cc8a92` (2026-06-09 UTC, steward-auto efter PR #252 — sync(jakob-be->main): merge-taget 2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in, recommendedPages-API m.m. (15 PRs)).
+Nya PRs sedan föregående checkpoint: PR #252 — sync(jakob-be->main): merge-taget
+2026-06-09/10 - synlig section_add (ADR 0038), golden-path-smoke, auto_prune opt-in,
+recommendedPages-API m.m. (15 PRs).
