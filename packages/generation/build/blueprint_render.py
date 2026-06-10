@@ -118,6 +118,44 @@ def _looks_like_phone_cta(label: str) -> bool:
     return any(token in low for token in _PHONE_CTA_TOKENS)
 
 
+def resolve_section_content_override(
+    dossier: dict[str, Any], section_id: str, field: str
+) -> str | None:
+    """Return the operator's section copy override for ``section_id``/``field``.
+
+    ADR 0043: a follow-up copy edit is stored on
+    ``directives.sectionContentOverrides`` as a ``"<route>.<section>.<field>"``
+    map. A section renderer reads only the dossier (no route context), so we
+    match by the ``.<section_id>.<field>`` address suffix - section ids are
+    scaffold-unique (same assumption as ``section_treatment_pick``). Returns the
+    single matching override (trimmed) so it can win over the regenerated
+    blueprint copy, mirroring the ``company.heroHeadline`` pin. Returns ``None``
+    when there is no override, the value is empty, or - to never silently guess -
+    more than one address matches the same section/field. A dossier with no
+    overrides renders byte-identically to today (the field is optional).
+    """
+    if not section_id or not field:
+        return None
+    directives = dossier.get("directives")
+    if not isinstance(directives, dict):
+        return None
+    overrides = directives.get("sectionContentOverrides")
+    if not isinstance(overrides, dict):
+        return None
+    suffix = f".{section_id}.{field}"
+    matches = [
+        value.strip()
+        for key, value in overrides.items()
+        if isinstance(key, str)
+        and key.endswith(suffix)
+        and isinstance(value, str)
+        and value.strip()
+    ]
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
 def _norm(value: Any) -> str:
     """Case/space-insensitive key for matching offer titles to dossier labels."""
     if not isinstance(value, str):

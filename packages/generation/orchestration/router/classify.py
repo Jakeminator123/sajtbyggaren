@@ -263,6 +263,31 @@ _ORDINAL_WORDS = {
     "sista": -1,
 }
 
+# Named copy sections (ADR 0043): a copy_change can name a section directly
+# ("hero-sektionen", "om-oss-sektionen") instead of by ordinal/position. Maps the
+# phrase to the section id the renderer/scaffold uses on the default (home)
+# route, so apply can target directives.sectionContentOverrides. Story/about
+# phrasings map to the home "story" section (the about copy on the default
+# route); validate_patch rejects a section that is not in the scaffold's rails,
+# so a scaffold without that section stays an honest rejected patch - never a
+# fabricated id. Only consulted in the copy_change branch, so other edit kinds
+# are unaffected.
+_NAMED_COPY_SECTIONS = {
+    "hero-sektionen": "hero", "hero-sektion": "hero", "herosektionen": "hero",
+    "hjältesektionen": "hero", "hjältesektion": "hero", "hero": "hero",
+    "hjälte": "hero",
+    "om-oss-sektionen": "story", "om oss-sektionen": "story",
+    "om-oss-sektion": "story", "om oss": "story", "om-oss": "story",
+    "berättelsen": "story", "berättelse": "story", "historien": "story",
+    "historia": "story", "vår historia": "story", "storyn": "story",
+    "story": "story",
+}
+# Longest-first so "hero-sektionen" wins over a bare "hero" (both map to hero,
+# but specificity keeps the match deterministic).
+_NAMED_COPY_SECTION_PHRASES = tuple(
+    sorted(_NAMED_COPY_SECTIONS, key=len, reverse=True)
+)
+
 # Multi-word positions first so "till vänster" wins over a bare token.
 _POSITION_PHRASES = (
     ("längst upp", "top"), ("högst upp", "top"), ("i toppen", "top"),
@@ -464,6 +489,40 @@ def _detect_ordinal(text: str) -> int | None:
     return None
 
 
+def _detect_named_copy_section(text: str) -> str | None:
+    """Return the section id a copy_change names directly, or None (ADR 0043)."""
+    for phrase in _NAMED_COPY_SECTION_PHRASES:
+        if _word_present(text, phrase):
+            return _NAMED_COPY_SECTIONS[phrase]
+    return None
+
+
+def _copy_change_target(
+    text: str, ctx: RouterContext, ordinal_target: RouterTarget | None
+) -> RouterTarget | None:
+    """Resolve a copy_change target, preferring a named section (ADR 0043).
+
+    Starts from the ordinal/position target ``_build_target`` produced and fills
+    in a named-section id ("hero-sektionen" -> ``hero``, "om-oss-sektionen" ->
+    ``story``) when the operator addressed a section by name. Returns ``None``
+    when neither a named section nor an ordinal/position was given (the planner
+    then has nothing to address and the copy edit stays an honest no-op).
+    """
+    named_section = _detect_named_copy_section(text)
+    if named_section is None:
+        return ordinal_target
+    if ordinal_target is None:
+        return RouterTarget(routeId=ctx.defaultRouteId, sectionId=named_section)
+    if ordinal_target.sectionId is None:
+        return RouterTarget(
+            routeId=ordinal_target.routeId or ctx.defaultRouteId,
+            sectionId=named_section,
+            sectionOrdinal=ordinal_target.sectionOrdinal,
+            position=ordinal_target.position,
+        )
+    return ordinal_target
+
+
 def _build_target(text: str, ctx: RouterContext) -> RouterTarget | None:
     ordinal = _detect_ordinal(text)
     position = _detect_position(text)
@@ -658,10 +717,23 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
         result.target = target
         return result
 
-    # copy_change: explicit copy verb, or a change verb + a copy noun.
-    if has_copy_verb or (has_change_verb and _any_word(work, _COPY_NOUNS)):
+    # copy_change: explicit copy verb, or a change/redesign verb + a copy noun.
+    # A bare redesign verb ("gör om") is a whole-site restyle, but "gör om
+    # texten"/"gör om rubriken" (a redesign verb + a copy noun, no whole-site
+    # ref) is a section copy edit, not a visual restyle - catch it here, before
+    # the visual_style branch below (ADR 0043). The target (named section like
+    # "hero-sektionen"/"om-oss-sektionen", or an ordinal) is attached so the
+    # patch planner has a section to address; copy_change carried no target
+    # before this slice, so attaching one cannot regress an existing decision.
+    has_copy_noun = _any_word(work, _COPY_NOUNS)
+    if (
+        has_copy_verb
+        or (has_change_verb and has_copy_noun)
+        or (has_redesign and has_copy_noun and not _has_site_ref(work))
+    ):
         result.editKind = "copy_change"
         result.scope = "component"
+        result.target = _copy_change_target(work, ctx, target)
         return result
 
     # visual_style: a style/redesign verb, an adjective in style context, or a
@@ -950,6 +1022,12 @@ def _decide_single_edit(
     if edit_kind == "visual_style" and _FULL_REDESIGN_RE.search(text):
         build = "full_rebuild"
     if edit_kind == "visual_style" and edit.target is not None:
+        context_level = "artifacts_plus_sections"
+    # A copy_change that addresses a concrete section needs the section rails so
+    # the patch planner can resolve + validate the section (ADR 0043). Without a
+    # target there is nothing to address, so the lighter "artifacts" level (and
+    # the honest no-op) is kept.
+    if edit_kind == "copy_change" and edit.target is not None:
         context_level = "artifacts_plus_sections"
 
     return RouterDecision(

@@ -375,6 +375,30 @@ integrate christopher-ui discovery and asset workflow`, merge
   TYST och full-rebuilden rapporterar ändå `appliedVisibleEffect=true`. Detta
   är den konkreta repron bakom B178 — håll B155 + B178 ihopkopplade tills
   fri-text-replace + ärlig avvisning täcker fallet.
+  Slice 2026-06-10 (ADR 0043, sektionscopy via apply — "funktionen som faktiskt
+  utför den"): en `copy_change` mot en sektion mappas nu i apply
+  (`packages/generation/orchestration/apply/`) till det nya valfria fältet
+  `directives.sectionContentOverrides` ("<routeId>.<sectionId>.<field>" -> text,
+  field = headline | subheadline | body) och renderaren låter overriden vinna
+  över blueprint-copyn (samma mönster som `company.heroHeadline`-pinnen). Routern
+  attar nu en named-section-target för `copy_change` ("hero-sektionen" -> hero,
+  "om-oss-sektionen" -> home story) och "gör om <copy-noun>" klassas som
+  copy_change i stället för visual_style. Den nya texten härleds deterministiskt
+  ur följdprompten genom copyDirective-guarderna; `... till "X"`/citat/kolon
+  ersätter, och `body` stödjer även `...så den nämner X` (lägg-till). Pilotacceptans
+  verifierad deterministiskt: "ändra texten i hero-sektionen till X" och "gör om
+  texten i om-oss-sektionen så den nämner Y" ger ny version + synlig ändring +
+  `appliedVisibleEffect`/`previewShouldRefresh=true`. Test:
+  `tests/test_section_content_overrides.py`,
+  `tests/test_patch_apply.py::test_apply_copy_change_*`,
+  `tests/test_renderer_blueprint.py::test_section_content_override_*`.
+  Kvarstår (egen uppföljning, håller B155 öppen):
+  (a) **generativ omskrivning utan explicit värde** ("gör om texten så den låter
+  mer premium" utan citat/markör) kräver copyModel — den deterministiska vägen
+  är fortsatt en ärlig no-op tills copyModel-passet kopplas in i apply;
+  (b) **compound-prompter** ("gör den coolare och lägg till ett skämt") rapporterar
+  ännu inte otillämpade delar via `unappliedFollowupIntents` på apply-vägen — de
+  tappas tyst i dag. Fler sektioner/routes/scaffolds är också utanför slicen.
 
 - **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
   renderar företagets logo via Next.js `Image` utan ett komplett aspekt-

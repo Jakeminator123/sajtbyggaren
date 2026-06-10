@@ -49,6 +49,15 @@ _LEAF_BY_EDIT: dict[EditKind, str] = {
     "copy_change": "headline",
 }
 
+# Section ids whose primary editable copy is a body paragraph rather than a
+# headline (story / about copy). A ``copy_change`` on one of these addresses the
+# ``body`` leaf so apply maps it to the section's body override (ADR 0043),
+# while every other section keeps ``headline`` (hero etc.). Mirrors the story
+# section ids the renderer reads (blueprint_render._STORY_SECTION_IDS).
+_COPY_BODY_SECTION_IDS: frozenset[str] = frozenset(
+    {"story", "about-story", "about-story-block"}
+)
+
 # componentIntent (router slug) -> capability slug (capability-map.v1.json key).
 # Only intents that correspond to a registered capability are mapped; intents
 # without a capability (e.g. clock_widget, button, image) are treated as inline
@@ -142,6 +151,10 @@ def _plan_one(
     section_id, resolve_error = _resolve_section(rails, route_id, target)
 
     leaf = _LEAF_BY_EDIT[edit_kind]
+    # A copy_change against a story/about section edits its body paragraph, not a
+    # headline (ADR 0043). Other sections (hero etc.) keep the headline leaf.
+    if edit_kind == "copy_change" and section_id in _COPY_BODY_SECTION_IDS:
+        leaf = "body"
     field = f"contentBlocks.{route_id}.{section_id}.{leaf}"
     value = _build_value(edit_kind, component_intent, target)
 

@@ -249,6 +249,22 @@
             ]
           }
         },
+        "sectionContentOverrides": {
+          "type": "object",
+          "maxProperties": 24,
+          "additionalProperties": false,
+          "description": "Operatör-redigerad sektionscopy härledd ur en följdprompt (ADR 0043, GAP-followup-prompt-content-passthrough, B155-resten). En map där nyckeln är ett sektionsmål på formen '<routeId>.<sectionId>.<field>' (field = headline | subheadline | body) och värdet är den nya, redan validerade texten. Apply (packages/generation/orchestration/apply) mappar patch-planerarens contentBlocks-mål hit i nästa immutabla version; bara de tre vitlistade textfälten accepteras (aldrig fri filpatch). Renderaren (packages/generation/build) låter en override vinna över blueprint-copyn (samma mönster som company.heroHeadline-pinnen) och faller annars tillbaka byte-stabilt. Varje värde filtreras genom samma public-copy-guards som copyDirectives så operatörens instruktionstext aldrig renderas okontrollerat som kundcopy. Mappen ersätts inte per version utan lever vidare i Project Input och överlever brief-reuse (B180) och hero-pinnen (B173) — en senare följdprompt lägger till/uppdaterar bara sina egna nycklar. Koden cappar per fält snävare än schemats maxLength: headline/subheadline 200, body 600.",
+          "propertyNames": {
+            "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*\\.(headline|subheadline|body)$"
+          },
+          "patternProperties": {
+            "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*\\.(headline|subheadline|body)$": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            }
+          }
+        },
         "mountedSections": {
           "type": "array",
           "maxItems": 16,

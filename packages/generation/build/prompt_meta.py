@@ -334,7 +334,15 @@ def _prompt_meta_followup_intent_id(prompt_meta: dict[str, Any] | None) -> str |
 
 
 def _has_copy_directives(payload: Any) -> bool:
-    """Detect a future ``copyDirectives[]`` contract without implementing it."""
+    """Detect an applied copy edit (copyDirectives or sectionContentOverrides).
+
+    Used by the follow-up honesty signal (ROW 3): when the operator asked to
+    replace visible copy, a byte diff is only an honest "applied" effect if a
+    real copy edit was actually recorded. ADR 0043 adds
+    ``directives.sectionContentOverrides`` as a second applied-copy shape (a
+    section text override), so an override-driven edit is recognised here too
+    and never mis-reported as a phantom ``copy_directive_not_applied`` no-op.
+    """
     if not isinstance(payload, dict):
         return False
     copy_directives = payload.get("copyDirectives")
@@ -344,7 +352,10 @@ def _has_copy_directives(payload: Any) -> bool:
     if not isinstance(directives, dict):
         return False
     nested_copy_directives = directives.get("copyDirectives")
-    return isinstance(nested_copy_directives, list) and bool(nested_copy_directives)
+    if isinstance(nested_copy_directives, list) and bool(nested_copy_directives):
+        return True
+    section_overrides = directives.get("sectionContentOverrides")
+    return isinstance(section_overrides, dict) and bool(section_overrides)
 
 
 def _placeholder_contact_warning_message(fields: list[str]) -> str:

@@ -476,6 +476,8 @@ def test_apply_reports_inline_component_as_unmapped(
 def test_apply_reports_copy_change_as_unmapped(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """A copy_change whitelisted target with NO follow-up prompt (no derivable
+    text) stays an honest no-op (ADR 0043): apply never invents copy."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     _init_site(tmp_path)
     result = apply_patch_plan(
@@ -485,6 +487,30 @@ def test_apply_reports_copy_change_as_unmapped(
     assert len(result.unmapped) == 1
     assert "copy_change" in result.unmapped[0].reason
     assert not (tmp_path / f"{SITE_ID}.v2.project-input.json").exists()
+
+
+def test_apply_copy_change_with_text_writes_section_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ADR 0043: a copy_change against a whitelisted section field WITH a
+    derivable new text from the follow-up prompt is now applied as a
+    directives.sectionContentOverrides entry (no longer a no-op)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        _copy_change_patch(),
+        site_id=SITE_ID,
+        follow_up_prompt="ändra texten i hero-sektionen till Snabb och trygg el",
+        output_dir=tmp_path,
+    )
+    assert result.applied is True
+    assert result.version == 2
+    assert not result.unmapped
+    v2 = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    overrides = (v2.get("directives") or {}).get("sectionContentOverrides") or {}
+    assert overrides == {"home.hero.headline": "Snabb och trygg el"}
 
 
 def test_apply_is_all_or_nothing_for_mixed_plan(
