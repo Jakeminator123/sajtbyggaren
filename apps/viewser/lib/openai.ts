@@ -38,6 +38,11 @@ const DEFAULT_MAX_OUTPUT_TOKENS = 1500;
 const MAX_INPUT_CHARS_PER_MESSAGE = 8000;
 const MAX_MESSAGES_PER_REQUEST = 40;
 
+// Fråga.. vad är max-tokengränsen här då?
+// Svar: max-tokengränsen (per svar, dvs max antalet tokens som modellen får generera) sätts av DEFAULT_MAX_OUTPUT_TOKENS,
+// dvs 1500 tokens som default, men kan överskrivas via env-variabeln VIEWSER_MAX_CHAT_TOKENS. Modeller har olika absoluta gränser
+// (t.ex. gpt-4o har 128k tokens totalt för prompt+output), men denna kod begränsar *svarstokens* till maxOutputTokens().
+
 let openaiClient: OpenAI | null = null;
 let openaiClientKey: string | null = null;
 
@@ -117,6 +122,7 @@ export async function chatWithOpenAi(messages: ChatMessage[]): Promise<{
   // B176: nyare modeller (gpt-5.x) avvisar `max_tokens` med 400
   // "Unsupported parameter" — `max_completion_tokens` är ersättaren och
   // accepteras även av äldre chat-modeller.
+  // max_completion_tokens = max-tokengränsen här, d.v.s. (oftast) 1500 tokens per svar se ovan.
   const completion = await client.chat.completions.create({
     model,
     messages,
