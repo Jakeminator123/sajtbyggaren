@@ -1079,6 +1079,11 @@ async function tryReuseSandboxPreview(
     });
     installMs = Date.now() - tInstall;
     if (install.exitCode !== 0) {
+      // Transient fail på en RUNNING sandbox (Vercel-bot-fynd på PR 276):
+      // recorden med det deterministiska namnet finns kvar efter safeStop, så
+      // fulla vägen MÅSTE använda tidsstämplat namn denna cykel — annars
+      // garanterad namnkollision i Sandbox.create.
+      pendingEphemeralFallbackSites.add(request.siteId);
       await safeStop(sandbox);
       return null;
     }
@@ -1103,6 +1108,9 @@ async function tryReuseSandboxPreview(
     const isUp = await waitForPublicUrl(url);
     readyMs = Date.now() - tReady;
     if (!isUp) {
+      // Samma transient-fail-regel som install-grenen ovan: markera ephemeral
+      // fallback så fulla vägen inte kolliderar med den kvarvarande recorden.
+      pendingEphemeralFallbackSites.add(request.siteId);
       await safeStop(sandbox);
       return null;
     }
@@ -1131,7 +1139,10 @@ async function tryReuseSandboxPreview(
       logs,
     };
   } catch {
-    // Oväntat fel under reuse → fall ärligt tillbaka på fulla vägen (ny sandbox).
+    // Oväntat fel under reuse → fall ärligt tillbaka på fulla vägen (ny
+    // sandbox). Även här: den deterministiskt namngivna recorden lever kvar,
+    // så fallbacken måste ta tidsstämplat namn (transient-fail-regeln).
+    pendingEphemeralFallbackSites.add(request.siteId);
     await safeStop(sandbox);
     return null;
   }

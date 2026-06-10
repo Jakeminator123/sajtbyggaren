@@ -352,6 +352,37 @@ def test_name_collision_strategy_locks_both_miss_branches() -> None:
 
 
 @pytest.mark.tooling
+def test_transient_reuse_failures_mark_ephemeral_fallback() -> None:
+    """Lås (Vercel-bot-fynd på PR #276): ett TRANSIENT fel på en RUNNING
+    sandbox (install-fel, ready-timeout, oväntad throw) lämnar recorden med
+    det deterministiska namnet kvar efter ``safeStop`` — så varje sådan gren
+    måste ``pendingEphemeralFallbackSites.add(request.siteId)`` innan den
+    returnerar null, annars kolliderar fulla vägens ``Sandbox.create`` med
+    namnet. Låser: VARJE ``safeStop(sandbox)`` i reuse-funktionen föregås av
+    ephemeral-markeringen (clean-miss-grenen rör ingen safeStop och förblir
+    omarkerad per lås 10)."""
+    text = _runner_text()
+    reuse_fn = _slice(
+        text,
+        "async function tryReuseSandboxPreview(",
+        "\nexport async function stopSandboxPreview(",
+    )
+    stops = [m.start() for m in re.finditer(r"await safeStop\(sandbox\);", reuse_fn)]
+    assert len(stops) >= 3, (
+        "Reuse-funktionen ska ha minst tre transienta felgrenar med "
+        "``await safeStop(sandbox);`` (install-fel, ready-timeout, catch)."
+    )
+    for stop_idx in stops:
+        preceding = reuse_fn[max(0, stop_idx - 400) : stop_idx]
+        assert "pendingEphemeralFallbackSites.add(request.siteId)" in preceding, (
+            "En transient felgren anropar ``safeStop(sandbox)`` utan att först "
+            "markera ``pendingEphemeralFallbackSites.add(request.siteId)`` — "
+            "fulla vägen skapar då med det deterministiska namnet medan den "
+            "stoppade recorden finns kvar → namnkollision (Vercel-bot-fyndet)."
+        )
+
+
+@pytest.mark.tooling
 def test_reuse_totalms_measured_before_sandbox_get() -> None:
     """Lås (ADR 0041 §mätbarhet): reuse-vägens ``totalMs`` mäts från FÖRE
     ``Sandbox.get`` så den är jämförbar med fulla vägens ``totalMs`` (som mäts
