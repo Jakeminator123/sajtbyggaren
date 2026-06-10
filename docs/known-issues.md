@@ -392,13 +392,25 @@ integrate christopher-ui discovery and asset workflow`, merge
   `tests/test_section_content_overrides.py`,
   `tests/test_patch_apply.py::test_apply_copy_change_*`,
   `tests/test_renderer_blueprint.py::test_section_content_override_*`.
+  Slice 2026-06-10 (ADR 0047, generativ sektionsomskrivning — uppföljning (a)
+  löst): editPlan-läget i `copyDirectiveModel` breddades till de vitlistade
+  sektionsfälten. När `derive_section_edit` inte hittar ett explicit värde och
+  följdprompten är en omskrivnings-instruktion ("gör om-oss-texten varmare",
+  "skriv om heron så den låter mer premium") läser apply sektionens aktuella
+  copy (befintlig override eller blueprint-copy) + instruktionen och genererar
+  ny text via samma public-copy-guard + grundnings-vakt som `copyDirectives`;
+  name/tagline genereras aldrig. Applicering ENBART via
+  `directives.sectionContentOverrides` (ingen ny skrivyta/renderer-/schema-
+  ändring). Utan `OPENAI_API_KEY`: ärlig no-op (mock-paritet, byte-identisk med
+  förr). Test: `tests/test_section_content_overrides.py` (mockad LLM +
+  mock-paritet + guards), `tests/test_followup_copy_directives.py` (gate/guard-
+  units).
   Kvarstår (egen uppföljning, håller B155 öppen):
-  (a) **generativ omskrivning utan explicit värde** ("gör om texten så den låter
-  mer premium" utan citat/markör) kräver copyModel — den deterministiska vägen
-  är fortsatt en ärlig no-op tills copyModel-passet kopplas in i apply;
   (b) **compound-prompter** ("gör den coolare och lägg till ett skämt") rapporterar
   ännu inte otillämpade delar via `unappliedFollowupIntents` på apply-vägen — de
-  tappas tyst i dag. Fler sektioner/routes/scaffolds är också utanför slicen.
+  tappas tyst i dag. Icke-numeriska påhittade fakta hålls bara av systemprompten
+  (samma begränsning som ADR 0034). Fler sektioner/routes/scaffolds är också
+  utanför slicen.
 
 - **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
   renderar företagets logo via Next.js `Image` utan ett komplett aspekt-

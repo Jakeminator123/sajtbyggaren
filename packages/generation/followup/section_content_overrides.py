@@ -29,20 +29,27 @@ from __future__ import annotations
 from typing import Any
 
 from packages.generation.followup.copy_directives import (
+    _COPY_CONTENT_REWRITE_VERBS,
     _extract_explicit_replace_value,
     _extract_replace_value,
+    _followup_is_additive_request,
+    _planned_payload_grounded,
     _safe_copy_payload,
 )
 from packages.generation.followup.text import (
     _contains_any,
+    _contains_any_word,
     _normalise_followup_text,
 )
 
 __all__ = [
     "SECTION_OVERRIDE_FIELDS",
     "build_section_override_key",
+    "current_section_text",
     "derive_section_edit",
+    "is_section_content_rewrite_request",
     "parse_section_content_field",
+    "plan_section_edit_via_llm",
     "render_section_override_text",
 ]
 
@@ -244,3 +251,179 @@ def section_base_text(
             if isinstance(value, str) and value.strip():
                 return value.strip()
     return None
+
+
+def current_section_text(
+    project_input: dict[str, Any], route_id: str, section_id: str, field: str
+) -> str | None:
+    """The section's CURRENT effective copy (base for a generative rewrite).
+
+    Prefers a carried-forward ``directives.sectionContentOverrides`` value for
+    this exact ``<route>.<section>.<field>`` target (so a later rewrite builds on
+    the operator's previous edit), else the structured blueprint copy the
+    renderer reads (``section_base_text``). Returns ``None`` when no base copy is
+    available. Used by the apply-side editPlan reader (ADR 0047) both as the
+    rewrite base shown to the model and as the grounding source for the number
+    guard.
+    """
+    directives = project_input.get("directives")
+    if isinstance(directives, dict):
+        overrides = directives.get("sectionContentOverrides")
+        if isinstance(overrides, dict):
+            prior = overrides.get(
+                build_section_override_key(route_id, section_id, field)
+            )
+            if isinstance(prior, str) and prior.strip():
+                return prior.strip()
+    return section_base_text(project_input, route_id, section_id, field)
+
+
+# Quality / tone-shift hints that mark a *vibe rewrite* of section copy even
+# without an explicit "skriv om"-style verb. The task's canonical phrasing
+# "gör om-oss-texten varmare" is a make-verb + a comparative quality word, not
+# one of the ADR 0034 rewrite verbs, so the gate must also recognise a
+# make-verb paired with such a hint. Matched as substrings of the normalised
+# prompt (NFKC + lower-case, diacritics preserved), so both Swedish and English
+# comparatives are caught. Kept narrow + paired with a make-verb so a bare
+# adjective never engages generation on its own.
+_SECTION_REWRITE_MAKE_VERBS: tuple[str, ...] = (
+    "gör",
+    "gor",
+    "göra",
+    "gora",
+    "make",
+    "låt",
+    "lat",
+    "fräscha",
+    "frascha",
+    "piffa",
+    "pimpa",
+    "modernisera",
+)
+_SECTION_REWRITE_QUALITY_HINTS: tuple[str, ...] = (
+    "varmare",
+    "kallare",
+    "coolare",
+    "snyggare",
+    "tydligare",
+    "enklare",
+    "kortare",
+    "längre",
+    "langre",
+    "personligare",
+    "lyxigare",
+    "modernare",
+    "fräschare",
+    "fraschare",
+    "vassare",
+    "mjukare",
+    "premium",
+    "lyxig",
+    "exklusiv",
+    "professionell",
+    "säljande",
+    "saljande",
+    "levande",
+    "personlig",
+    "inbjudande",
+    "modern",
+    "fräsch",
+    "frasch",
+    "mer ",
+    "mindre ",
+    "more ",
+    "less ",
+    "warmer",
+    "cooler",
+    "punchier",
+    "catchier",
+)
+
+
+def is_section_content_rewrite_request(field: str, follow_up_prompt: str) -> bool:
+    """True when the follow-up is a vibe rewrite of a whitelisted section field.
+
+    A generative editPlan (ADR 0047) only fires when the deterministic
+    ``derive_section_edit`` already returned ``None`` (no literal value the
+    operator supplied). This gate requires a transformation intent - either a
+    rewrite/improve verb (the ADR 0034 nivå 3a set) OR a make-verb paired with a
+    comparative/quality hint ("gör om-oss-texten varmare", "gör hero-texten mer
+    premium") - and rejects an additive / section-add phrasing, so a plain "add a
+    section" or a literal replace never routes into generation. A still-explicit
+    value also bails (the deterministic path owns it).
+    """
+    if field not in SECTION_OVERRIDE_FIELDS:
+        return False
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return False
+    # An explicit literal value is the deterministic path's job, not the
+    # planner's - never generate when the operator already gave the words.
+    if _extract_explicit_replace_value(follow_up_prompt) is not None:
+        return False
+    if _followup_is_additive_request(text):
+        return False
+    has_rewrite_verb = _contains_any_word(text, _COPY_CONTENT_REWRITE_VERBS)
+    has_quality_shift = _contains_any_word(
+        text, _SECTION_REWRITE_MAKE_VERBS
+    ) and _contains_any(text, _SECTION_REWRITE_QUALITY_HINTS)
+    return has_rewrite_verb or has_quality_shift
+
+
+def plan_section_edit_via_llm(
+    field: str,
+    follow_up_prompt: str,
+    *,
+    base_text: str | None,
+    language: str,
+) -> tuple[str, str] | None:
+    """Generative editPlan for ONE whitelisted section field (ADR 0047).
+
+    Returns ``("replace", text)`` with guarded, grounded, capped customer copy,
+    or ``None`` when nothing safe can be generated. ``None`` is returned without
+    an ``OPENAI_API_KEY`` (honest no-op / mock parity), when the gate rejects the
+    request, on any model error, or when the generated payload trips the same
+    public-copy guard (`_safe_copy_payload`) or grounding guard
+    (`_planned_payload_grounded`) as copyDirectives - the raw instruction can
+    never become customer copy and an ungrounded number is dropped. ``base_text``
+    is the section's current copy (resolved by the caller via
+    ``current_section_text``); it is the rewrite base shown to the model and the
+    grounding source. Generation is always a ``replace`` (full new text), like
+    the about-text editPlan precedent.
+    """
+    if field not in SECTION_OVERRIDE_FIELDS:
+        return None
+    if not is_section_content_rewrite_request(field, follow_up_prompt):
+        return None
+    base = (base_text or "").strip()
+    # Lazy import (cycle break): mirrors copy_directives._plan_copy_directives_via_llm.
+    try:
+        from packages.generation.brief.extract import plan_section_copy_rewrite_llm
+        from packages.generation.brief.models import resolve_copy_directive_model
+
+        model = resolve_copy_directive_model()
+        text = plan_section_copy_rewrite_llm(
+            follow_up_prompt,
+            field=field,
+            current_text=base,
+            language=language,
+            model=model,
+        )
+    except Exception:  # noqa: BLE001
+        return None
+    if not text:
+        return None
+    payload = _safe_copy_payload(
+        text, follow_up_prompt=follow_up_prompt, max_length=_FIELD_MAX_LENGTH[field]
+    )
+    if payload is None:
+        return None
+    # Grounding guard: a generated payload must not introduce a multi-digit
+    # number (founding year, price, count, percentage) absent from the current
+    # section copy and the follow-up prompt. Same whole-token guard as the
+    # copyDirectives editPlan (ADR 0034); non-numeric facts stay a documented
+    # limitation held by the system prompt.
+    grounding_text = f"{base} {follow_up_prompt}"
+    if not _planned_payload_grounded(payload, grounding_text):
+        return None
+    return "replace", payload

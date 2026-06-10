@@ -34,8 +34,11 @@ if str(REPO_ROOT) not in sys.path:
 
 from packages.generation.followup.section_content_overrides import (  # noqa: E402
     SECTION_OVERRIDE_FIELDS,
+    current_section_text,
     derive_section_edit,
+    is_section_content_rewrite_request,
     parse_section_content_field,
+    plan_section_edit_via_llm,
     render_section_override_text,
 )
 from packages.generation.orchestration.apply import (  # noqa: E402
@@ -465,3 +468,273 @@ def test_pilot_router_plan_apply_renders_visible_change(
     # The renderer resolves the override the apply wrote (visible change).
     _route, section_id, field = parse_section_content_field(expected_field)
     assert resolve_section_content_override(v2, section_id, field) is not None
+
+
+# ---------------------------------------------------------------------------
+# ADR 0047: generativ sektionsomskrivning utan explicit värde (editPlan)
+# ---------------------------------------------------------------------------
+
+# Mock seam: section editPlan calls copyDirectiveModel via this function. Tests
+# monkeypatch it to simulate the model (mirrors the copyDirectives editPlan
+# tests' _PLANNER_PATH), so they stay deterministic and need no API key.
+_SECTION_PLANNER_PATH = (
+    "packages.generation.brief.extract.plan_section_copy_rewrite_llm"
+)
+
+
+# --- unit: the rewrite-intent gate ------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("field", "prompt"),
+    [
+        ("body", "gör om-oss-texten varmare"),
+        ("headline", "skriv om heron så den låter mer premium"),
+        ("headline", "förbättra texten i hero"),
+        ("headline", "gör hero-texten lite coolare"),
+        ("body", "gör den mer levande"),
+        ("subheadline", "snygga till underrubriken"),
+    ],
+)
+def test_is_section_content_rewrite_request_positive(field: str, prompt: str) -> None:
+    assert is_section_content_rewrite_request(field, prompt) is True
+
+
+@pytest.mark.parametrize(
+    ("field", "prompt"),
+    [
+        # Explicit literal value -> deterministic path owns it, never generate.
+        ("headline", 'ändra hero till "Hej världen"'),
+        ("body", 'gör om om-oss-texten till "Vi är ett familjeföretag"'),
+        # Additive / section-add -> never a copy rewrite.
+        ("body", "lägg till en faq-sektion"),
+        # No transformation intent at all.
+        ("headline", "gör hero-texten"),
+        ("headline", "vad kostar en hemsida?"),
+        # Field outside the whitelist.
+        ("eyebrow", "gör texten varmare"),
+    ],
+)
+def test_is_section_content_rewrite_request_negative(field: str, prompt: str) -> None:
+    assert is_section_content_rewrite_request(field, prompt) is False
+
+
+# --- unit: current section text (rewrite base) ------------------------------
+
+
+def test_current_section_text_prefers_carried_forward_override() -> None:
+    pi = {
+        "company": {"story": "Blueprint-historien", "tagline": "Tag", "name": "Bolaget"},
+        "directives": {"sectionContentOverrides": {"home.story.body": "Tidigare override"}},
+    }
+    assert current_section_text(pi, "home", "story", "body") == "Tidigare override"
+
+
+def test_current_section_text_falls_back_to_blueprint_copy() -> None:
+    pi = {"company": {"story": "Blueprint-historien", "tagline": "Tag"}}
+    assert current_section_text(pi, "home", "story", "body") == "Blueprint-historien"
+    assert current_section_text(pi, "home", "hero", "subheadline") == "Tag"
+
+
+# --- unit: the generative wrapper (mocked model + guards) -------------------
+
+
+def test_plan_section_edit_via_llm_generates_replace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    new_text = "En varm, personlig berättelse om vårt lokala hantverk"
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, lambda *a, **k: new_text)
+    edit = plan_section_edit_via_llm(
+        "body",
+        "gör om-oss-texten varmare",
+        base_text="En kort historia om verkstaden.",
+        language="sv",
+    )
+    assert edit == ("replace", new_text)
+
+
+def test_plan_section_edit_via_llm_no_key_is_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # No mock + no key -> the real model call no-ops (mock parity).
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert (
+        plan_section_edit_via_llm(
+            "body", "gör om-oss-texten varmare", base_text="Text.", language="sv"
+        )
+        is None
+    )
+
+
+def test_plan_section_edit_via_llm_drops_ungrounded_number(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A generated payload that invents a year absent from base + prompt is dropped.
+    monkeypatch.setattr(
+        _SECTION_PLANNER_PATH, lambda *a, **k: "Vi har levererat kvalitet sedan 1985"
+    )
+    assert (
+        plan_section_edit_via_llm(
+            "body",
+            "gör om-oss-texten mer etablerad",
+            base_text="En kort historia om verkstaden.",
+            language="sv",
+        )
+        is None
+    )
+
+
+def test_plan_section_edit_via_llm_allows_grounded_number(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A number already present in the base copy is allowed through.
+    new_text = "Sedan 1985 har vi byggt varma, personliga hem"
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, lambda *a, **k: new_text)
+    edit = plan_section_edit_via_llm(
+        "body",
+        "gör om-oss-texten varmare",
+        base_text="Vi grundades 1985 i Malmö.",
+        language="sv",
+    )
+    assert edit == ("replace", new_text)
+
+
+def test_plan_section_edit_via_llm_drops_instruction_leak(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A payload that is really the instruction is dropped by the public-copy guard.
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, lambda *a, **k: "skriv om texten")
+    assert (
+        plan_section_edit_via_llm(
+            "body", "skriv om om-oss-texten", base_text="Text.", language="sv"
+        )
+        is None
+    )
+
+
+def test_plan_section_edit_via_llm_off_gate_is_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # An explicit-value prompt never reaches generation even if the model would.
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, lambda *a, **k: "Skulle aldrig nå hit")
+    assert (
+        plan_section_edit_via_llm(
+            "headline",
+            'ändra hero till "Hej"',
+            base_text="Gammal rubrik",
+            language="sv",
+        )
+        is None
+    )
+
+
+# --- apply integration: generative editPlan -> sectionContentOverrides ------
+
+
+def test_apply_section_rewrite_generates_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A vibe rewrite with a key generates new section copy via editPlan and
+    applies it through the ADR 0043 sectionContentOverrides path."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    new_text = "En varm och personlig berättelse om Malmös elektriker"
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, lambda *a, **k: new_text)
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        _copy_plan("contentBlocks.home.story.body"),
+        site_id=SITE_ID,
+        follow_up_prompt="gör om-oss-texten varmare",
+        output_dir=tmp_path,
+    )
+    assert result.applied is True
+    assert result.version == 2
+    assert _overrides(_read_v(tmp_path, 2)) == {"home.story.body": new_text}
+    meta = json.loads((tmp_path / f"{SITE_ID}.v2.meta.json").read_text(encoding="utf-8"))
+    assert meta["appliedPatchPlan"]["sectionContentOverrides"] == ["home.story.body"]
+
+
+def test_apply_section_rewrite_headline_generates_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    new_text = "Premium el för hela Malmö"
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, lambda *a, **k: new_text)
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        _copy_plan("contentBlocks.home.hero.headline"),
+        site_id=SITE_ID,
+        follow_up_prompt="skriv om heron så den låter mer premium",
+        output_dir=tmp_path,
+    )
+    assert result.applied is True
+    assert _overrides(_read_v(tmp_path, 2)) == {"home.hero.headline": new_text}
+
+
+def test_apply_section_rewrite_no_key_is_honest_no_op(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Mock parity: without OPENAI_API_KEY a vibe rewrite stays the unchanged
+    honest no-op (no version written) - no LLM is reachable."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        _copy_plan("contentBlocks.home.story.body"),
+        site_id=SITE_ID,
+        follow_up_prompt="gör om-oss-texten varmare",
+        output_dir=tmp_path,
+    )
+    assert result.applied is False
+    assert result.unmapped
+    assert not (tmp_path / f"{SITE_ID}.v2.project-input.json").exists()
+
+
+def test_apply_section_rewrite_ungrounded_number_is_no_op(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A generated payload that invents an ungrounded year is dropped by the
+    grounding guard -> honest no-op (all-or-nothing: no version)."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(
+        _SECTION_PLANNER_PATH, lambda *a, **k: "Vi har byggt sajter sedan 1912"
+    )
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        _copy_plan("contentBlocks.home.story.body"),
+        site_id=SITE_ID,
+        follow_up_prompt="gör om-oss-texten mer etablerad",
+        output_dir=tmp_path,
+    )
+    assert result.applied is False
+    assert result.unmapped
+    assert not (tmp_path / f"{SITE_ID}.v2.project-input.json").exists()
+
+
+def test_apply_section_rewrite_builds_on_carried_forward_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The editPlan rewrites the CURRENT copy: a second vibe rewrite sees the
+    previous override as its base (not the blueprint copy)."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    seen_bases: list[str] = []
+
+    def _fake(prompt, *, field, current_text, language, model):  # noqa: ANN001
+        seen_bases.append(current_text)
+        return f"Omskriven ({len(seen_bases)}) baserad på den aktuella texten"
+
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, _fake)
+    _init_site(tmp_path)
+    apply_patch_plan(
+        _copy_plan("contentBlocks.home.story.body"),
+        site_id=SITE_ID,
+        follow_up_prompt="gör om-oss-texten varmare",
+        output_dir=tmp_path,
+    )
+    v2_override = _overrides(_read_v(tmp_path, 2))["home.story.body"]
+    apply_patch_plan(
+        _copy_plan("contentBlocks.home.story.body"),
+        site_id=SITE_ID,
+        follow_up_prompt="gör om-oss-texten ännu varmare",
+        output_dir=tmp_path,
+    )
+    # The second call's base was the override the first call wrote (carry-forward).
+    assert seen_bases[-1] == v2_override

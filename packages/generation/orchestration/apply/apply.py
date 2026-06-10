@@ -32,8 +32,15 @@ Hard guarantees (kor-7c):
 - **Rejected/invalid never applies.** A plan that did not pass kor-7b's rails is
   refused with :class:`PatchApplyError`; a valid plan with an unmappable patch
   writes nothing and reports the gap.
-- **Mock-safe.** No LLM, no ``OPENAI_API_KEY`` (the empty-prompt merge path runs
-  the deterministic branch only).
+- **Mock-safe.** The empty-prompt merge path runs the deterministic branch only.
+  One scoped exception (ADR 0047): a ``copy_change`` against a whitelisted
+  section text field whose new copy cannot be derived deterministically MAY call
+  ``copyDirectiveModel`` (editPlan) to GENERATE the rewrite from the section's
+  current copy + the follow-up - but only when ``OPENAI_API_KEY`` is set and only
+  through ADR 0043's ``directives.sectionContentOverrides`` path (the same
+  public-copy + grounding guards as ``copyDirectives``, never a new write
+  surface). Without ``OPENAI_API_KEY`` it is an unchanged honest no-op
+  (mock parity).
 """
 
 from __future__ import annotations
@@ -51,8 +58,10 @@ from packages.generation.followup.hero_headline_pin import (
 )
 from packages.generation.followup.section_content_overrides import (
     build_section_override_key,
+    current_section_text,
     derive_section_edit,
     parse_section_content_field,
+    plan_section_edit_via_llm,
     render_section_override_text,
     section_base_text,
 )
@@ -284,6 +293,29 @@ def apply_patch_plan(
     unmapped: list[UnmappedPatch] = []
     # (routeId, sectionId, field, operation, value) for each derivable override.
     override_edits: list[tuple[str, str, str, str, str]] = []
+
+    # ADR 0047 generative editPlan needs the section's CURRENT copy as the
+    # rewrite base + grounding source. Read the prior immutable version lazily
+    # and cache it (only fires when a value-less section copy_change reaches the
+    # planner branch, which is rare) so the common path never pays the read.
+    # This is strictly additive - it does NOT move the authoritative step-4 read
+    # below and never touches apply_patch_plan's signature, so it stays disjoint
+    # from the parallel compound-prompt slice.
+    _prev_pi_cache: dict | None = None
+
+    def _previous_section_base(route_id: str, section_id: str, field: str) -> str | None:
+        nonlocal _prev_pi_cache
+        if _prev_pi_cache is None:
+            if base_run_id is not None:
+                _prev_pi_cache, _ = read_base_run_snapshot(
+                    site_id, base_run_id, output_dir=output_dir, runs_dir=runs_dir
+                )
+            else:
+                _prev_pi_cache = read_existing_project_input(
+                    site_id, output_dir=output_dir
+                )
+        return current_section_text(_prev_pi_cache, route_id, section_id, field)
+
     for patch in plan.patches:
         capability, reason = classify_patch(patch)
         if capability is not None:
@@ -295,6 +327,20 @@ def apply_patch_plan(
         if parsed is not None:
             route_id, section_id, leaf = parsed
             edit = derive_section_edit(leaf, follow_up_prompt)
+            if edit is None:
+                # ADR 0047: no literal value, but a vibe rewrite of a whitelisted
+                # section field -> generate new copy via copyDirectiveModel
+                # (editPlan), guarded + grounded exactly like copyDirectives.
+                # Without OPENAI_API_KEY this returns None (honest no-op / mock
+                # parity), so the value-less prompt stays an unmapped no-op below.
+                edit = plan_section_edit_via_llm(
+                    leaf,
+                    follow_up_prompt,
+                    base_text=_previous_section_base(route_id, section_id, leaf),
+                    language=str(
+                        (_prev_pi_cache or {}).get("language") or "sv"
+                    ),
+                )
             if edit is not None:
                 operation, value = edit
                 override_edits.append((route_id, section_id, leaf, operation, value))

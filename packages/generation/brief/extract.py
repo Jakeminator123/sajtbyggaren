@@ -1068,6 +1068,114 @@ def plan_copy_directives_llm(
 
 
 # ---------------------------------------------------------------------------
+# copyDirectiveModel editPlan for section copy (ADR 0047)
+# ---------------------------------------------------------------------------
+#
+# ADR 0043 made section text editable when the follow-up CARRIES the new copy
+# ("ändra texten i hero till X"). A rewrite instruction WITHOUT a value ("gör
+# om-oss-texten varmare", "skriv om heron så den låter mer premium") cannot be
+# derived deterministically; ADR 0047 broadens copyDirectiveModel's editPlan
+# mandate (the ADR 0034 nivå 3a precedent) to the whitelisted section fields
+# (headline | subheadline | body). The model reads the section's CURRENT copy +
+# the instruction and GENERATES new text for that ONE field. The caller
+# re-validates the result through the SAME public-copy guards + grounding guard
+# as copyDirectives and applies it ONLY via ADR 0043's sectionContentOverrides
+# path - never a new write surface, never name/tagline, never .generated/.
+
+
+class SectionCopyRewrite(BaseModel):
+    """One rewritten section-copy string proposed by the model (ADR 0047)."""
+
+    text: str | None = Field(
+        default=None,
+        description=(
+            "ONLY the finished customer-facing section copy after the rewrite, "
+            "or null if the request is not a copy rewrite or it cannot be "
+            "improved without inventing facts. Never the operator's instruction "
+            "wording and never a verb like 'rewrite'/'skriv om'."
+        ),
+    )
+
+
+_SECTION_COPY_REWRITE_SYSTEM = (
+    "You are the follow-up section-copy rewriter for Sajtbyggaren. The operator "
+    "already has a generated website and asked to rewrite ONE section's text "
+    "(its current copy is provided) without giving the literal new words. "
+    "Rewrite that ONE field's copy per the operator's intent (e.g. 'warmer', "
+    "'more premium'), keeping the real meaning of the current copy. Hard rules: "
+    "return ONLY the finished copy in 'text', never the instruction wording and "
+    "never a verb such as 'rewrite'/'skriv om'/'gör om'; never invent facts "
+    "(founding years, dates, names, numbers, percentages, places, phone "
+    "numbers, addresses or other contact details) that are not already in the "
+    "current copy or the follow-up. Keep a headline or subheadline to one short "
+    "line and a body to at most a short paragraph. If the request is not a copy "
+    "rewrite, or you cannot improve it without inventing, return null."
+)
+
+
+def _build_section_rewrite_context(
+    *, field: str, current_text: str, follow_up_prompt: str, language: str
+) -> str:
+    """Compact, read-only context for the section-copy rewrite editPlan."""
+    return (
+        f"Language: {language}\n"
+        f"Section field to rewrite: {field}\n"
+        f"Current {field} copy: {current_text}\n\n"
+        f"Operator follow-up: {follow_up_prompt}"
+    )
+
+
+def plan_section_copy_rewrite_llm(
+    follow_up_prompt: str,
+    *,
+    field: str,
+    current_text: str,
+    language: str,
+    model: str,
+) -> str | None:
+    """editPlan for ONE whitelisted section field (ADR 0047).
+
+    Reads the section's CURRENT copy and GENERATES new copy for a vibe rewrite
+    that carries no literal value. Returns ``None`` when no API key is
+    configured or on any error - the follow-up apply must never fail because
+    this optional understanding step did (honest no-op / mock parity). The
+    caller re-validates the result through the same public-copy + grounding
+    guards as copyDirectives, so this is not the security boundary.
+    """
+    if not has_openai_api_key():
+        return None
+    context = _build_section_rewrite_context(
+        field=field,
+        current_text=current_text,
+        follow_up_prompt=follow_up_prompt,
+        language=language,
+    )
+    try:
+        from openai import OpenAI
+
+        client = OpenAI()
+        response = client.responses.parse(
+            model=model,
+            input=[
+                {"role": "system", "content": _SECTION_COPY_REWRITE_SYSTEM},
+                {"role": "user", "content": context},
+            ],
+            text_format=SectionCopyRewrite,
+        )
+        parsed = response.output_parsed
+    except Exception as exc:  # noqa: BLE001
+        message = f"section copy rewrite model error: {type(exc).__name__}: {exc}"
+        logger.warning(message)
+        sys.stderr.write(f"[copyDirective] {message}\n")
+        sys.stderr.flush()
+        return None
+    if parsed is None or not parsed.text:
+        return None
+    text = parsed.text.strip()
+    return text or None
+
+
+# ---------------------------------------------------------------------------
 # styleDirectiveModel: free/compound style follow-up -> structured theme mutation
 # ---------------------------------------------------------------------------
 #
