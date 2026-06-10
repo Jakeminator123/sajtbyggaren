@@ -12,6 +12,7 @@ import {
   stopPreviewServer,
 } from "@/lib/local-preview-server";
 import { currentViewserRuntime } from "@/lib/preview-runtime-server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import {
   getSandboxSession,
   stopSandboxSessionForSite,
@@ -238,7 +239,7 @@ export async function GET(
   // en finns. local-next-grenen nedan är OFÖRÄNDRAD.
   if (runtime.kind !== "local") {
     if (runtime.kind === "vercel-sandbox") {
-      const session = getSandboxSession(siteId);
+      const session = await getSandboxSession(siteId);
       if (session) {
         const body: PreviewStartOk = {
           siteId,
@@ -276,6 +277,14 @@ export async function POST(
 ) {
   const localhostError = assertLocalhost(request);
   if (localhostError) return localhostError;
+
+  // Kostnadsskydd (öppen-relä-risken, PR #156): POST kan starta en Vercel
+  // Sandbox (npm install + next build) — den dyraste operationen i Viewser.
+  const rateLimited = await enforceRateLimit(request, "preview-start", {
+    limit: 6,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
 
   const { siteId } = await context.params;
   const validation = validateSiteId(siteId);

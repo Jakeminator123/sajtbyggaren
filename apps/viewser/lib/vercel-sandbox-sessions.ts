@@ -1,6 +1,6 @@
 /**
- * vercel-sandbox-sessions — in-memory registry over aktiva Vercel Sandbox-
- * previews per ``siteId``.
+ * vercel-sandbox-sessions — durabelt registry over aktiva Vercel Sandbox-
+ * previews per ``siteId``, lagrat i kv-store.
  *
  * Varför detta finns (livscykel + kostnad, ADR 0033): ``createSandboxPreview``
  * är keyad på ``siteId`` men returnerar ett ogenomskinligt ``sandboxId``
@@ -18,11 +18,19 @@
  * får INTE läcka dem: ``preview-runtime-server.ts`` stoppar en ev. tidigare
  * session för samma ``siteId`` innan en ny skapas, och registrerar den nya.
  *
+ * Lagring: registret är durabelt via kv-store (``getKvStore``). Lokalt utan
+ * Redis-env blir det memory-drivern = exakt dagens per-process-beteende.
+ * Hostat (Redis-driver) överlever sessionerna instansbyten, så en serverless-
+ * instans kan stoppa en sandbox som en annan instans startade. Varje entry
+ * lagras som JSON under ``viewser:sandbox-session:<siteId>`` med 45 min TTL —
+ * sandboxar lever ~15 min, så 45 min ger marginal utan att döda entries läcker.
+ *
  * Registret är medvetet INTE i ``vercel-sandbox-runner.ts``: runnern är
  * spike-agnostisk och delas med CLI:t (``scripts/spike_vercel_sandbox.ts``),
  * som äger sin egen lifecycle och inte ska auto-tracka sessioner.
  */
 
+import { getKvStore, kvGetJson, kvSetJson } from "./kv-store";
 import { stopSandboxPreview } from "./vercel-sandbox-runner";
 
 export interface SandboxSession {
@@ -36,28 +44,33 @@ export interface SandboxSession {
   createdAt: string;
 }
 
-/**
- * In-memory ``Map<siteId, SandboxSession>``. Per Viewser-process; sessioner
- * överlever inte en omstart (och behöver inte göra det — TTL städar ändå).
- */
-const sessionsBySite = new Map<string, SandboxSession>();
+const SESSION_KEY_PREFIX = "viewser:sandbox-session:";
+
+/** 45 min — sandboxens egen TTL är ~15 min, så detta städar utan läckage. */
+const SESSION_TTL_SECONDS = 45 * 60;
+
+function sessionKey(siteId: string): string {
+  return `${SESSION_KEY_PREFIX}${siteId}`;
+}
 
 /**
  * Registrera (eller ersätt) den aktiva sandbox-sessionen för ``siteId``.
  * Anropas efter en lyckad ``createSandboxPreview``.
  */
-export function recordSandboxSession(
+export async function recordSandboxSession(
   siteId: string,
   sandboxId: string,
   url: string,
-): SandboxSession {
+): Promise<SandboxSession> {
   const session: SandboxSession = {
     siteId,
     sandboxId,
     url,
     createdAt: new Date().toISOString(),
   };
-  sessionsBySite.set(siteId, session);
+  await kvSetJson(getKvStore(), sessionKey(siteId), session, {
+    ttlSeconds: SESSION_TTL_SECONDS,
+  });
   return session;
 }
 
@@ -66,8 +79,10 @@ export function recordSandboxSession(
  * ``GET /api/preview/<siteId>`` i vercel-sandbox-läge för status-rapport utan
  * att skapa något nytt.
  */
-export function getSandboxSession(siteId: string): SandboxSession | null {
-  return sessionsBySite.get(siteId) ?? null;
+export async function getSandboxSession(
+  siteId: string,
+): Promise<SandboxSession | null> {
+  return kvGetJson<SandboxSession>(getKvStore(), sessionKey(siteId));
 }
 
 /**
@@ -76,18 +91,35 @@ export function getSandboxSession(siteId: string): SandboxSession | null {
  * session fanns (vanligt fall i ``local-next``-läge där registret är tomt — så
  * callers som ``build-runner`` får en no-op och oförändrat beteende).
  *
- * Vi tar bort entry:t INNAN ``stopSandboxPreview`` await:as så ett samtidigt
+ * Vi tar bort KV-entryt INNAN ``stopSandboxPreview`` await:as så ett samtidigt
  * nytt bygge för samma ``siteId`` inte ser en redan-stoppande session.
  */
 export async function stopSandboxSessionForSite(siteId: string): Promise<boolean> {
-  const session = sessionsBySite.get(siteId);
-  if (!session) return false;
-  sessionsBySite.delete(siteId);
+  let session: SandboxSession | null;
+  try {
+    const store = getKvStore();
+    session = await kvGetJson<SandboxSession>(store, sessionKey(siteId));
+    if (!session) return false;
+    await store.delete(sessionKey(siteId));
+  } catch (error) {
+    // Icke-kastande kontrakt: ett KV-fel får inte fälla callers (build-runner,
+    // DELETE-routen). Vi loggar och behandlar det som "ingen session".
+    console.warn(
+      `[vercel-sandbox-sessions] KV-fel vid stopp för ${siteId}:`,
+      error instanceof Error ? error.message : error,
+    );
+    return false;
+  }
   await stopSandboxPreview(session.sandboxId);
   return true;
 }
 
 /** Lista alla aktiva sandbox-sessioner (admin/diagnostik). */
-export function listSandboxSessions(): SandboxSession[] {
-  return Array.from(sessionsBySite.values());
+export async function listSandboxSessions(): Promise<SandboxSession[]> {
+  const store = getKvStore();
+  const keys = await store.listKeys(SESSION_KEY_PREFIX);
+  const sessions = await Promise.all(
+    keys.map((key) => kvGetJson<SandboxSession>(store, key)),
+  );
+  return sessions.filter((session): session is SandboxSession => session !== null);
 }

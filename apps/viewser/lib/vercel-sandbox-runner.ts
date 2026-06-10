@@ -245,8 +245,11 @@ function ensureVercelEnvLocalLoaded(): void {
  *
  * Laddar först ``.env.vercel.local`` (best-effort) så OIDC-token från
  * ``vercel env pull`` hittas även om Next inte auto-laddade den filen.
+ *
+ * Exporterad (minimalt, P2 hosted build): ``hosted-build-runner.ts`` behöver
+ * exakt samma auth-mönster för sin bygg-sandbox och får inte duplicera logiken.
  */
-function resolveCredentials():
+export function resolveCredentials():
   | { mode: "oidc"; create: Record<string, never> }
   | { mode: "token"; create: { token: string; teamId: string; projectId: string } }
   | null {
@@ -289,8 +292,11 @@ export function hasVercelSandboxAuth(): boolean {
  *   - Refresh misslyckades och token är död/saknas → ärligt fel med
  *     expiresIn + hur-fixar-info (klassas som ``vercel_auth`` av preview-
  *     routen — meddelandet innehåller "VERCEL_OIDC_TOKEN").
+ *
+ * Exporterad (minimalt, P2 hosted build): bygg-sandboxen i
+ * ``hosted-build-runner.ts`` kör samma OIDC-färskhetsguard före Sandbox.create.
  */
-function ensureFreshOidcTokenBeforeCreate(
+export function ensureFreshOidcTokenBeforeCreate(
   logs: string[],
 ): { ok: true } | { ok: false; error: string } {
   const nowSeconds = Math.floor(Date.now() / 1000);

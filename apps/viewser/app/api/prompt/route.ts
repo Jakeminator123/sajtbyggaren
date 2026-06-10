@@ -7,18 +7,33 @@ import { z } from "zod";
 
 import { runBuild } from "@/lib/build-runner";
 import {
+  hostedRunKey,
+  startHostedBuild,
+  type HostedBuildRunStatus,
+} from "@/lib/hosted-build-runner";
+import {
   hostedPythonRuntimeUnavailable,
   isHostedVercelRuntime,
 } from "@/lib/hosted-python-runtime";
+import { getKvStore, kvGetJson } from "@/lib/kv-store";
 import { stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { chatWithOpenAi, openaiEnv } from "@/lib/openai";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { runOpenClawFollowupApply } from "@/lib/openclaw-runner";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
 import { classifyMessage } from "@/lib/router-classify-runner";
 import { readRunChangeSet } from "@/lib/run-change-set";
 import { readAppliedCopyDirectives, readBuildResult, runsDir } from "@/lib/runs";
 import { loadSoulBaseLines } from "@/lib/soul";
+
+// Hostat: bygget kör detached i en sandbox men NDJSON-streamen poll:ar KV
+// tills done/failed. 300 s är Fluid-taket på Hobby (Pro tillåter mer) — vid
+// budget-slut avslutas streamen ärligt med runId så klienten kan polla
+// GET /api/hosted-build/<runId> i stället. Lokalt påverkas inget (ingen
+// maxDuration-enforcement i `next dev`).
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 // Operator-prototype: keep the prompt small enough that an accidental
 // 50 MB paste cannot wedge the build pipeline. The cap is generous for
@@ -915,11 +930,154 @@ async function runPromptBuildSerially(
   }
 }
 
+/** Poll-intervall mot KV under en hostad NDJSON-stream. */
+const HOSTED_POLL_INTERVAL_MS = 3_000;
+/** Stream-budget under route:ns maxDuration (300 s) med marginal för avslut. */
+const HOSTED_STREAM_BUDGET_MS = 280_000;
+
+/**
+ * Hostad prompt-väg (P2): bygget kör detached i en sandbox via
+ * ``startHostedBuild``; status landar i KV. Två svarslägen, samma kontrakt
+ * som den lokala vägen så prompt-builder.tsx fungerar oförändrad:
+ *
+ *   - NDJSON (Accept: application/x-ndjson): emitterar ``accepted`` (ny rad,
+ *     ignoreras av dagens klient men bär runId för curl/framtida UI), sedan
+ *     ``building`` när sandboxen nått bygg-fasen, sist ``done``/``error``.
+ *     Tar bygget längre än stream-budgeten avslutas streamen ärligt med ett
+ *     error-event som pekar på GET /api/hosted-build/<runId> — bygget i
+ *     sandboxen fortsätter och pekaren sätts när det blir klart.
+ *   - Synkron JSON: 202 med ``{ accepted, runId, siteId }`` direkt; klienten
+ *     pollar status-routen själv.
+ *
+ * Följdprompter hostat failar ärligt i sandboxen tills run-historiken
+ * persisteras (P3) — statusen i KV förklarar varför.
+ */
+async function runHostedPromptFlow(
+  payload: z.infer<typeof PromptPayloadSchema>,
+  wantsStream: boolean,
+): Promise<Response> {
+  // Init-läge saknar siteId (lokalt deriverar Phase 1 det ur prompten) —
+  // hostat genererar vi det här så sandbox, blob-prefix och KV-pekare delar
+  // nyckel från start.
+  const siteId = payload.siteId ?? `site-${randomUUID().slice(0, 8)}`;
+
+  let runId: string;
+  try {
+    ({ runId } = await startHostedBuild({
+      siteId,
+      prompt: payload.prompt,
+      followup: payload.mode === "followup",
+    }));
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Okänt fel när det hostade bygget skulle startas.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  if (!wantsStream) {
+    return NextResponse.json(
+      { accepted: true, runId, siteId, hosted: true },
+      { status: 202 },
+    );
+  }
+
+  const encoder = new TextEncoder();
+  const store = getKvStore();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const enqueueLine = (line: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
+      };
+      enqueueLine({ stage: "accepted", runId, siteId, hosted: true });
+      const deadline = Date.now() + HOSTED_STREAM_BUDGET_MS;
+      let buildingEmitted = false;
+      try {
+        while (Date.now() < deadline) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, HOSTED_POLL_INTERVAL_MS),
+          );
+          const status = await kvGetJson<HostedBuildRunStatus>(
+            store,
+            hostedRunKey(runId),
+          );
+          if (!status) continue;
+          if (
+            !buildingEmitted &&
+            (status.phase === "building" || status.phase === "uploading")
+          ) {
+            buildingEmitted = true;
+            enqueueLine({ stage: "building" });
+          }
+          if (status.phase === "done") {
+            enqueueLine({
+              stage: "done",
+              runId,
+              siteId,
+              projectId: null,
+              version: null,
+              briefSource: null,
+              buildStatus: "ok",
+              hosted: true,
+              buildId: status.buildId ?? null,
+            });
+            return;
+          }
+          if (status.phase === "failed") {
+            enqueueLine({
+              stage: "error",
+              error: status.error ?? "Det hostade bygget misslyckades.",
+            });
+            return;
+          }
+        }
+        enqueueLine({
+          stage: "error",
+          error:
+            `Bygget pågår fortfarande (runId ${runId}) men svarsbudgeten är slut. ` +
+            `Följ status via GET /api/hosted-build/${runId} — previewen funkar när bygget är klart.`,
+        });
+      } catch (error) {
+        enqueueLine({
+          stage: "error",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Okänt fel under status-pollningen av det hostade bygget.",
+        });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
-  if (isHostedVercelRuntime()) {
-    return hostedPythonRuntimeUnavailable("prompt-build");
+  const hosted = isHostedVercelRuntime();
+  if (hosted) {
+    // P2 (hostad byggväg) är bakom explicit opt-in: utan flaggan degraderar
+    // routen ärligt som tidigare i stället för att halvfungera.
+    if (process.env.VIEWSER_ENABLE_HOSTED_BUILD !== "1") {
+      return hostedPythonRuntimeUnavailable("prompt-build");
+    }
+    // Publik deploy utan auth (operatörsbeslut 2026-06-10): bygget är den
+    // dyraste endpointen (sandbox + LLM + npm install) — strama kvoter per IP.
+    const limited = await enforceRateLimit(request, "prompt-build", {
+      limit: 3,
+      windowSeconds: 300,
+    });
+    if (limited) return limited;
   }
 
   let payload: z.infer<typeof PromptPayloadSchema>;
@@ -961,6 +1119,10 @@ export async function POST(request: NextRequest) {
   // (zero impact på floating-chat.tsx + use-followup-build.ts).
   const acceptHeader = request.headers.get("accept") ?? "";
   const wantsStream = acceptHeader.includes("application/x-ndjson");
+
+  if (hosted) {
+    return runHostedPromptFlow(payload, wantsStream);
+  }
 
   if (wantsStream) {
     const encoder = new TextEncoder();

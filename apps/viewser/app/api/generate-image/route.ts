@@ -8,6 +8,7 @@ import type {
 } from "@/lib/asset-store/types";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { openaiEnv } from "@/lib/openai";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/generate-image — generera en bild med OpenAI GPT Image 1.5
@@ -372,6 +373,14 @@ async function callOpenAIImageAPI(req: GenerateRequest): Promise<Buffer> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const guard = assertLocalhost(request);
   if (guard) return guard;
+
+  // Kostnadsskydd (öppen-relä-risken, PR #156): bildgenerering är det
+  // dyraste enskilda OpenAI-anropet (~$0.04+/bild).
+  const rateLimited = await enforceRateLimit(request, "generate-image", {
+    limit: 5,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
 
   let json: unknown;
   try {

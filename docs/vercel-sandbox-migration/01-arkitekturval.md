@@ -4,7 +4,7 @@ Varje gap har flera vägar. Skriv en ADR under `governance/decisions/` per beslu
 (numren nedan är platshållare — ta nästa lediga). Uppdatera den här filen med valda
 nummer när ADR:erna landat.
 
-## G1 — Byggorkestrering (ADR-förslag: bygg-runtime)
+## G1 — Byggorkestrering (beslutad: ADR 0048 — alternativ A)
 - A. Kör Python-byggaren i en sandbox. Ladda upp generation-paketen plus
   `scripts/build_site.py` till en sandbox (`node24` har även python3), kör pipen
   där, skriv ut artefakter till blob-lagring. Minst omskrivning; återanvänder all
@@ -15,7 +15,7 @@ nummer när ADR:erna landat.
   rekommenderat på kort sikt (pipen är stor och Python-tung).
 - Rekommendation: börja med A eller B (Python i sandbox), C som långsiktig möjlighet.
 
-## G2 — Lagring (ADR-förslag: artifact-store)
+## G2 — Lagring (beslutad: ADR 0048 artefakter till blob, ADR 0049 pekare/metadata till kv-store)
 - Genererade sajter och artefakter -> en object-store. Projektet har REDAN en
   blob-store provisionerad (`BLOB_READ_WRITE_TOKEN` och `BLOB_STORE_ID` drogs av
   `vercel env pull`), och `ASSET_STORE_DRIVER=vercel-blob` finns redan som driver.
@@ -24,13 +24,13 @@ nummer när ADR:erna landat.
   lagring (t.ex. en marketplace-provisionerad Postgres, Redis via Upstash, eller
   Edge Config för bara pekaren). Pekaren får inte ligga på lokal disk hostat.
 
-## G3 — Sandbox-sessioner (ADR-förslag: session-store)
+## G3 — Sandbox-sessioner (beslutad: ADR 0049 — kv-store-adapter)
 - Ersätt minnes-mappen i `apps/viewser/lib/vercel-sandbox-sessions.ts` med ett delat
   lager (siteId eller userId -> sandbox-id, url, createdAt, ttl) som överlever
   instansbyten. SDK:n kan återansluta till en levande sandbox via dess namn, så
   lagra namnet.
 
-## G4 — Auth och tenant (ADR-förslag: auth-och-tenant)
+## G4 — Auth och tenant (v1 beslutad: ADR 0050 — publik med rate-limit; riktig auth kvarstår som nästa steg)
 - Ersätt `assertLocalhost` med riktig auth. Plugin-skillen auth beskriver Clerk
   (native i Vercel Marketplace), Descope och Auth0. Lägg auth i middleware och
   scope:a varje siteId och preview till en användare så ingen kan starta eller se

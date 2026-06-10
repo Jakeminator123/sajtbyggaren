@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { chatWithOpenAi } from "@/lib/openai";
 import { assertLocalhost } from "@/lib/localhost-guard";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 const ChatMessageSchema = z.object({
   role: z.enum(["system", "user", "assistant"]),
@@ -16,6 +17,13 @@ const ChatPayloadSchema = z.object({
 export async function POST(request: NextRequest) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
+
+  // Kostnadsskydd (öppen-relä-risken, PR #156): chatten gör OpenAI-anrop.
+  const rateLimited = await enforceRateLimit(request, "chat", {
+    limit: 20,
+    windowSeconds: 60,
+  });
+  if (rateLimited) return rateLimited;
 
   let payload: z.infer<typeof ChatPayloadSchema>;
   try {
