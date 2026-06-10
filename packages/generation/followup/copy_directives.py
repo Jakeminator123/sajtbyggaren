@@ -775,7 +775,13 @@ def _extract_literal_replace_directives(
         return []
     old_value, new_value = _extract_literal_old_new(follow_up_prompt)
     if not old_value or not new_value:
-        return []
+        # No QUOTED OLD/NEW pair: try the UNQUOTED substring path (B155). A
+        # quoted prompt that merely failed to yield a complete pair is bounced
+        # back out by the unquoted resolver's no-quote guard, so the two paths
+        # never double-process the same follow-up.
+        return _resolve_unquoted_literal_replace(follow_up_prompt, merged)[
+            "directives"
+        ]
     old_norm = _normalise_followup_text(old_value)
     if not old_norm:
         return []
@@ -831,6 +837,218 @@ def _extract_literal_replace_directives(
                 }
             ]
     return []
+
+
+# --- unquoted literal find-and-replace (B155) -------------------------------
+# "ändra <OLD> till <NEW>" WITHOUT quotes is the most natural way an operator
+# asks for a verbatim swap. The quoted path above cannot see it (no quoted
+# span), so before this slice it paraphrased (semantic patch) or silently
+# no-op:ed. This path extracts OLD/NEW from the unquoted phrasing and matches
+# OLD as an EXACT (normalised, case-insensitive) SUBSTRING of a known stored
+# copy field (company.tagline / company.story / each services[].summary). A
+# single match applies a literal substitution; zero matches stay an honest
+# no-op; OLD present in >= 2 distinct copy fields is an honest AMBIGUOUS no-op
+# (surfaced with a reason via the unappliedFollowupIntents observer). We NEVER
+# guess a target or paraphrase. company.heroHeadline is intentionally NOT a
+# separate match target here: it is a derived mirror of company.tagline (set by
+# _apply_copy_directives), so matching the tagline both avoids a false
+# "ambiguous" with its own mirror and lets the apply step keep the H1 in sync.
+# Service LABEL/name rename is out of scope this slice: the copyDirective schema
+# only models services[].summary (no field for a label rename, and adding one
+# would be a schema change). A label-only hit is reported honestly via the
+# observer instead (detection-only, no new directive type).
+# Operator-facing reason (Swedish) surfaced via unappliedFollowupIntents when an
+# unquoted OLD matches more than one editable copy field. We refuse to guess
+# which one the operator meant, so the build is an honest no-op instead of a
+# silent (possibly wrong) edit.
+_UNQUOTED_AMBIGUOUS_REASON = (
+    "Texten du ville byta finns i flera fält, så ingen ändring gjordes. "
+    "Var mer specifik (t.ex. ange rubrik, om-oss-text eller tjänst) eller "
+    "citera hela stycket du vill ersätta."
+)
+_UNQUOTED_REPLACE_VERBS_ALT = "|".join(
+    re.escape(verb)
+    for verb in sorted(_COPY_DIRECTIVE_REPLACE_KEYWORDS, key=len, reverse=True)
+)
+_UNQUOTED_REPLACE_ANCHOR_ALT = "|".join(
+    re.escape(anchor)
+    for anchor in sorted(_LITERAL_TEXT_ANCHOR_KEYWORDS, key=len, reverse=True)
+)
+_UNQUOTED_REPLACE_RE = re.compile(
+    rf"\b(?:{_UNQUOTED_REPLACE_VERBS_ALT})\b\s+"
+    rf"(?:(?:{_UNQUOTED_REPLACE_ANCHOR_ALT})\s+)?"
+    rf"(?P<old>.+?)\s+(?:\btill\b|\bto\b)\s+(?P<new>.+?)\s*$",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _clean_unquoted_fragment(value: str | None) -> str:
+    """Trim a captured OLD/NEW fragment (quotes + edge punctuation/whitespace)."""
+    if not value:
+        return ""
+    cleaned = value.strip().strip(_QUOTE_CHARS).strip()
+    return cleaned.strip(".:,;!? ").strip()
+
+
+def _extract_unquoted_old_new(
+    follow_up_prompt: str,
+) -> tuple[str | None, str | None]:
+    """Pull ``(OLD, NEW)`` from an UNQUOTED ``<verb> <OLD> till <NEW>`` phrasing.
+
+    Returns ``(None, None)`` when the prompt carries any quoted span (the quoted
+    path owns that case) or when the unquoted pattern does not match. The first
+    ``till``/``to`` after a replace verb is the separator (OLD is non-greedy), and
+    an optional literal-text anchor ("denna text"/"texten"/...) right after the
+    verb is dropped so it never becomes part of OLD.
+    """
+    if _QUOTED_SPAN_RE.search(follow_up_prompt):
+        return None, None
+    match = _UNQUOTED_REPLACE_RE.search(follow_up_prompt)
+    if not match:
+        return None, None
+    old_value = _clean_unquoted_fragment(match.group("old"))
+    new_value = _clean_unquoted_fragment(match.group("new"))
+    return (old_value or None), (new_value or None)
+
+
+def _unquoted_replace_candidates(
+    merged: dict[str, Any],
+) -> list[tuple[str, str | None, str, int]]:
+    """Editable copy fields the unquoted path may substring-match against.
+
+    Each entry is ``(target, targetRef, raw_value, max_length)``. heroHeadline is
+    deliberately excluded (mirror of tagline). Service entries require both a
+    non-empty summary and a resolvable ref (id/label).
+    """
+    company = merged.get("company")
+    company = company if isinstance(company, dict) else {}
+    candidates: list[tuple[str, str | None, str, int]] = []
+    tagline = company.get("tagline")
+    if isinstance(tagline, str) and tagline.strip():
+        candidates.append(("tagline", None, tagline, 140))
+    story = company.get("story")
+    if isinstance(story, str) and story.strip():
+        candidates.append(("about-text", None, story, _COPY_DIRECTIVE_ABOUT_MAX_LENGTH))
+    for service in merged.get("services") or []:
+        if not isinstance(service, dict):
+            continue
+        summary = service.get("summary")
+        ref = service.get("id") or service.get("label")
+        if (
+            isinstance(summary, str)
+            and summary.strip()
+            and isinstance(ref, str)
+            and ref.strip()
+        ):
+            candidates.append(
+                (
+                    "services",
+                    ref.strip()[:80],
+                    summary,
+                    _COPY_DIRECTIVE_SERVICES_MAX_LENGTH,
+                )
+            )
+    return candidates
+
+
+def _resolve_unquoted_literal_replace(
+    follow_up_prompt: str,
+    merged: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve an UNQUOTED literal replace into a status + directive list.
+
+    Returns ``{"status", "directives", "reason"}`` where ``status`` is one of:
+      - ``"none"``   - not an engaged unquoted literal-replace form;
+      - ``"no_match"`` - engaged but OLD matches no stored copy field;
+      - ``"ambiguous"`` - OLD matches >= 2 distinct copy fields (honest no-op);
+      - ``"applied"`` - exactly one field matched and a directive was built.
+
+    Engagement is deliberately narrow so target-keyword prompts ("ändra taglinen
+    till X") still flow through ``_extract_copy_directives`` and additive /
+    section-add prompts are never treated as a replace.
+    """
+    empty: dict[str, Any] = {"status": "none", "directives": [], "reason": None}
+    if _QUOTED_SPAN_RE.search(follow_up_prompt):
+        return empty
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return empty
+    has_replace = _contains_any_word(
+        text, _COPY_DIRECTIVE_REPLACE_KEYWORDS
+    ) or _contains_any(text, _REPLACE_MARKERS)
+    if not has_replace:
+        return empty
+    # A recognised target keyword ("taglinen"/"namnet"/"hero"/"tjänsten"/...) is
+    # owned by _extract_copy_directives; an additive/section-add ask is never a
+    # replace. Both gates run on the instruction skeleton so a target/section
+    # word inside the OLD/NEW copy never drives them.
+    skeleton = _text_outside_quotes(follow_up_prompt) or text
+    if _classify_copy_target(skeleton) is not None:
+        return empty
+    if _followup_is_additive_request(skeleton):
+        return empty
+    old_value, new_value = _extract_unquoted_old_new(follow_up_prompt)
+    if not old_value or not new_value:
+        return empty
+    old_norm = _normalise_followup_text(old_value)
+    if len(old_norm) < 2:
+        return empty
+    candidates = _unquoted_replace_candidates(merged)
+    matches = [
+        candidate
+        for candidate in candidates
+        if old_norm in _normalise_followup_text(candidate[2])
+    ]
+    if not matches:
+        return {"status": "no_match", "directives": [], "reason": None}
+    distinct_keys = {(target, target_ref) for target, target_ref, _, _ in matches}
+    if len(distinct_keys) >= 2:
+        return {
+            "status": "ambiguous",
+            "directives": [],
+            "reason": _UNQUOTED_AMBIGUOUS_REASON,
+        }
+    target, target_ref, raw_value, cap = matches[0]
+    # Leak-guard the INSERTED fragment only (the surrounding field is already
+    # public copy that passed the guards when first written) - validating the
+    # whole reconstructed string would false-reject when the existing copy
+    # happens to contain a change-verb word.
+    if _safe_copy_payload(
+        new_value, follow_up_prompt=follow_up_prompt, max_length=cap
+    ) is None:
+        return {"status": "no_match", "directives": [], "reason": None}
+    pattern = re.compile(re.escape(old_value), re.IGNORECASE)
+    new_raw = pattern.sub(lambda _match: new_value, raw_value, count=1)
+    if new_raw == raw_value:
+        # Normalised match but the raw substitution found nothing (whitespace /
+        # punctuation drift) - never guess, stay an honest no-op.
+        return {"status": "no_match", "directives": [], "reason": None}
+    payload = new_raw.strip()[:cap].strip()
+    if not payload:
+        return {"status": "no_match", "directives": [], "reason": None}
+    directive: dict[str, Any] = {
+        "target": target,
+        "operation": "replace-text",
+        "payload": payload,
+        "source": "prompt-rule",
+    }
+    if target == "services" and target_ref:
+        directive["targetRef"] = target_ref
+    return {"status": "applied", "directives": [directive], "reason": None}
+
+
+def unquoted_literal_replace_status(
+    follow_up_prompt: str,
+    source_project_input: dict[str, Any],
+) -> dict[str, Any]:
+    """Public wrapper around the unquoted resolver (observer + test entry point).
+
+    ``source_project_input`` is the site state whose copy fields OLD is matched
+    against (the previous version in the honest-no-op observer). Returns the same
+    ``{"status", "directives", "reason"}`` shape as
+    ``_resolve_unquoted_literal_replace``.
+    """
+    return _resolve_unquoted_literal_replace(follow_up_prompt, source_project_input)
 
 
 def _followup_is_additive_request(skeleton_text: str) -> bool:
