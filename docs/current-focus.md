@@ -117,13 +117,14 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   multi-field, route/element-targeting). B169-uppföljning för Christopher
   noterad i msg-0061.
 
-Last verified state: `9a7c9f6` (2026-06-10 ~06:00 UTC+2; `jakob-be` HEAD
-efter #266+#267-mergarna + trace-katalog-härdningen `472e150` +
-markdown-lint-fixen `0bfdbbd`. Rent träd, i sync med origin, alla mergade
-PR-brancher städade lokalt+remote. `main = 7486145` — sync väntar
+Last verified state: `ced8ca0` (2026-06-10 ~07:40 UTC+2; `jakob-be` HEAD
+efter morgonpassets bugg-runda: B176-chatfix (`max_completion_tokens`) +
+docs B177/B178 + köpunkter 6/7. Lokal ligger 2 commits före `origin`
+(`7110714`) — **push väntar operatörs-OK**. `main = 7486145` — sync väntar
 operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #262, #263, #264, #265, #266, #267
-(alla mergade till `jakob-be`).
+Nya commits sedan föregående checkpoint: `ced8ca0` (ej pushad).
+Morgonpassets fynd: B176 (fixad), B177 (font-@import i byggd CSS),
+B178 (falsk framgång vid icke-applicerad fri-text-ändring, kopplad B155).
 
 ## Öppna PR att känna till
 
