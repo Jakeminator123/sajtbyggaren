@@ -241,6 +241,123 @@ if (mode === "vercel-sandbox") {
   });
 }
 
+// --- Retention-städning av gamla preview-byggen vid dev-start --------------
+// `.generated/<siteId>/` ackumulerar preview-byggen (immutable builds by
+// design, men retention är opt-in sedan PR #250 och operatören sätter aldrig
+// caps manuellt). Därför kör dispatchern `scripts/prune_generated_previews.py
+// --apply` EN gång vid uppstart med skriptets default-caps (keep-per-site 3,
+// keep-total 10) — FÖRE next spawnas, så skriptets port-guard (3000 +
+// preview-portarna 4100-4199, B167) inte triggas av vår egen dev-server.
+//
+// Säkerheten ägs helt av prune-skriptet och konsumeras bara här:
+//   - Port-guard: en lyssnare på 3000/41xx → SystemExit utan radering.
+//   - Current-pointer-skydd: siteIds med pointer i data/prompt-inputs/ eller
+//     data/runs/*/build-result.json raderas aldrig.
+//   - `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true` neutraliserar --apply i
+//     skriptet som vanligt (vi ändrar inte dess semantik, bara loggar ärligt).
+//
+// Feltolerans: städningen får ALDRIG stoppa dev-starten. Alla utfall (fel,
+// timeout, saknad venv) loggas ärligt på en svensk rad och dev fortsätter.
+// Kill-switch: VIEWSER_PRUNE_ON_DEV_START=0 (läses ur samma mergade env-kedja
+// som VIEWSER_PREVIEW_MODE, så den kan sättas i .env.local). Default PÅ.
+//
+// Spawnen är shell-fri (samma DEP0190-disciplin som next-spawnen nedan):
+// venv-python anropas direkt med en argv-array, aldrig via en shell-sträng.
+const PRUNE_TIMEOUT_MS = 60_000;
+const PRUNE_SCRIPT = resolve(REPO_ROOT, "scripts", "prune_generated_previews.py");
+const VENV_PYTHON = resolve(
+  REPO_ROOT,
+  ".venv",
+  ...(IS_WINDOWS ? ["Scripts", "python.exe"] : ["bin", "python"]),
+);
+// Samma off-tokens som övriga boolean-env i repot; allt annat (inkl. unset)
+// betyder PÅ — kill-switchen ska vara explicit, inte något man råkar trycka på.
+const PRUNE_OFF_VALUES = new Set(["0", "false", "no", "off"]);
+
+function pruneLog(message) {
+  process.stdout.write(`Viewser dev → ${message}\n`);
+}
+
+function runPruneOnDevStart() {
+  const rawFlag = (mergedEnv.VIEWSER_PRUNE_ON_DEV_START ?? "1").trim().toLowerCase();
+  if (PRUNE_OFF_VALUES.has(rawFlag)) {
+    pruneLog("Städning av: VIEWSER_PRUNE_ON_DEV_START=0");
+    return;
+  }
+  if (!existsSync(PRUNE_SCRIPT)) {
+    pruneLog(`Städning skippad: prune-skriptet saknas (${PRUNE_SCRIPT})`);
+    return;
+  }
+  if (!existsSync(VENV_PYTHON)) {
+    pruneLog(`Städning skippad: venv-python saknas (${VENV_PYTHON})`);
+    return;
+  }
+  const result = spawnSync(VENV_PYTHON, [PRUNE_SCRIPT, "--apply"], {
+    cwd: REPO_ROOT,
+    shell: false,
+    timeout: PRUNE_TIMEOUT_MS,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    // mergedEnv (inte bara process.env) så SAJTBYGGAREN_GENERATED_DIR /
+    // SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN ur .env-filerna når skriptet —
+    // samma env-vy som operatören konfigurerat för resten av pipelinen.
+    env: { ...mergedEnv, PYTHONIOENCODING: "utf-8" },
+  });
+  if (result.error) {
+    const reason =
+      result.error.code === "ETIMEDOUT"
+        ? `timeout efter ${PRUNE_TIMEOUT_MS / 1000}s — fortsätter utan städning`
+        : result.error.message;
+    pruneLog(`Städning skippad: ${reason}`);
+    return;
+  }
+  const stdout = result.stdout ?? "";
+  const stderr = result.stderr ?? "";
+  if (result.status !== 0) {
+    // T.ex. SystemExit från port-guarden ("Live target detected; ...") när en
+    // orphan-preview på 41xx fortfarande lyssnar. Första raden är orsaken.
+    const firstLine =
+      (stderr.trim() || stdout.trim()).split(/\r?\n/)[0] ||
+      `prune-skriptet exitade med ${result.status ?? result.signal}`;
+    pruneLog(`Städning skippad: ${firstLine}`);
+    return;
+  }
+  if (stdout.includes("dry-run=True")) {
+    // Skriptet neutraliserade vårt --apply (SAJTBYGGAREN_PREVIEW_RETENTION_
+    // DRY_RUN=true). Ärlig logg: inget raderades.
+    pruneLog(
+      "Städning skippad: SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN tvingar dry-run (inget raderades)",
+    );
+    return;
+  }
+  // "Decision counts:"-blocket skriver `  deleted   N` när radering skett och
+  // `(apply-error: ...)` per katalog som inte gick att ta bort (låsta filer).
+  const deletedMatch = stdout.match(/^\s*deleted\s+(\d+)\s*$/m);
+  const deleted = deletedMatch ? Number(deletedMatch[1]) : 0;
+  const applyErrors = (stdout.match(/apply-error/g) ?? []).length;
+  if (deleted > 0) {
+    pruneLog(
+      `Städade ${deleted} gamla preview-byggen` +
+        (applyErrors > 0 ? ` (${applyErrors} kunde inte raderas — låsta filer?)` : ""),
+    );
+  } else if (applyErrors > 0) {
+    pruneLog(
+      `Städning misslyckades för ${applyErrors} kataloger (låsta filer?) — ` +
+        "kör scripts/prune_generated_previews.py manuellt",
+    );
+  } else {
+    pruneLog("Städning klar: inga gamla preview-byggen att ta bort");
+  }
+}
+
+// Belt-and-braces utöver spawnSyncs egna felvägar: även en oväntad throw i
+// själva städlogiken får aldrig stoppa dev-starten.
+try {
+  runPruneOnDevStart();
+} catch (err) {
+  pruneLog(`Städning skippad: ${err instanceof Error ? err.message : String(err)}`);
+}
+
 // Pass through extra argv (allt efter scriptnamnet). Tillåter t.ex.
 // `npm run dev -- --port 3001`.
 const passthroughArgs = process.argv.slice(2);
