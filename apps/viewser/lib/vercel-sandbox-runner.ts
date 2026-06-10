@@ -249,11 +249,39 @@ function ensureVercelEnvLocalLoaded(): void {
  * Exporterad (minimalt, P2 hosted build): ``hosted-build-runner.ts`` behöver
  * exakt samma auth-mönster för sin bygg-sandbox och får inte duplicera logiken.
  */
+/**
+ * Hostat på Vercel injiceras OIDC-token INTE som env-var i funktioner — den
+ * levereras per request via request-kontexten (samma källa som
+ * ``@vercel/functions`` ``getVercelOidcToken`` läser, utan att vi behöver den
+ * dependencyn). Utan denna adoption är ``process.env.VERCEL_OIDC_TOKEN`` tom
+ * hostat och sandbox-vägarna failar med "credentials saknas" — det var därför
+ * en statisk (och efter ~12 h utgången) token tidigare låg som env-var i
+ * produktionsprojektet. Lokalt är detta en no-op (kontext-symbolen finns inte).
+ */
+function adoptOidcTokenFromRequestContext(): void {
+  if (process.env.VERCEL_OIDC_TOKEN?.trim()) return;
+  try {
+    const requestContext = Reflect.get(
+      globalThis,
+      Symbol.for("@vercel/request-context"),
+    ) as
+      | { get?: () => { headers?: Record<string, string | undefined> } }
+      | undefined;
+    const token = requestContext?.get?.()?.headers?.["x-vercel-oidc-token"];
+    if (token && token.trim()) {
+      process.env.VERCEL_OIDC_TOKEN = token.trim();
+    }
+  } catch {
+    // Kontext-läsningen är best-effort — token-trion är kvar som fallback.
+  }
+}
+
 export function resolveCredentials():
   | { mode: "oidc"; create: Record<string, never> }
   | { mode: "token"; create: { token: string; teamId: string; projectId: string } }
   | null {
   ensureVercelEnvLocalLoaded();
+  adoptOidcTokenFromRequestContext();
   if (process.env.VERCEL_OIDC_TOKEN && process.env.VERCEL_OIDC_TOKEN.trim()) {
     return { mode: "oidc", create: {} };
   }
