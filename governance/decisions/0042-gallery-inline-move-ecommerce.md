@@ -1,4 +1,4 @@
-# ADR 0040 — section_add slice 4: galleri som flyttbar inline-sektion + ecommerce-lite
+# ADR 0042 — section_add slice 4: galleri som flyttbar inline-sektion + ecommerce-lite
 
 **Status:** Accepted
 **Datum:** 2026-06-10

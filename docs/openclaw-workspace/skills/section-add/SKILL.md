@@ -6,7 +6,7 @@ capability+dossier via apply-kedjan, så en följdprompt ("lägg till en
 FAQ-sektion") ger en ny immutabel version med sektionen monterad.
 
 > **SYNLIGT för faq + team (flippat 2026-06-09), öppettider (ADR 0038) och
-> galleri (ADR 0040); MOUNT-ONLY för resten:** section_add MONTERAR alltid
+> galleri (ADR 0042); MOUNT-ONLY för resten:** section_add MONTERAR alltid
 > capability + dossier i nästa version (`requestedCapabilities` +
 > `selectedDossiers.required`).
 >
@@ -21,9 +21,9 @@ FAQ-sektion") ger en ny immutabel version med sektionen monterad.
 > (mounted-but-no-content), aldrig en påhittad platshållare. På andra scaffolds
 > förblir faq/team mount-only tills deras renderare väljer in wizard-routes.
 >
-> För `hours` (ADR 0038) och `gallery` (ADR 0040) renderas sektionen INLINE som
+> För `hours` (ADR 0038) och `gallery` (ADR 0042) renderas sektionen INLINE som
 > block på home via `directives.mountedSections`, på scaffolds local-service-
-> business + ecommerce-lite (ADR 0040). Positionsmålet ("överst"/"längst ner")
+> business + ecommerce-lite (ADR 0042). Positionsmålet ("överst"/"längst ner")
 > respekteras; för `gallery`, som ofta redan ligger i home-ordningen när
 > galleri-bilder finns, betyder en explicit position en FLYTT av den
 > befintliga sektionen (aldrig en dubblett). Grundat innehåll krävs
@@ -87,5 +87,5 @@ supported — router + apply-väg + 9 typer + tester + verify_openclaw inne på
 `jakob-be` (se `../../action-registry.json`). Synlig render landad för `faq` +
 `team` på local-service-business (grundad dedikerad route), `hours` inline på
 home (ADR 0038) och `gallery` inline/flytt på home för local-service-business +
-ecommerce-lite (ADR 0040, 2026-06-10); övriga fem typer är fortfarande
+ecommerce-lite (ADR 0042, 2026-06-10); övriga fem typer är fortfarande
 mount-only (följd: priser/karta nästa).

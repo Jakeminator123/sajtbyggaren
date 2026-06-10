@@ -94,7 +94,7 @@ type ModuleDef = {
 // så de gav en falsk affordance (Vercel-agent-fynd 2026-06-08) och är borttagna.
 const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
   {
-    // ADR 0040 (2026-06-10): gallery renderas inline på startsidan (företags-/
+    // ADR 0042 (2026-06-10): gallery renderas inline på startsidan (företags-/
     // tjänstemallen + e-handelsmallen) och en explicit position FLYTTAR den
     // befintliga gallerisektionen. Gated på uppladdade galleri-bilder.
     id: "gallery",
@@ -174,7 +174,7 @@ const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
 const EFFECT_BADGES: Record<ModuleEffect, { label: string; title: string }> = {
   inline: {
     label: "kan synas på startsidan",
-    // Scaffold-nyansen per msg-0057 + ADR 0040: inline-rendern gäller
+    // Scaffold-nyansen per msg-0057 + ADR 0042: inline-rendern gäller
     // företags-/tjänstemallen och e-handelsmallen; på andra sajttyper blir
     // den ärligt mount-only (toasten säger då "registrerad men syns inte").
     title:

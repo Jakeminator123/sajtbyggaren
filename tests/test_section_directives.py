@@ -280,7 +280,7 @@ def test_inline_placement_for_hours_on_lsb() -> None:
 
 
 def test_inline_placement_for_gallery_on_lsb_and_ecommerce() -> None:
-    """ADR 0040 slice 4: ``gallery`` maps to the home gallery section on BOTH
+    """ADR 0042 slice 4: ``gallery`` maps to the home gallery section on BOTH
     inline scaffolds (they share the render_home injection seam)."""
     expected = [{"capability": "gallery", "sectionId": "gallery", "routeId": "home"}]
     assert resolve_inline_section_placements(["gallery"], _LSB_PI) == expected

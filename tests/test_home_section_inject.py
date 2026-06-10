@@ -236,7 +236,7 @@ def test_home_already_present_section_not_duplicated():
 
 
 # ---------------------------------------------------------------------------
-# Slice 4 (ADR 0040): gallery as a movable inline section. ``gallery`` is part
+# Slice 4 (ADR 0042): gallery as a movable inline section. ``gallery`` is part
 # of the default home order whenever the operator has gallery images, so a
 # section_add "lägg till galleri överst" must MOVE the section to the
 # requested slot (never duplicate it, never silently no-op the operator's
@@ -262,7 +262,7 @@ def _gallery_dossier(scaffold_id: str = "local-service-business") -> dict[str, A
 
 @pytest.mark.tooling
 def test_home_gallery_move_top_lands_after_hero():
-    """ADR 0040: gallery + position=top MOVES the default mid-page gallery to
+    """ADR 0042: gallery + position=top MOVES the default mid-page gallery to
     right after the hero — rendered exactly once, before the services summary."""
     dossier = _gallery_dossier()
     dossier["directives"] = {
@@ -284,7 +284,7 @@ def test_home_gallery_move_top_lands_after_hero():
 
 @pytest.mark.tooling
 def test_home_gallery_move_bottom_lands_before_contact():
-    """ADR 0040: gallery + position=bottom moves the section to just before the
+    """ADR 0042: gallery + position=bottom moves the section to just before the
     closing contact-cta (after the default mid-page slot)."""
     dossier = _gallery_dossier()
     dossier["directives"] = {
@@ -324,7 +324,7 @@ def test_home_gallery_without_position_keeps_default_slot():
 
 @pytest.mark.tooling
 def test_home_gallery_move_works_on_ecommerce_lite():
-    """ADR 0040 scaffold gate: ecommerce-lite home goes through the same
+    """ADR 0042 scaffold gate: ecommerce-lite home goes through the same
     render_home shim, so the same move directive must work there too."""
     dossier = _gallery_dossier(scaffold_id="ecommerce-lite")
     dossier["directives"] = {
@@ -345,7 +345,7 @@ def test_home_gallery_move_works_on_ecommerce_lite():
 @pytest.mark.tooling
 def test_home_gallery_move_blocked_on_unsanctioned_scaffold():
     """The (scaffoldId, routeId) allowlist still gates moves: the same grounded
-    move directive must be a no-op on a scaffold ADR 0040 has not sanctioned."""
+    move directive must be a no-op on a scaffold ADR 0042 has not sanctioned."""
     dossier = _gallery_dossier(scaffold_id="agency-studio")
     baseline = render_home(
         {**dossier, "directives": {}}, _HOME_ROUTES, variant_id=dossier["variantId"]

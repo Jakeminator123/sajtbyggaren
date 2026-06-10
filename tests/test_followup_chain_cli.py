@@ -598,7 +598,7 @@ def _seed_example_with_gallery_init_build(
     tmp_path: Path, example_filename: str, site_id: str
 ) -> tuple[Path, Path, Path]:
     """Like ``_seed_example_init_build`` but with two gallery assetRefs added,
-    so the home gallery section is grounded (ADR 0040 move tests). Two images
+    so the home gallery section is grounded (ADR 0042 move tests). Two images
     because a non-empty company.story consumes the first one (the home gallery
     renderer skips it), and a single image would suppress the section. The
     physical bytes are absent on purpose — ``copy_operator_uploads`` skips a
@@ -641,7 +641,7 @@ def _seed_example_with_gallery_init_build(
 def test_followup_chain_section_add_gallery_moves_to_top(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """ADR 0040 (slice 4) move-proof: "lägg till en galleri-sektion överst" on
+    """ADR 0042 (slice 4) move-proof: "lägg till en galleri-sektion överst" on
     a site whose home ALREADY renders the gallery mid-page (grounded images)
     must MOVE the section to right after the hero — rendered exactly once —
     and report an honest appliedVisibleEffect=true on home."""
@@ -703,7 +703,7 @@ def test_followup_chain_section_add_gallery_moves_to_top(
 def test_followup_chain_section_add_gallery_moves_on_ecommerce_lite(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """ADR 0040 scaffold gate, E2E: the same gallery move works on the
+    """ADR 0042 scaffold gate, E2E: the same gallery move works on the
     ecommerce-lite scaffold (operator scenario 2026-06-10: drag-and-drop
     "galleri överst" on the 1753-skincare site changed nothing because gallery
     was mount-only outside local-service-business)."""
