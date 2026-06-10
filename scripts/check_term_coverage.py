@@ -826,6 +826,12 @@ COMMON_WORDS = {
     "ProgressTrack", "ProgressValue",
     # Python stdlib + tredjepart-symboler i scrape_site.py och build_site.py
     "BeautifulSoup", "RequestException", "ChunkedEncodingError", "ConnectionError",
+    # pandas/pyarrow-symboler refererade av backoffice/asset_graph.py + dess test
+    # när det bevisar att Asset Graph-nodtabellen serialiseras till Arrow
+    # (Streamlits st.dataframe-väg, B-fix sourceFileCount). Externa
+    # bibliotekssymboler — samma kategori som BeautifulSoup / ImageChops — inte
+    # canonical domänbegrepp.
+    "ArrowInvalid", "DataFrame",
     # Pillow (PIL) submodulnamn som asset-parity-testets avkodade pixel-jämförelse
     # använder (tests/test_build_assets_parity.py). Externa bibliotekssymboler
     # (samma kategori som BeautifulSoup / RequestException ovan), inte canonical
