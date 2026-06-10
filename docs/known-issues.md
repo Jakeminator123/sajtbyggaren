@@ -665,26 +665,36 @@ round 2); se Stängda-sektionen.
   befintliga operatörs-overriden `company.heroHeadline` (kontrakt heroHeadline
   > blueprint > company.name, `fb9692d`) sattes bara av explicita
   rubrik-ändringar, så en aldrig-redigerad rubrik saknade ankare och driftade.
-  Fix: `generate_followup` (scripts/prompt_to_project_input.py) pinnar nu
+  Fix: en delad pin-modul
+  (`packages/generation/followup/hero_headline_pin.py`, stdlib-only) pinnar
   föregående versions FAKTISKT renderade H1 (blueprint-rubriken ur basrunens
   `generation-package.json`, annars `company.name` - renderarens egen
-  fallback-kedja) som `company.heroHeadline` på merge-basen när fältet saknas.
-  Init-bygget orört (pinnen körs bara i följdprompt-flödet); explicit "byt
-  rubriken till X" (copy-directives/B155-literal/LLM-copy) skriver fortfarande
-  över pinnen via `_apply_copy_directives`-mirrorn; pinnen reproducerar
-  föregående H1 byte-för-byte och kan därför aldrig ensam flippa
-  `appliedVisibleEffect`; no-key-läget beter sig likadant (deterministiska
-  tester). Bonus: B155-literal-replace kan nu matcha den SYNLIGA hero-raden
-  (operatören citerar det hen ser). Kvarstående lucka (medveten scope-gräns):
-  KÖR-7-kedjan (`build_site.py --followup` / OpenClaw `--apply`) pinnar inte
-  själv - den ärver dock en redan satt pin byte-stabilt via apply:ns deepcopy.
-  Källa: operatörsfynd 2026-06-10, manuella klick-checkar /studio
-  painter-palma. Fix: `190f5de`. Test:
+  fallback-kedja) som `company.heroHeadline` på merge-basen när fältet saknas,
+  i BÅDA följdprompt-seamsen: (1) `generate_followup`
+  (scripts/prompt_to_project_input.py, legacy Phase 1+2-vägen) och (2)
+  `apply_patch_plan` (packages/generation/orchestration/apply/apply.py, steg
+  4b - KÖR-7-kedjan bakom `run_followup_chain`/OpenClaw apply-bridgen som
+  /studio-följdprompter går genom och som ALDRIG anropar generate_followup;
+  Scout-fynd på PR #264 - utan denna seam fick painter-palma aldrig pinnen).
+  Init-bygget orört (ingen pin utan tidigare run); explicit "byt rubriken
+  till X" (copy-directives/B155-literal/LLM-copy) skriver fortfarande över
+  pinnen via `_apply_copy_directives`-mirrorn och apply rör aldrig ett redan
+  satt fält; pinnen reproducerar föregående H1 byte-för-byte och kan därför
+  aldrig ensam flippa `appliedVisibleEffect`; no-key-läget beter sig likadant
+  (deterministiska tester, inkl. mock-no-key-integration över riktiga
+  `run_followup_chain`). Bonus: B155-literal-replace kan nu matcha den
+  SYNLIGA hero-raden (operatören citerar det hen ser). Källa: operatörsfynd
+  2026-06-10, manuella klick-checkar /studio painter-palma; apply-seam-luckan
+  verifierad av Scout-granskning av PR #264. Fix: `190f5de` +
+  apply-seam `4cb0c3c`. Test:
   `tests/test_hero_headline_stability.py::test_followup_without_heading_intent_pins_previous_hero_headline`
   + `::test_pin_alone_renders_hero_byte_identically`
   + `::test_explicit_heading_change_wins_over_pin`
   + `::test_init_generation_never_pins`
-  + `::test_base_run_id_pins_that_runs_headline`.
+  + `::test_base_run_id_pins_that_runs_headline`
+  + `::test_apply_patch_plan_theme_directive_pins_previous_hero_headline`
+  + `::test_apply_patch_plan_does_not_overwrite_existing_explicit_hero_headline`
+  + `::test_followup_chain_restyle_pins_previous_hero_headline_end_to_end`.
 - **`B164` Medel-Hög** (stängd 2026-06-10, bug-sweep round 2) - OpenClaw
   apply-bridge-fel EFTER att KÖR-7-kedjan skrivit Project Input/version gav
   tyst dubbelbygge. `runOpenClawFollowupApply` returnerar `null` vid timeout
