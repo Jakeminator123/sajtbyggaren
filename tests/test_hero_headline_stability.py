@@ -38,6 +38,9 @@ import pytest
 
 from packages.generation.build.blueprint_render import RenderBlueprint
 from packages.generation.build.renderers import render_section_hero
+from packages.generation.followup.theme_directives import ThemeDirective
+from packages.generation.orchestration.apply import apply_patch_plan
+from packages.generation.orchestration.patch import PatchPlan
 from scripts.prompt_to_project_input import generate, generate_followup
 
 INIT_PROMPT = "Skapa en hemsida för en målerifirma i Palma."
@@ -337,7 +340,165 @@ def test_pin_falls_back_to_company_name_when_blueprint_lacks_hero_block(
 
 
 # ---------------------------------------------------------------------------
-# 5. --base-run-id: the pin follows the run the operator iterates from
+# 5. KÖR-7 apply seam (the /studio OpenClaw apply-bridge path)
+# ---------------------------------------------------------------------------
+# Scout-fynd på PR #264: /studio follow-ups go through runOpenClawFollowupApply
+# -> run_followup_chain -> apply_patch_plan, which creates the next PI version
+# WITHOUT generate_followup (route.ts early-returns on bridge.applied=true, so
+# legacy Phase 1 never runs). The pin must therefore live in apply too.
+
+
+@pytest.mark.tooling
+def test_apply_patch_plan_theme_directive_pins_previous_hero_headline(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A visual_style restyle through apply (no capability patch, theme only)
+    pins the previously rendered H1 when company.heroHeadline is missing."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    output_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    initial_pi, _, _, _ = generate(
+        INIT_PROMPT,
+        output_dir=output_dir,
+        site_id=SITE_ID,
+        project_id=PROJECT_ID,
+    )
+    assert "heroHeadline" not in initial_pi["company"]
+    _write_previous_run(runs_dir)
+
+    result = apply_patch_plan(
+        PatchPlan(),
+        site_id=SITE_ID,
+        output_dir=output_dir,
+        runs_dir=runs_dir,
+        theme_directive=ThemeDirective(
+            primaryColorHex="#db2777", toneVibe="editorial", colorWord="rosa"
+        ),
+    )
+    assert result.applied is True
+    v2_pi = json.loads(
+        (output_dir / f"{SITE_ID}.v2.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert v2_pi["company"]["heroHeadline"] == PREVIOUS_HEADLINE
+    # The restyle itself still landed (the pin never blocks the apply edit).
+    assert v2_pi["brand"]["primaryColorHex"] == "#db2777"
+
+
+@pytest.mark.tooling
+def test_apply_patch_plan_does_not_overwrite_existing_explicit_hero_headline(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An operator-set heroHeadline survives an apply-driven follow-up even
+    when the latest run carries a different blueprint headline."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    output_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generate(
+        INIT_PROMPT,
+        output_dir=output_dir,
+        site_id=SITE_ID,
+        project_id=PROJECT_ID,
+    )
+    # The operator set an explicit heading in the current version.
+    current_path = output_dir / f"{SITE_ID}.project-input.json"
+    current = json.loads(current_path.read_text(encoding="utf-8"))
+    current["company"]["heroHeadline"] = "Operatörens egna rubrik"
+    current_path.write_text(
+        json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    _write_previous_run(runs_dir, headline="En annan blueprintrubrik")
+
+    result = apply_patch_plan(
+        PatchPlan(),
+        site_id=SITE_ID,
+        output_dir=output_dir,
+        runs_dir=runs_dir,
+        theme_directive=ThemeDirective(
+            primaryColorHex="#db2777", toneVibe="editorial", colorWord="rosa"
+        ),
+    )
+    assert result.applied is True
+    v2_pi = json.loads(
+        (output_dir / f"{SITE_ID}.v2.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert v2_pi["company"]["heroHeadline"] == "Operatörens egna rubrik"
+
+
+@pytest.mark.tooling
+def test_followup_chain_restyle_pins_previous_hero_headline_end_to_end(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Mock-no-key integration over the REAL chain (router -> patch -> apply):
+    a neutral restyle on the painter-palma example yields a v2 Project Input
+    whose pinned heroHeadline equals the H1 the v1 build actually rendered,
+    and the rendered H1 stays unchanged even against a freshly regenerated
+    blueprint."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import build, run_followup_chain
+
+    repo_root = Path(__file__).resolve().parents[1]
+    example = repo_root / "examples" / "painter-palma.project-input.json"
+    site_id = "painter-palma"
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "gen"
+    _target, v1_run_dir = build(
+        example,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        prompt_inputs_dir=prompt_inputs,
+    )
+    package = json.loads(
+        (v1_run_dir / "generation-package.json").read_text(encoding="utf-8")
+    )
+    v1_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v1.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    hero_block = (package.get("contentBlocks") or {}).get("home.hero") or {}
+    rendered_h1 = (hero_block.get("headline") or "").strip() or v1_pi[
+        "company"
+    ]["name"]
+    assert "heroHeadline" not in v1_pi["company"]
+
+    result = run_followup_chain(
+        site_id,
+        "ändra färgen till rosa",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert result["applied"] is True, result
+    assert result["version"] == 2
+
+    v2_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v2.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert v2_pi["company"]["heroHeadline"] == rendered_h1, (
+        "the apply-driven follow-up must carry the H1 the v1 build rendered"
+    )
+    # The H1 stays put even when the NEXT rebuild's brief regenerates a brand
+    # new blueprint headline (the drift painter-palma showed in production).
+    regenerated = RenderBlueprint(
+        content_blocks={"home.hero": {"headline": REGENERATED_HEADLINE}}
+    )
+    hero = _render_hero(copy.deepcopy(v2_pi), regenerated)
+    assert rendered_h1 in hero
+    assert REGENERATED_HEADLINE not in hero
+
+
+# ---------------------------------------------------------------------------
+# 6. --base-run-id: the pin follows the run the operator iterates from
 # ---------------------------------------------------------------------------
 
 
