@@ -89,14 +89,14 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    bara `--primary` — beslutsunderlag med tre optioner ligger i
    `docs/heavy-llm-flow/openclaw-2.0-conductor.md` (slice 3-kandidat;
    option b möjliggjordes av #262:s answer-only-väg).
-4. **Tier 2-beslut på verklig användningsdata (NEDGRADERAD från manuell
-   mätning, operatörsbeslut 2026-06-10):** ingen separat mätövning —
-   #263 loggar redan `timings` automatiskt i varje preview-svar, så
-   datat samlas av sig självt vid verklig användning. Tier 2
-   (bas-snapshot P3 + sandbox-återanvändning, kräver liten ADR; lärdom
-   från #156-boten: `Sandbox.get()` behöver `resume: false`) byggs först
-   när sandbox-previewen upplevs långsam i praktiken — då finns
-   timings-datat att besluta på.
+4. **Tier 2 LANDAD (PR #276, ADR 0041):** opt-in warm-sandbox-
+   återanvändning (`VIEWSER_SANDBOX_REUSE=1` i `apps/viewser/.env.local`,
+   default AV → noll regression), inkl. route-grinden (stop-before-create
+   hoppas i reuse-läge), namn-kollisionsstrategin (ren miss →
+   deterministiskt namn; funnen-men-död/transient fel → tidsstämplat,
+   Vercel-bot-fyndet fixat i `a5f66c6`) och typad `reused`-flagga i
+   timings. KVAR (operatören): live-mätning med flaggan på — kör en
+   följdprompt två gånger, bekräfta `reused: true` utan `createMs`.
 5. **Starter-hygien-slice (kräver operatörs-OK, plattform-pins):**
    `engines`-fält (Node, matcha Vercels 24), `allowScripts`-godkännande
    för sharp (npm-varningar i genererade sajter), spåra transitiva
@@ -154,16 +154,15 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `d4a070a` (2026-06-10 ~13:40 UTC+2; `jakob-be` HEAD
-efter merge av PR #275 — komponentkatalog lager 1+2 LANDAD, ADR 0040.
-Tidigare i dag: #274 (F1 slice 3 roll-dispatch: rollvalet styr
-section-add-dispatchen, `expectsAnswer`, ärlig roll-rad), Christopher
-aviserad via `msg-0063`/`msg-0064`. Hygien-fix `58aec36`: add-module-
-dialog-låsen utbrutna till `tests/test_viewser_builder_dialogs.py`
-(1200-raders-taket; ytan syntes först i #275:s CI). Tier 2-slicen
-(sandbox warm-reuse, ADR 0041) kör i cloud-grind med operatörens svar:
-landa mekanism + minimal route-grind, reconcile-install, typad
-`reused`-flagga). Dagens facit efter main-syncen (`6ea53c0`, pre-sync
+Last verified state: `c1b9c43` (2026-06-10 ~14:15 UTC+2; `jakob-be` HEAD
+efter merge av PR #276 — Tier 2 warm-sandbox-reuse LANDAD, ADR 0041,
+inkl. babysit-fix `a5f66c6` för Vercel-botens transient-fail-fynd).
+Tidigare i dag: #274 (roll-dispatch), #275 (komponentkatalog lager 1+2,
+ADR 0040), hygien-fix `58aec36` (add-module-låsen → egen testfil),
+design-notens lager 3 har konceptbevis (operatörens shadcn-mcp-lab) +
+hård MCP-separationsregel. Christopher aviserad `msg-0063`/`msg-0064`.
+Ev. pågående: lager 3-slicen (komponent-förslag, ADR 0042) om operatören
+skickat prompten. Dagens facit efter main-syncen (`6ea53c0`, pre-sync
 sparad som `backup_150_BRA`):
 
 - **#270** slice 3-delar: B178 stängd (ociterad demonstrativ fri-text-replace
