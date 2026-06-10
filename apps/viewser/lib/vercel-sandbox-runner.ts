@@ -43,6 +43,12 @@ import {
   collectSourceFromBlob,
   type CollectedBlobSource,
 } from "./generated-blob-source";
+import {
+  decodeJwtExpirySeconds,
+  ensureFreshVercelOidcToken,
+  OIDC_REFRESH_MARGIN_SECONDS,
+  readVercelOidcTokenFromFile,
+} from "./vercel-oidc-refresh.mjs";
 
 const TTL_ENV = "VIEWSER_SANDBOX_SPIKE_TTL_MS";
 
@@ -236,6 +242,71 @@ function resolveCredentials():
  */
 export function hasVercelSandboxAuth(): boolean {
   return resolveCredentials() !== null;
+}
+
+/**
+ * B1a — token-hållbarhet: OIDC-token från ``vercel env pull`` lever ~12 h
+ * lokalt. En lång viewser-session överlever den gränsen, och utan denna
+ * guard dör previews mitt i med ett kryptiskt SDK-fel. Anropas FÖRE
+ * ``Sandbox.create`` när OIDC-vägen används:
+ *
+ *   - > 1 h kvar på JWT-exp → no-op (ingen pull-kostnad i normalfallet).
+ *   - < 1 h kvar / oläsbar exp → kör den DELADE refreshen
+ *     (``vercel-oidc-refresh.mjs``, samma logik som scripts/dev.mjs predev)
+ *     och adoptera en fräschare token från ``.env.vercel.local`` in i
+ *     ``process.env`` (det är därifrån SDK:n läser ``VERCEL_OIDC_TOKEN``;
+ *     ``ensureVercelEnvLocalLoaded`` fyller bara TOMMA nycklar en gång per
+ *     process och hjälper inte här).
+ *   - Refresh misslyckades men token lever fortfarande → fortsätt ärligt
+ *     med varningslogg (previewn hinner förmodligen klart).
+ *   - Refresh misslyckades och token är död/saknas → ärligt fel med
+ *     expiresIn + hur-fixar-info (klassas som ``vercel_auth`` av preview-
+ *     routen — meddelandet innehåller "VERCEL_OIDC_TOKEN").
+ */
+function ensureFreshOidcTokenBeforeCreate(
+  logs: string[],
+): { ok: true } | { ok: false; error: string } {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const currentExp = decodeJwtExpirySeconds(process.env.VERCEL_OIDC_TOKEN);
+  if (currentExp !== null && currentExp - nowSeconds > OIDC_REFRESH_MARGIN_SECONDS) {
+    return { ok: true };
+  }
+  ensureFreshVercelOidcToken({
+    log: (message: string) => logs.push(`OIDC-refresh: ${message}`),
+    warn: (message: string) => logs.push(`OIDC-refresh: ${message}`),
+  });
+  const fileToken = readVercelOidcTokenFromFile();
+  if (fileToken) {
+    const fileExp = decodeJwtExpirySeconds(fileToken);
+    if (fileExp !== null && (currentExp === null || fileExp > currentExp)) {
+      process.env.VERCEL_OIDC_TOKEN = fileToken;
+    }
+  }
+  const effectiveExp = decodeJwtExpirySeconds(process.env.VERCEL_OIDC_TOKEN);
+  if (effectiveExp !== null && effectiveExp > nowSeconds) {
+    const minutesLeft = Math.round((effectiveExp - nowSeconds) / 60);
+    if (effectiveExp - nowSeconds <= OIDC_REFRESH_MARGIN_SECONDS) {
+      logs.push(
+        "Varning: OIDC-refresh misslyckades — fortsätter på nuvarande token " +
+          `(~${minutesLeft} min kvar).`,
+      );
+    } else {
+      logs.push(`OIDC-token färsk (~${minutesLeft} min kvar).`);
+    }
+    return { ok: true };
+  }
+  const expiresIn =
+    effectiveExp === null
+      ? "okänd (token saknas eller har oläsbar exp)"
+      : `${effectiveExp - nowSeconds} s (utgången)`;
+  return {
+    ok: false,
+    error:
+      "VERCEL_OIDC_TOKEN är utgången och kunde inte uppdateras automatiskt " +
+      `(expiresIn: ${expiresIn}). Kör \`vercel env pull ` +
+      "apps/viewser/.env.vercel.local` (kräver `vercel link` + inloggad " +
+      "vercel-CLI) och försök igen — en färsk token gäller ~12 h.",
+  };
 }
 
 // Var ``build_site.py`` skrivit den genererade sajten resolveras av den
@@ -628,6 +699,15 @@ async function createSandboxPreviewAttempt(
 
   const ttlMs = clampTtl(request.ttlMs);
   const sandboxName = `sajtbyggaren-preview-${slug(request.siteId)}-${Date.now()}`;
+
+  // B1a: håll OIDC-token färsk FÖRE Sandbox.create (refresh vid < 1 h kvar).
+  // Auth-fel är aldrig fallback-berättigade — fulla vägen failar identiskt.
+  if (credentials.mode === "oidc") {
+    const oidcGuard = ensureFreshOidcTokenBeforeCreate(logs);
+    if (!oidcGuard.ok) {
+      return { result: failed(oidcGuard.error, logs), fallbackEligible: false };
+    }
+  }
 
   const t0 = Date.now();
   let createMs: number | undefined;
