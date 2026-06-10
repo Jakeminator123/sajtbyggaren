@@ -233,6 +233,24 @@ def test_known_operator_directive_still_reuses(monkeypatch, tmp_path):
     assert carried["positioning"]["oneLiner"] == SENTINEL
 
 
+def test_removed_operator_directive_regenerates(monkeypatch, tmp_path):
+    """A directive the PREVIOUS brief carried but the new Project Input dropped
+    must regenerate: the previous brief's creative copy was shaped by that
+    directive, so a byte-stable reuse would silently keep the removed
+    instruction's influence (the operator deleted it on purpose)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    base = _dossier()
+    base["directives"] = {"notesForPlanner": "Lyft fram fasadmålning."}
+    previous = _previous_mock_brief(base)
+    assert "Operator: Lyft fram fasadmålning." in previous["notesForPlanner"]
+    run_dir = _write_previous_run(tmp_path, previous)
+
+    # The new version removes the operator directive entirely.
+    without_directive = copy.deepcopy(base)
+    without_directive.pop("directives", None)
+    assert reuse_previous_site_brief("run-new", without_directive, run_dir) is None
+
+
 def test_missing_or_malformed_previous_brief_regenerates(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     dossier = _dossier()

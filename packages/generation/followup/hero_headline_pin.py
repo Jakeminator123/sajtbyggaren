@@ -51,12 +51,27 @@ __all__ = [
 HERO_HEADLINE_PIN_MAX_LENGTH = 200
 
 
+# build-result.json status of a run that genuinely FAILED (npm install/build or
+# a blocking Quality Gate check) - its artefakts may be partial/broken, so it is
+# never a trustworthy base to carry a headline/brief forward from or to iterate a
+# follow-up on. NOTE: ``skipped`` (a ``--skip-build`` / do_build=False run) is
+# NOT excluded - that is the normal dev/eval fast-mode and its artefakts (Project
+# Input version, brief, generation-package) are fully written; only the npm
+# preview build was skipped. ``ok``/``degraded``/``skipped``/missing are all
+# valid bases (B-fix latest-run-status: skip only genuinely failed runs).
+_NON_SHIPPABLE_RUN_STATUSES = frozenset({"failed"})
+
+
 def latest_run_dir_for_site(runs_dir: Path, site_id: str) -> Path | None:
-    """Newest run dir whose build-result.json belongs to ``site_id``.
+    """Newest non-failed run dir whose build-result.json belongs to ``site_id``.
 
     Mirrors ``scripts/build_site.py:_latest_run_id_for_site`` (mtime order,
-    read-only). Returns ``None`` when the site has no completed run yet —
-    then nothing was ever rendered, so there is no headline to carry forward.
+    read-only). Returns ``None`` when the site has no usable run yet — then
+    nothing was rendered, so there is no headline to carry forward. A ``failed``
+    run still writes build-result.json but its artefakts may be partial/broken,
+    so it is skipped: a follow-up must iterate from the last GOOD version, not a
+    build that failed (a ``skipped``/--skip-build run keeps full artefakts and
+    is a valid base, so it is NOT excluded).
     """
     try:
         candidates = sorted(
@@ -73,8 +88,11 @@ def latest_run_dir_for_site(runs_dir: Path, site_id: str) -> Path | None:
             )
         except (OSError, json.JSONDecodeError):
             continue
-        if payload.get("siteId") == site_id:
-            return run_dir
+        if payload.get("siteId") != site_id:
+            continue
+        if payload.get("status") in _NON_SHIPPABLE_RUN_STATUSES:
+            continue
+        return run_dir
     return None
 
 

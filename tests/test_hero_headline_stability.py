@@ -38,6 +38,7 @@ import pytest
 
 from packages.generation.build.blueprint_render import RenderBlueprint
 from packages.generation.build.renderers import render_section_hero
+from packages.generation.followup.hero_headline_pin import latest_run_dir_for_site
 from packages.generation.followup.theme_directives import ThemeDirective
 from packages.generation.orchestration.apply import apply_patch_plan
 from packages.generation.orchestration.patch import PatchPlan
@@ -119,6 +120,41 @@ def _init_then_followup(
         runs_dir=runs_dir,
     )
     return initial_pi, followup_pi
+
+
+@pytest.mark.tooling
+def test_latest_run_dir_skips_failed_runs(tmp_path: Path) -> None:
+    """A genuinely FAILED run may have partial/broken artefakts, so it must NOT
+    be picked as the base to carry a headline/brief forward from - the last good
+    run wins. A ``skipped`` (--skip-build) run keeps full artefakts and stays a
+    valid base; ``degraded``/missing-status are valid too."""
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+
+    def _seed(run_id: str, status: str | None, mtime: float) -> Path:
+        run_dir = runs_dir / run_id
+        run_dir.mkdir()
+        payload: dict[str, Any] = {"siteId": SITE_ID}
+        if status is not None:
+            payload["status"] = status
+        (run_dir / "build-result.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+        os.utime(run_dir, (mtime, mtime))  # set LAST so the write does not bump it
+        return run_dir
+
+    degraded_run = _seed("run-degraded", "degraded", mtime=1000)
+    _seed("run-failed", "failed", mtime=2000)  # newest by mtime, but FAILED -> skip
+    assert latest_run_dir_for_site(runs_dir, SITE_ID) == degraded_run
+
+    # A skipped (--skip-build) run is a VALID base (full artefakts) and, being
+    # newest, now wins - this is the normal dev/eval fast-mode.
+    skipped_run = _seed("run-skipped", "skipped", mtime=3000)
+    assert latest_run_dir_for_site(runs_dir, SITE_ID) == skipped_run
+
+    # A legacy run with no status field also stays valid (back-compat).
+    legacy_run = _seed("run-legacy", None, mtime=4000)
+    assert latest_run_dir_for_site(runs_dir, SITE_ID) == legacy_run
 
 
 def _render_hero(dossier: dict[str, Any], blueprint: RenderBlueprint | None) -> str:

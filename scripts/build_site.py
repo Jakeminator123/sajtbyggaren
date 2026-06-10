@@ -3151,13 +3151,33 @@ def build_targeted_version(
     return result
 
 
+def _build_result_site_id(run_dir: Path) -> str | None:
+    """Return ``build-result.json:siteId`` for one run dir, or ``None``.
+
+    Read-only; a missing/malformed artefakt yields ``None`` (the caller then
+    skips the cross-site check rather than blocking on an unreadable run).
+    """
+    try:
+        payload = json.loads(
+            (run_dir / "build-result.json").read_text(encoding="utf-8")
+        )
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+    site_id = payload.get("siteId") if isinstance(payload, dict) else None
+    return site_id if isinstance(site_id, str) and site_id else None
+
+
 def _latest_run_id_for_site(runs_root: Path, site_id: str) -> str | None:
-    """Return the newest run id whose build-result.json is for ``site_id``.
+    """Return the newest non-failed run id whose build-result.json is for ``site_id``.
 
     Used by the CLI follow-up entrypoint to find the base run a follow-up
     prompt iterates from (the run whose artefakts the Context Assembler reads).
     Reads only build-result.json (read-only) and picks the most recent by mtime;
-    returns ``None`` when no run for the site exists yet.
+    returns ``None`` when no usable run for the site exists yet. A ``failed`` run
+    still writes build-result.json but its artefakts may be partial/broken, so a
+    follow-up must iterate from the last GOOD version, not a failed build
+    (mirrors ``packages/generation/followup/hero_headline_pin.py``). A
+    ``skipped`` (--skip-build) run keeps full artefakts and stays a valid base.
     """
     if not runs_root.exists():
         return None
@@ -3170,8 +3190,14 @@ def _latest_run_id_for_site(runs_root: Path, site_id: str) -> str | None:
             )
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             continue
-        if payload.get("siteId") == site_id:
-            return run_dir.name
+        if payload.get("siteId") != site_id:
+            continue
+        # A genuinely failed run may have partial/broken artefakts - skip it so
+        # the follow-up iterates from the last good version. ``skipped``
+        # (--skip-build) keeps full artefakts, so it stays a valid base.
+        if payload.get("status") == "failed":
+            continue
+        return run_dir.name
     return None
 
 
@@ -3240,6 +3266,7 @@ def run_followup_chain(
         return payload
 
     # 0. Resolve the base run (the version + artefakts the follow-up builds on).
+    explicit_base_run_id = base_run_id is not None
     if base_run_id is None:
         base_run_id = _latest_run_id_for_site(runs_root, site_id)
     if base_run_id is None:
@@ -3247,6 +3274,18 @@ def run_followup_chain(
             f"Follow-up: hittade ingen tidigare run för siteId={site_id!r} under "
             f"{runs_root}. Kör en init-build först (skapar artefakter att bygga vidare på)."
         )
+    # An EXPLICIT baseRunId ("Iterera från denna") must belong to THIS site:
+    # iterating a follow-up from another site's run would read the wrong
+    # artefakts (and pin the wrong hero headline). The auto-resolved path is
+    # already siteId-filtered, so only validate the operator-supplied id.
+    if explicit_base_run_id:
+        base_site_id = _build_result_site_id(runs_root / base_run_id)
+        if base_site_id is not None and base_site_id != site_id:
+            raise SystemExit(
+                f"Follow-up: baseRunId={base_run_id!r} tillhör siteId="
+                f"{base_site_id!r}, inte {site_id!r}. Vägrar bygga vidare på en "
+                "annan sajts run (cross-site-skydd)."
+            )
 
     paths = ContextPaths(runsDir=runs_root, promptInputsDir=prompt_inputs_dir)
 
