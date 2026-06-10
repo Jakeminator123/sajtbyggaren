@@ -17,16 +17,32 @@
       "canonical": "Site Brief",
       "definition": "Strukturerat businessobjekt om sajten: bransch, sidor, ton, färger, capabilities. Output från fas 1.",
       "ownerPackage": "packages/generation/brief",
-      "aliasesAllowed": ["StructuredSiteBrief"],
-      "aliasesForbidden": ["brief", "deepBrief", "structuredBrief", "siteSpec", "websiteSpec"]
+      "aliasesAllowed": [
+        "StructuredSiteBrief"
+      ],
+      "aliasesForbidden": [
+        "brief",
+        "deepBrief",
+        "structuredBrief",
+        "siteSpec",
+        "websiteSpec"
+      ]
     },
     {
       "id": "copyDirective",
       "canonical": "Copy Directive",
       "definition": "Strukturerad, validerad copy-ändring tolkad ur en följdprompt (ADR 0034 väg A): target (company-name | tagline | about-text | services), operation (replace-text | include-token; about-text och services endast replace-text), payload och ett optional targetRef (services[].id eller services[].label, krävs när target=services). Lagras i project-input directives.copyDirectives och appliceras på strukturerade fält (company.name, company.tagline, company.story, services[].summary) före render. Producenter: den deterministiska extraktorn i scripts/prompt_to_project_input.py, copyDirectiveModel-extraktion (explicit copy) och copyDirectiveModel-planering (nivå 3a editPlan: genererar ny about/service-copy ur site-state vid rewrite-instruktion). Varje payload valideras genom public-copy-guards (+ grundnings-guard i planner-läge) så fri följdprompt-text aldrig renderas okontrollerat som kundcopy; name/tagline genereras aldrig; en services-träff matchas mot befintliga tjänster (ingen ny tjänst skapas).",
       "ownerPackage": "packages/generation/brief",
-      "aliasesAllowed": ["CopyDirectiveCandidate", "CopyDirectiveExtraction"],
-      "aliasesForbidden": ["textEdit", "copyEdit", "copyPatch", "rewriteDirective"]
+      "aliasesAllowed": [
+        "CopyDirectiveCandidate",
+        "CopyDirectiveExtraction"
+      ],
+      "aliasesForbidden": [
+        "textEdit",
+        "copyEdit",
+        "copyPatch",
+        "rewriteDirective"
+      ]
     },
     {
       "id": "sectionContentOverride",
@@ -42,7 +58,11 @@
       "definition": "En synlig sektions-injektion härledd ur en section_add-följdprompt (ADR 0038, GAP-followup-prompt-content-passthrough). Säger att en monterad sektionscapability ska renderas INLINE som ett block på en befintlig route vid en valfri position, i stället för dagens mount-only / egen-route-only. Lagras i project-input directives.mountedSections (sectionId, routeId, optional capability/position/ordinal). Renderaren (render_home m.fl. i packages/generation/build/renderers.py) läser fältet direkt och injicerar sektionen i route-ordningen ENDAST när sectionId har en registrerad render_section_*-renderare i _SECTION_RENDERERS och grundat innehåll finns — annars förblir sektionen ärligt mount-only. Listan ersätts per version (inte ackumulerad). Rå följdprompt renderas aldrig som kundcopy; sectionId/routeId är slutna referenser till befintliga sektioner och routes.",
       "ownerPackage": "packages/generation/followup",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["sectionInjection", "inlineSection", "sectionPatch"]
+      "aliasesForbidden": [
+        "sectionInjection",
+        "inlineSection",
+        "sectionPatch"
+      ]
     },
     {
       "id": "generationPackage",
@@ -50,7 +70,11 @@
       "definition": "Den enda nyttolasten som skickas till codegen-LLM. Innehåller systemPrompt, brief, policy, scaffold, routes, dossiers, buildSpec, kvalitetsmål.",
       "ownerPackage": "packages/generation/package",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["llmPayload", "promptBundle", "dynamicContextBag"]
+      "aliasesForbidden": [
+        "llmPayload",
+        "promptBundle",
+        "dynamicContextBag"
+      ]
     },
     {
       "id": "businessFacts",
@@ -121,16 +145,28 @@
       "canonical": "Scaffold",
       "definition": "Sajtens grammatik. Route-struktur + sektionsgrammatik + tillåtna dossiers + kvalitetsregler. Inte en mall och inte en körbar kodbas - för det senare se Starter.",
       "ownerPackage": "packages/generation/orchestration/scaffolds",
-      "aliasesAllowed": ["ScaffoldDefinition"],
-      "aliasesForbidden": ["template", "boilerplate", "pack"]
+      "aliasesAllowed": [
+        "ScaffoldDefinition"
+      ],
+      "aliasesForbidden": [
+        "template",
+        "boilerplate",
+        "pack"
+      ]
     },
     {
       "id": "starter",
       "canonical": "Starter",
       "definition": "Körbar kodbas (Next.js-app) som scaffolds patchar ovanpå. Tom på företagsspecifik logik. Bor i data/starters/<starterId>/. En starter är teknisk grund; en scaffold är sajtens grammatik. Reviewer-modell: 5 starters (marketing-base, saas-base, commerce-base, portfolio-base, docs-base) täcker de 14 scaffold-IDs.",
       "ownerPackage": "data/starters",
-      "aliasesAllowed": ["StarterBase"],
-      "aliasesForbidden": ["template", "boilerplate", "scaffold"]
+      "aliasesAllowed": [
+        "StarterBase"
+      ],
+      "aliasesForbidden": [
+        "template",
+        "boilerplate",
+        "scaffold"
+      ]
     },
     {
       "id": "starterRegistry",
@@ -146,7 +182,11 @@
       "definition": "Visuell/personlig variant inom en Scaffold: typografi, färgschema, motif, prompt hints.",
       "ownerPackage": "packages/generation/orchestration/scaffold-variants",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["theme", "skin", "style"]
+      "aliasesForbidden": [
+        "theme",
+        "skin",
+        "style"
+      ]
     },
     {
       "id": "scaffoldRegistry",
@@ -154,7 +194,10 @@
       "definition": "Centralt index över giltiga Scaffold-id:n. Sanningskälla i scaffold-contract.v1.json:primaryScaffoldRegistry.",
       "ownerPackage": "packages/generation/orchestration/scaffolds",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["scaffoldList", "templateList"]
+      "aliasesForbidden": [
+        "scaffoldList",
+        "templateList"
+      ]
     },
     {
       "id": "selectionProfile",
@@ -162,7 +205,11 @@
       "definition": "Per-Scaffold-fil med embeddingText, semanticSignals, negativeSignals och llmClassificationHints som styr Scaffold Selector. Ersätter ordmatchning.",
       "ownerPackage": "packages/generation/orchestration/scaffolds",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["matcher", "rules", "trigger"]
+      "aliasesForbidden": [
+        "matcher",
+        "rules",
+        "trigger"
+      ]
     },
     {
       "id": "qualityContract",
@@ -170,7 +217,10 @@
       "definition": "Per-Scaffold-fil med scorecardWeights, mustPass och avoid. Härleder vikter från page-quality-traits men kan justera per Scaffold.",
       "ownerPackage": "packages/generation/orchestration/scaffolds",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["scoreConfig", "qualityRules"]
+      "aliasesForbidden": [
+        "scoreConfig",
+        "qualityRules"
+      ]
     },
     {
       "id": "initPrompt",
@@ -178,15 +228,25 @@
       "definition": "Den första råa promptens text från operatören. Steg 1 i operator-flödet (ADR 0012). Bör inte muteras eller polishas; tolkningen sker i nästa steg (Project Input).",
       "ownerPackage": "packages/generation/brief",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["promptPolish", "promptRewrite"]
+      "aliasesForbidden": [
+        "promptPolish",
+        "promptRewrite"
+      ]
     },
     {
       "id": "projectInput",
       "canonical": "Project Input",
       "definition": "Strukturerad tolkning av operatörens Init Prompt och konkreta kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: examples/<siteId>.project-input.json. Är inte en Dossier - en Dossier är en återanvändbar capability, ett Project Input är ett konkret kundprojekt.",
       "ownerPackage": "examples",
-      "aliasesAllowed": ["Deep Brief", "Example Project"],
-      "aliasesForbidden": ["Site Dossier", "siteDossier", "site-dossier"]
+      "aliasesAllowed": [
+        "Deep Brief",
+        "Example Project"
+      ],
+      "aliasesForbidden": [
+        "Site Dossier",
+        "siteDossier",
+        "site-dossier"
+      ]
     },
     {
       "id": "assetRef",
@@ -194,7 +254,11 @@
       "definition": "Referens till en operatör-uppladdad bild eller video som lagras i AssetStore. Schema-form definierat i governance/schemas/project-input.schema.json $defs/assetRef. Bär assetId, filename (det /uploads/-namn genererad sajt refererar), mimeType (image/png|jpeg|webp|svg+xml eller video/mp4|webm), sizeBytes, role (logo|hero|gallery|favicon|ogImage|backgroundVideo), valfri placement (home|about|services|projects|products|gallery), alt-text, GPT Vision-output (visionSubject, visionConfidence) och valfri sourceUrl (HTTPS-URI till blob-store-bytes när VercelBlobAssetStore är aktiv; build_site.py copy_operator_uploads föredrar disk men faller tillbaka till sourceUrl-fetch när bytes inte ligger lokalt).",
       "ownerPackage": "apps/viewser/lib/asset-store",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["uploadRef", "imageRef", "operatorAsset"]
+      "aliasesForbidden": [
+        "uploadRef",
+        "imageRef",
+        "operatorAsset"
+      ]
     },
     {
       "id": "assetStore",
@@ -202,7 +266,11 @@
       "definition": "Driver-baserad abstraktion för var operatör-uppladdade bilder lagras. LocalAssetStore (default) skriver till data/uploads/<siteId>/<assetId>/. S3AssetStore (kommande) skriver till blob storage. Driver väljs via ASSET_STORE_DRIVER-env. Interface i apps/viewser/lib/asset-store/types.ts.",
       "ownerPackage": "apps/viewser/lib/asset-store",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["uploadStore", "imageStore", "blobStore"]
+      "aliasesForbidden": [
+        "uploadStore",
+        "imageStore",
+        "blobStore"
+      ]
     },
     {
       "id": "operatorUpload",
@@ -210,14 +278,20 @@
       "definition": "En bild, logotyp eller video som operatorn har laddat upp via discovery-wizardens AssetsStep (eller MediaStep) till /api/upload-asset. Bytes:en lagras antingen lokalt under data/uploads/<siteId>/ (LocalAssetStore) eller i en Vercel Blob-store (VercelBlobAssetStore — sätter AssetRef.sourceUrl). AssetRef:en följer med genom DiscoveryPayload → Project Input → build_site.py copy_operator_uploads, som föredrar disk-lookup men HTTP-fetchar bytes från sourceUrl när disk-vägen inte hittar filen (allowlist:ad host, HTTPS only, redirects blockerade, 8 MB cap, 15s timeout). Filerna hamnar i genererad sajts public/uploads/<filename>.",
       "ownerPackage": "apps/viewser",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["userUpload", "customerUpload", "clientImage"]
+      "aliasesForbidden": [
+        "userUpload",
+        "customerUpload",
+        "clientImage"
+      ]
     },
     {
       "id": "route",
       "canonical": "Route",
       "definition": "En faktisk sida i den genererade sajten (t.ex. /, /kontakt, /tjanster). Bestäms av Scaffold. En Scaffold är inte en Route - Scaffold är grammatiken, Route är resultatet.",
       "ownerPackage": "packages/generation/orchestration/routing",
-      "aliasesAllowed": ["Page"],
+      "aliasesAllowed": [
+        "Page"
+      ],
       "aliasesForbidden": []
     },
     {
@@ -226,7 +300,17 @@
       "definition": "Återanvändbar capability/legokloss som kan kopplas på en Route, section eller slot i en Scaffold. Default-kompatibel med alla Scaffolds. Klass: soft eller hard.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["package", "plugin", "feature", "addon", "Site Dossier", "Feature Dossier", "Integration Dossier", "Data Dossier", "Hybrid Dossier"]
+      "aliasesForbidden": [
+        "package",
+        "plugin",
+        "feature",
+        "addon",
+        "Site Dossier",
+        "Feature Dossier",
+        "Integration Dossier",
+        "Data Dossier",
+        "Hybrid Dossier"
+      ]
     },
     {
       "id": "capability",
@@ -241,8 +325,14 @@
       "canonical": "Capability Map",
       "definition": "Policy som mappar Capability-slugs (t.ex. interactive-game, payments, analytics) till kandidat-Dossier-IDs. planningModel läser denna i Sprint 2B för att veta vilka Dossiers som ens är kandidater innan embedding + rerank körs. Bor i governance/policies/capability-map.v1.json.",
       "ownerPackage": "governance/policies",
-      "aliasesAllowed": ["CapabilityMap"],
-      "aliasesForbidden": ["capability-index", "dossierMap", "capability-registry"]
+      "aliasesAllowed": [
+        "CapabilityMap"
+      ],
+      "aliasesForbidden": [
+        "capability-index",
+        "dossierMap",
+        "capability-registry"
+      ]
     },
     {
       "id": "dossierClass",
@@ -250,7 +340,12 @@
       "definition": "En av soft eller hard. Avgör om Dossiern kräver env, backend och integration eller bara content/layout. ADR 0012 tog bort 'hybrid' som klass; en Dossier som behöver mock i designläge är hard med mockMode-konfiguration.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["dossierType", "dossierKind", "hybrid", "Hybrid Dossier"]
+      "aliasesForbidden": [
+        "dossierType",
+        "dossierKind",
+        "hybrid",
+        "Hybrid Dossier"
+      ]
     },
     {
       "id": "softDossier",
@@ -298,7 +393,10 @@
       "definition": "Strukturerad logg över Scaffold/Dossier-val: kandidater, scores, LLM-reasons, accept/reject. Sparas under data/runs/<runId>/.",
       "ownerPackage": "packages/generation/orchestration",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["selectionLog", "trace"]
+      "aliasesForbidden": [
+        "selectionLog",
+        "trace"
+      ]
     },
     {
       "id": "policyGate",
@@ -314,7 +412,10 @@
       "definition": "Direkt strängmatchning mot promptens innehåll. Tillåtet endast som svag signal eller guardrail; aldrig som primär selector.",
       "ownerPackage": "packages/generation/orchestration",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["keywordMatching", "stringMatching"]
+      "aliasesForbidden": [
+        "keywordMatching",
+        "stringMatching"
+      ]
     },
     {
       "id": "embeddingIndex",
@@ -322,7 +423,10 @@
       "definition": "Sökbar embedding-baserad index. Ett per domän: scaffolds, dossiers, reference-templates, section-patterns, style-signatures.",
       "ownerPackage": "packages/generation/orchestration",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["vectorStore", "vectorDb"]
+      "aliasesForbidden": [
+        "vectorStore",
+        "vectorDb"
+      ]
     },
     {
       "id": "referenceTemplate",
@@ -330,7 +434,10 @@
       "definition": "Externt material (t.ex. Vercel templates) som används som inspirations- och struktur-corpus, inte som produktens skelett.",
       "ownerPackage": "data/reference-templates",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["template-library", "v0-template"]
+      "aliasesForbidden": [
+        "template-library",
+        "v0-template"
+      ]
     },
     {
       "id": "sectionPattern",
@@ -354,7 +461,11 @@
       "definition": "Lista över sidor/rutter som ska finnas i den genererade sajten med ordning och syfte.",
       "ownerPackage": "packages/generation/orchestration/routing",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["sitemap", "navigation", "pageList"]
+      "aliasesForbidden": [
+        "sitemap",
+        "navigation",
+        "pageList"
+      ]
     },
     {
       "id": "contractPlan",
@@ -362,7 +473,11 @@
       "definition": "Tekniska krav: auth, betalning, databas, env-variabler, integrationer som sajten behöver.",
       "ownerPackage": "packages/generation/orchestration/contracts",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["dependencies", "requirements", "integrations"]
+      "aliasesForbidden": [
+        "dependencies",
+        "requirements",
+        "integrations"
+      ]
     },
     {
       "id": "buildSpec",
@@ -370,7 +485,11 @@
       "definition": "Körnings- och kvalitetspolicy: changeScope, qualityTarget, contextPolicy, verificationPolicy, tokenBudgets.",
       "ownerPackage": "packages/generation/orchestration/build-spec",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["config", "settings", "options"]
+      "aliasesForbidden": [
+        "config",
+        "settings",
+        "options"
+      ]
     },
     {
       "id": "qualityGate",
@@ -378,7 +497,12 @@
       "definition": "Mätbar acceptansgräns mot Page Quality Traits. EN gate; inga parallella tier-axlar.",
       "ownerPackage": "packages/generation/quality_gate",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["tier2", "tier3", "designPreview", "integrationsBuild"]
+      "aliasesForbidden": [
+        "tier2",
+        "tier3",
+        "designPreview",
+        "integrationsBuild"
+      ]
     },
     {
       "id": "codegenResult",
@@ -386,7 +510,11 @@
       "definition": "Strukturerat manifest från codegenModel om vilka filer fas 3 producerar. Sprint 3A v1 är deterministisk; senare sprintar emittar manifestet från riktigt LLM-anrop innan filer skrivs.",
       "ownerPackage": "packages/generation/codegen",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["codegenManifest", "fileManifest", "outputSpec"]
+      "aliasesForbidden": [
+        "codegenManifest",
+        "fileManifest",
+        "outputSpec"
+      ]
     },
     {
       "id": "codegenFile",
@@ -394,7 +522,11 @@
       "definition": "En entry i CodegenResult.files: relativ filsökväg + source (codegen/dossier-mount/starter-patched/scaffold) + role (page/component/config/theme).",
       "ownerPackage": "packages/generation/codegen",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["fileSpec", "outputFile", "generatedFile"]
+      "aliasesForbidden": [
+        "fileSpec",
+        "outputFile",
+        "generatedFile"
+      ]
     },
     {
       "id": "repairFix",
@@ -402,15 +534,27 @@
       "definition": "En entry i RepairResult.mechanicalFixesApplied eller llmFixesApplied: kind (mechanical/llm) + name + target + detail + success. Sprint 3A v1 emitter aldrig RepairFix; Sprint 3B+ fyller listorna när Fix Registry kopplas in.",
       "ownerPackage": "packages/generation/repair",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["repairAttempt", "fixEntry", "patch"]
+      "aliasesForbidden": [
+        "repairAttempt",
+        "fixEntry",
+        "patch"
+      ]
     },
     {
       "id": "previewRuntime",
       "canonical": "Preview Runtime",
       "definition": "Abstraktion för var en genererad sajt körs. Implementationer: VercelSandboxRuntime (primär per ADR 0033), LocalRuntime, StackBlitzRuntime (pausad), FlyRuntime.",
       "ownerPackage": "packages/preview-runtime",
-      "aliasesAllowed": ["VM", "sandbox", "Vercel Sandbox", "Vercel VM"],
-      "aliasesForbidden": ["preview-host", "webcontainer"]
+      "aliasesAllowed": [
+        "VM",
+        "sandbox",
+        "Vercel Sandbox",
+        "Vercel VM"
+      ],
+      "aliasesForbidden": [
+        "preview-host",
+        "webcontainer"
+      ]
     },
     {
       "id": "previewRuntimeKind",
@@ -441,15 +585,21 @@
       "canonical": "Preview Session",
       "definition": "Aktiv session från en Preview Runtime: id, url, kind, createdAt. Returneras av PreviewRuntime.start() och stoppas av PreviewRuntime.stop().",
       "ownerPackage": "packages/preview-runtime",
-      "aliasesAllowed": ["PreviewSession"],
-      "aliasesForbidden": ["sandboxSession"]
+      "aliasesAllowed": [
+        "PreviewSession"
+      ],
+      "aliasesForbidden": [
+        "sandboxSession"
+      ]
     },
     {
       "id": "previewFile",
       "canonical": "Preview File",
       "definition": "En fil i den filuppsättning som monteras i Preview Runtime: path + content. Definierad i packages/preview-runtime/PreviewRuntime.ts.",
       "ownerPackage": "packages/preview-runtime",
-      "aliasesAllowed": ["PreviewFile"],
+      "aliasesAllowed": [
+        "PreviewFile"
+      ],
       "aliasesForbidden": []
     },
     {
@@ -466,14 +616,18 @@
       "definition": "Versionsstatus när Quality Gate failat och LLM Repair har producerat en ny version som väntar på re-evaluering eller accept.",
       "ownerPackage": "packages/builder",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["repairAvailable"]
+      "aliasesForbidden": [
+        "repairAvailable"
+      ]
     },
     {
       "id": "stackBlitzRuntime",
       "canonical": "StackBlitzRuntime",
       "definition": "Preview Runtime-implementation som kör genererade Next.js-sajter via WebContainer i browserfliken.",
       "ownerPackage": "packages/preview-runtime/stackblitz",
-      "aliasesAllowed": ["WebContainerRuntime"],
+      "aliasesAllowed": [
+        "WebContainerRuntime"
+      ],
       "aliasesForbidden": []
     },
     {
@@ -490,7 +644,9 @@
       "definition": "Preview Runtime-implementation som kör genererade sajter på Fly.io VM. Framtida server-runtime-fallback för tunga integrationer (Stripe, Supabase, databas); ej implementerad idag.",
       "ownerPackage": "packages/preview-runtime/fly",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["preview-host"]
+      "aliasesForbidden": [
+        "preview-host"
+      ]
     },
     {
       "id": "localRuntime",
@@ -514,15 +670,24 @@
       "definition": "En version som klarat Quality Gate och blivit accepterad som aktuell version.",
       "ownerPackage": "packages/builder",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["finalSite", "deployedSite", "publishedSite"]
+      "aliasesForbidden": [
+        "finalSite",
+        "deployedSite",
+        "publishedSite"
+      ]
     },
     {
       "id": "backoffice",
       "canonical": "Backoffice",
       "definition": "backoffice.py Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. INTE i användarens runtime.",
       "ownerPackage": "backoffice.py",
-      "aliasesAllowed": ["adminPanel"],
-      "aliasesForbidden": ["dashboard", "frontoffice"]
+      "aliasesAllowed": [
+        "adminPanel"
+      ],
+      "aliasesForbidden": [
+        "dashboard",
+        "frontoffice"
+      ]
     },
     {
       "id": "policy",
@@ -530,7 +695,11 @@
       "definition": "JSON-fil under governance/policies/. Sanningskälla för en domän (kvalitet, namn, gränser, flöde, runtime, scaffold-/dossier-kontrakt och -val).",
       "ownerPackage": "governance/policies",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["config", "rule", "settings"]
+      "aliasesForbidden": [
+        "config",
+        "rule",
+        "settings"
+      ]
     },
     {
       "id": "rule",
@@ -538,7 +707,10 @@
       "definition": "Mänsklig instruktion under governance/rules/ som speglas till .cursor/rules/. Beskriver beteende, inte data.",
       "ownerPackage": "governance/rules",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["policy", "instruction"]
+      "aliasesForbidden": [
+        "policy",
+        "instruction"
+      ]
     },
     {
       "id": "schema",
@@ -570,7 +742,12 @@
       "definition": "Produktens kanoniska huvudflöde (prompt -> företagshemsida -> preview -> följdprompt -> ny version) och den smala vertikala motor-skivan som bevisar att flödet lever (Project Input -> Site Brief -> Site Plan -> Generation Package -> Generated Files -> Quality Gate -> Preview). Sanningskälla för flödet: docs/llm-golden-path-runbook.md. Deterministisk mätning: scripts/run_golden_path_eval.py (default offline, ingen OPENAI_API_KEY, ingen npm-build); låst av tests/test_golden_path_eval.py + tests/test_llm_golden_path_smoke.py; eval-output under data/evals/{summaries,artifacts}/golden-path/. Golden Path är INTE snapshot-/golden-master-testning (sådan testtext säger 'snapshot baseline'). Ingen extra golden-term införs (ingen separat 'Golden Path Eval'/'Golden Fixtures'/'Quality Scorecard' som canonical).",
       "ownerPackage": "scripts",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["happy-path", "main-flow", "core-path", "goldenflow"]
+      "aliasesForbidden": [
+        "happy-path",
+        "main-flow",
+        "core-path",
+        "goldenflow"
+      ]
     },
     {
       "id": "engineRun",
@@ -578,7 +755,10 @@
       "definition": "En hel körning från prompt till Promoted Site eller Repair Candidate. Identifieras med en runId och har en mapp under data/runs/<runId>/ med alla artefakter och en trace.ndjson.",
       "ownerPackage": "packages/generation/engine",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["pipelineRun", "execution"]
+      "aliasesForbidden": [
+        "pipelineRun",
+        "execution"
+      ]
     },
     {
       "id": "engineEvent",
@@ -586,7 +766,10 @@
       "definition": "Append-only händelse i en Engine Run: phase, status (started|done|failed|degraded), message, optional payloadPath. Skrivs till trace.ndjson.",
       "ownerPackage": "packages/generation/engine",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["log", "step"]
+      "aliasesForbidden": [
+        "log",
+        "step"
+      ]
     },
     {
       "id": "sitePlan",
@@ -594,7 +777,10 @@
       "definition": "Output från fas 2 Plan: vald Scaffold, Variant, Route Plan, valda Dossiers och BuildSpec. En enda fil site-plan.json.",
       "ownerPackage": "packages/generation/planning",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["plan", "scaffoldPlan"]
+      "aliasesForbidden": [
+        "plan",
+        "scaffoldPlan"
+      ]
     },
     {
       "id": "generatedFiles",
@@ -602,7 +788,10 @@
       "definition": "Filerna som codegen-LLM producerat innan Repair Pipeline. Skrivs till data/runs/<runId>/generated-files/.",
       "ownerPackage": "packages/generation/build",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["rawFiles", "outputFiles"]
+      "aliasesForbidden": [
+        "rawFiles",
+        "outputFiles"
+      ]
     },
     {
       "id": "repairPipeline",
@@ -610,7 +799,12 @@
       "definition": "Centraliserad reparationskedja: normalize -> mechanical fixes -> typecheck/syntax -> optional LLM fix -> re-check -> final result. Får bo på exakt EN plats i kodbasen.",
       "ownerPackage": "packages/generation/repair",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["fixLoop", "autofixChain", "repairLoop", "repairLoopCore"]
+      "aliasesForbidden": [
+        "fixLoop",
+        "autofixChain",
+        "repairLoop",
+        "repairLoopCore"
+      ]
     },
     {
       "id": "repairResult",
@@ -625,7 +819,9 @@
       "canonical": "Blueprint Repair",
       "definition": "kor-5: den bundna repairModel-passen i Repair Pipeline som körs efter den deterministiska Quality Critic (kor-4a) på den enda centrala repair-gaten. Patchar BARA namngivna, redan existerande blueprint-fält (Content Blocks på Generation Package, Conversion på Site Brief) för critic-issues vars typ finns i fix-registry.v1.json:blueprintRepair.triggerIssueTypes, re-renderar deterministiskt och kör critic igen. Validering (rails + grounding-guard + schema) sker före apply; LLM skriver aldrig fria filer. Telemetri (before/after) sparas som blueprintRepairs[] + blueprintPasses på Repair Result. Saknad nyckel/otillgänglig modell -> no-fix-applied utan blueprintRepairs (loggas som repair.blueprint_skipped).",
       "ownerPackage": "packages/generation/repair",
-      "aliasesAllowed": ["repairModel"],
+      "aliasesAllowed": [
+        "repairModel"
+      ],
       "aliasesForbidden": []
     },
     {
@@ -633,7 +829,9 @@
       "canonical": "Preview Result",
       "definition": "Resultat från PreviewRuntime efter en Engine Run: previewSession, previewUrl, eventuell startup-output, status, samt ett optional additivt timings-fält (fas-timing i ms: createMs/uploadMs/installMs/buildMs/readyMs/totalMs) som adaptrar med cold-start-mätning (idag vercel-sandbox) rapporterar och POST /api/preview exponerar. PreviewTimings är implementation-typen som bär timing-fältet (samma mönster som CopyDirectiveCandidate på Copy Directive), inte en egen canonical term.",
       "ownerPackage": "packages/preview-runtime",
-      "aliasesAllowed": ["PreviewTimings"],
+      "aliasesAllowed": [
+        "PreviewTimings"
+      ],
       "aliasesForbidden": []
     },
     {
@@ -667,7 +865,13 @@
         "verifierModel",
         "embeddingModel"
       ],
-      "aliasesForbidden": ["fast", "pro", "max", "codex", "anthropic"]
+      "aliasesForbidden": [
+        "fast",
+        "pro",
+        "max",
+        "codex",
+        "anthropic"
+      ]
     },
     {
       "id": "projectDna",
@@ -675,7 +879,10 @@
       "definition": "Persistent state per projekt: scaffoldId, variantId, valda dossiers, theme tokens, language, route-baseline. Init skapar DNA, follow-up patchar inom DNA, redesign forkar DNA.",
       "ownerPackage": "data/projects",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["projectState", "projectMeta"]
+      "aliasesForbidden": [
+        "projectState",
+        "projectMeta"
+      ]
     },
     {
       "id": "projectFork",
@@ -691,7 +898,10 @@
       "definition": "Klassificering av en follow-up-prompt. En av: text-edit, section-add, section-remove, page-add, page-remove, restyle, redesign, clarify. Avgör vad Engine Run får ändra inom Project DNA.",
       "ownerPackage": "packages/generation/brief",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["changeIntent", "patchIntent"]
+      "aliasesForbidden": [
+        "changeIntent",
+        "patchIntent"
+      ]
     },
     {
       "id": "scaffoldLock",
@@ -731,7 +941,10 @@
       "definition": "Deterministisk reparationsregel registrerad i fix-registry.v1.json. Körs av Repair Pipeline innan eventuell LLM Fix.",
       "ownerPackage": "packages/generation/repair",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["autofix", "deterministicFix"]
+      "aliasesForbidden": [
+        "autofix",
+        "deterministicFix"
+      ]
     },
     {
       "id": "llmFix",
@@ -739,7 +952,10 @@
       "definition": "LLM-driven reparation registrerad i fix-registry.v1.json. Triggas av specifik felsignatur efter att Mechanical Fix inte räckt.",
       "ownerPackage": "packages/generation/repair",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["aiFix", "smartFix"]
+      "aliasesForbidden": [
+        "aiFix",
+        "smartFix"
+      ]
     },
     {
       "id": "fixRegistry",
@@ -755,7 +971,10 @@
       "definition": "Fallback-läge när en Engine Run-fas inte kan köra riktig LLM (saknad API-nyckel eller LLM-fel). Artefakter skrivs ändå men markeras med modelUsed=mock och briefSource=mock-no-key/mock-llm-error så de aldrig förväxlas med riktiga svar.",
       "ownerPackage": "packages/generation",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["fakeMode", "stubMode"]
+      "aliasesForbidden": [
+        "fakeMode",
+        "stubMode"
+      ]
     },
     {
       "id": "briefSource",
@@ -795,7 +1014,10 @@
       "definition": "Backend-modul (packages/generation/discovery/resolve.py) som svetsar ihop Discovery Payload, Site Brief-kandidat och Discovery Taxonomy till ett deterministiskt Project Input plus Discovery Decision. Field-source-prioritet: wizard > scrape > brief > taxonomy > default. Stänger B121-arkitekturskulden där discovery-sanning tidigare passerade WizardAnswers, briefModel/masterprompt och _apply_discovery_overrides utan explicit konfliktlösare.",
       "ownerPackage": "packages/generation/discovery",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["discovery overrides", "discovery patcher"]
+      "aliasesForbidden": [
+        "discovery overrides",
+        "discovery patcher"
+      ]
     },
     {
       "id": "discoveryDecision",
@@ -818,7 +1040,9 @@
       "canonical": "Field Source",
       "definition": "Strängenum som beskriver var ett Project Input-fält kom från efter Discovery Resolver. Tillåtna värden: wizard, scrape, brief, taxonomy, default, operator, pinned. Bor i DiscoveryDecision.fieldSources som map per Project Input-fältsökväg. Operator och pinned är reserverade för framtida Backoffice-pin / Project Input starterId-pin; PR A använder bara wizard, scrape, brief, taxonomy och default.",
       "ownerPackage": "packages/generation/discovery",
-      "aliasesAllowed": ["FieldSources"],
+      "aliasesAllowed": [
+        "FieldSources"
+      ],
       "aliasesForbidden": []
     },
     {
@@ -826,7 +1050,9 @@
       "canonical": "Component Catalog",
       "definition": "Det komponentmedvetna lagret som låter LLM-flödet (plan/codegen) referera de shadcn-komponenter en Starter faktiskt har vendorerade. Två deterministiska delar (ADR 0040): ett genererat Component Manifest per Starter (lager 1) och en valfri capability -> komponent-mappning i capability-map.v1.json:capabilities[].components (lager 2), korskontrollerad mot manifesten av scripts/governance_validate.py. Roll-uppslag via shadcn-MCP (lager 3) och render/codegen-konsumtion är senare slices. Svensk prosa-alias: komponentkatalog.",
       "ownerPackage": "packages/generation",
-      "aliasesAllowed": ["komponentkatalog"],
+      "aliasesAllowed": [
+        "komponentkatalog"
+      ],
       "aliasesForbidden": []
     },
     {
@@ -834,7 +1060,45 @@
       "canonical": "Component Manifest",
       "definition": "Deterministisk inventering av de shadcn-komponenter som är vendorerade under en Starters components/ui/. Genereras av scripts/generate_component_manifests.py ur components.json + components/ui/ på disk (inga LLM-anrop) och bor hos Startern som data/starters/<starterId>/component-manifest.json. En synk-check (--check + tests/test_component_manifests.py) failar vid drift, samma mönster som rules-speglarna. Manifestet är kontraktet capability-map.v1.json:capabilities[].components korskontrolleras mot. Svensk prosa-alias: komponent-manifest.",
       "ownerPackage": "data/starters",
-      "aliasesAllowed": ["komponent-manifest", "component-manifest.json"],
+      "aliasesAllowed": [
+        "komponent-manifest",
+        "component-manifest.json"
+      ],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "industryProfile",
+      "canonical": "IndustryProfile",
+      "definition": "En branschprofil per SNI 2025-huvudgrupp (87 st) i governance/policies/industry-profiles.v1.json (ADR 0045). Beskriver vad branschens hemsida behöver — extraCapabilities, copyAngle, toneHints, trustSignals, primaryCta, recommendedPages, imageryHints — och konsumeras som mjuk signal av Discovery Resolver (packages/generation/discovery/industry_profiles.py). Pekar ALDRIG direkt på scaffold/starter/variant/dossier. Svensk prosa-alias: branschprofil.",
+      "ownerPackage": "packages/generation",
+      "aliasesAllowed": [
+        "branschprofil",
+        "branschprofiler"
+      ],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "industryProfilesPolicy",
+      "canonical": "IndustryProfilesPolicy",
+      "definition": "In-memory-representationen av hela industry-profiles.v1.json-policyn (alla 87 IndustryProfile-rader + metadata), laddad via load_industry_profiles() i packages/generation/discovery/industry_profiles.py. Skeleton genereras deterministiskt av scripts/generate_industry_profiles.py; kurerade rader skyddas i merge-läge.",
+      "ownerPackage": "packages/generation",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "sniSearchMatch",
+      "canonical": "SniSearchMatch",
+      "definition": "En träff-rad från viewser-API:t /api/sni-search (apps/viewser/app/api/sni-search/route.ts): SNI-kod, labelSv, wizardCategoryId (via sni-discovery-map) och valfri profil-prefill (primaryCta + extraCapabilities, gated på kategori-match). Konsumeras av wizardens branschsök (industry-search.tsx) som mergar SNI-träffar med lokala yrkes-/kategori-träffar.",
+      "ownerPackage": "apps/viewser",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "sniSearchResponse",
+      "canonical": "SniSearchResponse",
+      "definition": "Response-kuvertet från /api/sni-search: { ok, matches: SniSearchMatch[] }. Frontend-typen i industry-search.tsx speglar API-routens shape; ändringar måste ske i båda ändar samtidigt.",
+      "ownerPackage": "apps/viewser",
+      "aliasesAllowed": [],
       "aliasesForbidden": []
     }
   ],

@@ -251,6 +251,14 @@ export type WizardAnswers = {
   businessFamily: BusinessFamilyId | "";
   /** Sub-kategori (sub-specialisering). Multi-select bibehållen för bakåtkompat. */
   siteType: WizardCategoryId[];
+  /**
+   * SNI 2025-kod från branschsöket (ADR 0045), t.ex. "96.021". Tom när
+   * operatören valde family/kategori manuellt. Följer med i payloadens
+   * `answers.sniCode` så Discovery Resolver kan slå upp branschprofilen
+   * (industry-profiles.v1.json) — backend behandlar den som mjuk signal
+   * och wizardens explicita kategori-val vinner alltid.
+   */
+  sniCode: string;
 
   /** Steg 2 — Visuell identitet */
   vibe: WizardVibe;
@@ -300,6 +308,7 @@ export function emptyWizardAnswers(): WizardAnswers {
     contact: { phone: "", email: "", address: "", openingHours: "" },
     businessFamily: "",
     siteType: [],
+    sniCode: "",
     vibe: {
       vibeId: "",
       useCustomColors: false,

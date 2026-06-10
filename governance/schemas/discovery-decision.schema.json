@@ -134,6 +134,16 @@
       "enum": ["high", "medium", "low"],
       "description": "Resolverns självskattade säkerhet i beslutet. Reserverat för Backoffice-visning; saknas när resolvern inte beräknar den."
     },
+    "sniCode": {
+      "type": "string",
+      "minLength": 2,
+      "description": "Normaliserad SNI 2025-kod (digit-only) från wizardens branschsök (answers.sniCode), ADR 0045. Närvarande bara när payloaden bar en kod som resolvade mot sni-discovery-map; ren spårbarhet — kategorivalet sker fortsatt via categoryIds."
+    },
+    "industryProfileId": {
+      "type": "string",
+      "pattern": "^sni-[0-9]{2}$",
+      "description": "profileId i industry-profiles.v1.json vars berikning (extraCapabilities + planner-kontext) applicerades, ADR 0045. Saknas när ingen SNI-kod gavs eller ingen profil matchade — beteendet är då byte-identiskt med pre-0045."
+    },
     "inheritedFromVersion": {
       "type": "integer",
       "minimum": 1,

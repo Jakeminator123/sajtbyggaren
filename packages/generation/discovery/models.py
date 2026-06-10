@@ -145,6 +145,13 @@ class DiscoveryDecision:
     expectedStarterId: str | None = None
     rationale: str = ""
     confidence: Literal["high", "medium", "low"] | None = None
+    # ADR 0045: spårbarhet för bransch-berikningen. ``sniCode`` är den
+    # normaliserade koden från wizardens branschsök; ``industryProfileId``
+    # pekar på profilen i industry-profiles.v1.json vars berikning
+    # applicerades. Båda saknas (None) när payloaden inte bar någon
+    # SNI-kod — decision-shapen är då byte-identisk med pre-0045.
+    sniCode: str | None = None
+    industryProfileId: str | None = None
     schemaVersion: Literal[1] = 1
 
     def to_dict(self) -> dict[str, Any]:
@@ -171,4 +178,8 @@ class DiscoveryDecision:
             payload["rationale"] = self.rationale
         if self.confidence is not None:
             payload["confidence"] = self.confidence
+        if self.sniCode is not None:
+            payload["sniCode"] = self.sniCode
+        if self.industryProfileId is not None:
+            payload["industryProfileId"] = self.industryProfileId
         return payload

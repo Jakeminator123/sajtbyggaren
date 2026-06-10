@@ -156,12 +156,12 @@ def test_taxonomy_coverage_gaps_returns_categories_without_sni_mapping() -> None
     gaps = sni_diagnostics.taxonomy_coverage_gaps()
     gap_ids = {gap["wizardCategoryId"] for gap in gaps}
 
-    # Discovery Taxonomy har 25 kategorier; SNI Discovery Map täcker 19
-    # unika kategorier. De 6 utan mappning ska finnas i listan.
-    assert "landing" in gap_ids  # Single-page-koncept, ingen relevant SNI
-    assert "other" in gap_ids   # Catch-all, per design utan SNI-koppling
-    assert "business" in gap_ids  # Catch-all för generisk tjänsteverksamhet
-    # Kategorier vi täcker ska INTE finnas i listan
+    # ADR 0045 (map v2) täcker alla 87 huvudgrupper, så 24 av 25
+    # taxonomy-kategorier har minst en policyrad. Enda kvarvarande gap är
+    # "landing" — ett sajtkoncept, inte en bransch, så ingen SNI-kod kan
+    # rimligen mappa dit.
+    assert gap_ids == {"landing"}
+    # Kategorier som täcktes redan i v1 ska förstås inte regrediera.
     assert "restaurant" not in gap_ids
     assert "construction" not in gap_ids
     assert "tech" not in gap_ids

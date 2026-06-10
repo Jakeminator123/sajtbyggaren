@@ -14,6 +14,7 @@ import {
   type BusinessFamilyId,
   familyForCategory,
   findVibe,
+  FUNCTION_GROUPS,
   type WizardCategoryId,
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
@@ -57,6 +58,48 @@ type ScrapeResponse = {
   data?: Partial<WizardAnswers>;
   error?: string;
 };
+
+/**
+ * Branschprofilens extraCapabilities (canonical slugs ur
+ * capability-map.v1.json) → funktions-chipens capability-värden i
+ * FUNCTION_GROUPS, som delvis använder äldre UI-alias. Spegelvänd
+ * riktning mot backend-resolverns alias-tabell (_CAPABILITY_ALIASES i
+ * packages/generation/discovery/resolve.py).
+ */
+const PROFILE_CAPABILITY_ALIASES: Record<string, readonly string[]> = {
+  booking: ["online-booking"],
+  hours: ["opening-hours"],
+  location: ["map-embed"],
+  pricing: ["pricing-display"],
+  "newsletter-subscribe": ["newsletter-signup"],
+  payments: ["checkout-flow"],
+  "hero-video": ["video-hero"],
+};
+
+/**
+ * Översätt profilens capability-slugs till funktions-chip-ids (ADR 0045
+ * prefill). Ett chip per canonical slug — första träffen vinner så
+ * "booking" inte väljer både fn-booking och fn-tableresv. Slugs utan
+ * chip (t.ex. "guarantees") hoppas ärligt över; de når backend ändå
+ * via resolverns profil-merge.
+ */
+function functionIdsForProfileCapabilities(
+  capabilities: readonly string[],
+): string[] {
+  const ids: string[] = [];
+  for (const slug of capabilities) {
+    const candidates = new Set([slug, ...(PROFILE_CAPABILITY_ALIASES[slug] ?? [])]);
+    outer: for (const group of FUNCTION_GROUPS) {
+      for (const choice of group.choices) {
+        if (choice.capability && candidates.has(choice.capability)) {
+          ids.push(choice.id);
+          break outer;
+        }
+      }
+    }
+  }
+  return ids;
+}
 
 export function FoundationStep({
   answers,
@@ -198,14 +241,33 @@ export function FoundationStep({
 
   // Branschsök (2026-06-09): exakt bransch-träff sätter både family och
   // sub-kategori i ett klick — samma fält som scrape-inferensen skriver.
+  // ADR 0045: SNI-träffar bär dessutom sniCode (→ answers.sniCode →
+  // backend-resolvern slår upp branschprofilen) och förifyller
+  // funktions-/CTA-val från profilen. Ett icke-SNI-val rensar sniCode
+  // så payloaden aldrig bär en kod som inte matchar operatörens val.
   const handleIndustryPick = useCallback(
     (match: IndustryMatch) => {
-      onChange({
+      const patch: Partial<WizardAnswers> = {
         businessFamily: match.family,
         siteType: [match.category],
-      });
+        sniCode: match.sniCode ?? "",
+      };
+      if (match.profilePrefill) {
+        if (!answers.primaryCta.trim() && match.profilePrefill.primaryCta) {
+          patch.primaryCta = match.profilePrefill.primaryCta;
+        }
+        const prefillIds = functionIdsForProfileCapabilities(
+          match.profilePrefill.extraCapabilities,
+        );
+        if (prefillIds.length > 0) {
+          patch.selectedFunctions = Array.from(
+            new Set([...answers.selectedFunctions, ...prefillIds]),
+          );
+        }
+      }
+      onChange(patch);
     },
-    [onChange],
+    [answers.primaryCta, answers.selectedFunctions, onChange],
   );
 
   const selectFamily = useCallback(
