@@ -44,6 +44,13 @@ leverantörsneutral: sandboxen är bara en exekveringsyta.
 - Vägen är bakom `VIEWSER_ENABLE_HOSTED_BUILD=1` — utan flaggan degraderar
   `/api/prompt` hostat ärligt som tidigare.
 
+## Termer
+
+Beslutet introducerar två canonical termer, registrerade i
+naming-dictionary v34: hosted-build (den hostade byggvägen ovan) och
+build-context (pipens minimala filuppsättning som tar.gz i blob,
+uppladdad av operatörs-CLI:t; måste laddas om när pipen ändras).
+
 ## Konsekvenser
 
 - Plus: ingen omskrivning av genereringspipen; lokal väg helt oförändrad;

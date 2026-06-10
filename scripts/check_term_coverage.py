@@ -434,11 +434,12 @@ COMMON_WORDS = {
     # inte domänbegrepp. Samma behandling som PreviewServerInfo / FilesPayload.
     "PreviewStartOk", "PreviewStartResponse", "SandboxSession",
     # P2 hostad byggväg (ADR 0048-0050) — viewser-lokala TS-symboler för
-    # kv-store-kontraktet, hosted-build-runnern och status-routen. Drivrarna
-    # MemoryKvStore/UpstashRedisKvStore är canonical (naming-dictionary v33);
-    # resten är implementation-detaljer, inte domänbegrepp — samma behandling
-    # som PreviewStartOk/SandboxSession ovan.
-    "KvStore", "KvSetOptions", "KvRestResponse", "MemoryEntry",
+    # kv-store-kontraktet, hosted-build-runnern och status-routen. De centrala
+    # begreppen är canonical i naming-dictionary v34 (KvStore, Hosted Build,
+    # Build Context, Rate Limit Scope) plus drivrarna MemoryKvStore/
+    # UpstashRedisKvStore (v33); symbolerna nedan är implementation-detaljer,
+    # inte domänbegrepp — samma behandling som PreviewStartOk/SandboxSession.
+    "KvSetOptions", "KvRestResponse", "MemoryEntry",
     "HostedBuildRequest", "HostedBuildPhase", "HostedBuildRunStatus",
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
     "GameState", "KeyboardEvent", "PacmanGame",

@@ -34,6 +34,12 @@ Publik v1 med kostnadsskydd i stället för auth:
 Riktig auth + tenant-isolering (G4/ADR 0035) är fortsatt nästa steg när
 produkten ska ha konton, kvoter per användare och delning.
 
+## Termer
+
+Scope-begreppet (namngiven kvot-yta per endpoint: chat, generate-image,
+preview-start, prompt-build) är canonical i naming-dictionary v34 som
+rate-limit-scope, med env-override-konventionen dokumenterad där.
+
 ## Konsekvenser
 
 - Plus: noll friktion för testanvändare; kostnadsexponeringen är kapad per

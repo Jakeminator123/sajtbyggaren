@@ -40,6 +40,14 @@ Postgres/supabase avvisas inte — de är fel verktyg för pekare/sessioner/
 räknare idag och kan läggas till som driver eller separat databas när
 relationsdata (användare, delning) faktiskt behövs.
 
+## Termer
+
+Kontraktet och drivrarna är canonical i naming-dictionary (v33-v34):
+kv-store-kontraktet självt plus memory- och upstash-redis-drivrarna.
+TS-implementationssymbolerna (set-options, rest-response-shapen m.fl.)
+är medvetet INTE canonical — de ligger i term-checkerns lokala allowlist
+per etablerad praxis för viewser-lokala typer.
+
 ## Konsekvenser
 
 - Plus: noll nya npm-dependencies; lokal utveckling kravlös; byte av
