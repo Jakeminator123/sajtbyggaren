@@ -154,9 +154,20 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `c1b9c43` (2026-06-10 ~14:15 UTC+2; `jakob-be` HEAD
-efter merge av PR #276 — Tier 2 warm-sandbox-reuse LANDAD, ADR 0041,
-inkl. babysit-fix `a5f66c6` för Vercel-botens transient-fail-fynd).
+Last verified state: `c1b9c43`+granskningsfixar (2026-06-10 ~14:45 UTC+2).
+Extern granskning (read-only-agent F1–F10 + GPT-agent) processad: SEX
+buggar fixade + stängda i samma commit-svit — B186 (baseRunId vinner över
+latest i brief-reuse), B187 (frågeformade section_add-edits byggde inte:
+infinitivverb saknades i routerns `_ADD_VERBS`), B188 (cross-site-guard
+hoppades över vid overifierbar baseRunId), B189 (removed-notes-guard
+substring → onödig regen), B190 (route-gaten hedrar nu `expectsAnswer`),
+B191 (`_metadata_int` "--5"-krasch). B192 ÖPPEN (dialog-vägens
+answer-only renderas rött — medvetet deferrad bakom Christophers
+#269-rebase, samma fil). Avfärdade med motivering: F1 (medveten
+substring-design), F6 (latent, täcks av test vid PR), F7 (by design),
+F9 (sync_canvases --check är lokal, ej i CI — verifierat). Granskningen
+arkiverad i operatörens `övrigt/`. Tidigare i dag: PR #276 (Tier 2
+warm-sandbox-reuse, ADR 0041, inkl. babysit-fix `a5f66c6`).
 Tidigare i dag: #274 (roll-dispatch), #275 (komponentkatalog lager 1+2,
 ADR 0040), hygien-fix `58aec36` (add-module-låsen → egen testfil),
 design-notens lager 3 har konceptbevis (operatörens shadcn-mcp-lab) +

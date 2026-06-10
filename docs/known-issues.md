@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 158 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 164 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -658,17 +658,21 @@ Alla fyra fynd (B176–B179) är stängda och flyttade till Stängda-sektionen (
 
 ### Brief-reuse/latest-run-härdning 2026-06-10 (agent-triage, diff-verifierad)
 
-B183–B185 är stängda och flyttade till Stängda-sektionen (Steward-pass 2026-06-10); B186 nedan är kvar öppen.
+B183–B186 är stängda och flyttade till Stängda-sektionen (Steward-pass +
+extern granskning 2026-06-10); B192 nedan (dialog-vägens answer-only-UI) är
+öppen och medvetet deferrad bakom Christophers #269-rebase.
 
-- **`B186` Låg** - brief-reuse-beslutet i `write_phase1_understand` nycklar på
-  `latest_run_dir_for_site(...)` (senaste run), inte på en ev. explicit
-  baseRunId. På en "Iterera från denna"-följd (pinnad äldre bas) jämförs
-  brief-inputen alltså mot SENASTE runens brief, inte den pinnade basens. Liten
-  semantisk inkonsekvens (kedjan bygger från baseRunId men brief-reuse läser
-  latest). Lågt sannolik effekt (latest och bas har oftast samma maskade input),
-  men fixen kräver att baseRunId trådas in i `write_phase1_understand` →
-  deferrad som egen uppföljning. Källa: agent-triage 2026-06-10, diff-verifierad.
-  Fix: open. Test: open.
+- **`B192` Låg-Medel** - answer-only-svar via DIALOG-vägen (färgväljare,
+  modul-dialog, inspector m.fl. som konsumerar `use-followup-build`) renderas
+  som RÖTT fel trots `isAnswer`-diskriminatorn: hooken lägger svarstexten i
+  `error`-state och callers stylar den destructive. Inte ett motorfel
+  (FloatingChat renderar samma svar korrekt som info-bubbla), men upplevs som
+  falskt fel. Fix-skiss: separera `answer` från `error` i hooken (eller låt
+  callers läsa `isAnswer` och rendera neutral info). MEDVETET DEFERRAD:
+  `use-followup-build.ts` + dialogerna ägs just nu av Christophers
+  #269-rebase (toolIntent) — fixas efter den landat för att undvika
+  trippel-kollision i samma fil. Källa: extern GPT-granskning 2026-06-10
+  (fynd 1), kod-verifierad mot hooken + callers. Fix: open. Test: open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
@@ -682,6 +686,82 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B187` Medel** (stängd 2026-06-10, extern granskning samma dag) - en
+  frågeformad section_add ("kan du lägga till en FAQ-sektion?", "skulle du
+  kunna lägga till en team-sektion?") klassades som answer-only `question`
+  i stället för edit → användaren fick ett chat-svar och INGET bygge.
+  Rotorsak: routerns `_ADD_VERBS` bar bara imperativformerna ("lägg till");
+  infinitivets "lägga till" matchade inte (ordgräns: "lägg" ≠ "lägga") så
+  add-verbet missades och ?-grenen vann. Restyle/copy-edits i frågeform
+  ("kan du göra sajten mörkblå?") klarade sig — bara add-verben saknade
+  infinitiv. Fix: infinitivformerna ("lägga till/in/dit", "sätta in/dit")
+  tillagda i `_ADD_VERBS` (`packages/generation/orchestration/router/
+  classify.py`), additiv lexikon-utökning, negativa kontroller intakta
+  ("vad är en FAQ-sektion?" förblir question). Källa: extern GPT-granskning
+  2026-06-10 (fynd 2), repro-verifierad före fix. Test:
+  `tests/test_openclaw_roles.py::test_question_formed_edits_classify_as_edit`
+  + `::test_genuine_conversation_stays_answer_only_after_infinitive_verbs`.
+
+- **`B188` Medel** (stängd 2026-06-10, extern granskning samma dag) -
+  cross-site-guarden för explicit baseRunId (B185) hoppades över när
+  `_build_result_site_id` gav `None` (saknad/oläsbar `build-result.json`
+  eller tomt siteId) — en overifierbar/trasig run-dir kunde alltså passera
+  skyddet och bli följdpromptens bas. Fix: `None` behandlas nu som "kan
+  inte verifiera ägarskap" → ärligt stopp med åtgärdsförslag (välj komplett
+  run eller auto-resolve). Källa: extern read-only-granskning 2026-06-10
+  (F2), diff-verifierad. Fix: `scripts/build_site.py`. Test:
+  `tests/test_followup_chain_cli.py::test_followup_chain_rejects_unverifiable_base_run_id`.
+
+- **`B189` Låg-Medel** (stängd 2026-06-10, extern granskning samma dag) -
+  brief-reusens removed-notes-guard (B184) detekterade "förra briefen hade
+  en operator-/mood-not" via RÅTT substring-test på prefixet — fri
+  brief-prosa som bara nämnde strängen "Operator: " mitt i ett block
+  tvingade en onödig regenerering på varje följdbygge för den sajten
+  (= exakt copy-driften B180 dödade, fast i smalt kantfall). Fix:
+  prefix-matchning per BLOCK (`notesForPlanner` är `\n\n`-separerade block,
+  injektorn prependar sina block). Källa: extern read-only-granskning
+  2026-06-10 (F3), kod-verifierad. Fix:
+  `packages/generation/brief/site_brief.py`. Test:
+  `tests/test_brief_carry_forward.py::test_prose_mentioning_operator_prefix_does_not_force_regen`.
+
+- **`B190` Medel** (stängd 2026-06-10, extern granskning samma dag) -
+  `/api/prompt`-conversation-grinden läste bara `conversationKind` mot
+  kind-mängden, INTE `expectsAnswer` — medan use-followup-build och
+  FloatingChat (efter #274) hedrar `expectsAnswer` som självständig signal.
+  Skulle konduktorn någonsin svars-markera en kind utanför mängden hade
+  servern kört vidare till legacy-build medan klienterna väntade svar
+  (kontraktsdivergens mellan lagren). Fix: grinden hedrar nu BÅDE
+  kind-mängden OCH `expectsAnswer === true`, och återanvänder den redan
+  extraherade `conversationMeta` (granskningens F5, dubbelanropet bort).
+  Källa: extern read-only-granskning 2026-06-10 (F4+F5), kod-verifierad.
+  Fix: `apps/viewser/app/api/prompt/route.ts`. Test:
+  `tests/test_viewser_floating_chat.py::test_prompt_route_gate_honours_expects_answer`.
+
+- **`B191` Låg** (stängd 2026-06-10, extern granskning samma dag) -
+  `_metadata_int`-fixen (B-posten för Arrow-kraschen) hade ett kvarvarande
+  kraschfönster: en patologisk sträng som `"--5"` passerade
+  `lstrip("-").isdigit()`-heuristiken men fick `int()` att kasta
+  `ValueError` → grafvyn kraschade igen (samma symptom fixen skulle döda).
+  Fix: `try/except (ValueError)` i stället för heuristiken. Källa: extern
+  read-only-granskning 2026-06-10 (F8), kod-verifierad. Fix:
+  `backoffice/asset_graph.py`. Test:
+  `tests/test_backoffice_asset_graph.py::test_metadata_int_never_raises_on_pathological_strings`.
+
+- **`B186` Låg** (stängd 2026-06-10, samma dag som registreringen) -
+  brief-reuse-beslutet i `write_phase1_understand` nycklade på
+  `latest_run_dir_for_site(...)` (senaste run), inte på en ev. explicit
+  baseRunId — på en "Iterera från denna"-följd jämfördes brief-inputen mot
+  SENASTE runens brief i stället för den pinnade basens (kedjan bygger från
+  basen men brief-reuse läste latest; semantisk inkonsekvens med
+  copy-drift-risk på pinnade iterationer). Fix: ny
+  `_followup_previous_run_dir(runs_root, site_id, prompt_meta)` — en
+  explicit `baseRunId` i prompt-meta-sidecaren (skrivs av
+  `generate_followup`) vinner över latest när den pinnade runen har en
+  läsbar `site-brief.json`; annars latest-fallback. Källa: agent-triage
+  2026-06-10 (registrerad i morse), prioriterad av extern GPT-granskning
+  ("9/10-fråga"). Fix: `scripts/build_site.py`. Test:
+  `tests/test_brief_carry_forward.py::test_explicit_base_run_id_wins_over_latest_for_brief_reuse`.
 
 - **`B183` Medel** (stängd 2026-06-10) - latest-run-resolvers (`scripts/build_site.py:_latest_run_id_for_site`
   + `packages/generation/followup/hero_headline_pin.py:latest_run_dir_for_site`)
