@@ -58,6 +58,13 @@ type PreviewInspectorContextValue = {
   clearPlacementPick: () => void;
   /** Bumpas vid varje avslutad/avbruten pick så BuilderShell kan re-öppna dialogen. */
   placementPickResolvedSignal: number;
+  /**
+   * Inspektera-läget (hover-highlight + element-info). Startas från
+   * Verktyg-menyn i FloatingChat — INGEN permanent knapp på canvasen,
+   * previewn är helt ren tills operatören aktivt slår på ett läge.
+   */
+  inspectModeActive: boolean;
+  setInspectModeActive: (active: boolean) => void;
 };
 
 const PreviewInspectorContext =
@@ -74,6 +81,7 @@ export function PreviewInspectorProvider({
     useState<PlacementPick | null>(null);
   const [placementPickResolvedSignal, setPlacementPickResolvedSignal] =
     useState(0);
+  const [inspectModeActive, setInspectModeActiveInternal] = useState(false);
 
   const setPreviewUrl = useCallback((url: string | null) => {
     setPreviewUrlInternal(url);
@@ -100,6 +108,10 @@ export function PreviewInspectorProvider({
     setLastPlacementPick(null);
   }, []);
 
+  const setInspectModeActive = useCallback((active: boolean) => {
+    setInspectModeActiveInternal(active);
+  }, []);
+
   const value = useMemo(
     () => ({
       previewUrl,
@@ -111,6 +123,8 @@ export function PreviewInspectorProvider({
       lastPlacementPick,
       clearPlacementPick,
       placementPickResolvedSignal,
+      inspectModeActive,
+      setInspectModeActive,
     }),
     [
       previewUrl,
@@ -122,6 +136,8 @@ export function PreviewInspectorProvider({
       lastPlacementPick,
       clearPlacementPick,
       placementPickResolvedSignal,
+      inspectModeActive,
+      setInspectModeActive,
     ],
   );
 
@@ -142,6 +158,8 @@ const FALLBACK_VALUE: PreviewInspectorContextValue = {
   lastPlacementPick: null,
   clearPlacementPick: () => {},
   placementPickResolvedSignal: 0,
+  inspectModeActive: false,
+  setInspectModeActive: () => {},
 };
 
 /**

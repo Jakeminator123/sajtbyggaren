@@ -180,7 +180,12 @@ export function BuilderShell({
   // setState:n deferras via setTimeout för React 19:s
   // react-hooks/set-state-in-effect-regel (samma mönster som
   // DevicePresetProvider-hydreringen).
-  const { placementPickResolvedSignal } = usePreviewInspector();
+  const {
+    placementPickResolvedSignal,
+    previewUrl: inspectorPreviewUrl,
+    inspectModeActive,
+    setInspectModeActive,
+  } = usePreviewInspector();
   const lastPlacementSignalRef = useRef(placementPickResolvedSignal);
   useEffect(() => {
     if (placementPickResolvedSignal === lastPlacementSignalRef.current) return;
@@ -210,6 +215,23 @@ export function BuilderShell({
         icon: "inspect",
         group: "Inspektera",
         onSelect: openDialogFactory("inspect"),
+      },
+      // Peka i previewn (preview-inspector): togglar hover-inspektionen
+      // ovanpå preview-iframen. Medvetet INGEN permanent knapp på
+      // canvasen (operatörskrav 2026-06-10: ren preview-yta) — läget
+      // startas härifrån och stängs med Esc/X i overlayns statusrad.
+      // disabled när ingen server-nåbar preview-URL finns (StackBlitz-
+      // läget publicerar ingen) eller medan ett bygge pågår.
+      {
+        id: "preview-inspect",
+        label: inspectModeActive ? "Stäng granskningen" : "Granska previewn",
+        description: inspectModeActive
+          ? "Stänger hover-inspektionen"
+          : "Hovra och identifiera element",
+        icon: "preview-inspect",
+        group: "Inspektera",
+        onSelect: () => setInspectModeActive(!inspectModeActive),
+        disabled: !inspectorPreviewUrl || isBuilding,
       },
       // Design
       {
@@ -301,7 +323,15 @@ export function BuilderShell({
         onSelect: onNewSite,
       },
     ],
-    [isBuilding, openDialogFactory, onOpenConsole, onNewSite],
+    [
+      isBuilding,
+      openDialogFactory,
+      onOpenConsole,
+      onNewSite,
+      inspectModeActive,
+      setInspectModeActive,
+      inspectorPreviewUrl,
+    ],
   );
 
   return (

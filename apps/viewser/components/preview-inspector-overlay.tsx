@@ -1,6 +1,6 @@
 "use client";
 
-import { Crosshair, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -32,10 +32,17 @@ import { cn } from "@/lib/utils";
  *     klick väljer platsen. Ärlighet: backendens section_add-router kan
  *     idag bara "överst"/"längst ner", så valet visar BÅDE närmaste
  *     insättningspunkt OCH vilken grovposition den faktiskt mappar till.
- *   - Inspektionsläge (lokal toggle, kikar-knappen uppe till höger):
- *     hovring markerar minsta elementet under musen; klick visar ett
- *     info-kort (tag, text, närmaste rubrik) med kopierbar beskrivning
- *     som operatören kan klistra in i en följdprompt.
+ *   - Inspektionsläge (inspectModeActive via context, startas från
+ *     Verktyg-menyn i FloatingChat): hovring markerar minsta elementet
+ *     under musen; klick visar ett info-kort (tag, text, närmaste
+ *     rubrik) med kopierbar beskrivning som operatören kan klistra in
+ *     i en följdprompt.
+ *
+ * Ren canvas-princip (operatörskrav 2026-06-10): overlayn renderar
+ * INGENTING när inget läge är aktivt — inga permanenta knappar eller
+ * chrome ovanpå previewn. Båda lägena startas från FloatingChat
+ * (Verktyg-menyn resp. Lägg till modul-dialogen) och stängs med Esc
+ * eller X-knappen i statusraden.
  *
  * Kända begränsningar (samma som originalet): kartan tas vid sidtopp
  * (scroll 0) — element under första viewporten kläms mot 100 % och
@@ -69,11 +76,18 @@ export function PreviewInspectorOverlay({
   /** False medan preview laddar/bygger — döljer toggle + avbryter lägen. */
   active: boolean;
 }) {
-  const { placementPickActive, cancelPlacementPick, completePlacementPick } =
-    usePreviewInspector();
+  const {
+    placementPickActive,
+    cancelPlacementPick,
+    completePlacementPick,
+    inspectModeActive,
+    setInspectModeActive,
+  } = usePreviewInspector();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [inspectMode, setInspectMode] = useState(false);
+  // Placeringsläget äger overlayn när båda råkar vara aktiva (platsvalet
+  // är en pågående dialog-handling med tydligt avslut).
+  const inspectMode = inspectModeActive && !placementPickActive;
   const [mapState, setMapState] = useState<MapFetchState>("idle");
   const [mapError, setMapError] = useState<string | null>(null);
   const [elementMap, setElementMap] = useState<ElementMapItem[]>([]);
@@ -195,17 +209,29 @@ export function PreviewInspectorOverlay({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (placementPickActive) cancelPlacementPick();
-      setInspectMode(false);
+      setInspectModeActive(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [overlayActive, placementPickActive, cancelPlacementPick]);
+  }, [
+    overlayActive,
+    placementPickActive,
+    cancelPlacementPick,
+    setInspectModeActive,
+  ]);
 
-  // Preview försvann/byggdes om medan läget var aktivt → avbryt ärligt.
+  // Preview försvann/byggdes om medan ett läge var aktivt → avbryt ärligt.
   useEffect(() => {
-    if (active || !placementPickActive) return;
-    cancelPlacementPick();
-  }, [active, placementPickActive, cancelPlacementPick]);
+    if (active) return;
+    if (placementPickActive) cancelPlacementPick();
+    if (inspectModeActive) setInspectModeActive(false);
+  }, [
+    active,
+    placementPickActive,
+    cancelPlacementPick,
+    inspectModeActive,
+    setInspectModeActive,
+  ]);
 
   const relativePercent = useCallback(
     (
@@ -332,34 +358,11 @@ export function PreviewInspectorOverlay({
 
   if (!active) return null;
 
+  // Ren canvas: ingenting renderas alls när inget läge är aktivt.
+  // Båda lägena startas från FloatingChat (Verktyg-menyn resp.
+  // Lägg till modul-dialogen) — previewn har noll permanent chrome.
   return (
     <>
-      {/* Toggle för inspektionsläget — döljs medan placeringsläget äger
-          overlayn (placering startas från Lägg till modul-dialogen). */}
-      {!placementPickActive ? (
-        <button
-          type="button"
-          onClick={() => setInspectMode((prev) => !prev)}
-          aria-pressed={inspectMode}
-          title={
-            inspectMode
-              ? "Stäng inspektionen"
-              : "Inspektera sajten — hovra och klicka för att identifiera element"
-          }
-          className={cn(
-            "absolute top-3 right-3 z-[8] inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm backdrop-blur transition",
-            inspectMode
-              ? "border-foreground bg-foreground text-background"
-              : "border-border/60 bg-background/85 text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Crosshair className="h-4 w-4" aria-hidden />
-          <span className="sr-only">
-            {inspectMode ? "Stäng inspektionen" : "Inspektera sajten"}
-          </span>
-        </button>
-      ) : null}
-
       {overlayActive ? (
         <div
           ref={containerRef}
@@ -408,20 +411,25 @@ export function PreviewInspectorOverlay({
             </div>
           </div>
 
-          {/* Avbryt-knapp i placeringsläget (klickbar trots pointer-läget). */}
-          {placementPickActive ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
+          {/* Stäng-knapp — avbryter platsvalet resp. stänger inspektionen.
+              Syns BARA medan ett läge är aktivt (ren canvas annars). */}
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (placementPickActive) {
                 cancelPlacementPick();
-              }}
-              className="border-border/60 bg-background/90 text-muted-foreground hover:text-foreground absolute top-3 right-3 z-[9] inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm backdrop-blur transition"
-              aria-label="Avbryt platsval"
-            >
-              <X className="h-4 w-4" aria-hidden />
-            </button>
-          ) : null}
+              } else {
+                setInspectModeActive(false);
+              }
+            }}
+            className="border-border/60 bg-background/90 text-muted-foreground hover:text-foreground absolute top-3 right-3 z-[9] inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm backdrop-blur transition"
+            aria-label={
+              placementPickActive ? "Avbryt platsval" : "Stäng inspektionen"
+            }
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
 
           {/* Sektionszoner som visuell kontext i placeringsläget. */}
           {placementPickActive
