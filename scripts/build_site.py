@@ -243,6 +243,7 @@ build_site_brief = _brief_site_exports.build_site_brief
 build_site_brief_mock = _brief_site_exports.build_site_brief_mock
 resolve_brief_model = _brief_site_exports.resolve_brief_model
 project_input_to_brief_prompt = _brief_site_exports.project_input_to_brief_prompt
+reuse_previous_site_brief = _brief_site_exports.reuse_previous_site_brief
 
 # Shared render helpers (slice 5, behavior-preserving extraction per
 # docs/refactor/megafiles-plan.md Del 1 slice 5 + Del 2 slice 5): the shared
@@ -1584,7 +1585,35 @@ def write_phase1_understand(
         payload_path="input.json",
     )
 
-    brief = build_site_brief(trace.run_id, dossier, scaffold)
+    # B176: a follow-up build whose brief input is unchanged carries the
+    # previous run's Site Brief forward instead of re-rolling briefModel -
+    # otherwise ALL brief-derived copy (about-story, hero subheadline, quick
+    # facts) drifts on every pure restyle/section/capability follow-up. The
+    # new run dir has no build-result.json yet, so latest_run_dir_for_site
+    # naturally resolves the PREVIOUS completed run.
+    brief: dict | None = None
+    if _prompt_meta_mode(prompt_meta) == "followup":
+        from packages.generation.followup.hero_headline_pin import (
+            latest_run_dir_for_site,
+        )
+
+        previous_run_dir = latest_run_dir_for_site(
+            run_dir.parent, dossier["siteId"]
+        )
+        if previous_run_dir is not None:
+            brief = reuse_previous_site_brief(trace.run_id, dossier, previous_run_dir)
+            if brief is not None:
+                trace.event(
+                    "understand",
+                    "site_brief.reused",
+                    "done",
+                    (
+                        "Site Brief carried forward from previous run "
+                        f"{previous_run_dir.name} (unchanged brief input, B176)"
+                    ),
+                )
+    if brief is None:
+        brief = build_site_brief(trace.run_id, dossier, scaffold)
     from packages.generation.artifacts import validate_site_brief
 
     validate_site_brief(brief)
