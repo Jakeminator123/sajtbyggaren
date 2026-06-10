@@ -154,8 +154,21 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `0f61611` (2026-06-10 ~16:45 UTC+2; jakob-be HEAD efter
-eftermiddagens tre merges). **#277** toolIntent v1-pilot UI-halvan
+Last verified state: `706b889` (2026-06-10 ~17:45 UTC+2; jakob-be HEAD efter
+PR #280-mergen). **#280** ADR 0045 SNI-branschberedskap MERGAD (Christophers
+lane, granskad i sin helhet): full SNI-täckning (sni-discovery-map v2 — alla
+87 huvudgrupper + 23 groupOverrides, 0 unknown testlåst), 87 branschprofiler
+(`industry-profiles.v1.json` + schema som hårt förbjuder direkta
+scaffold/starter/variant/dossier-pekare), resolver-slicen verifierad (mjuk
+`answers.sniCode`-signal, dubbel gating — profilen appliceras aldrig mot fel
+kategori eller mot operatörens explicita val; byte-identiskt flöde utan kod)
++ wizard-branschsök via localhost-gated `/api/sni-search` med profil-prefill.
+Inbox-konflikten mot `3666bea` löst i merge-commit `10d6383` (msg-0065 +
+msg-0067/0068 behållna i id-ordning); guards gröna lokalt (ruff 0, governance
+21/21, rules_sync, term-coverage --strict, pytest core + alla fem
+SNI-sviterna) + CI grön på merge-committen. PR-branchen städad
+(lokalt + remote). Tidigare samma dag (~16:45, `0f61611`):
+**#277** toolIntent v1-pilot UI-halvan
 (Christophers utbrytning ur #269 per msg-0063 — färgväljaren skickar
 strukturerad theme_change-intent; backend-halvan = nästa steg ovanpå
 rollmappningen; #269 bär nu enbart inspector-lanen och väntar rebase).
@@ -222,11 +235,6 @@ misplaced-poster som väntar Steward-flytt (B176–B179-rundan, B183–B185).
 
 ## Öppna PR att känna till
 
-- **#280** (`chgenberg → jakob-be`): SNI-branschberedskap — full SNI-täckning
-  + 87 branschprofiler + wizard-branschsök, ADR-nummer 0045 (numret är
-  därmed TAGET; model-tuning-slicen renumreras till 0046, generativ
-  omskrivning till 0047 — se handoff-liggaren). VÄNTAR GRANSKNING (stor: 21 filer,
-  governance + discovery + wizard).
 - **#269** (`christopher → jakob-be`): toolIntent v1-pilot (strukturerad
   specialist-intent från färgväljaren, UI-halva). **Vänta med merge:** (a) PR:en
   är hela `christopher`-branchen (23 filer, +2805 — bär även en hel

@@ -30,13 +30,15 @@ PR:ar (#270–#279 utom parkerade) + två main-syncar. Verifierad
 >
 > **ADR-nummerliggare (kollisionsrisk vid parallella agenter!):** 0040
 > komponentkatalog (mergad), 0041 Tier 2 (mergad), 0042 RESERVERAD lager 3
-> (ev. i cloud), 0043 sektionstext (mergad), 0044 SOUL (mergad), 0045 TAGEN
-> av öppna PR #280 (Christophers SNI-branschberedskap), 0046 RESERVERAD
+> (ev. i cloud), 0043 sektionstext (mergad), 0044 SOUL (mergad), 0045
+> SNI-branschberedskap (MERGAD via #280 ~17:45), 0046 RESERVERAD
 > model-tuning, 0047 RESERVERAD generativ sektionsomskrivning.
 >
-> **Öppet/pågående:** PR #280 (Christophers SNI + 87 branschprofiler +
-> wizard-branschsök — VÄNTAR GRANSKNING), #269 (numera enbart
+> **Öppet/pågående:** #269 (numera enbart
 > inspector-lanen, väntar Christophers rebase), #156 (parkerad, säkerhet).
+> #280 (Christophers SNI + 87 branschprofiler + wizard-branschsök) är
+> GRANSKAD och MERGAD ~17:45 (`706b889`; inbox-konflikt löst, guards + CI
+> gröna — detaljer i current-focus).
 > Ev. cloud-agenter i flykt: lager 3 (ADR 0042), model-tuning (ska
 > RENUMRERAS till 0046), generativ omskrivning (0047), compound-prompt-
 > ärlighet (ingen ADR). B192 öppen (answer-only rött i dialog-vägen,
