@@ -220,6 +220,12 @@ COMMON_WORDS = {
     # in apps/viewser/app/api/prompt/route.ts to split client-side
     # validation errors (400) from server errors (500).
     "ZodError",
+    # Internal TS type in apps/viewser/app/api/prompt/route.ts (F1 slice 2,
+    # conversation gate): the defensively-extracted {conversationKind, role}
+    # block from the OpenClaw bridge decision. Mirrors the BriefResult /
+    # BugEntry pattern above - an internal code symbol, not a domain term
+    # (ConversationKind itself stays a conductor-layer concept per slice 1).
+    "ConversationMetadata",
     # psutil exception classes referenced by scripts/prune_generated_previews.py
     # when iterating processes. External library symbols, not domain terms.
     "AccessDenied", "NoSuchProcess",

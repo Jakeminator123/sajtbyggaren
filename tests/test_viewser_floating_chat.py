@@ -531,6 +531,134 @@ def test_floating_chat_renders_openclaw_bridge_honestly() -> None:
 
 
 @pytest.mark.tooling
+def test_prompt_route_conversation_gate_answers_without_build() -> None:
+    """F1 slice 2 (conductor wiring): när bryggan klassar follow-upen som en
+    KONVERSATION (small_talk/site_opinion/question) ska ``/api/prompt`` svara
+    med ett ärligt chat-svar (``answerText``) och stanna FÖRE bygget — ett
+    skämt eller en omdömesfråga får aldrig skriva en ny version.
+
+    Locks:
+      1. De tre konversations-kinds:en speglas i en stängd uppsättning.
+      2. Gaten ligger EFTER applied-grenen men FÖRE Phase 1
+         (runPromptToProjectInput) — inget bygge kan starta.
+      3. Svarstexten genereras via den BEFINTLIGA lib/openai.ts-chathelpern
+         (chatWithOpenAi) med ärlig no-key-fallback ("OPENAI_API_KEY saknas"
+         — aldrig en låtsad konversation).
+      4. Return-objektet bär ``answerText`` + ``runId: null`` och ett tomt
+         ``buildResult`` (appliedVisibleEffect kan aldrig bli true för en
+         konversation; previewShouldRefresh är false från bryggan).
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+
+    # 1. Den stängda kind-uppsättningen (spegel av Python-seamens gate).
+    assert "CONVERSATION_ANSWER_KINDS" in text, (
+        "route.ts måste hålla konversations-kinds:en i en stängd uppsättning "
+        "(spegel av _ANSWER_ONLY_CONVERSATION_KINDS i run_openclaw_followup.py)."
+    )
+    for kind in ("small_talk", "site_opinion", "question"):
+        assert f'"{kind}"' in text, (
+            f"route.ts: konversations-kinden {kind!r} saknas i gaten."
+        )
+
+    # 2. Gaten ligger före Phase 1 så inget bygge kan starta för en konversation.
+    gate_idx = text.index("extractConversation(applyResult.decision)")
+    phase1_idx = text.index("await runPromptToProjectInput(")
+    assert gate_idx < phase1_idx, (
+        "route.ts: konversations-gaten måste ligga FÖRE Phase 1 "
+        "(runPromptToProjectInput) — annars kan ett skämt starta ett bygge."
+    )
+    # ...och efter applied-grenen (en faktiskt landad ändring vinner alltid).
+    applied_idx = text.index("applyResult.bridge.applied")
+    assert applied_idx < gate_idx, (
+        "route.ts: applied-grenen (materialiserad ändring) måste preempta "
+        "konversations-gaten."
+    )
+
+    # 3. Befintliga chathelpern + ärlig no-key-fallback.
+    assert 'import { chatWithOpenAi, openaiEnv } from "@/lib/openai"' in text, (
+        "route.ts måste återanvända lib/openai.ts-chathelpern (ingen egen "
+        "OpenAI-klient)."
+    )
+    assert "chatWithOpenAi([" in text, (
+        "Konversations-svaret ska genereras via chatWithOpenAi."
+    )
+    assert 'openaiEnv("OPENAI_API_KEY")' in text, (
+        "No-key-grenen måste kolla nyckeln via openaiEnv (samma resolution "
+        "som övriga OpenAI-rutter)."
+    )
+    assert "OPENAI_API_KEY saknas" in text, (
+        "Utan nyckel måste svaret vara den ärliga svenska no-key-texten — "
+        "aldrig en låtsad konversation."
+    )
+
+    # 4. Ärligt return-objekt: answerText + runId null + tomt buildResult.
+    gate_region = text[gate_idx : gate_idx + 1800]
+    assert "runId: null" in gate_region, (
+        "Konversations-svaret får inte bära ett runId (ingen version skrevs)."
+    )
+    assert "answerText," in gate_region, (
+        "Return-objektet måste bära answerText (chat-svaret)."
+    )
+    assert "buildResult: {}" in gate_region, (
+        "buildResult måste vara tomt — appliedVisibleEffect kan aldrig bli "
+        "true för en konversation."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_renders_conversation_answer_honestly() -> None:
+    """F1 slice 2 (UI-halvan): FloatingChat ska visa konversations-svaret som
+    en ärlig info-bubbla UTAN att trigga bygg-flödet.
+
+    Locks:
+      1. ``PromptApiResponse`` exponerar ``answerText`` (valfritt).
+      2. Defensiv ``extractConversationAnswer`` som bara gäller när runId
+         saknas (ett riktigt bygge går alltid genom den vanliga summeringen).
+      3. Svaret hanteras FÖRE ``!payload.runId``-felgrenen (annars hade ett
+         ärligt svar renderats som ett fel).
+      4. Konversations-grenen anropar ALDRIG onBuildDone (ingen version,
+         ingen preview-refresh).
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "answerText?: string | null" in text, (
+        "PromptApiResponse måste exponera ett valfritt answerText-fält."
+    )
+    assert "function extractConversationAnswer(" in text, (
+        "FloatingChat måste läsa answerText defensivt (extractConversationAnswer)."
+    )
+    extract_start = text.index("function extractConversationAnswer(")
+    extract_body = text[extract_start : extract_start + 600]
+    assert "if (payload.runId) return null;" in extract_body, (
+        "extractConversationAnswer: ett payload med runId är ett riktigt "
+        "bygge och får aldrig omtolkas som konversations-svar."
+    )
+
+    answer_idx = text.index("extractConversationAnswer(payload)")
+    error_idx = text.index("!response.ok || !payload.runId || !payload.siteId")
+    assert answer_idx < error_idx, (
+        "Konversations-svaret måste hanteras FÖRE !payload.runId-felgrenen — "
+        "annars renderas ett ärligt svar som ett fel."
+    )
+
+    branch_start = text.index("if (conversationAnswer !== null) {")
+    branch_end = text.index("return;", branch_start)
+    branch_body = text[branch_start:branch_end]
+    assert "onBuildDone" not in branch_body, (
+        "Konversations-grenen får ALDRIG anropa onBuildDone (ingen version, "
+        "ingen preview-refresh)."
+    )
+    assert 'variant: "info"' in branch_body, (
+        "Konversations-svaret ska visas som en neutral info-bubbla, inte som "
+        "en success-rad (inget byggdes)."
+    )
+
+
+@pytest.mark.tooling
 def test_add_module_dialog_only_offers_backend_mountable_modules() -> None:
     """Vercel-agent-fynd 2026-06-08: AddModuleDialog erbjöd hero/services/
     cta-banner som section_add, men de är INTE mountbara (hero/services är
