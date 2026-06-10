@@ -61,6 +61,27 @@ const TTL_ENV = "VIEWSER_SANDBOX_SPIKE_TTL_MS";
  */
 const UPLOAD_BUILT_ENV = "VIEWSER_SANDBOX_UPLOAD_BUILT";
 
+/**
+ * Kill-switch för Tier 2-återanvändning (ADR 0041). Default är AV (opt-in):
+ * bara ett explicit ``VIEWSER_SANDBOX_REUSE=1`` slår på återanvändning av en
+ * redan varm, namngiven sandbox för samma sajt. Allt annat (inkl. osatt eller
+ * ``0``) ger dagens en-sandbox-per-preview-flöde, byte-identiskt. Skiljer sig
+ * medvetet från ``UPLOAD_BUILT_ENV`` (``!== "0"``, default PÅ) eftersom Tier 2
+ * är default AV tills operatören mätt vinsten — så ingen regression.
+ */
+const REUSE_ENV = "VIEWSER_SANDBOX_REUSE";
+
+/**
+ * Statusar (``@vercel/sandbox`` v2: ``sandbox.status``) där en återansluten
+ * sandbox är säker att återanvända. SDK:ns enum är
+ * ``aborted | failed | pending | running | stopping | stopped | snapshotting``;
+ * endast ``running`` återanvänds. Allt annat (inkl. okänd/oläsbar status)
+ * behandlas konservativt som en miss → full fallback. ``pending`` är just den
+ * status en TYST återupplivad (``resume: true``) sandbox rapporterar — därför
+ * reconnectar vi alltid med ``resume: false`` och kräver ``running`` (#156).
+ */
+const REUSABLE_SANDBOX_STATUSES = new Set<string>(["running"]);
+
 const PREVIEW_PORT = 3000;
 const SANDBOX_RUNTIME = "node24";
 
@@ -129,6 +150,12 @@ export interface SandboxPreviewResult {
     buildMs?: number;
     readyMs?: number;
     totalMs?: number;
+    /**
+     * True när previewn serverades genom att återanvända en redan varm sandbox
+     * (Tier 2, ADR 0041) i stället för att skapa en ny. Speglar
+     * ``PreviewTimings.reused`` och flödar oförändrat upp till POST-svaret.
+     */
+    reused?: boolean;
   };
   /** Kostnadssignal vid create (faktisk CPU/nätverk syns först vid stop). */
   cost?: {
@@ -430,6 +457,45 @@ function prebuiltUploadEnabled(): boolean {
 }
 
 /**
+ * True om Tier 2-återanvändning (ADR 0041) är PÅ. Opt-in, default AV: bara ett
+ * explicit ``VIEWSER_SANDBOX_REUSE=1`` aktiverar reconnect-vägen. Allt annat
+ * (osatt eller ``0``) ger dagens en-sandbox-per-preview-flöde, byte-identiskt.
+ */
+export function isSandboxReuseEnabled(): boolean {
+  return process.env[REUSE_ENV] === "1";
+}
+
+/**
+ * Per-sajt-flagga (Tier 2, ADR 0041): siteId:n vars NÄSTA full-fallback-create
+ * måste använda det TIDSSTÄMPLADE namnet i stället för det deterministiska.
+ * Sätts av ``tryReuseSandboxPreview`` enbart på en FUNNEN-MEN-DÖD reconnect
+ * (efter best-effort ``stop()``/``delete()``) så ett ``Sandbox.create`` med det
+ * deterministiska namnet inte race:ar mot den asynkrona deleten. En REN miss
+ * (``Sandbox.get`` not-found) lägger INTE till siteId:t → fulla vägen
+ * bootstrappar då det deterministiska namnet. ``createSandboxPreview`` rensar
+ * flaggan i en ``finally`` efter att fallbacken kört (båda attempt-anropen
+ * peekar samma flagga så de väljer samma namn).
+ */
+const pendingEphemeralFallbackSites = new Set<string>();
+
+/**
+ * Dagens TIDSSTÄMPLADE, unika sandbox-namn. Används i icke-återanvänt läge så
+ * varje preview får en egen sandbox (oförändrat beteende).
+ */
+function ephemeralSandboxName(siteId: string): string {
+  return `sajtbyggaren-preview-${slug(siteId)}-${Date.now()}`;
+}
+
+/**
+ * DETERMINISTISKT sandbox-namn per sajt (Tier 2, ADR 0041) — utan ``Date.now()``
+ * så ``Sandbox.get({ name, resume: false })`` kan återansluta till samma varma
+ * sandbox mellan previews för samma sajt. Används bara när ``isSandboxReuseEnabled()``.
+ */
+function reuseSandboxName(siteId: string): string {
+  return `sajtbyggaren-preview-${slug(siteId)}`;
+}
+
+/**
  * True om käll-katalogen har en FÄRDIG ``next build``-output. ``BUILD_ID``
  * skrivs sist i en lyckad build, så dess närvaro är readiness-signalen
  * (samma kontrakt som ``local-preview-server.ts`` förlitar sig på).
@@ -585,18 +651,36 @@ async function waitForPublicUrl(url: string): Promise<boolean> {
 export async function createSandboxPreview(
   request: SandboxPreviewRequest,
 ): Promise<SandboxPreviewResult> {
-  const first = await createSandboxPreviewAttempt(request, true);
-  if (first.fallbackEligible && first.result.status === "failed") {
-    const honestLog =
-      "Pre-built .next misslyckades i sandboxen — faller ärligt tillbaka " +
-      "till fulla vägen (npm install + next build) EN gång, ingen loop.";
-    const second = await createSandboxPreviewAttempt(request, false);
-    return {
-      ...second.result,
-      logs: [...(first.result.logs ?? []), honestLog, ...(second.result.logs ?? [])],
-    };
+  // Tier 2 (ADR 0041): opt-in återanvändning. Försök återansluta till en redan
+  // varm, namngiven sandbox för samma sajt och ladda bara upp de nya filerna +
+  // starta om servern (hoppar Sandbox.create + kall install). Vid miss/utgången
+  // returnerar tryReuseSandboxPreview null och vi faller ärligt tillbaka på
+  // dagens fulla väg nedan (createSandboxPreviewAttempt) — oförändrad. På en
+  // FUNNEN-MEN-DÖD miss markeras siteId:t i pendingEphemeralFallbackSites så
+  // fallbacken nedan skapar med tidsstämplat namn (se createSandboxPreviewAttempt).
+  if (isSandboxReuseEnabled()) {
+    const reused = await tryReuseSandboxPreview(request);
+    if (reused) return reused;
   }
-  return first.result;
+
+  try {
+    const first = await createSandboxPreviewAttempt(request, true);
+    if (first.fallbackEligible && first.result.status === "failed") {
+      const honestLog =
+        "Pre-built .next misslyckades i sandboxen — faller ärligt tillbaka " +
+        "till fulla vägen (npm install + next build) EN gång, ingen loop.";
+      const second = await createSandboxPreviewAttempt(request, false);
+      return {
+        ...second.result,
+        logs: [...(first.result.logs ?? []), honestLog, ...(second.result.logs ?? [])],
+      };
+    }
+    return first.result;
+  } finally {
+    // Båda attempt-anropen ovan peekar samma per-sajt-flagga (så de väljer samma
+    // namn); rensa den när fallbacken är klar oavsett utfall.
+    pendingEphemeralFallbackSites.delete(request.siteId);
+  }
 }
 
 /**
@@ -706,7 +790,18 @@ async function createSandboxPreviewAttempt(
   );
 
   const ttlMs = clampTtl(request.ttlMs);
-  const sandboxName = `sajtbyggaren-preview-${slug(request.siteId)}-${Date.now()}`;
+  // Tier 2 (ADR 0041) namn-kollisionsstrategi:
+  //  - reuse AV → dagens tidsstämplade, unika namn (oförändrat).
+  //  - reuse PÅ, REN miss (default) → DETERMINISTISKT namn (bootstrap, så nästa
+  //    preview kan återansluta).
+  //  - reuse PÅ, FUNNEN-MEN-DÖD (tryReuseSandboxPreview markerade siteId:t efter
+  //    stop/delete) → TIDSSTÄMPLAT namn just denna cykel, så create inte race:ar
+  //    mot den asynkrona deleten av det deterministiska namnet.
+  const useEphemeralName =
+    !isSandboxReuseEnabled() || pendingEphemeralFallbackSites.has(request.siteId);
+  const sandboxName = useEphemeralName
+    ? ephemeralSandboxName(request.siteId)
+    : reuseSandboxName(request.siteId);
 
   // B1a: håll OIDC-token färsk FÖRE Sandbox.create (refresh vid < 1 h kvar).
   // Auth-fel är aldrig fallback-berättigade — fulla vägen failar identiskt.
@@ -847,7 +942,8 @@ async function createSandboxPreviewAttempt(
         sandboxId: sandbox.name,
         ttlMs,
         prebuilt,
-        timings: { createMs, uploadMs, installMs, buildMs, readyMs, totalMs },
+        // reused: false — fulla vägen skapade en ny sandbox (Tier 2, ADR 0041).
+        timings: { createMs, uploadMs, installMs, buildMs, readyMs, totalMs, reused: false },
         cost: {
           runtime: SANDBOX_RUNTIME,
           vcpus: sandbox.vcpus,
@@ -867,6 +963,188 @@ async function createSandboxPreviewAttempt(
     const fallbackEligible = prebuilt && sandbox !== null;
     if (sandbox) await safeStop(sandbox);
     return { result: failed(messageFromError(error), logs), fallbackEligible };
+  }
+}
+
+/**
+ * Tier 2-återanvändning (ADR 0041). Försök återansluta till en redan varm,
+ * deterministiskt namngiven sandbox för sajten och servera previewn genom att
+ * BARA ladda upp de aktuella bygg-filerna + starta om servern — den dyra
+ * ``Sandbox.create`` + kalla installen hoppas över.
+ *
+ * Returnerar ett ``SandboxPreviewResult`` (``reused: true``) vid träff, annars
+ * ``null`` så ``createSandboxPreview`` ärligt faller tillbaka på dagens fulla
+ * väg (ny sandbox). Anropas bara när ``isSandboxReuseEnabled()``.
+ *
+ * #156-LÄRDOMEN (hedras): ``Sandbox.get`` anropas med ``resume: false``. I
+ * ``@vercel/sandbox`` v2 är ``resume`` default ``true`` → ett ``Sandbox.get``
+ * utan flaggan återstartar en UTGÅNGEN sandbox tyst och rapporterar ``pending``.
+ * Vi återansluter utan att återuppliva och återanvänder bara en sandbox vars
+ * ``status`` faktiskt är ``running`` (``REUSABLE_SANDBOX_STATUSES``).
+ *
+ * Disk-only: blob-snapshots saknar ``.next`` och hör till det hostade fallet;
+ * reuse riktar sig mot den lokala operatör-/mät-loopen, så en disk-källa krävs.
+ * Icke-kastande: alla miss-vägar returnerar ``null`` (aldrig ett kast som skulle
+ * maskera fulla vägens ärliga felmeddelande).
+ */
+async function tryReuseSandboxPreview(
+  request: SandboxPreviewRequest,
+): Promise<SandboxPreviewResult | null> {
+  const logs: string[] = [];
+
+  // Valideringsfel / saknad auth → null så fulla vägen ger det enda (ärliga)
+  // felmeddelandet; vi dubblerar inte meddelanden i reuse-vägen.
+  if (validateSiteId(request.siteId ?? "")) return null;
+  const credentials = resolveCredentials();
+  if (!credentials) return null;
+
+  const sourceDir = resolveSourceDir(request.siteId);
+  if (!sourceDir) return null;
+  const prebuilt = prebuiltUploadEnabled() && hasCompletedNextBuild(sourceDir);
+  let collected: CollectedSource;
+  try {
+    collected = collectSource(sourceDir, prebuilt);
+  } catch {
+    return null;
+  }
+
+  const sdk = await loadSandboxSdk();
+  if (!sdk) return null;
+  const { Sandbox } = sdk;
+
+  // OIDC-token färsk även före reconnect (Sandbox.get kräver giltig auth).
+  if (credentials.mode === "oidc") {
+    const oidcGuard = ensureFreshOidcTokenBeforeCreate(logs);
+    if (!oidcGuard.ok) return null;
+  }
+
+  const name = reuseSandboxName(request.siteId);
+  const ttlMs = clampTtl(request.ttlMs);
+  // totalMs mäts från FÖRE Sandbox.get (ADR 0041 §mätbarhet) så reuse-vägens
+  // totalMs är jämförbar med fulla vägens (som mäter från före Sandbox.create).
+  const tReuse = Date.now();
+
+  let sandbox: Awaited<ReturnType<typeof Sandbox.get>>;
+  try {
+    // resume: false — se #156-lärdomen ovan. Aldrig en tyst återupplivning.
+    sandbox = await Sandbox.get({ ...credentials.create, name, resume: false });
+  } catch {
+    // REN miss (not-found): inget finns med det deterministiska namnet → markera
+    // INTE ephemeral. Fulla vägen bootstrappar det deterministiska namnet (ingen
+    // kollision möjlig) så nästa preview kan återansluta.
+    return null;
+  }
+
+  const status = (sandbox as { status?: string }).status;
+  if (!status || !REUSABLE_SANDBOX_STATUSES.has(status)) {
+    // FUNNEN-MEN-DÖD: Sandbox.get returnerade en record men den är inte
+    // ``running`` (utgången/stoppad/okänd). Städa best-effort OCH markera siteId:t
+    // så fulla vägen skapar med TIDSSTÄMPLAT namn denna cykel — annars race:ar ett
+    // create med det deterministiska namnet mot den asynkrona deleten ovan.
+    pendingEphemeralFallbackSites.add(request.siteId);
+    await safeStopAndDelete(sandbox);
+    return null;
+  }
+  logs.push(`Återanvänder varm sandbox ${name} (status ${status}).`);
+
+  let uploadMs: number | undefined;
+  let installMs: number | undefined;
+  let readyMs: number | undefined;
+
+  try {
+    // Ladda upp aktuella bygg-filer (overwrite). node_modules ligger kvar i den
+    // varma sandboxen och laddas aldrig upp.
+    const tUpload = Date.now();
+    if (collected.dirs.length > 0) {
+      await sandbox.runCommand({ cmd: "mkdir", args: ["-p", ...collected.dirs] });
+    }
+    await sandbox.writeFiles(
+      collected.files.map((f) => ({ path: f.relPath, content: f.content })),
+    );
+    uploadMs = Date.now() - tUpload;
+    logs.push(`Filer uppladdade på ${uploadMs} ms (reuse).`);
+
+    // Reconcile-install (ADR 0041): nära-no-op på oförändrad lockfile eftersom
+    // node_modules redan är populerat, men håller previewn korrekt om beroenden
+    // ändrats. Den dyra KALLA installen är borta — det är Tier 2-vinsten.
+    const tInstall = Date.now();
+    const installArgs = prebuilt
+      ? ["install", "--omit=dev", "--no-audit", "--no-fund", "--loglevel", "warn"]
+      : ["install", "--no-audit", "--no-fund", "--loglevel", "warn"];
+    const install = await sandbox.runCommand({
+      cmd: "npm",
+      args: installArgs,
+      stdout: process.stdout,
+      stderr: process.stderr,
+    });
+    installMs = Date.now() - tInstall;
+    if (install.exitCode !== 0) {
+      // Transient fail på en RUNNING sandbox (Vercel-bot-fynd på PR 276):
+      // recorden med det deterministiska namnet finns kvar efter safeStop, så
+      // fulla vägen MÅSTE använda tidsstämplat namn denna cykel — annars
+      // garanterad namnkollision i Sandbox.create.
+      pendingEphemeralFallbackSites.add(request.siteId);
+      await safeStop(sandbox);
+      return null;
+    }
+    logs.push(
+      `npm install${prebuilt ? " --omit=dev" : ""} (reuse-reconcile) klar på ${installMs} ms.`,
+    );
+
+    // Starta om servern: stoppa ev. gammal detached ``next start`` (sandboxen
+    // kör bara denna sajt) så porten frigörs, och starta en ny mot nya filerna.
+    await sandbox.runCommand({
+      cmd: "sh",
+      args: ["-c", "pkill -f 'next start' || true"],
+    });
+    await sandbox.runCommand({
+      cmd: "npx",
+      args: ["next", "start", "-p", String(PREVIEW_PORT)],
+      detached: true,
+    });
+
+    const url = sandbox.domain(PREVIEW_PORT);
+    const tReady = Date.now();
+    const isUp = await waitForPublicUrl(url);
+    readyMs = Date.now() - tReady;
+    if (!isUp) {
+      // Samma transient-fail-regel som install-grenen ovan: markera ephemeral
+      // fallback så fulla vägen inte kolliderar med den kvarvarande recorden.
+      pendingEphemeralFallbackSites.add(request.siteId);
+      await safeStop(sandbox);
+      return null;
+    }
+
+    const totalMs = Date.now() - tReuse;
+    logs.push(
+      `Preview live på ${url} via återanvänd sandbox (totalt ${totalMs} ms, ingen create).`,
+    );
+
+    return {
+      status: "ready",
+      url,
+      sandboxId: sandbox.name,
+      ttlMs,
+      prebuilt,
+      // reused: true + ingen createMs = den synliga Tier 2-vinsten.
+      timings: { uploadMs, installMs, readyMs, totalMs, reused: true },
+      cost: {
+        runtime: SANDBOX_RUNTIME,
+        vcpus: sandbox.vcpus,
+        memoryMb: sandbox.memory,
+        ttlMs,
+        fileCount: collected.files.length,
+        uploadBytes: collected.totalBytes,
+      },
+      logs,
+    };
+  } catch {
+    // Oväntat fel under reuse → fall ärligt tillbaka på fulla vägen (ny
+    // sandbox). Även här: den deterministiskt namngivna recorden lever kvar,
+    // så fallbacken måste ta tidsstämplat namn (transient-fail-regeln).
+    pendingEphemeralFallbackSites.add(request.siteId);
+    await safeStop(sandbox);
+    return null;
   }
 }
 
@@ -951,6 +1229,27 @@ async function safeStop(
     await sandbox.stop();
   } catch {
     // Best-effort cleanup — svälj så vi aldrig maskerar det ursprungliga felet.
+  }
+}
+
+/**
+ * Best-effort stop + delete av en återansluten men icke-körande sandbox (Tier 2,
+ * ADR 0041), så ett senare ``Sandbox.create`` med samma deterministiska namn
+ * inte kolliderar med en kvarvarande utgången/stoppad record. Icke-kastande:
+ * båda stegen sväljs så vi aldrig blockerar fallbacken till fulla vägen.
+ */
+async function safeStopAndDelete(
+  sandbox: { stop: () => Promise<unknown>; delete: () => Promise<unknown> },
+): Promise<void> {
+  try {
+    await sandbox.stop();
+  } catch {
+    // best-effort
+  }
+  try {
+    await sandbox.delete();
+  } catch {
+    // best-effort
   }
 }
 
