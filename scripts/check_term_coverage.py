@@ -1288,6 +1288,23 @@ COMMON_WORDS = {
     # (no saved file, no ADR) - same local-allowlist treatment as the
     # OpenClawDecision / RouterDecision families above.
     "PatchPlanRequest", "ToolCall",
+    # OpenClaw F1 slice 1 conductor role-contract symbols
+    # (packages/generation/orchestration/openclaw/roles.py). ``RoleContract`` is
+    # the frozen dataclass locking each conductor role's input/output contract;
+    # ``RoleDirectiveKind`` is the Literal alias for the directive kinds an
+    # editing role may emit; ``ConversationKind`` / ``ConversationDecision`` are
+    # the conductor-level conversation-intent label + result that ADD to (never
+    # mutate) the router's locked messageKind. Implementation symbols, not new
+    # canonical domain terms - same treatment as the OpenClawDecision / ToolCall
+    # / RouterDecision families above (the canonical router terms MessageKind /
+    # EditKind / ContextLevel are already allowlisted).
+    "RoleContract", "RoleDirectiveKind",
+    "ConversationKind", "ConversationDecision",
+    # Python stdlib exception raised when assigning to a frozen dataclass,
+    # asserted by tests/test_openclaw_roles.py to prove the role contracts are
+    # immutable. Same treatment as the other Python builtin exception names
+    # above (KeyError / TimeoutError / ProcessLookupError) - not a domain term.
+    "FrozenInstanceError",
     # docs/diagnosis-and-handoff-2026-06-08.md prose-emphasis labels. The
     # diagnosis frames two future mutation modes ("Safe Mode" = current
     # sanctioned-contract conductor, "Agent Code Mode" = future sandboxed free
