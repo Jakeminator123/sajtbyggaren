@@ -208,6 +208,7 @@ export default function LivePage() {
     setSubmitting(true);
     setChatInput("");
     setErrorMsg(null);
+    pendingReloadRef.current = true;
     setPhase("generating");
     pushMessage("user", text);
     try {
@@ -220,9 +221,9 @@ export default function LivePage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Kunde inte starta följdbygget.");
       }
-      pendingReloadRef.current = true;
       pushMessage("system", "Bygger en ny version …");
     } catch (error) {
+      pendingReloadRef.current = false;
       setPhase("failed");
       setErrorMsg(error instanceof Error ? error.message : "Okänt fel.");
       pushMessage(
