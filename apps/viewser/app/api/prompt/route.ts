@@ -250,26 +250,77 @@ function conversationContextSnippet(
 }
 
 /**
+ * Roll-minne (operatörsfynd 2026-06-10): dirigenten svarade "jag ändrade
+ * inget i den här turen" direkt EFTER att stylisten byggt v2 — tekniskt sant
+ * men kontextlöst, så systemet såg ut att motsäga sig självt (rollerna delade
+ * inget minne). Bygg en kompakt, faktabaserad historik-rad ur den senaste
+ * KOMPLETTA runens artefakter (version + ändringsprompt ur ``input.json``)
+ * så svars-rollen kan referera vad byggrollerna gjort — som historik, aldrig
+ * som en ändring i denna tur. Defensiv: null på minsta läsfel.
+ */
+async function latestChangeSnippet(
+  siteId: string | null | undefined,
+): Promise<string | null> {
+  if (!siteId) return null;
+  const latest = await latestCompletedRunForSite(siteId);
+  if (!latest) return null;
+  let changePrompt: string | null = null;
+  try {
+    const raw = await fs.readFile(
+      path.join(runsDir(), latest.runId, "input.json"),
+      "utf-8",
+    );
+    const input = JSON.parse(raw) as Record<string, unknown>;
+    for (const key of ["followUpPrompt", "originalPrompt", "rawPrompt"] as const) {
+      const value = input[key];
+      if (typeof value === "string" && value.trim()) {
+        changePrompt = value.trim().slice(0, 300);
+        break;
+      }
+    }
+  } catch {
+    // input.json saknas/oläsbar -> historiken får klara sig utan prompten.
+  }
+  const versionLabel = latest.version !== null ? `v${latest.version}` : "okänd version";
+  const promptPart = changePrompt
+    ? ` Senaste ändringsprompt: "${changePrompt}".`
+    : "";
+  return `Senaste byggda version av sajten är ${versionLabel}.${promptPart}`;
+}
+
+/**
  * F1 slice 2: generate the honest chat answer for a conversation kind via the
  * EXISTING lib/openai.ts chat helper. Never throws: no key → the honest
  * no-key line; any helper failure → an honest error line. The answer text is
- * plain chat copy — it never claims a site change (the gate guarantees no
- * build ran, ``appliedVisibleEffect`` stays false and no version exists).
+ * plain chat copy — it never claims a site change THIS turn (the gate
+ * guarantees no build ran), but it MAY reference the build history snippet as
+ * facts so the dispatcher never contradicts what the build roles just did.
  */
 async function generateConversationAnswer(
   prompt: string,
   conversation: ConversationMetadata,
   decision: Record<string, unknown>,
+  siteId: string | null = null,
 ): Promise<string> {
   if (!openaiEnv("OPENAI_API_KEY")) {
     return CONVERSATION_NO_KEY_ANSWER;
   }
   const contextSnippet = conversationContextSnippet(decision);
+  const historySnippet = await latestChangeSnippet(siteId);
   const systemLines = [
     "Du är OpenClaw, dirigenten i Sajtbyggaren — operatörens chattassistent.",
     "Svara kort, vänligt och ärligt på svenska.",
-    "Du har INTE ändrat sajten i den här turen: påstå aldrig att något " +
-      "byggts eller ändrats.",
+    "Du har INTE ändrat sajten i DENNA tur: påstå aldrig att något byggts " +
+      "eller ändrats nu.",
+    // Roll-minnet: historiken är fakta från artefakterna, inte ett påstående
+    // om denna tur. Utan den motsade dirigenten stylistens nyss byggda v2.
+    historySnippet
+      ? "Byggrollernas historik (FAKTA du får referera): " +
+        historySnippet +
+        " Om operatören frågar vad som ändrats: referera historiken i " +
+        "stället för att säga att inget hänt."
+      : "Du har ingen bygghistorik i den här turen — säg det ärligt om " +
+        "operatören frågar vad som ändrats.",
     conversation.conversationKind === "site_opinion"
       ? contextSnippet
         ? "Frågan gäller operatörens sajt. Grunda omdömet ENBART i " +
@@ -523,6 +574,7 @@ async function runPromptBuildOnce(
         payload.prompt,
         conversation,
         applyResult.decision,
+        payload.siteId ?? null,
       );
       return {
         runId: null,
