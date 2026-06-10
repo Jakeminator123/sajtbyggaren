@@ -100,8 +100,10 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    governance-mappning). **Design-noten är skriven:**
    [`docs/heavy-llm-flow/komponentkatalog-design-not.md`](heavy-llm-flow/komponentkatalog-design-not.md)
    (tre lager: starter-manifest → capability-mappning → roll-uppslag via
-   shadcn-MCP; 4 beslutspunkter väntar operatören). Lager 3 förutsätter
-   roll-dispatchen (köpunkt 2).
+   shadcn-MCP). Beslutspunkt 2 är AVGJORD (mappningen = ny valfri nyckel i
+   capability-map, agent på operatörens delegation); 3 beslutspunkter kvar
+   hos operatören (manifestets plats, ADR-omfång, pilot-capability).
+   Lager 3 förutsätter roll-dispatchen (köpunkt 2).
 7. **Begreppssession (operatör + agent):** blueprint/variant/dossier/DNA
    m.fl. överlappar i dag och ingen av termerna finns i naming-dictionaryn.
    Utgå från ADR 0036 (blueprint-and-router-vocabulary), begrepps-PR:en
@@ -151,9 +153,14 @@ pre-sync sparad som `backup_150_BRA`):
 
 Alla mergade brancher städade (lokalt + remote). `main` är kvar på
 `6ea53c0` — nästa main-sync tar med förmiddagens fyra merges
-(operatörsbeslut). Roll-dispatch-slicen (köpunkt 2) kör i cloud-grind.
-Öppna buggar kvar: B155 (kvarvarande targets), B186 + misplaced-poster
-som väntar Steward-flytt (B176–B179-rundan, B183–B185).
+(operatörsbeslut). Roll-dispatch-slicen (köpunkt 2) kör i cloud-grind
+(operatörens GO 2026-06-10 ~12:00 efter faktakontroll; justeringar
+skickade: färsk bas, None-säker skill-lookup, minimal
+use-followup-build-yta). Christopher aviserad via inbox `msg-0063`
+(#269-rebase + ordning + utbrytningsförslag). Öppna buggar kvar: B155
+(kvarvarande targets), B186 + misplaced-poster som väntar Steward-flytt
+(B176–B179-rundan, B183–B185). Senaste docs-commit efter `44c9da8`:
+focus/design-not-bump + inbox-msg + beslutspunkt 2 avgjord.
 
 ## Öppna PR att känna till
 

@@ -30,10 +30,16 @@ synk-check i CI). Exponeras för planeringen via starter-registryt så
 
 En deterministisk mappning från capability-slug till komponent(er) som
 renderaren/codegen får använda för den capabilityn (t.ex. faq-section →
-accordion). Bor som ny nyckel i `capability-map.v1.json` eller som egen
-policy + schema — operatörsbeslut. Valideras av `governance_validate` mot
-manifestet i lager 1 (en mappning till en komponent som saknas i startern är
-ett gate-fel, inte en tyst fallback).
+accordion). **Beslutad placering (beslutspunkt 2, avgjord på operatörens
+delegation 2026-06-10): ny valfri nyckel per capability i
+`capability-map.v1.json`**, inte en egen policy-fil. Motivering:
+capability-kartan äger redan capability → tillgångar-axeln (dossiers), så
+komponenter är samma slags mappning; planeringen läser redan den filen, så
+ingen ny lässökväg behövs; och en policy-fil till vore mer governance-yta
+utan motsvarande separationsvinst. Konsekvens: additiv schema-bump för
+capability-map (valfritt fält, befintliga poster opåverkade). Valideras av
+`governance_validate` mot manifestet i lager 1 (en mappning till en komponent
+som saknas i startern är ett gate-fel, inte en tyst fallback).
 
 ### 3. Roll-uppslag via shadcn-MCP (byggtid, aldrig runtime)
 
@@ -59,13 +65,14 @@ få add-kommandon. Tre hårda regler:
 - Roll-dispatchen (köpunkt 2, F1 slice 3) är en förutsättning för lager 3 —
   rollvalet måste styra beteende innan rollen kan ges verktyg.
 
-## Beslutspunkter (operatören)
+## Beslutspunkter
 
-1. Var manifestet bor: under `data/starters/<id>/` (nära källan) eller under
-   `governance/` (nära kontrakten)?
-2. Mappningen i lager 2: ny nyckel i `capability-map.v1.json` (minst ny yta)
-   eller egen policy-fil + schema (renare separation)?
-3. ADR-omfång: en ADR för hela kedjan (manifest + mappning + roll-uppslag)
-   eller en per lager?
-4. Första capability att pilota (förslag: faq-section → accordion, minsta
-   yta med tydlig synlig effekt).
+1. **(operatören)** Var manifestet bor: under `data/starters/<id>/` (nära
+   källan) eller under `governance/` (nära kontrakten)?
+2. Beslutad (agent på operatörens delegation, 2026-06-10): mappningen i
+   lager 2 = ny valfri nyckel i `capability-map.v1.json` (se motivering under
+   lager 2 ovan).
+3. **(operatören)** ADR-omfång: en ADR för hela kedjan (manifest + mappning +
+   roll-uppslag) eller en per lager?
+4. **(operatören)** Första capability att pilota (förslag: faq-section →
+   accordion, minsta yta med tydlig synlig effekt).
