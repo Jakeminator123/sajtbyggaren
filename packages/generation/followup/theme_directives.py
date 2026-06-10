@@ -325,6 +325,7 @@ def extract_theme_directive_via_llm(
     prompt: str,
     *,
     language: str = "sv",
+    focus_sections: list[dict[str, str]] | None = None,
 ) -> ThemeDirective | None:
     """stylist role: model-driven theme fallback for a free/unknown style request.
 
@@ -335,13 +336,22 @@ def extract_theme_directive_via_llm(
     light accent could break contrast). An all-empty / invalid result is an
     honest no-op (``None``). Fail-safe: any resolution/call error yields
     ``None`` so a missing key never breaks the follow-up loop.
+
+    ``focus_sections`` (ADR 0046): validated preview markings appended as a
+    Swedish prioritisation note to the model context. Purely soft signal —
+    the re-validation of every returned field is unchanged.
     """
     try:
         from packages.generation.brief.extract import extract_style_directive_llm
         from packages.generation.brief.models import resolve_style_directive_model
+        from packages.generation.followup.marked_sections import focus_note_for_llm
 
+        focus_note = focus_note_for_llm(focus_sections or [])
+        stylist_prompt = f"{prompt}\n\n{focus_note}" if focus_note else prompt
         model = resolve_style_directive_model()
-        raw = extract_style_directive_llm(prompt, language=language, model=model)
+        raw = extract_style_directive_llm(
+            stylist_prompt, language=language, model=model
+        )
     except Exception:  # noqa: BLE001
         return None
     if not isinstance(raw, dict):

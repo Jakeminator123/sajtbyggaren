@@ -75,7 +75,20 @@ export type PromptHelperOptions = {
    * Kontraktet följer `DiscoveryPayload` i `wizard-payload.ts`.
    */
   discovery?: unknown;
+  /**
+   * ADR 0046: operatörens preview-markeringar ("Markera modul").
+   * Skickas som `--marked-sections <json>` till Python-helpern, som
+   * validerar varje markering mot base-runens emittedSections-facit.
+   * Endast giltig i follow-up-läge. Mjuk prioriteringssignal — triggar
+   * aldrig ensam en build.
+   */
+  markedSections?: { routeId: string; sectionId: string; note?: string }[];
 };
+
+// Samma slug-grammatik som /api/prompt-schemats SECTION_REF_PATTERN och
+// Python-sidans parse_marked_sections — defense-in-depth eftersom spawn()
+// inte quotar argument.
+const SECTION_REF_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 /**
  * Spawn `scripts/prompt_to_project_input.py` and parse its stdout.
@@ -118,6 +131,27 @@ export async function runPromptToProjectInput(
         throw new Error(`Ogiltigt baseRunId: ${options.baseRunId}`);
       }
       args.push("--base-run-id", options.baseRunId);
+    }
+    if (options.markedSections?.length) {
+      // ADR 0046: re-validera id-grammatiken före spawn (zod-laget har
+      // redan validerat, men spawn() quotar inte argument). Ogiltiga
+      // poster filtreras bort i stället för att fälla hela follow-upen —
+      // Python-sidan droppar ändå okända markeringar med varning.
+      const safeMarkings = options.markedSections
+        .filter(
+          (entry) =>
+            SECTION_REF_PATTERN.test(entry.routeId) &&
+            SECTION_REF_PATTERN.test(entry.sectionId),
+        )
+        .slice(0, 5)
+        .map((entry) => ({
+          routeId: entry.routeId,
+          sectionId: entry.sectionId,
+          ...(entry.note ? { note: entry.note.slice(0, 200) } : {}),
+        }));
+      if (safeMarkings.length) {
+        args.push("--marked-sections", JSON.stringify(safeMarkings));
+      }
     }
   } else if (options.baseRunId) {
     // Defense-in-depth: schema-laget förbjuder redan baseRunId i init-läge,

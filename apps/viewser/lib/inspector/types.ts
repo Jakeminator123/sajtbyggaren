@@ -28,6 +28,21 @@ export type ElementMapItem = {
   rect: { x: number; y: number; width: number; height: number };
   /** Bounding box i procent av viewporten — skalfri, används av overlayn. */
   vpPercent: { x: number; y: number; w: number; h: number };
+  /**
+   * Kanoniskt sektions-id från närmaste `[data-section-id]`-förälder
+   * (sektionsmarkering i preview: codegen stämplar varje emitterad
+   * sektion). null för element utanför en markerad sektion och för
+   * äldre builds utan markörer — overlayn faller då tillbaka på
+   * heuristiken i section-zones.ts. Valfri eftersom en extern
+   * inspector-worker av äldre version inte rapporterar fältet.
+   */
+  sectionId?: string | null;
+  /**
+   * Sidans pathname vid kartläggningen ("/", "/kontakt", …) — används
+   * för att mappa markeringen till routePlan-route-id:t. Valfri av
+   * samma worker-kompatibilitetsskäl som sectionId.
+   */
+  routePath?: string | null;
 };
 
 export type ElementMapResponse = {

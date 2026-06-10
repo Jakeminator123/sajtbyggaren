@@ -973,6 +973,7 @@ export function ViewerPanel({
           <PreviewInspectorOverlay
             previewUrl={localPreviewUrl}
             active={iframeLoaded && !isBuilding && !isFinalizing}
+            runId={runId}
           />
         </div>
       ) : null}

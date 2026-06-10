@@ -78,6 +78,25 @@ export type PlacementDragPayload = {
 /** Vilken dialog som bad om platsvalet — styr återöppningen. */
 export type PlacementRequester = "module" | "asset";
 
+/**
+ * En markerad modul i previewn (sektionsmarkering i preview): klick i
+ * Markera modul-läget skapar en strukturerad referens till en kanonisk
+ * sektion — routeId ur routePlan + sectionId ur scaffoldens
+ * sections.json (via data-section-id-markörerna). headingText är
+ * operatörsvänlig kontext (närmaste rubrik) som följer med som note i
+ * /api/prompt-payloaden. Markeringen är en MJUK signal: backend
+ * validerar mot base-runens emittedSections och droppar okända id:n
+ * med varning i stället för att gissa.
+ */
+export type MarkedSectionRef = {
+  routeId: string;
+  sectionId: string;
+  headingText?: string | null;
+};
+
+/** Max antal samtidiga modulmarkeringar — speglar /api/prompt-kontraktet. */
+export const MAX_MARKED_SECTIONS = 5;
+
 type RequestPlacementPickOptions = {
   payload?: PlacementDragPayload;
   requester?: PlacementRequester;
@@ -109,6 +128,19 @@ type PreviewInspectorContextValue = {
   inspectModeActive: boolean;
   setInspectModeActive: (active: boolean) => void;
   /**
+   * Markera modul-läget (sektionsmarkering i preview): klick på en
+   * sektion skapar en strukturerad markering som visas som chip i
+   * FloatingChat-composern och skickas som markedSections[] i nästa
+   * följdprompt. Startas från Verktyg-menyn, precis som inspektionen.
+   */
+  markModeActive: boolean;
+  setMarkModeActive: (active: boolean) => void;
+  /** Aktiva modulmarkeringar (max MAX_MARKED_SECTIONS, dedupe på route+sektion). */
+  markedSections: MarkedSectionRef[];
+  addMarkedSection: (ref: MarkedSectionRef) => void;
+  removeMarkedSection: (routeId: string, sectionId: string) => void;
+  clearMarkedSections: () => void;
+  /**
    * True medan ett bygge som startades av "Placera här" pågår.
    * BuilderShell sätter true vid bekräftat släpp; ViewerPanel renderar
    * då den nordiska 0–100-bannern I STÄLLET för BuildProgressCard och
@@ -138,6 +170,8 @@ export function PreviewInspectorProvider({
   const [placementPickResolvedSignal, setPlacementPickResolvedSignal] =
     useState(0);
   const [inspectModeActive, setInspectModeActiveInternal] = useState(false);
+  const [markModeActive, setMarkModeActiveInternal] = useState(false);
+  const [markedSections, setMarkedSections] = useState<MarkedSectionRef[]>([]);
   const [placementBuildActive, setPlacementBuildActive] = useState(false);
 
   const setPreviewUrl = useCallback((url: string | null) => {
@@ -174,6 +208,40 @@ export function PreviewInspectorProvider({
 
   const setInspectModeActive = useCallback((active: boolean) => {
     setInspectModeActiveInternal(active);
+    // Granska och Markera modul delar overlay-ytan — bara ett läge i taget.
+    if (active) setMarkModeActiveInternal(false);
+  }, []);
+
+  const setMarkModeActive = useCallback((active: boolean) => {
+    setMarkModeActiveInternal(active);
+    if (active) setInspectModeActiveInternal(false);
+  }, []);
+
+  const addMarkedSection = useCallback((ref: MarkedSectionRef) => {
+    setMarkedSections((prev) => {
+      const exists = prev.some(
+        (item) =>
+          item.routeId === ref.routeId && item.sectionId === ref.sectionId,
+      );
+      if (exists || prev.length >= MAX_MARKED_SECTIONS) return prev;
+      return [...prev, ref];
+    });
+  }, []);
+
+  const removeMarkedSection = useCallback(
+    (routeId: string, sectionId: string) => {
+      setMarkedSections((prev) =>
+        prev.filter(
+          (item) =>
+            !(item.routeId === routeId && item.sectionId === sectionId),
+        ),
+      );
+    },
+    [],
+  );
+
+  const clearMarkedSections = useCallback(() => {
+    setMarkedSections([]);
   }, []);
 
   const value = useMemo(
@@ -191,6 +259,12 @@ export function PreviewInspectorProvider({
       placementPickResolvedSignal,
       inspectModeActive,
       setInspectModeActive,
+      markModeActive,
+      setMarkModeActive,
+      markedSections,
+      addMarkedSection,
+      removeMarkedSection,
+      clearMarkedSections,
       placementBuildActive,
       setPlacementBuildActive,
     }),
@@ -208,6 +282,12 @@ export function PreviewInspectorProvider({
       placementPickResolvedSignal,
       inspectModeActive,
       setInspectModeActive,
+      markModeActive,
+      setMarkModeActive,
+      markedSections,
+      addMarkedSection,
+      removeMarkedSection,
+      clearMarkedSections,
       placementBuildActive,
       setPlacementBuildActive,
     ],
@@ -234,6 +314,12 @@ const FALLBACK_VALUE: PreviewInspectorContextValue = {
   placementPickResolvedSignal: 0,
   inspectModeActive: false,
   setInspectModeActive: () => {},
+  markModeActive: false,
+  setMarkModeActive: () => {},
+  markedSections: [],
+  addMarkedSection: () => {},
+  removeMarkedSection: () => {},
+  clearMarkedSections: () => {},
   placementBuildActive: false,
   setPlacementBuildActive: () => {},
 };

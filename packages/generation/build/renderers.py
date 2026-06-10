@@ -58,6 +58,7 @@ from packages.generation.build.dispatcher import (
     _load_scaffold_sections,
     _operator_pin_for_section,
     _treatment_for_section,
+    annotate_section_marker,
     render_route_generic,
 )
 from packages.generation.build.static_assets import (
@@ -1894,11 +1895,14 @@ def render_services(
     # through render_route_generic, so without this thread the headline
     # service-list example (tabular vs alternating-rows) could never see the
     # blueprint.
-    service_list_section = render_section_service_list(
-        dossier,
-        contact_path=contact_path,
-        variant_id=dossier.get("variantId"),
-        blueprint=blueprint,
+    service_list_section = annotate_section_marker(
+        render_section_service_list(
+            dossier,
+            contact_path=contact_path,
+            variant_id=dossier.get("variantId"),
+            blueprint=blueprint,
+        ),
+        "service-list",
     )
     return (
         icon_import + "\n"
@@ -1942,7 +1946,9 @@ def _render_collection_page(
         f"export default function {component_name}() {{\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        # Sidnivå-grov markering: collection-sidorna (treatments/expertise/
+        # work) är en service-list-presentation i en enda <section>.
+        '      <section data-section-id="service-list" className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <header className="flex flex-col gap-3">\n'
         f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{eyebrow}</p>\n'
@@ -2065,7 +2071,9 @@ def render_about(dossier: dict) -> str:
         "export default function AboutPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        # Sidnivå-grov markering: om-oss-sidan är en enda <section> med
+        # flera logiska block; about-story är det dominerande innehållet.
+        '      <section data-section-id="about-story" className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         f"{about_story_block}"
         f"{team_section}"
@@ -2091,7 +2099,10 @@ def render_contact(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     # ``contact_path`` is threaded through so the B159 honest-CTA fallback
     # (no real phone/email) links back to the scaffold's contact route
     # (``/hitta-hit`` for restaurant-hospitality, ``/kontakt`` elsewhere).
-    contact_info_section = render_section_contact_info(dossier, contact_path=contact_path)
+    contact_info_section = annotate_section_marker(
+        render_section_contact_info(dossier, contact_path=contact_path),
+        "contact-info",
+    )
     icons = sorted(set(_DISPATCHED_ICON_PATTERN.findall(contact_info_section)))
     icon_import = (
         ("import { " + ", ".join(icons) + ' } from "lucide-react";\n' + "\n")
@@ -2156,7 +2167,9 @@ def render_products(
         "export default function ProductsPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        # Sidnivå-grov markering: produktsidan är en enda <section> där
+        # product-grid är det dominerande innehållet.
+        '      <section data-section-id="product-grid" className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         f"{products_intro_block}"
         f"{product_grid_block}"
@@ -2193,13 +2206,18 @@ def _wizard_section_heading(
     eyebrow: str,
     heading: str,
     intro: str | None = None,
+    *,
+    section_id: str | None = None,
 ) -> str:
     """Reusable hero-style header for the wizard-route renderers.
 
     Matches the eyebrow + h1 idiom of the existing about/services
     pages so the new routes feel consistent with the rest of the
     generated site. ``intro`` renders as a muted lead paragraph and
-    is dropped when empty.
+    is dropped when empty. ``section_id`` stamps the opening
+    ``<section>`` with ``data-section-id`` (preview-markeringskontraktet)
+    — wizard-sidorna är en enda <section>, så sidans dominerande
+    innehåll ger id:t.
     """
     intro_jsx = ""
     if intro:
@@ -2207,8 +2225,9 @@ def _wizard_section_heading(
             '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">'
             f"{_jsx_safe_string(intro)}</p>\n"
         )
+    marker_attr = f' data-section-id="{section_id}"' if section_id else ""
     return (
-        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        f'      <section{marker_attr} className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <header className="flex flex-col gap-3">\n'
         f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(eyebrow)}</p>\n'
@@ -2342,6 +2361,7 @@ def render_faq(
             "Det vi får höra ofta",
             "Korta svar på de frågor våra kunder ställer oftast. "
             "Saknas något du undrar över? Hör av dig så svarar vi.",
+            section_id="faq",
         )
         + '          <div className="grid gap-3 md:grid-cols-2">\n'
         + items
@@ -3249,6 +3269,7 @@ def render_gallery(dossier: dict, *, contact_path: str = "/kontakt") -> str:
             "Bilder från våra uppdrag",
             "Ett urval av jobb vi har gjort. Bilderna laddas upp av "
             "oss i takt med att nya projekt blir klara.",
+            section_id="gallery",
         )
         + body
         + _wizard_contact_cta(dossier, contact_path)
@@ -3302,6 +3323,7 @@ def render_team(dossier: dict, *, contact_path: str = "/kontakt") -> str:
             "Team",
             "Människorna bakom",
             "Här ser du vilka du kommer i kontakt med när du anlitar oss.",
+            section_id="team",
         )
         + body
         + _wizard_contact_cta(dossier, contact_path)
@@ -3351,6 +3373,7 @@ def render_pricing(dossier: dict, *, contact_path: str = "/kontakt") -> str:
             "Priserna beror på uppdragets omfattning. Begär en "
             "kostnadsfri offert så får du ett tydligt pris innan vi "
             "startar.",
+            section_id="pricing",
         )
         + body
         + _wizard_contact_cta(dossier, contact_path)
@@ -3412,6 +3435,7 @@ def render_portfolio(dossier: dict, *, contact_path: str = "/kontakt") -> str:
             "Portfolio",
             "Tidigare uppdrag",
             "Ett urval av jobb och case som visar hur vi arbetar.",
+            section_id="portfolio",
         )
         + "".join(blocks)
         + _wizard_contact_cta(dossier, contact_path)
@@ -3506,6 +3530,7 @@ def render_map(dossier: dict, *, contact_path: str = "/kontakt") -> str:
             "Vägbeskrivning och områden",
             "Här hittar du adressen och vilka områden vi arbetar i. "
             "Vill du ha hjälp med vägbeskrivning är det bara att ringa.",
+            section_id="map",
         )
         + '          <div className="grid gap-4 md:grid-cols-2">\n'
         + address_block
@@ -4123,8 +4148,11 @@ def _render_restaurant_route(
     # kor-2: thread the blueprint so the trailing contact CTA follows
     # conversion.primaryCta (e.g. "Boka bord") instead of the generic
     # "Kontakta oss", consistent with the rest of the default-route set.
-    cta_section = render_section_contact_cta(
-        dossier, contact_path=contact_path, blueprint=blueprint
+    cta_section = annotate_section_marker(
+        render_section_contact_cta(
+            dossier, contact_path=contact_path, blueprint=blueprint
+        ),
+        "contact-cta",
     )
     return (
         'import { ArrowRight } from "lucide-react";\n'

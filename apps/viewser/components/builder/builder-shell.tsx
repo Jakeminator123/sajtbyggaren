@@ -133,6 +133,8 @@ export function BuilderShell({
     previewUrl: inspectorPreviewUrl,
     inspectModeActive,
     setInspectModeActive,
+    markModeActive,
+    setMarkModeActive,
     setPlacementBuildActive,
   } = usePreviewInspector();
 
@@ -261,6 +263,21 @@ export function BuilderShell({
         onSelect: () => setInspectModeActive(!inspectModeActive),
         disabled: !inspectorPreviewUrl || isBuilding,
       },
+      // Markera modul (sektionsmarkering i preview): klick på en sektion
+      // skapar en strukturerad markering {routeId, sectionId} som visas
+      // som chip i chatten och följer med nästa följdprompt som
+      // markedSections[]. Samma rena-canvas-princip som granskningen.
+      {
+        id: "preview-mark",
+        label: markModeActive ? "Avsluta markeringen" : "Markera modul",
+        description: markModeActive
+          ? "Stänger modulmarkeringen"
+          : "Klicka en sektion → chip i chatten",
+        icon: "preview-inspect",
+        group: "Inspektera",
+        onSelect: () => setMarkModeActive(!markModeActive),
+        disabled: !inspectorPreviewUrl || isBuilding,
+      },
       // Design
       {
         id: "variant",
@@ -358,6 +375,8 @@ export function BuilderShell({
       onNewSite,
       inspectModeActive,
       setInspectModeActive,
+      markModeActive,
+      setMarkModeActive,
       inspectorPreviewUrl,
     ],
   );

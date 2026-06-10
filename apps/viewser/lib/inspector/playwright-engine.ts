@@ -291,6 +291,8 @@ export async function collectElementMap(
         return Boolean(r) && r.width > 2 && r.height > 2;
       });
 
+      const routePath = window.location?.pathname || null;
+
       return all.slice(0, params.max).map((el) => {
         const r = el.getBoundingClientRect();
         const tag = el.tagName.toLowerCase();
@@ -301,12 +303,21 @@ export async function collectElementMap(
             .slice(0, 120) || null;
         const className =
           (typeof el.className === "string" ? el.className.trim() : "") || null;
+        // Sektionsmarkering i preview: codegen stämplar varje emitterad
+        // sektion med data-section-id — närmaste markerade förälder ger
+        // elementets kanoniska sektions-id (null på äldre builds).
+        const sectionHost = el.closest("[data-section-id]");
+        const sectionId = sectionHost
+          ? sectionHost.getAttribute("data-section-id") || null
+          : null;
         return {
           tag,
           id: el.id || null,
           className,
           text,
           selector: buildSelector(el),
+          sectionId,
+          routePath,
           rect: {
             x: Math.round(r.left),
             y: Math.round(r.top),

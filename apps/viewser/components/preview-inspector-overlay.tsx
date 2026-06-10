@@ -12,11 +12,15 @@ import {
 } from "react";
 
 import { ModuleMockup } from "@/components/builder/module-mockups";
-import { usePreviewInspector } from "@/components/preview-inspector-context";
+import {
+  usePreviewInspector,
+  type MarkedSectionRef,
+} from "@/components/preview-inspector-context";
 import {
   extractSectionZones,
   nearestInsertionPoint,
   type InsertionPoint,
+  type SectionZone,
 } from "@/lib/inspector/section-zones";
 import type { ElementMapItem, ElementMapResponse } from "@/lib/inspector/types";
 import { cn } from "@/lib/utils";
@@ -105,14 +109,48 @@ type InspectedElement = {
   nearestHeading: string | null;
 };
 
+/**
+ * En markerbar sektion i Markera modul-läget. Kanonisk när den kommer
+ * från en data-section-id-markör i den rendrade previewn; heuristisk
+ * (canonical=false) på äldre builds utan markörer — då skickas
+ * heuristikens sektionstyp som id och backendens valideringsgrind
+ * droppar okända id:n med varning i stället för att gissa.
+ */
+type MarkableSection = {
+  sectionId: string;
+  top: number;
+  bottom: number;
+  left: number;
+  width: number;
+  headingText: string | null;
+  canonical: boolean;
+};
+
+/** Mappa previewns pathname till routePlan-route-id ("/" → home). */
+function routeIdForPath(
+  path: string | null | undefined,
+  pathToRouteId: Record<string, string>,
+): string {
+  const segment = (path || "/").replace(/^\/+|\/+$/g, "");
+  const mapped = pathToRouteId[segment];
+  if (mapped) return mapped;
+  return segment || "home";
+}
+
 export function PreviewInspectorOverlay({
   previewUrl,
   active,
+  runId,
 }: {
   /** Server-nåbar preview-URL (samma som iframen visar). */
   previewUrl: string;
   /** False medan preview laddar/bygger — döljer toggle + avbryter lägen. */
   active: boolean;
+  /**
+   * Aktiv run — används av Markera modul-läget för att läsa routePlan
+   * (path → routeId) ur runens artefakter. null → segment-fallback.
+   */
+  runId?: string | null;
 }) {
   const {
     placementPickActive,
@@ -121,12 +159,19 @@ export function PreviewInspectorOverlay({
     placementDragPayload,
     inspectModeActive,
     setInspectModeActive,
+    markModeActive,
+    setMarkModeActive,
+    markedSections,
+    addMarkedSection,
   } = usePreviewInspector();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Placeringsläget äger overlayn när båda råkar vara aktiva (platsvalet
-  // är en pågående dialog-handling med tydligt avslut).
-  const inspectMode = inspectModeActive && !placementPickActive;
+  // är en pågående dialog-handling med tydligt avslut). Contexten håller
+  // granska/markera ömsesidigt uteslutande, så ordningen här är bara
+  // ett bälte-och-hängslen-skydd.
+  const markMode = markModeActive && !placementPickActive;
+  const inspectMode = inspectModeActive && !placementPickActive && !markMode;
   const [mapState, setMapState] = useState<MapFetchState>("idle");
   const [mapError, setMapError] = useState<string | null>(null);
   const [elementMap, setElementMap] = useState<ElementMapItem[]>([]);
@@ -166,14 +211,108 @@ export function PreviewInspectorOverlay({
   const lastInsertionRef = useRef<InsertionPoint | null>(null);
   const [inspected, setInspected] = useState<InspectedElement | null>(null);
   const [copied, setCopied] = useState(false);
+  // Markera modul-läget: hovrad sektion + path→routeId-karta ur runens
+  // site-plan (routePlan). Kartan hämtas lazily när läget aktiveras.
+  const [hoveredMarkable, setHoveredMarkable] =
+    useState<MarkableSection | null>(null);
+  const [pathToRouteId, setPathToRouteId] = useState<Record<string, string>>(
+    {},
+  );
+  const routeMapTokenRef = useRef(0);
   const fetchTokenRef = useRef(0);
 
-  const overlayActive = active && (placementPickActive || inspectMode);
+  const overlayActive =
+    active && (placementPickActive || inspectMode || markMode);
 
   const sectionZones = useMemo(
     () => extractSectionZones(elementMap),
     [elementMap],
   );
+
+  // Markerbara sektioner: primärt elementen som BÄR data-section-id-
+  // markören (tag=section), sekundärt heuristik-zonerna för äldre builds
+  // utan markörer. Kanoniska sektioner deduplas på id (hero emitterar
+  // två <section> för samma id — vi slår ihop till en sammanhängande yta).
+  const markableSections = useMemo<MarkableSection[]>(() => {
+    const canonical = new Map<string, MarkableSection>();
+    for (const el of elementMap) {
+      if (!el.sectionId) continue;
+      if (el.tag !== "section") continue;
+      const top = el.vpPercent.y;
+      const bottom = el.vpPercent.y + el.vpPercent.h;
+      const existing = canonical.get(el.sectionId);
+      if (existing) {
+        existing.top = Math.min(existing.top, top);
+        existing.bottom = Math.max(existing.bottom, bottom);
+        continue;
+      }
+      // Närmaste rubrik inom sektionen (första h1–h6 i kart-ordningen
+      // vars y ligger inom sektionens band) som operatörsvänlig kontext.
+      let heading: string | null = null;
+      for (const candidate of elementMap) {
+        if (candidate.sectionId !== el.sectionId) continue;
+        if (!/^h[1-6]$/.test(candidate.tag)) continue;
+        heading = candidate.text;
+        break;
+      }
+      canonical.set(el.sectionId, {
+        sectionId: el.sectionId,
+        top,
+        bottom,
+        left: el.vpPercent.x,
+        width: el.vpPercent.w,
+        headingText: heading,
+        canonical: true,
+      });
+    }
+    if (canonical.size > 0) {
+      return Array.from(canonical.values()).sort((a, b) => a.top - b.top);
+    }
+    // Fallback för builds utan markörer: heuristik-zonerna. Id:t blir
+    // heuristikens sektionstyp — backendens grind validerar ärligt.
+    return sectionZones.map((zone: SectionZone) => ({
+      sectionId: zone.type,
+      top: zone.top,
+      bottom: zone.bottom,
+      left: 0,
+      width: 100,
+      headingText: zone.label,
+      canonical: false,
+    }));
+  }, [elementMap, sectionZones]);
+
+  // Route-id-kartan (path → routeId) ur runens site-plan. Hämtas när
+  // Markera modul-läget aktiveras; utan run/plan faller markeringen
+  // tillbaka på path-segmentet (routeIdForPath).
+  useEffect(() => {
+    if (!markMode || !runId) return;
+    const token = ++routeMapTokenRef.current;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/runs/${runId}/artifacts`);
+        const bundle = (await response.json().catch(() => null)) as {
+          sitePlan?: { routePlan?: unknown } | null;
+        } | null;
+        if (token !== routeMapTokenRef.current) return;
+        const routePlan = bundle?.sitePlan?.routePlan;
+        if (!Array.isArray(routePlan)) return;
+        const mapping: Record<string, string> = {};
+        for (const entry of routePlan) {
+          if (!entry || typeof entry !== "object") continue;
+          const id = (entry as { id?: unknown }).id;
+          const path = (entry as { path?: unknown }).path;
+          if (typeof id !== "string" || typeof path !== "string") continue;
+          mapping[path.replace(/^\/+|\/+$/g, "")] = id;
+        }
+        setPathToRouteId(mapping);
+      } catch {
+        // Plan saknas/oläsbar — segment-fallbacken gäller.
+      }
+    })();
+    return () => {
+      routeMapTokenRef.current += 1;
+    };
+  }, [markMode, runId]);
 
   const fetchElementMap = useCallback(async () => {
     const token = ++fetchTokenRef.current;
@@ -265,6 +404,7 @@ export function PreviewInspectorOverlay({
       setPendingDrop(null);
       setInspected(null);
       setCopied(false);
+      setHoveredMarkable(null);
       setMapState("idle");
       setMapError(null);
       setElementMap([]);
@@ -289,7 +429,7 @@ export function PreviewInspectorOverlay({
   }, [placementPickActive, placementDragPayload]);
 
   // Esc: ångra ett obekräftat släpp först; annars avbryt placerings-
-  // läget (och stäng inspektionsläget).
+  // läget (och stäng inspektions-/markeringsläget).
   useEffect(() => {
     if (!overlayActive) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -302,6 +442,7 @@ export function PreviewInspectorOverlay({
         cancelPlacementPick();
       }
       setInspectModeActive(false);
+      setMarkModeActive(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -311,6 +452,7 @@ export function PreviewInspectorOverlay({
     pendingDrop,
     cancelPlacementPick,
     setInspectModeActive,
+    setMarkModeActive,
   ]);
 
   // Preview försvann/byggdes om medan ett läge var aktivt → avbryt ärligt.
@@ -318,12 +460,15 @@ export function PreviewInspectorOverlay({
     if (active) return;
     if (placementPickActive) cancelPlacementPick();
     if (inspectModeActive) setInspectModeActive(false);
+    if (markModeActive) setMarkModeActive(false);
   }, [
     active,
     placementPickActive,
     cancelPlacementPick,
     inspectModeActive,
     setInspectModeActive,
+    markModeActive,
+    setMarkModeActive,
   ]);
 
   const relativePercent = useCallback(
@@ -380,6 +525,26 @@ export function PreviewInspectorOverlay({
         return;
       }
 
+      if (markMode && markableSections.length > 0) {
+        // Sektionen vars vertikala band innehåller punkten — smalast
+        // band vinner när kanoniska sektioner överlappar (hero-bannern
+        // ligger t.ex. inom hero-totalytan).
+        let best: MarkableSection | null = null;
+        let bestHeight = Infinity;
+        for (const section of markableSections) {
+          if (point.y < section.top || point.y > section.bottom) continue;
+          const height = section.bottom - section.top;
+          if (height < bestHeight) {
+            best = section;
+            bestHeight = height;
+          }
+        }
+        setHoveredMarkable((prev) =>
+          prev?.sectionId === best?.sectionId ? prev : best,
+        );
+        return;
+      }
+
       if (inspectMode && elementMap.length > 0) {
         // Minsta elementet vars box innehåller punkten — samma val som
         // sajtmaskins map-engine (minst area vinner).
@@ -408,6 +573,8 @@ export function PreviewInspectorOverlay({
       placementPickActive,
       pendingDrop,
       inspectMode,
+      markMode,
+      markableSections,
       elementMap,
       sectionZones,
       applyHoveredInsertion,
@@ -445,6 +612,21 @@ export function PreviewInspectorOverlay({
         return;
       }
 
+      if (markMode && hoveredMarkable) {
+        // Klick = markera modulen. routeId mappas via routePlan-kartan
+        // (elementkartan bär previewns pathname); chips + borttagning
+        // bor i FloatingChat-composern.
+        const routePath =
+          elementMap.find((el) => el.routePath)?.routePath ?? "/";
+        const marking: MarkedSectionRef = {
+          routeId: routeIdForPath(routePath, pathToRouteId),
+          sectionId: hoveredMarkable.sectionId,
+          headingText: hoveredMarkable.headingText,
+        };
+        addMarkedSection(marking);
+        return;
+      }
+
       if (inspectMode && hoveredElement) {
         setCopied(false);
         setInspected({
@@ -458,6 +640,11 @@ export function PreviewInspectorOverlay({
       placementPickActive,
       sectionZones,
       inspectMode,
+      markMode,
+      hoveredMarkable,
+      elementMap,
+      pathToRouteId,
+      addMarkedSection,
       hoveredElement,
       nearestHeadingFor,
     ],
@@ -620,6 +807,7 @@ export function PreviewInspectorOverlay({
           onClick={handleClick}
           onMouseLeave={() => {
             setHoveredElement(null);
+            setHoveredMarkable(null);
             if (ghostRef.current) {
               ghostRef.current.style.visibility = "hidden";
             }
@@ -631,13 +819,17 @@ export function PreviewInspectorOverlay({
           }}
           className={cn(
             "absolute inset-0 z-[7]",
-            placementPickActive ? "cursor-crosshair" : "cursor-help",
+            placementPickActive || markMode
+              ? "cursor-crosshair"
+              : "cursor-help",
           )}
           role="application"
           aria-label={
             placementPickActive
               ? "Välj plats i förhandsvisningen"
-              : "Inspektera förhandsvisningen"
+              : markMode
+                ? "Markera modul i förhandsvisningen"
+                : "Inspektera förhandsvisningen"
           }
         >
           {/* Statusrad högst upp. Döljs medan ett släpp väntar på
@@ -666,6 +858,13 @@ export function PreviewInspectorOverlay({
                       · Esc avbryter
                     </span>
                   </>
+                ) : markMode ? (
+                  <>
+                    Klicka på en modul för att markera den ({markedSections.length}/5)
+                    <span className="text-muted-foreground">
+                      · Esc avslutar
+                    </span>
+                  </>
                 ) : (
                   <>
                     Hovra och klicka för att identifiera element
@@ -686,13 +885,19 @@ export function PreviewInspectorOverlay({
               event.stopPropagation();
               if (placementPickActive) {
                 cancelPlacementPick();
+              } else if (markMode) {
+                setMarkModeActive(false);
               } else {
                 setInspectModeActive(false);
               }
             }}
             className="border-border/60 bg-background/90 text-muted-foreground hover:text-foreground absolute top-3 right-3 z-[9] inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm backdrop-blur transition"
             aria-label={
-              placementPickActive ? "Avbryt platsval" : "Stäng inspektionen"
+              placementPickActive
+                ? "Avbryt platsval"
+                : markMode
+                  ? "Avsluta modulmarkeringen"
+                  : "Stäng inspektionen"
             }
           >
             <X className="h-4 w-4" aria-hidden />
@@ -972,6 +1177,51 @@ export function PreviewInspectorOverlay({
               );
             })()
           ) : null}
+
+          {/* Markera modul-läget: hover-ram med sektions-id-etikett +
+              ihållande emerald-kontur på redan markerade sektioner.
+              Kanoniska markeringar visar id:t från data-section-id;
+              heuristik-fallbacken (äldre builds) flaggas med "≈" så
+              operatören ser att id:t är en gissning. */}
+          {markMode && hoveredMarkable ? (
+            <div
+              className="border-foreground/80 bg-foreground/5 pointer-events-none absolute inset-x-1 z-[8] rounded-md border-2"
+              style={{
+                top: `${Math.max(hoveredMarkable.top, 0)}%`,
+                height: `${Math.max(hoveredMarkable.bottom - hoveredMarkable.top, 2)}%`,
+              }}
+            >
+              <span className="bg-foreground text-background absolute top-1.5 left-2 max-w-[280px] truncate rounded px-1.5 py-0.5 font-mono text-[10px]">
+                {hoveredMarkable.canonical ? "" : "≈ "}
+                {hoveredMarkable.sectionId}
+                {hoveredMarkable.headingText
+                  ? ` · ${hoveredMarkable.headingText.slice(0, 40)}`
+                  : ""}
+              </span>
+            </div>
+          ) : null}
+          {markMode
+            ? markableSections
+                .filter((section) =>
+                  markedSections.some(
+                    (marked) => marked.sectionId === section.sectionId,
+                  ),
+                )
+                .map((section) => (
+                  <div
+                    key={`marked-${section.sectionId}`}
+                    className="pointer-events-none absolute inset-x-1 z-[7] rounded-md border-2 border-emerald-500/80 bg-emerald-500/5"
+                    style={{
+                      top: `${Math.max(section.top, 0)}%`,
+                      height: `${Math.max(section.bottom - section.top, 2)}%`,
+                    }}
+                  >
+                    <span className="absolute top-1.5 right-2 rounded bg-emerald-600 px-1.5 py-0.5 font-mono text-[10px] text-white">
+                      Markerad
+                    </span>
+                  </div>
+                ))
+            : null}
 
           {/* Hover-highlight i inspektionsläget. */}
           {inspectMode && !placementPickActive && hoveredElement ? (

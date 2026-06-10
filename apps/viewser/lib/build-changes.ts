@@ -54,6 +54,13 @@ export type RunChangeSet = {
   variantBefore: string | null;
   /** Designvariant efter bytet — `null` om variant var oförändrad. */
   variantAfter: string | null;
+  /**
+   * ADR 0046: de validerade preview-markeringar operatören pekade på när
+   * versionen byggdes (`{routeId, sectionId, note?}`). Läses ur
+   * build-result.json:s `appliedFocusSections`. Tom lista när inga
+   * markeringar fanns.
+   */
+  appliedFocusSections: { routeId: string; sectionId: string; note?: string }[];
 };
 
 interface KeywordRule {
@@ -230,6 +237,15 @@ export function summarizeChangeSet(
       category: "design",
       label: `Designvariant: ${changeSet.variantBefore} → ${changeSet.variantAfter}`,
     });
+  }
+  // ADR 0046: visa vad operatören pekade på i preview ("Markera modul")
+  // när versionen byggdes. `note` är sektionens rubriktext från overlayn.
+  for (const focus of changeSet.appliedFocusSections ?? []) {
+    if (changes.length >= 3) return changes;
+    const label = focus.note
+      ? `Markerad modul: ${focus.note} (${focus.routeId}/${focus.sectionId})`
+      : `Markerad modul: ${focus.routeId}/${focus.sectionId}`;
+    changes.push({ category: "content", label });
   }
   return changes;
 }

@@ -624,6 +624,10 @@ COMMON_WORDS = {
     # UI-gap-fix (juni 2026): exakt change-set i FloatingChat ("Ändrat")
     # härledd ur run-diff istället för prompt-heuristik ("Troligen ändrat").
     "RunChangeSet",
+    # Sektionsmarkering i preview (ADR 0046): MarkedSectionRef är registrerad
+    # som canonical domänterm i naming-dictionary; dessa är lokala
+    # implementationssymboler runt overlay-läget och zod-valideringen.
+    "MarkedSectionSchema", "MarkableSection",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",
