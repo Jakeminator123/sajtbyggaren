@@ -138,6 +138,12 @@ Steward skriver docs, focus, handoff, branch-/review-disciplin och sanity.
 Steward får inte röra aktivt Builder-scope om det inte uttryckligen ingår i
 samma sprint.
 
+Steward äger också de delade canvas-översikterna i `docs/canvases/`
+(begreppskarta + OpenClaw-flöde, se `docs/canvases/README.md`): fakta-blocket
+hålls i synk med `python scripts/update_canvas_facts.py`, och fasstatus,
+kvalitetstelemetri och stegstatus uppdateras för hand när
+`docs/current-focus.md` ändrar läget.
+
 ### Specialiserad starter- eller grind-agent
 
 Använd en specialiserad agent för nya starters/scaffolds först när
@@ -265,6 +271,9 @@ Rapportera ändrade filer, tester, risker och eventuell follow-up.
 Roll: Steward.
 Uppgift: uppdatera docs/current-focus.md, docs/handoff.md eller
 arbetsflödesdocs efter genomfört pass.
+Håll även docs/canvases/ i synk: kör
+python scripts/update_canvas_facts.py --check och uppdatera fas-/telemetri-
+status i canvaserna om passet ändrade läget.
 Rör inte aktivt Builder-scope. Kör docs-/governance-guards och rapportera SHA,
 checks och nästa köpunkt.
 ```
@@ -303,6 +312,7 @@ Minsta docs-/steward-checks:
 python scripts/governance_validate.py
 python scripts/rules_sync.py --check
 python scripts/check_term_coverage.py --strict
+python scripts/update_canvas_facts.py --check
 python -m pytest tests/test_docs_freshness.py tests/test_no_legacy_terms.py -q
 ```
 

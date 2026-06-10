@@ -37,6 +37,10 @@ EXCLUDE_DIRS = {
     # Operator-only reference workspace (gitignored) - never scan as product source
     "MIN_IDE",
     "övrigt",
+    # Shared Cursor canvases (docs/canvases/) deliberately catalogue forbidden
+    # aliases for pedagogy ("say X, not Y" tables) - same treatment as the
+    # check_term_coverage exclusion for canvases.
+    "canvases",
 }
 
 # Files that legitimately mention forbidden terms because their job is to

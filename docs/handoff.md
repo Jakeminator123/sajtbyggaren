@@ -117,6 +117,13 @@ problem `contact` i alla case → B166 togs först.
 8. **Christopher-koordinering:** msg-0060 (B166) + msg-0061 (#262 rörde
    FloatingChat, heads-up B173/Tier 1, sandbox-primär, main-sync-avisering
    kommer) väntar på kvittens. B169-uppföljning i hans lane noterad.
+9. **Delade canvases (nytt, Steward-ägt):** `docs/canvases/` innehåller
+   begreppskartan + openclaw-flödet som interaktiva canvases, delade via
+   git. Spegla lokalt med `python scripts/sync_canvases.py`; fakta-blocket
+   hålls i synk med `python scripts/update_canvas_facts.py --check` (körs
+   även automatiskt post-merge på `main` via steward-auto-bump). Rutin och
+   ägarskap: `docs/canvases/README.md` + orchestrator-playbookens
+   Steward-avsnitt.
 
 ### Kända småsaker (inte buggar)
 
