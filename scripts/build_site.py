@@ -3489,6 +3489,36 @@ def run_followup_chain(
             editKind=decision.editKind,
         )
 
+    # 3d. Honest compound reporting (B155 follow-up): a compound follow-up where
+    #     ONE part lands (e.g. the stylist takes the colour) used to drop the
+    #     rest SILENTLY - a router subtask whose editKind no executor owns
+    #     (component_remove/layout_change/route_add), or an owner that
+    #     materialised nothing (a visual_style with no parseable colour/font/tone,
+    #     an unsupported section_add, a component_add/copy_change with no target).
+    #     Compute those here, where the subtask outcomes already exist, and thread
+    #     them onto the new version's meta sidecar via apply so the deterministic
+    #     builder surfaces them in build-result.json through the EXISTING
+    #     unappliedFollowupIntents channel (no new mechanism). Observer-only: it
+    #     never changes the router/patch/apply/theme/section behaviour above.
+    from packages.generation.followup.section_directives import (
+        SECTION_TYPE_CAPABILITY,
+    )
+    from packages.generation.orchestration.openclaw import (
+        compute_unapplied_followup_chain_intents,
+    )
+
+    theme_applied_flag = theme_directive is not None and bool(
+        theme_directive.primaryColorHex
+        or theme_directive.accentColorHex
+        or theme_directive.toneVibe
+    )
+    unapplied_followup_intents = compute_unapplied_followup_chain_intents(
+        decision,
+        theme_applied=theme_applied_flag,
+        applied_section_capabilities=added_capabilities,
+        section_capability_for_intent=SECTION_TYPE_CAPABILITY,
+    )
+
     # 4. Apply (kor-7c): create the next immutable v<N+1> Project Input. A valid
     #    plan whose patch is unmapped writes nothing (all-or-nothing, honest).
     try:
@@ -3502,6 +3532,7 @@ def run_followup_chain(
             theme_directive=theme_directive,
             added_capabilities=added_capabilities,
             section_positions=section_positions,
+            unapplied_followup_intents=unapplied_followup_intents,
         )
     except PatchApplyError as exc:
         return _result(
@@ -3568,6 +3599,11 @@ def run_followup_chain(
         previewShouldRefresh=targeted.previewShouldRefresh,
         runId=targeted.runId,
         projectInputPath=apply_result.projectInputPath,
+        # B155 follow-up: the honest complement to applied=True - parts of a
+        # compound follow-up the chain could not apply (also surfaced in
+        # build-result.json via the meta sidecar above). Empty for a clean
+        # single-intent follow-up, so no false positives.
+        unappliedFollowupIntents=unapplied_followup_intents,
     )
 
 

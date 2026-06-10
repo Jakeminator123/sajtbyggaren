@@ -98,6 +98,35 @@ Kvarvarande gap (denna slice täcker dem inte):
 - Bredare/multi-target literal replace, route-/element-targeting (utanför scope),
   samt väg B-presentation (FloatingChat) och väg C.
 
+### Slice 2026-06-10: ärliga sammansatta följdprompter i KÖR-7-kedjan (B155)
+
+Operatörsfynd (snickesnackarn): en sammansatt följdprompt ("gör den coolare och
+lägg till ett skämt och använd snyggare kort") där bara EN del kan utföras (t.ex.
+stylisten tar färgen) tappade resten TYST i kapabilitetskedjan
+(`scripts/build_site.py:run_followup_chain`). Operatören såg "Klart! v1→v2" och
+trodde att allt gjordes.
+
+Kedjan äger bara tre redigeringsroller — stylist (`visual_style`),
+section_builder (`section_add`) och patch-planeraren
+(`component_add`/`copy_change` mot en namngiven sektion). Router-subtasks vars
+editKind ingen utförare äger (`component_remove`, `layout_change`, `route_add`),
+eller ägare som inte materialiserade något (en `visual_style` utan tolkbar
+färg/font/ton, en `section_add` med ostödd typ, en `component_add`/`copy_change`
+utan sektion), försvann tyst.
+
+Nu rapporteras de via den BEFINTLIGA `unappliedFollowupIntents`-kanalen: en ren
+observatör (`compute_unapplied_followup_chain_intents` i
+`packages/generation/orchestration/openclaw/`) räknar upp de actionable
+del-utfallen, släpper de täckta, och returnerar en bounded `{target, reason}`-lista
+med ärliga svenska reasons. `run_followup_chain` trär listan genom
+`apply_patch_plan` (ny valfri kwarg, default = dagens beteende) som skriver den på
+nästa versions meta-sidecar efter den befintliga stale-scrub:en. Den
+deterministiska byggaren surfar fältet i `build-result.json` + trace-eventet
+`followup.unapplied_intents_detected` precis som väg A redan gör — ingen ny
+mekanism, ingen schemaändring, ingen LLM-roll-ändring, ingen ny ADR (additiv
+användning, B155 honest-level-1). En ren enkel-intent-följdprompt ger tom lista
+(inga falska positiva).
+
 ## Reproduktion
 
 Operatören verifierade 2026-05-27 att följdpromptar i dag inte når en
