@@ -2201,3 +2201,271 @@ def test_genuine_copy_replace_still_detected_after_additive_tightening() -> None
     assert (
         _followup_requested_copy_replace('gör herotexten "X" istället för "Y"') is True
     )
+
+
+# --- 2026-06-10 (B155): UNQUOTED literal replace -----------------------------
+#
+# "ändra <OLD> till <NEW>" WITHOUT quotes used to paraphrase (semantic patch) or
+# silently no-op, because the literal find-and-replace path only extracted OLD
+# from quoted spans. The unquoted path matches OLD as an exact (normalised,
+# case-insensitive) SUBSTRING of a known stored copy field
+# (company.tagline / company.story / services[].summary), applies a literal
+# substitution on a single match, stays an honest no-op on a miss, and is an
+# honest AMBIGUOUS no-op (with a surfaced reason) when OLD hits >= 2 fields. It
+# never guesses a target or paraphrases.
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_on_tagline_substring() -> None:
+    """A word inside the stored tagline is swapped verbatim; heroHeadline mirrors."""
+    merged = _merge("ändra Handgjorda till Maskingjorda")
+    assert merged["company"]["tagline"] == "Maskingjorda örhängen i Malmö"
+    assert merged["company"]["heroHeadline"] == "Maskingjorda örhängen i Malmö"
+    directive = merged["directives"]["copyDirectives"][0]
+    assert directive["target"] == "tagline"
+    assert directive["operation"] == "replace-text"
+    assert directive["source"] == "prompt-rule"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_whole_tagline_value() -> None:
+    """OLD equal to the entire tagline replaces the whole field."""
+    merged = _merge("ändra Handgjorda örhängen i Malmö till Smycken i Lund")
+    assert merged["company"]["tagline"] == "Smycken i Lund"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_on_story_substring() -> None:
+    """A substring of company.story is replaced; no heroHeadline is written."""
+    merged = _merge("ändra liten butik till stor verkstad")
+    assert merged["company"]["story"] == "En stor verkstad med stor passion."
+    assert "heroHeadline" not in merged["company"]
+    assert merged["directives"]["copyDirectives"][0]["target"] == "about-text"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_on_service_summary() -> None:
+    """A substring of a service summary replaces that summary, with targetRef."""
+    merged = _merge("ändra Fina örhängen till Vackra smycken")
+    assert merged["services"][0]["summary"] == "Vackra smycken."
+    directive = merged["directives"]["copyDirectives"][0]
+    assert directive["target"] == "services"
+    assert directive["targetRef"] == "orhangen"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_case_insensitive_lowercase_old() -> None:
+    """OLD typed all-lowercase still matches a capitalised stored value."""
+    merged = _merge("ändra handgjorda till Maskingjorda")
+    assert merged["company"]["tagline"] == "Maskingjorda örhängen i Malmö"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_uppercase_old_matches_lowercase_field() -> None:
+    """OLD typed uppercase matches a lower/mixed-case stored value (versaler)."""
+    merged = _merge("ändra HANDGJORDA till Maskingjorda")
+    assert merged["company"]["tagline"] == "Maskingjorda örhängen i Malmö"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_no_match_is_honest_no_op() -> None:
+    """OLD that matches no stored field leaves every copy field untouched."""
+    previous = _previous_project_input()
+    merged = _merge("ändra Helikopterplattan till Något annat", previous)
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert "copyDirectives" not in merged.get("directives", {})
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_ambiguous_two_fields_is_no_op() -> None:
+    """OLD present in BOTH tagline and story is an honest no-op (no guess)."""
+    previous = _previous_project_input()
+    previous["company"]["tagline"] = "Vi älskar kvalitet"
+    previous["company"]["story"] = "Vår story handlar om kvalitet och passion."
+    merged = _merge("ändra kvalitet till klass", previous)
+    assert merged["company"]["tagline"] == "Vi älskar kvalitet"
+    assert merged["company"]["story"] == "Vår story handlar om kvalitet och passion."
+    assert "copyDirectives" not in merged.get("directives", {})
+
+
+@pytest.mark.tooling
+def test_unquoted_ambiguous_records_unapplied_reason() -> None:
+    """The ambiguous no-op surfaces a honest reason via the observer; a single
+    clean match (and a plain miss) records nothing."""
+    from scripts.prompt_to_project_input import compute_unapplied_followup_intents
+
+    previous = _previous_project_input()
+    previous["company"]["tagline"] = "Vi älskar kvalitet"
+    previous["company"]["story"] = "Vår story handlar om kvalitet och passion."
+    ambiguous_prompt = "ändra kvalitet till klass"
+    merged = _merge(ambiguous_prompt, previous)
+    posts = compute_unapplied_followup_intents(
+        previous, merged, follow_up_prompt=ambiguous_prompt
+    )
+    assert any(post["target"] == "copy-replace" for post in posts)
+    reason = next(post["reason"] for post in posts if post["target"] == "copy-replace")
+    assert "flera fält" in reason
+
+    # A single clean match must NOT produce an ambiguous post.
+    clean_previous = _previous_project_input()
+    clean_prompt = "ändra Handgjorda till Maskingjorda"
+    clean_merged = _merge(clean_prompt, clean_previous)
+    clean_posts = compute_unapplied_followup_intents(
+        clean_previous, clean_merged, follow_up_prompt=clean_prompt
+    )
+    assert all(post["target"] != "copy-replace" for post in clean_posts)
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_does_not_hijack_target_keyword_prompt() -> None:
+    """'ändra taglinen till X' is still owned by the target-keyword path, not the
+    substring matcher (the word 'taglinen' is not stored copy)."""
+    from packages.generation.followup.copy_directives import (
+        unquoted_literal_replace_status,
+    )
+
+    previous = _previous_project_input()
+    assert (
+        unquoted_literal_replace_status("ändra taglinen till Helt ny text", previous)[
+            "status"
+        ]
+        == "none"
+    )
+    merged = _merge("ändra taglinen till Helt ny text", previous)
+    assert merged["company"]["tagline"] == "Helt ny text"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_additive_request_is_not_literal_replace() -> None:
+    """An additive 'lägg till ...' ask is never treated as a copy replace, even
+    when a replace verb co-occurs and a 'till' marker is present."""
+    from packages.generation.followup.copy_directives import (
+        unquoted_literal_replace_status,
+    )
+
+    previous = _previous_project_input()
+    result = unquoted_literal_replace_status(
+        "ändra startsidan och lägg till Fina örhängen i menyn", previous
+    )
+    assert result["status"] == "none"
+    assert result["directives"] == []
+
+
+@pytest.mark.tooling
+def test_unquoted_resolver_bails_on_quoted_prompt() -> None:
+    """A quoted prompt is owned by the quoted whole-field path; the unquoted
+    resolver must not engage (returns status 'none')."""
+    from packages.generation.followup.copy_directives import (
+        unquoted_literal_replace_status,
+    )
+
+    previous = _previous_project_input()
+    assert (
+        unquoted_literal_replace_status(
+            'ändra "Handgjorda örhängen i Malmö" till "Nytt"', previous
+        )["status"]
+        == "none"
+    )
+    # And the quoted whole-field path still applies the rename.
+    merged = _merge('ändra "Handgjorda örhängen i Malmö" till "Nytt värde"')
+    assert merged["company"]["tagline"] == "Nytt värde"
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_rejects_instruction_shaped_new_value() -> None:
+    """OLD matches, but a NEW value that reads as an instruction (carries a
+    change-verb) is rejected by the leak guard -> honest no-op."""
+    previous = _previous_project_input()
+    merged = _merge("ändra Handgjorda till byt knappen", previous)
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert "copyDirectives" not in merged.get("directives", {})
+
+
+@pytest.mark.tooling
+def test_unquoted_replace_partial_substring_preserves_surrounding_copy() -> None:
+    """Only the matched span changes; the rest of the field is preserved."""
+    merged = _merge("ändra Malmö till Lund")
+    assert merged["company"]["tagline"] == "Handgjorda örhängen i Lund"
+
+
+@pytest.mark.tooling
+def test_end_to_end_unquoted_replace_visible_and_applied(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Acceptance: an unquoted replace of the stored tagline reaches the rendered
+    page and reports an honest appliedVisibleEffect=True."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+    site_id = "surdeg-b155-unq"
+
+    _, _, init_path, _ = generate(
+        "Skapa en hemsida för Surdegsbagaren i Malmö.",
+        output_dir=prompt_inputs_dir,
+        site_id=site_id,
+        project_id="b155-unq-applied",
+    )
+    build(init_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir)
+    v1 = json.loads(Path(init_path).read_text(encoding="utf-8"))
+    tagline = v1["company"]["tagline"]
+    token = "JAKOBTOKEN"
+
+    _, _, followup_path, _ = generate_followup(
+        f"ändra {tagline} till {token}",
+        output_dir=prompt_inputs_dir,
+        site_id=site_id,
+    )
+    _, run_dir = build(
+        followup_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir
+    )
+    page = (run_dir / "generated-files" / "app" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    build_result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+    assert token in page
+    assert build_result["appliedVisibleEffect"] is True
+
+
+@pytest.mark.tooling
+def test_end_to_end_unquoted_replace_miss_is_honest_no_op(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A miss (OLD in no stored field) never fabricates copy and reports an
+    honest appliedVisibleEffect=False."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+    site_id = "surdeg-b155-miss"
+
+    _, _, init_path, _ = generate(
+        "Skapa en hemsida för Surdegsbagaren i Malmö.",
+        output_dir=prompt_inputs_dir,
+        site_id=site_id,
+        project_id="b155-unq-miss",
+    )
+    build(init_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir)
+    token = "JAKOBTOKEN"
+
+    _, _, followup_path, _ = generate_followup(
+        f"ändra Helikopterlandningsplattan till {token}",
+        output_dir=prompt_inputs_dir,
+        site_id=site_id,
+    )
+    _, run_dir = build(
+        followup_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir
+    )
+    page = (run_dir / "generated-files" / "app" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    build_result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+    assert token not in page
+    assert build_result["appliedVisibleEffect"] is False
