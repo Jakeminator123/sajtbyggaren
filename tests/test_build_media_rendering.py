@@ -254,6 +254,29 @@ def test_layout_emits_preconnect_to_google_fonts() -> None:
 
 
 @pytest.mark.tooling
+def test_layout_emits_font_stylesheet_link_when_href_provided() -> None:
+    """B177: when a variant font href is provided the layout loads it via a
+    ``<link rel="stylesheet">`` in ``<head>`` (order-independent of the bundle),
+    not a CSS ``@import`` that Next would bundle mid-file and the browser ignore."""
+    href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
+    layout = render_layout(
+        _minimal_dossier(), dossier_routes=["/"], font_stylesheet_href=href
+    )
+    assert f'<link rel="stylesheet" href="{href}" />' in layout
+    # The stylesheet link sits inside <head>, after the preconnects.
+    head = layout.split("<head>", 1)[1].split("</head>", 1)[0]
+    assert 'rel="stylesheet"' in head
+
+
+@pytest.mark.tooling
+def test_layout_omits_font_link_without_href() -> None:
+    """No href -> no font stylesheet link (preconnects stay); a variant without a
+    google_query must not emit an empty/broken <link>."""
+    layout = render_layout(_minimal_dossier(), dossier_routes=["/"])
+    assert 'rel="stylesheet"' not in layout
+
+
+@pytest.mark.tooling
 def test_layout_emits_theme_color_from_brand() -> None:
     """Viewport.themeColor mirrors brand.primaryColorHex so mobile address
     bars match site identity."""

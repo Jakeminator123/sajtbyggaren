@@ -155,6 +155,7 @@ _normalize_tone_key = _tokens_exports._normalize_tone_key
 _typography_overlay_for_tone = _tokens_exports._typography_overlay_for_tone
 _motion_css_block = _tokens_exports._motion_css_block
 variant_css = _tokens_exports.variant_css
+variant_google_fonts_href = _tokens_exports.variant_google_fonts_href
 
 # Asset/media pipeline (slice 2, behavior-preserving extraction per
 # docs/refactor/megafiles-plan.md Del 2): the PURE asset logic (AssetRef
@@ -2380,6 +2381,14 @@ def build(
     from packages.generation.build.blueprint_render import RenderBlueprint
 
     blueprint = RenderBlueprint.from_artifacts(generation_package, site_brief)
+    # B177: resolve the variant webfont URL from the SAME typography overlay
+    # patch_globals_css uses, so the layout loads it via <link> (order-safe)
+    # instead of a bundle-ignored @import. None when the variant declares no
+    # google_query (layout then emits no font <link>, just the preconnects).
+    font_stylesheet_href = variant_google_fonts_href(
+        variant,
+        typography_overlay=_typography_overlay_for_tone(dossier),
+    )
     print("Writing pages: " + ", ".join(routes_to_write) + " and layout")
     paths_written = write_pages(
         target,
@@ -2389,6 +2398,7 @@ def build(
         extra_routes=wizard_extra_routes or None,
         variant_id=variant.get("id") if isinstance(variant, dict) else None,
         blueprint=blueprint,
+        font_stylesheet_href=font_stylesheet_href,
     )
     if paths_written != routes_to_write:
         raise SystemExit(
@@ -2527,6 +2537,7 @@ def build(
             extra_routes=wizard_extra_routes or None,
             variant_id=variant.get("id") if isinstance(variant, dict) else None,
             blueprint=patched_blueprint,
+            font_stylesheet_href=font_stylesheet_href,
         )
 
     quality_payload, repair_payload = run_phase3_quality_and_repair(
