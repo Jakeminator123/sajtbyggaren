@@ -22,8 +22,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = REPO_ROOT / "governance" / "policies" / "backoffice-views.v1.json"
 
 # Prefixes a readsFrom path is allowed to start with. Catches typos that would
-# silently point a freshness badge at a non-existent surface.
-KNOWN_READS_FROM_PREFIXES = ("governance", "data", "packages", "scripts")
+# silently point a freshness badge at a non-existent surface. ``docs`` was added
+# with ADR 0044 (the Identitet/SOUL view reads docs/openclaw-workspace/).
+KNOWN_READS_FROM_PREFIXES = ("governance", "data", "packages", "scripts", "docs")
 
 
 @pytest.fixture(scope="module")

@@ -16,6 +16,7 @@ import pytest
 VIEW_MODULES = [
     "backoffice.views.status",
     "backoffice.views.governance",
+    "backoffice.views.identity",
     "backoffice.views.llm_engine",
     "backoffice.views.building_blocks",
     "backoffice.views.engine_runs",
