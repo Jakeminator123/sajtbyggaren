@@ -1012,6 +1012,41 @@ def test_followup_build_hook_surfaces_answer_only_reply() -> None:
 
 
 @pytest.mark.tooling
+def test_followup_build_hook_short_circuits_on_expects_answer() -> None:
+    """F1 slice 3 (Scout #262): useFollowupBuild ska kortsluta answer-only på den
+    EXPLICITA ``conversation.expectsAnswer``-signalen, inte bara gissa via
+    'inget runId + answerText'. Additivt: ``answerText`` förblir primärkällan
+    för svarstexten (käll-låset test_followup_build_hook_surfaces_answer_only_reply
+    bevarar att answer-grenen ligger FÖRE den generiska felgrenen).
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "use-followup-build.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "conversation?: Record<string, unknown>;" in text, (
+        "PromptApiResponse måste exponera conversation så expectsAnswer kan läsas."
+    )
+    assert "function readExpectsAnswer(" in text, (
+        "Hooken måste läsa expectsAnswer defensivt (readExpectsAnswer), samma "
+        "mönster som readFollowupVisibleEffect."
+    )
+    assert ".expectsAnswer === true" in text, (
+        "readExpectsAnswer måste läsa conversation.expectsAnswer (boolean)."
+    )
+    # The expectsAnswer signal must participate in the answer-only short-circuit
+    # WITHOUT removing the existing answerText path (additive, minimal change).
+    assert "const expectsAnswer = readExpectsAnswer(payload);" in text, (
+        "runFollowup måste beräkna expectsAnswer och använda den i answer-grenen."
+    )
+    expects_idx = text.index("const expectsAnswer = readExpectsAnswer(payload);")
+    answer_idx = text.index('typeof payload.answerText === "string"', expects_idx)
+    failure_idx = text.index("Prompt-anropet misslyckades")
+    assert expects_idx < failure_idx and answer_idx < failure_idx, (
+        "expectsAnswer-kortslutningen måste ligga FÖRE den generiska !runId-"
+        "felgrenen (bevara käll-låset)."
+    )
+
+
+@pytest.mark.tooling
 def test_builder_shell_threads_lock_and_base_run_id_into_dialogs() -> None:
     """C1 + C2: BuilderShell måste skicka både det globala isBuilding-låset och
     den aktiva baseRunId-pinnen till alla bygg-utlösande dialoger (variant/
