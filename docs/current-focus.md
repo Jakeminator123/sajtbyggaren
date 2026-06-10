@@ -154,7 +154,23 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `c1b9c43`+granskningsfixar (2026-06-10 ~14:45 UTC+2).
+Last verified state: `0f61611` (2026-06-10 ~16:45 UTC+2; jakob-be HEAD efter
+eftermiddagens tre merges). **#277** toolIntent v1-pilot UI-halvan
+(Christophers utbrytning ur #269 per msg-0063 — färgväljaren skickar
+strukturerad theme_change-intent; backend-halvan = nästa steg ovanpå
+rollmappningen; #269 bär nu enbart inspector-lanen och väntar rebase).
+**#278** ADR 0043 sektionstext-utföraren — "ändra texten i hero-sektionen
+till X" ger nu NY VERSION + SYNLIG ÄNDRING (sectionContentOverrides i PI,
+apply-mappning, renderer-override per hero-pin-mönstret; uppföljningar
+registrerade i B155: generativ omskrivning via copyModel +
+compound-prompt-rapportering). **#279** ADR 0044 SOUL i runtime
+(chatt-personan läses ur docs/openclaw-workspace/SOUL.md med kodade
+ärlighetsrader som alltid vinner) + Backoffice-identitetsvy
+(vy-registrerad). Operatörens openai.ts-kommentarer committade (`fbe36f1`;
+chat-tokentak finns redan: VIEWSER_MAX_CHAT_TOKENS i apps/viewser-miljön).
+Core-lanen grön på det sammanslagna trädet. KVAR för operatören: live-test
+av sektionstext-ändring + SOUL-chatt med riktig nyckel; dev-server-omstart.
+Tidigare samma dag (~14:45):
 Extern granskning (read-only-agent F1–F10 + GPT-agent) processad: SEX
 buggar fixade + stängda i samma commit-svit — B186 (baseRunId vinner över
 latest i brief-reuse), B187 (frågeformade section_add-edits byggde inte:
@@ -206,6 +222,11 @@ misplaced-poster som väntar Steward-flytt (B176–B179-rundan, B183–B185).
 
 ## Öppna PR att känna till
 
+- **#280** (`chgenberg → jakob-be`): SNI-branschberedskap — full SNI-täckning
+  + 87 branschprofiler + wizard-branschsök, ADR-nummer 0045 (numret är
+  därmed TAGET; model-tuning-slicen renumreras till 0046, generativ
+  omskrivning till 0047 — se handoff-liggaren). VÄNTAR GRANSKNING (stor: 21 filer,
+  governance + discovery + wizard).
 - **#269** (`christopher → jakob-be`): toolIntent v1-pilot (strukturerad
   specialist-intent från färgväljaren, UI-halva). **Vänta med merge:** (a) PR:en
   är hela `christopher`-branchen (23 filer, +2805 — bär även en hel
