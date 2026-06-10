@@ -49,6 +49,8 @@ import {
   DEVICE_PRESET_WIDTHS,
   useDevicePreset,
 } from "@/components/device-preset-context";
+import { usePreviewInspector } from "@/components/preview-inspector-context";
+import { PreviewInspectorOverlay } from "@/components/preview-inspector-overlay";
 import { cn } from "@/lib/utils";
 
 // Device-preset state + DEVICE_OPTIONS-listan lever numera i
@@ -366,6 +368,20 @@ export function ViewerPanel({
   // har följt med dit oförändrat så vi slipper SSR-mismatch.
   const { devicePreset } = useDevicePreset();
 
+  // Preview-inspector (peka-i-previewn): publicera aktiv server-nåbar
+  // preview-URL till contexten så builder-dialogerna vet när platsval i
+  // förhandsvisningen är möjligt. StackBlitz-vägen publicerar aldrig
+  // (ingen server-nåbar URL) → peka-knappen döljs ärligt där.
+  const { setPreviewUrl: publishInspectorPreviewUrl } = usePreviewInspector();
+
+  useEffect(() => {
+    const visible = Boolean(localPreviewUrl) && !unavailable && Boolean(runId);
+    publishInspectorPreviewUrl(visible ? localPreviewUrl : null);
+    return () => {
+      publishInspectorPreviewUrl(null);
+    };
+  }, [localPreviewUrl, unavailable, runId, publishInspectorPreviewUrl]);
+
   // Studio-hero-videorna är dekorativa (aria-hidden). Under reduced-motion
   // pausar vi dem på första framen (ingen autoplay/loop) i st.f. att rulla
   // en oönskad bakgrundsanimation — samma a11y-kontrakt som marketing-hero:n.
@@ -622,8 +638,7 @@ export function ViewerPanel({
   // (loading) och pågående bygge. `loading` räcker — `isFinalizing` är en
   // delmängd av `loading`. När StackblitzPreview är aktiv är `loading`
   // false så hero släcks och den lazy-komponenten äger ytan.
-  const showHero =
-    showEmpty || showUnavailable || loading || isBuilding;
+  const showHero = showEmpty || showUnavailable || loading || isBuilding;
   // BuildProgressCard tar över mittenytan när vi aktivt bygger ELLER
   // när bygget precis blivit klart men preview fortfarande bootas.
   // Hero-texten ska INTE visas i någondera fas — det skulle vara dubbel
@@ -918,6 +933,17 @@ export function ViewerPanel({
               />
             </div>
           ) : null}
+          {/*
+            Preview-inspector-overlayn (peka-i-previewn): inspektera-toggle
+            + placeringsläge ovanpå iframen. Ligger i wrappern (z 7–9) så
+            den följer device-preset-bredden, och under BuildProgressCard
+            (z-20). `active` gate:as mot laddat dokument + inget pågående
+            bygge så lägena aldrig kartlägger en halvfärdig sajt.
+          */}
+          <PreviewInspectorOverlay
+            previewUrl={localPreviewUrl}
+            active={iframeLoaded && !isBuilding && !isFinalizing}
+          />
         </div>
       ) : null}
 

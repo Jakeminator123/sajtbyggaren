@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   BuilderActions,
@@ -24,6 +24,7 @@ import type {
   PendingBuildState,
 } from "@/components/builder/use-pending-build";
 import type { PromptStage } from "@/components/prompt-builder";
+import { usePreviewInspector } from "@/components/preview-inspector-context";
 
 /**
  * BuilderShell är compositionen som tar över hela kant-ytan när
@@ -171,6 +172,23 @@ export function BuilderShell({
   );
   const [openDialog, setOpenDialog] = useState<DialogId | null>(null);
 
+  // Peka-i-previewn (platsval): AddModuleDialog stänger sig själv när
+  // operatören väljer "Peka i förhandsvisningen". När picken avslutas
+  // (klick i previewn ELLER Esc/avbryt) bumpar contexten
+  // placementPickResolvedSignal — då öppnar vi modul-dialogen igen så
+  // operatören landar där den var, med (eller utan) vald plats.
+  // setState:n deferras via setTimeout för React 19:s
+  // react-hooks/set-state-in-effect-regel (samma mönster som
+  // DevicePresetProvider-hydreringen).
+  const { placementPickResolvedSignal } = usePreviewInspector();
+  const lastPlacementSignalRef = useRef(placementPickResolvedSignal);
+  useEffect(() => {
+    if (placementPickResolvedSignal === lastPlacementSignalRef.current) return;
+    lastPlacementSignalRef.current = placementPickResolvedSignal;
+    const timerId = window.setTimeout(() => setOpenDialog("module"), 0);
+    return () => window.clearTimeout(timerId);
+  }, [placementPickResolvedSignal]);
+
   const openDialogFactory = useCallback(
     (id: DialogId) => () => setOpenDialog(id),
     [],
@@ -283,12 +301,7 @@ export function BuilderShell({
         onSelect: onNewSite,
       },
     ],
-    [
-      isBuilding,
-      openDialogFactory,
-      onOpenConsole,
-      onNewSite,
-    ],
+    [isBuilding, openDialogFactory, onOpenConsole, onNewSite],
   );
 
   return (

@@ -795,6 +795,27 @@ COMMON_WORDS = {
     # från builder-dialoger (use-followup-build.ts). UI-lokal typ tills
     # backend-dispatchen landar och kontraktet ev. kanoniseras.
     "FollowupToolIntent",
+    # Preview-inspector (peka-i-previewn, porterad från sajtmaskin med
+    # Jakob-OK 2026-06-10): viewser-lokala symboler i apps/viewser/
+    # lib/inspector/, app/api/inspector-*/route.ts samt komponenterna
+    # preview-inspector-context.tsx / preview-inspector-overlay.tsx.
+    # Typer för element-kartan, sektionszoner, platsval och Playwright-
+    # motorn — inga canonical domänbegrepp (samma lokala behandling som
+    # AddModuleDialog-symbolerna ovan). AppleWebKit/HeadersInit/MouseEvent
+    # är plattformsnamn (UA-sträng, DOM lib-typer), inte domäntermer.
+    "AppleWebKit",
+    "CapturePointDetails", "CaptureRequestSchema", "CaptureResponse",
+    "CapturedElement",
+    "ElementMapItem", "ElementMapRequestSchema", "ElementMapResponse",
+    "HeadersInit",
+    "InsertionPoint", "InspectedElement",
+    "InspectorPageUnavailable", "InspectorTargetCheck",
+    "MapFetchState", "MouseEvent", "MousePointerClick",
+    "PlacementPick", "PlaywrightModule",
+    "PreviewInspectorContext", "PreviewInspectorContextValue",
+    "PreviewInspectorOverlay", "PreviewInspectorProvider",
+    "ReactMouseEvent",
+    "SectionKind", "SectionZone",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",

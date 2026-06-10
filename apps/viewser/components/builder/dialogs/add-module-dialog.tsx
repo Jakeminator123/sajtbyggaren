@@ -8,6 +8,7 @@ import {
   Loader2,
   Mail,
   MapPin,
+  MousePointerClick,
   ShieldCheck,
   Star,
   Tag,
@@ -15,13 +16,14 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   useFollowupBuild,
   type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
+import { usePreviewInspector } from "@/components/preview-inspector-context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -88,15 +90,78 @@ type ModuleDef = {
 // section_add-mål (hero/services är sidsektioner, cta-banner saknar dossier),
 // så de gav en falsk affordance (Vercel-agent-fynd 2026-06-08) och är borttagna.
 const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
-  { id: "gallery", label: "Galleri", description: "Bildrutnät", Icon: Images, effect: "registered", promptNoun: "en galleri-sektion" },
-  { id: "contact-form", label: "Kontaktformulär", description: "Namn, e-post, meddelande", Icon: Mail, effect: "registered", promptNoun: "en kontaktformulär-sektion" },
-  { id: "faq", label: "Vanliga frågor", description: "Hopfällbara frågor och svar", Icon: HelpCircle, effect: "route", promptNoun: "en FAQ-sektion" },
-  { id: "testimonials", label: "Omdömen", description: "Kundcitat", Icon: Star, effect: "registered", promptNoun: "en sektion med omdömen" },
-  { id: "pricing", label: "Priser", description: "Pris-/paketlista", Icon: Tag, effect: "registered", promptNoun: "en sektion med priser" },
-  { id: "map", label: "Karta", description: "Plats med adress", Icon: MapPin, effect: "registered", promptNoun: "en sektion med en karta" },
-  { id: "opening-hours", label: "Öppettider", description: "Veckoschema", Icon: Clock, effect: "inline", promptNoun: "en öppettider-sektion" },
-  { id: "team", label: "Team", description: "Personalkort", Icon: Users, effect: "route", promptNoun: "en team-sektion" },
-  { id: "trust-badges", label: "Förtroende", description: "Certifikat och logotyper", Icon: ShieldCheck, effect: "registered", promptNoun: "en sektion om garantier" },
+  {
+    id: "gallery",
+    label: "Galleri",
+    description: "Bildrutnät",
+    Icon: Images,
+    effect: "registered",
+    promptNoun: "en galleri-sektion",
+  },
+  {
+    id: "contact-form",
+    label: "Kontaktformulär",
+    description: "Namn, e-post, meddelande",
+    Icon: Mail,
+    effect: "registered",
+    promptNoun: "en kontaktformulär-sektion",
+  },
+  {
+    id: "faq",
+    label: "Vanliga frågor",
+    description: "Hopfällbara frågor och svar",
+    Icon: HelpCircle,
+    effect: "route",
+    promptNoun: "en FAQ-sektion",
+  },
+  {
+    id: "testimonials",
+    label: "Omdömen",
+    description: "Kundcitat",
+    Icon: Star,
+    effect: "registered",
+    promptNoun: "en sektion med omdömen",
+  },
+  {
+    id: "pricing",
+    label: "Priser",
+    description: "Pris-/paketlista",
+    Icon: Tag,
+    effect: "registered",
+    promptNoun: "en sektion med priser",
+  },
+  {
+    id: "map",
+    label: "Karta",
+    description: "Plats med adress",
+    Icon: MapPin,
+    effect: "registered",
+    promptNoun: "en sektion med en karta",
+  },
+  {
+    id: "opening-hours",
+    label: "Öppettider",
+    description: "Veckoschema",
+    Icon: Clock,
+    effect: "inline",
+    promptNoun: "en öppettider-sektion",
+  },
+  {
+    id: "team",
+    label: "Team",
+    description: "Personalkort",
+    Icon: Users,
+    effect: "route",
+    promptNoun: "en team-sektion",
+  },
+  {
+    id: "trust-badges",
+    label: "Förtroende",
+    description: "Certifikat och logotyper",
+    Icon: ShieldCheck,
+    effect: "registered",
+    promptNoun: "en sektion om garantier",
+  },
 ];
 
 /** Operatörsvänlig, ärlig etikett per synlighets-utfall ("kan" — gated). */
@@ -125,7 +190,11 @@ const EFFECT_BADGES: Record<ModuleEffect, { label: string; title: string }> = {
 // home-only och routern sid-targetar inte) — övriga sidor visas som
 // medvetet inaktiva zoner ("stöds inte än") i stället för att lova en
 // placering bygget inte kan hålla (granskningsfynd 2026-06-09).
-const PAGE_TARGETS: ReadonlyArray<{ id: string; label: string; enabled: boolean }> = [
+const PAGE_TARGETS: ReadonlyArray<{
+  id: string;
+  label: string;
+  enabled: boolean;
+}> = [
   { id: "home", label: "Startsida", enabled: true },
   { id: "about", label: "Om oss", enabled: false },
   { id: "services", label: "Tjänster", enabled: false },
@@ -138,10 +207,11 @@ const PAGE_TARGETS: ReadonlyArray<{ id: string; label: string; enabled: boolean 
 // "längst ner" → bottom (= före kontakt-CTA:n). Minimala fraser med flit —
 // EMPIRISKT verifierat att längre fraser med "på sidan" tippar vissa
 // sektionstyper till route_add i klassificeringen.
-const POSITIONS: ReadonlyArray<{ id: string; label: string; clause: string }> = [
-  { id: "top", label: "Överst (efter hero)", clause: "överst" },
-  { id: "bottom", label: "Längst ner", clause: "längst ner" },
-];
+const POSITIONS: ReadonlyArray<{ id: string; label: string; clause: string }> =
+  [
+    { id: "top", label: "Överst (efter hero)", clause: "överst" },
+    { id: "bottom", label: "Längst ner", clause: "längst ner" },
+  ];
 
 type Placement = {
   // Lokalt unikt id så samma modul kan placeras flera gånger.
@@ -192,6 +262,9 @@ export function AddModuleDialog({
 }: AddModuleDialogProps) {
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [dragOverPageId, setDragOverPageId] = useState<string | null>(null);
+  // Etikett från senaste peka-i-previewn-valet ("Efter Omdömen → längst
+  // ner") — visas vid placeringsraden som kvitto på var klicket landade.
+  const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   const { runFollowup, isBusy, error } = useFollowupBuild({
     siteId,
     onBuildStart,
@@ -200,6 +273,42 @@ export function AddModuleDialog({
     isBuilding,
     baseRunId,
   });
+
+  // Peka-i-previewn: knappen visas bara när en server-nåbar preview-URL
+  // finns (local-next/vercel-sandbox — StackBlitz publicerar ingen).
+  // Flödet: requestPlacementPick() + stäng dialogen → ViewerPanel ritar
+  // overlayn → klick/Esc → BuilderShell öppnar dialogen igen → effekten
+  // nedan läser ut lastPlacementPick och sätter positionen.
+  const {
+    previewUrl,
+    requestPlacementPick,
+    lastPlacementPick,
+    clearPlacementPick,
+  } = usePreviewInspector();
+
+  useEffect(() => {
+    if (!open || !lastPlacementPick) return;
+    const timerId = window.setTimeout(() => {
+      const { point, coarsePosition } = lastPlacementPick;
+      setPlacements((current) =>
+        current.length > 0
+          ? current.map((p, idx) =>
+              idx === 0 ? { ...p, positionId: coarsePosition } : p,
+            )
+          : current,
+      );
+      setPickedLabel(
+        `${point.label} → ${coarsePosition === "top" ? "överst" : "längst ner"}`,
+      );
+      clearPlacementPick();
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [open, lastPlacementPick, clearPlacementPick]);
+
+  const handlePlacementPick = useCallback(() => {
+    requestPlacementPick();
+    onOpenChange(false);
+  }, [requestPlacementPick, onOpenChange]);
 
   const addPlacement = useCallback((moduleId: string, pageId: string) => {
     // En modul per bygge (skiva 1): routern klassar EN section_add-klausul
@@ -216,17 +325,25 @@ export function AddModuleDialog({
         positionId: "bottom",
       },
     ]);
+    setPickedLabel(null);
   }, []);
 
   const removePlacement = useCallback((key: string) => {
     setPlacements((current) => current.filter((p) => p.key !== key));
+    setPickedLabel(null);
   }, []);
 
-  const setPlacementPosition = useCallback((key: string, positionId: string) => {
-    setPlacements((current) =>
-      current.map((p) => (p.key === key ? { ...p, positionId } : p)),
-    );
-  }, []);
+  const setPlacementPosition = useCallback(
+    (key: string, positionId: string) => {
+      setPlacements((current) =>
+        current.map((p) => (p.key === key ? { ...p, positionId } : p)),
+      );
+      // Manuellt positionsval ersätter peka-kvittot (annars skulle kvittot
+      // kunna motsäga dropdownen).
+      setPickedLabel(null);
+    },
+    [],
+  );
 
   const handleDrop = useCallback(
     (pageId: string) => (event: React.DragEvent<HTMLDivElement>) => {
@@ -268,6 +385,7 @@ export function AddModuleDialog({
     const result = await runFollowup(prompt, { toolIntent });
     if (result.ok) {
       setPlacements([]);
+      setPickedLabel(null);
       onOpenChange(false);
     }
   }, [placements, runFollowup, onOpenChange]);
@@ -278,11 +396,11 @@ export function AddModuleDialog({
         <DialogHeader>
           <DialogTitle>Lägg till modul</DialogTitle>
           <DialogDescription>
-            Dra (eller klicka) en modul till startsidan — en modul per bygge.
-            Vi skickar en strukturerad instruktion och bygger om sajten.
-            Märkningen på varje kort visar ärligt vad som kan synas efter
-            bygget. Exakt position är något vi bara styr på startsidan (överst /
-            längst ner) — finare placering och fler sidor kommer senare.
+            Dra (eller klicka) en modul till startsidan — en modul per bygge. Vi
+            skickar en strukturerad instruktion och bygger om sajten. Märkningen
+            på varje kort visar ärligt vad som kan synas efter bygget. Exakt
+            position är något vi bara styr på startsidan (överst / längst ner) —
+            finare placering och fler sidor kommer senare.
           </DialogDescription>
         </DialogHeader>
 
@@ -312,7 +430,10 @@ export function AddModuleDialog({
                       "border-border/60 hover:border-border bg-card/60 flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition active:scale-[0.98] active:cursor-grabbing",
                     )}
                   >
-                    <Icon className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
+                    <Icon
+                      className="text-muted-foreground h-4 w-4 shrink-0"
+                      aria-hidden
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="text-foreground block truncate text-[12px] font-medium">
                         {mod.label}
@@ -353,7 +474,9 @@ export function AddModuleDialog({
                     event.dataTransfer.dropEffect = "copy";
                     setDragOverPageId(page.id);
                   }}
-                  onDragLeave={() => setDragOverPageId((cur) => (cur === page.id ? null : cur))}
+                  onDragLeave={() =>
+                    setDragOverPageId((cur) => (cur === page.id ? null : cur))
+                  }
                   onDrop={handleDrop(page.id)}
                   className={cn(
                     "flex min-h-[52px] flex-col items-center justify-center rounded-lg border border-dashed px-2 py-3 text-center text-[12px] transition",
@@ -386,12 +509,19 @@ export function AddModuleDialog({
                     className="border-border/60 bg-card/60 flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px]"
                   >
                     <span className="text-foreground min-w-0 flex-1 truncate">
-                      <span className="font-medium">{moduleLabel(p.moduleId)}</span>
-                      <span className="text-muted-foreground"> → {pageLabel(p.pageId)}</span>
+                      <span className="font-medium">
+                        {moduleLabel(p.moduleId)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        → {pageLabel(p.pageId)}
+                      </span>
                     </span>
                     <select
                       value={p.positionId}
-                      onChange={(event) => setPlacementPosition(p.key, event.target.value)}
+                      onChange={(event) =>
+                        setPlacementPosition(p.key, event.target.value)
+                      }
                       aria-label={`Position för ${moduleLabel(p.moduleId)} på ${pageLabel(p.pageId)}`}
                       className="border-border/60 bg-background text-muted-foreground rounded border px-1.5 py-1 text-[11px]"
                     >
@@ -412,6 +542,34 @@ export function AddModuleDialog({
                   </li>
                 ))}
               </ul>
+              {/* Peka-i-previewn: välj position genom att klicka i den
+                  rendrade förhandsvisningen i stället för dropdownen.
+                  Dialogen stängs under valet och öppnas igen efteråt.
+                  Visas bara när en server-nåbar preview-URL finns. */}
+              {previewUrl ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePlacementPick}
+                    disabled={isBusy}
+                    className="border-border/60 hover:border-border text-foreground inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] transition disabled:opacity-50"
+                  >
+                    <MousePointerClick className="h-3.5 w-3.5" aria-hidden />
+                    Peka i förhandsvisningen
+                  </button>
+                  {pickedLabel ? (
+                    <span className="text-muted-foreground text-[11px]">
+                      Vald plats:{" "}
+                      <span className="text-foreground">{pickedLabel}</span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/70 text-[10.5px]">
+                      Dialogen stängs medan du väljer — klicket snäpper till
+                      överst/längst ner.
+                    </span>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : (
             <p className="text-muted-foreground border-border/60 rounded-md border border-dashed px-3 py-2 text-[11px] leading-snug">
@@ -457,7 +615,8 @@ export function AddModuleDialog({
             ) : (
               <>
                 <Blocks className="h-4 w-4" />
-                Lägg till {placements.length > 0 ? `(${placements.length})` : ""}
+                Lägg till{" "}
+                {placements.length > 0 ? `(${placements.length})` : ""}
               </>
             )}
           </Button>
