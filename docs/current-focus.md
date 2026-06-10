@@ -117,15 +117,21 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   multi-field, route/element-targeting). B169-uppföljning för Christopher
   noterad i msg-0061.
 
-Last verified state: `01bab96` (2026-06-10 ~08:00 UTC+2; `jakob-be` HEAD
-efter morgonpassets bugg-runda: B176-chatfix (`max_completion_tokens`),
-B179-fix (B175-recovery accepterar inte längre stale runs) + docs
-B177/B178 + köpunkter 6/7. Pushad till `origin/jakob-be`.
-`main = 7486145` — sync väntar operatörsbeslut).
-Nya commits sedan föregående checkpoint: `ced8ca0`, `90d7150`, `01bab96`.
-Morgonpassets fynd: B176 (fixad), B177 (font-@import i byggd CSS, öppen),
-B178 (falsk framgång vid icke-applicerad fri-text-ändring, öppen, kopplad
-B155), B179 (fixad).
+Last verified state: `2b970d9` (2026-06-10 ~09:45 UTC+2; `jakob-be` HEAD
+efter merge av PR #268 — B180 (brief carry-forward på följdbyggen, slut på
+copy-drift vid restyle), B181 (hälsningsfras kapar inte längre
+konversationsklassningen), B182 (OpenClaw-beslut auto-resolvar senaste run
+när baseRunId saknas) + snabb core-testlane (`python -m pytest -m core`,
+~1 min; `scripts/review_check.py --core`) och `docs/testing.md` med
+lane-tabell + testfamiljeklassificering. `main = 7486145` — sync väntar
+operatörsbeslut).
+Städat efter mergen: worktree `sajtbyggaren-wt-fixes` borttagen,
+PR-branchen raderad lokalt + remote, lokala `feat/live-preview` raderad
+(allt unikt innehåll redan på `jakob-be`; remote-branchen för parkerade
+ #156 är kvar).
+Morgonpassets fynd (föregående checkpoint `01bab96`): B176 (fixad), B177
+(font-@import i byggd CSS, öppen), B178 (falsk framgång vid
+icke-applicerad fri-text-ändring, öppen, kopplad B155), B179 (fixad).
 
 ## Öppna PR att känna till
 
