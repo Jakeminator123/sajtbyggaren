@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 147 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 148 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -656,6 +656,23 @@ round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B175` Medel** (stängd 2026-06-10, samma PR som registreringen) -
+  B164-recoveryn täckte inte first-run-scenariot: gaten i
+  `apps/viewser/app/api/prompt/route.ts` krävde `preBridgeLatestRun !== null`,
+  så när sajten saknade en klar run FÖRE bridge-anropet (init-runen prunad
+  via SAJTBYGGAREN_MAX_RUNS-retention, eller aldrig fullbordad) och KÖR-7-
+  kedjan sedan landade sajtens FÖRSTA klara run men bryggan failade
+  rapportera (`null`), hoppades recoveryn över och legacy Phase 1+2
+  dubbelbyggde — exakt det B164 skulle förhindra. Fix: gaten kräver inte
+  längre ett pre-bridge-run; "kedjan landade en NY run" avgörs med
+  runId-diff när ett pre-run finns och annars med run-katalogens
+  mtime >= requestStart - 5s-marginal (`FS_TIMESTAMP_ALLOWANCE_MS`), så ett
+  transient failat pre-snapshot aldrig kan re-surfa en STALE run som om
+  prompten producerade den. `latestCompletedRunForSite` returnerar nu även
+  `mtimeMs` (ingen extra I/O — stat:en fanns redan). Källa: extern
+  granskning 2026-06-10 (B164-residualrisk flaggad redan i #260-Scouten),
+  verifierad mot kod. Fix: `34f1a05`. Test:
+  `tests/test_viewser_api_prompt.py::test_b175_recovery_covers_first_completed_run`.
 - **`B174` Medel** (stängd 2026-06-10, samma PR som registreringen) - Falsk
   "Quality Gate flaggade något"/degraded-varning på VARJE lyckad
   /studio-följdprompt (painter-palma v2/v3 2026-06-10: gröna QG-resultat,
