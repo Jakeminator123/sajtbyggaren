@@ -154,8 +154,30 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `706b889` (2026-06-10 ~17:45 UTC+2; jakob-be HEAD efter
-PR #280-mergen). **#280** ADR 0045 SNI-branschberedskap MERGAD (Christophers
+Last verified state: `df25e34` (2026-06-10 ~19:20 UTC+2; jakob-be HEAD efter
+PR #282+#283-mergen, `main = jakob-be` tom diff verifierad). **#282**
+compound-prompt-ärlighet MERGAD (B155-uppföljning, ingen ny ADR): en
+sammansatt följdprompt där bara EN del kan utföras (t.ex. stylisten tar
+färgen) tappar inte längre resten TYST — ägarlösa/omaterialiserade
+KÖR-7-subtasks (component_remove/layout_change/route_add, samt ägda kinds
+som inget materialiserade) rapporteras via den BEFINTLIGA
+`unappliedFollowupIntents`-kanalen (ren observer i
+`openclaw/unapplied.py`, bounded {target, reason}, ärliga svenska reasons,
+trädas via apply-metan → build-result.json → FloatingChat; ingen
+viewser/schema-ändring). **#283** ADR 0047 generativ sektionsomskrivning
+MERGAD: en omskrivnings-instruktion UTAN explicit värde ("gör om-oss-texten
+varmare", "skriv om heron så den låter mer premium") går nu genom
+copyDirectiveModels editPlan-läge för de vitlistade sektionsfälten
+(headline/subheadline/body), applicerad ENBART via ADR 0043:s
+`sectionContentOverrides`-väg, genom SAMMA public-copy- + grundnings-vakter
+(name/tagline genereras aldrig; ogrundade siffror släpps); utan
+`OPENAI_API_KEY` ärlig no-op (mock-paritet). `llm-models` v9→10 (bara
+purpose-text). Båda PR:arna rörde `apply.py` men i disjunkta regioner
+(#282: signatur + meta-block; #283: lokal cachead läsning + patch-loop) —
+mergade i följd utan konflikt, sanity-guard på sammanslagna trädet grön
+(ruff 0, governance 21/21, pytest core + riktade apply/followup-sviter).
+PR-brancherna städade. Tidigare samma dag (~17:45, `706b889`):
+**#280** ADR 0045 SNI-branschberedskap MERGAD (Christophers
 lane, granskad i sin helhet): full SNI-täckning (sni-discovery-map v2 — alla
 87 huvudgrupper + 23 groupOverrides, 0 unknown testlåst), 87 branschprofiler
 (`industry-profiles.v1.json` + schema som hårt förbjuder direkta
@@ -235,17 +257,14 @@ misplaced-poster som väntar Steward-flytt (B176–B179-rundan, B183–B185).
 
 ## Öppna PR att känna till
 
-- **#269** (`christopher → jakob-be`): toolIntent v1-pilot (strukturerad
-  specialist-intent från färgväljaren, UI-halva). **Vänta med merge:** (a) PR:en
-  är hela `christopher`-branchen (23 filer, +2805 — bär även en hel
-  preview-inspector-lane + playwright-beroende utöver de ~4 toolIntent-filerna),
-  (b) den blev CONFLICTING efter förmiddagens merges (#272 rör samma
-  `docs/agent-inbox.jsonl`, #270 rör samma `use-followup-build.ts`) och behöver
-  Christophers rebase, (c) backend-halvan (schema-fält + dispatch-bypass i
-  `/api/prompt`) finns inte än och samma söm byggs JUST NU av
-  roll-dispatch-slicen i cloud-grind — landa den först, sedan rebasar
-  Christopher och toolIntent-dispatchen läggs OVANPÅ roll-dispatchen
-  (toolIntent = deterministisk genväg in i samma specialist-/rollmappning).
+- **#269** (`christopher → jakob-be`): toolIntent v1-pilot (UI-halva). **Väntar
+  Christophers rebase — hans action, inte vår.** Pilotens kärna är redan
+  mergad som **#277** (utbrytningen); #269 bär nu enbart preview-inspector-lanen
+  (CONFLICTING mot dagens jakob-be). Roll-dispatchen (#274) + backend-sömmen
+  finns nu på trädet, så när Christopher rebasar läggs toolIntent-dispatchen
+  OVANPÅ rollmappningen (deterministisk genväg in i samma specialist-dispatch).
+  Christopher aviserad via inbox `msg-0065`. **Rör inte denna PR-yta** (Christophers
+  lane: viewser-frontend/inspector).
 - **#156** (`feat/live-preview → jakob-be`): hostad `/live`-loop. **Parkerad pga säkerhet**
   (publik POST utan auth/rate-limit kan starta sandboxar). Behålls som arkitektur-referens;
   görs om på färsk bas med auth/rate-limit designat från start när runtime-spåret väljs aktivt.

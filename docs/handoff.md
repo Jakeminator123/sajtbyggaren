@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-10 ~17:00 UTC+2, dagpassets checkpoint efter 10 mergade
-PR:ar (#270–#279 utom parkerade) + två main-syncar. Verifierad
+**Datum:** 2026-06-10 ~19:20 UTC+2, kvällscheckpoint efter 13 mergade
+PR:ar (#270–#283 utom parkerade) + main-syncar. Verifierad
 `origin/jakob-be = origin/main` (identiska, se Last verified i
 `docs/current-focus.md`).
 
@@ -31,18 +31,25 @@ PR:ar (#270–#279 utom parkerade) + två main-syncar. Verifierad
 > **ADR-nummerliggare (kollisionsrisk vid parallella agenter!):** 0040
 > komponentkatalog (mergad), 0041 Tier 2 (mergad), 0042 RESERVERAD lager 3
 > (ev. i cloud), 0043 sektionstext (mergad), 0044 SOUL (mergad), 0045
-> SNI-branschberedskap (MERGAD via #280 ~17:45), 0046 RESERVERAD
-> model-tuning, 0047 RESERVERAD generativ sektionsomskrivning.
+> SNI-branschberedskap (mergad #280), 0046 RESERVERAD model-tuning,
+> 0047 generativ sektionsomskrivning (MERGAD via #283 ~19:20). Nästa lediga
+> ADR-nummer: **0048**.
 >
-> **Öppet/pågående:** #269 (numera enbart
-> inspector-lanen, väntar Christophers rebase), #156 (parkerad, säkerhet).
-> #280 (Christophers SNI + 87 branschprofiler + wizard-branschsök) är
-> GRANSKAD och MERGAD ~17:45 (`706b889`; inbox-konflikt löst, guards + CI
-> gröna — detaljer i current-focus).
-> Ev. cloud-agenter i flykt: lager 3 (ADR 0042), model-tuning (ska
-> RENUMRERAS till 0046), generativ omskrivning (0047), compound-prompt-
-> ärlighet (ingen ADR). B192 öppen (answer-only rött i dialog-vägen,
-> deferrad bakom #269).
+> **Kväll ~19:20 — två cloud-PR:ar GRANSKADE + MERGADE (`df25e34`):**
+> #282 compound-prompt-ärlighet (B155-uppföljning, ingen ADR — ägarlösa/
+> omaterialiserade KÖR-7-subtasks rapporteras via befintliga
+> `unappliedFollowupIntents`; ren observer `openclaw/unapplied.py`) och
+> #283 ADR 0047 generativ sektionsomskrivning (omskrivnings-instruktion utan
+> värde → copyDirectiveModel editPlan på vitlistade sektionsfält, enbart via
+> ADR 0043:s `sectionContentOverrides`, samma guards, mock-paritet). Båda
+> rörde `apply.py` i disjunkta regioner → mergade i följd utan konflikt,
+> sanity-guard på sammanslagna trädet grön. `main = jakob-be` tom diff.
+> PR-brancher städade.
+>
+> **Öppet/pågående:** #269 (numera enbart inspector-lanen, väntar
+> Christophers rebase — HANS action), #156 (parkerad, säkerhet).
+> Ev. cloud-agenter i flykt: lager 3 (ADR 0042), model-tuning (0046).
+> B192 öppen (answer-only rött i dialog-vägen, deferrad bakom #269).
 >
 > **Operatörens kvarvarande manuella:** dev-server-omstart; live-test av
 > sektionstext-ändring + SOUL-chatt med riktig nyckel; Tier 2-mätning
