@@ -179,7 +179,7 @@ def test_skill_for_edit_kind_maps_role_skill(
 def test_skill_for_edit_kind_agrees_with_role_contracts():
     """For every editing role, skill_for_edit_kind(directive) equals the role's
     own contract skill (no drift between the helper and the contracts)."""
-    for role, contract in ROLE_CONTRACTS.items():
+    for _role, contract in ROLE_CONTRACTS.items():
         for directive in contract.producesDirectives:
             assert skill_for_edit_kind(directive) == contract.skill
 

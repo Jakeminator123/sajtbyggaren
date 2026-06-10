@@ -288,7 +288,6 @@ def test_answer_only_kinds_stay_in_lockstep_with_conductor():
     from packages.generation.orchestration.openclaw import (
         ANSWER_ONLY_CONVERSATION_KINDS,
     )
-
     from scripts.run_openclaw_followup import _ANSWER_ONLY_CONVERSATION_KINDS
 
     assert tuple(_ANSWER_ONLY_CONVERSATION_KINDS) == tuple(
