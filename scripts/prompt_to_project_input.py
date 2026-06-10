@@ -2935,6 +2935,9 @@ _UNAPPLIED_CAPABILITY_REASON = (
     "Förmågan '{capability}' känns igen men byggsteget renderar den inte ännu."
 )
 _UNAPPLIED_HERO_TARGET = "hero"
+# B155: target label for an ambiguous unquoted literal-replace no-op (the reason
+# string itself lives in copy_directives._UNQUOTED_AMBIGUOUS_REASON).
+_UNAPPLIED_AMBIGUOUS_REPLACE_TARGET = "copy-replace"
 _UNAPPLIED_HERO_REASON = (
     "Hjältesektionens rubrik kan inte skrivas om via följdprompt ännu – just "
     "nu går det bara att ändra namn, tagline, om-oss-text eller tjänstetext."
@@ -3090,6 +3093,28 @@ def compute_unapplied_followup_intents(
         posts.append(
             {"target": _UNAPPLIED_HERO_TARGET, "reason": _UNAPPLIED_HERO_REASON}
         )
+
+    # Rule 3 (B155): an UNQUOTED "ändra <OLD> till <NEW>" whose OLD matches more
+    # than one editable copy field is an honest AMBIGUOUS no-op - we refuse to
+    # guess which field the operator meant. Surfaced here so build-result.json
+    # is honest instead of letting an unrelated rebuild diff imply success. Only
+    # the ambiguous status emits a post (a plain miss keeps the existing
+    # intent_no_semantic_change / visible_files_unchanged honesty path, so a
+    # theme/tone request whose OLD never matches >=2 copy fields is unaffected).
+    # Matched against the PREVIOUS copy fields (the state OLD was written for).
+    if _UNAPPLIED_AMBIGUOUS_REPLACE_TARGET not in seen_targets:
+        replace_status = _copy_directives.unquoted_literal_replace_status(
+            follow_up_prompt, previous
+        )
+        if replace_status.get("status") == "ambiguous" and replace_status.get(
+            "reason"
+        ):
+            posts.append(
+                {
+                    "target": _UNAPPLIED_AMBIGUOUS_REPLACE_TARGET,
+                    "reason": str(replace_status["reason"]),
+                }
+            )
 
     return posts
 

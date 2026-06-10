@@ -357,6 +357,15 @@ integrate christopher-ui discovery and asset workflow`, merge
   inte instruktioner ("change the hero to be more premium") som publik tagline.
   Kvarstår (håller B155 öppen): nivå 2 bredare targets, ärligare nivå-1-svar och
   väg B/C-presentation. Test: `tests/test_followup_copy_directives.py`.
+  Slice 2026-06-10 (okvoterad literal replace): en okvoterad "ändra X till Y"
+  matchar nu gammeltexten som exakt delsträng mot sparade copy-fält
+  (`company.tagline`, `company.story`, `services[].summary`) och gör ett
+  ordagrant byte vid exakt en träff; ingen träff = ärlig no-op; gammeltext i
+  ≥2 fält = ärlig tvetydig no-op med reason i `unappliedFollowupIntents`. Citerade vägen oförändrad; ingen
+  schema-/LLM-roll-ändring. Håller B155 öppen tills resten av targets är täckta —
+  kvarvarande: byte av tjänst-namn/label (schemat har bara `services[].summary`),
+  bredare/multi-target replace och väg B/C. Test: `tests/test_followup_copy_directives.py`
+  (okvoterade fall + ärlig no-op + tvetydig reason + end-to-end).
 
 - **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
   renderar företagets logo via Next.js `Image` utan ett komplett aspekt-
