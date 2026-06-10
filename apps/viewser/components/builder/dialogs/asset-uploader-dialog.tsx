@@ -1,13 +1,21 @@
 "use client";
 
-import { Crown, ImageIcon, ImagePlus, Loader2, Mountain } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import {
+  Crown,
+  ImageIcon,
+  ImagePlus,
+  Loader2,
+  Mountain,
+  MousePointerClick,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   useFollowupBuild,
   type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
+import { usePreviewInspector } from "@/components/preview-inspector-context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,7 +41,11 @@ import { cn } from "@/lib/utils";
  *   2. Vi POST:ar till `/api/upload-asset` med rollen och siteId
  *      → backenden lagrar den under aktuell sajt.
  *   3. Operatören får valfritt beskriva placering ("ska ligga på
- *      tjänster-sidan", "byt ut huvudbilden").
+ *      tjänster-sidan", "byt ut huvudbilden") — ELLER dra bilden till
+ *      en plats i förhandsvisningen ("Dra till plats i previewn"):
+ *      en thumbnail-ghost följer pekaren över previewn, "Placera här"
+ *      bekräftar och bygget startar direkt med platskontexten
+ *      ("efter Omdömen", högt upp/långt ner) i instruktionen.
  *   4. Vi skickar en följdprompt som refererar till asset:en så
  *      build-pipelinen vet att den ska användas och var.
  */
@@ -180,44 +192,128 @@ export function AssetUploaderDialog({
     }
   }, [file, isUploading, role, siteId]);
 
-  const handleApply = useCallback(async () => {
-    if (!uploadedRef) return;
-    const roleSentence = (() => {
-      switch (uploadedRef.role) {
-        case "logo":
-          return "Använd den uppladdade bilden som ny logotyp i header och footer.";
-        case "hero":
-          return "Använd den uppladdade bilden som ny huvudbild (hero) på startsidan.";
-        case "gallery":
-        default:
-          return "Lägg in den uppladdade bilden i sajtens bildbank.";
+  const applyAsset = useCallback(
+    async (placementHint?: string) => {
+      if (!uploadedRef) return;
+      const roleSentence = (() => {
+        switch (uploadedRef.role) {
+          case "logo":
+            return "Använd den uppladdade bilden som ny logotyp i header och footer.";
+          case "hero":
+            return "Använd den uppladdade bilden som ny huvudbild (hero) på startsidan.";
+          case "gallery":
+          default:
+            return "Lägg in den uppladdade bilden i sajtens bildbank.";
+        }
+      })();
+      // Drag-flödets platskontext slås ihop med operatörens egna
+      // önskemål — båda är fritext som LLM-steget förstår.
+      const trimmedHint = [hint.trim(), placementHint?.trim()]
+        .filter(Boolean)
+        .join(" ");
+      const promptParts = [
+        roleSentence,
+        `Referens: assetId=${uploadedRef.assetId}, filename=${uploadedRef.filename}, alt="${uploadedRef.alt ?? ""}".`,
+        trimmedHint ? `Önskemål: ${trimmedHint}` : null,
+      ].filter(Boolean);
+      // Strukturerad intent (specialist-dispatch steg 2): roll + assetId
+      // är exakta — backend slipper regex:a fram referensraden ur prompten.
+      // hint-fritexten följer med strukturerat; den kan kräva copy-
+      // specialisten och är det enda LLM-värdiga i detta verktyg.
+      const toolIntent: FollowupToolIntent = {
+        tool: "asset_set",
+        params: {
+          role: uploadedRef.role,
+          assetId: uploadedRef.assetId,
+          filename: uploadedRef.filename,
+          ...(uploadedRef.alt ? { alt: uploadedRef.alt } : {}),
+          ...(trimmedHint ? { hint: trimmedHint } : {}),
+        },
+      };
+      const result = await runFollowup(promptParts.join("\n"), { toolIntent });
+      if (result.ok) {
+        handleClose(false);
       }
-    })();
-    const promptParts = [
-      roleSentence,
-      `Referens: assetId=${uploadedRef.assetId}, filename=${uploadedRef.filename}, alt="${uploadedRef.alt ?? ""}".`,
-      hint.trim() ? `Önskemål: ${hint.trim()}` : null,
-    ].filter(Boolean);
-    // Strukturerad intent (specialist-dispatch steg 2): roll + assetId
-    // är exakta — backend slipper regex:a fram referensraden ur prompten.
-    // hint-fritexten följer med strukturerat; den kan kräva copy-
-    // specialisten och är det enda LLM-värdiga i detta verktyg.
-    const trimmedHint = hint.trim();
-    const toolIntent: FollowupToolIntent = {
-      tool: "asset_set",
-      params: {
-        role: uploadedRef.role,
-        assetId: uploadedRef.assetId,
-        filename: uploadedRef.filename,
-        ...(uploadedRef.alt ? { alt: uploadedRef.alt } : {}),
-        ...(trimmedHint ? { hint: trimmedHint } : {}),
-      },
-    };
-    const result = await runFollowup(promptParts.join("\n"), { toolIntent });
-    if (result.ok) {
-      handleClose(false);
+    },
+    [uploadedRef, hint, runFollowup, handleClose],
+  );
+
+  const handleApply = useCallback(() => {
+    void applyAsset();
+  }, [applyAsset]);
+
+  // Dra-till-plats: ghost-thumbnail av bilden följer pekaren över
+  // previewn (PreviewInspectorOverlay). Logotypen har fast placering
+  // (header/footer) så drag-knappen visas bara för hero/galleri.
+  const {
+    previewUrl,
+    requestPlacementPick,
+    lastPlacementPick,
+    clearPlacementPick,
+    placementRequester,
+  } = usePreviewInspector();
+  // Object-URL för ghost-thumbnailen — frigörs efter picken (eller när
+  // dialogen stängs helt) så vi inte läcker blob-minne.
+  const dragThumbUrlRef = useRef<string | null>(null);
+  const releaseDragThumb = useCallback(() => {
+    if (dragThumbUrlRef.current) {
+      URL.revokeObjectURL(dragThumbUrlRef.current);
+      dragThumbUrlRef.current = null;
     }
-  }, [uploadedRef, hint, runFollowup, handleClose]);
+  }, []);
+  useEffect(() => releaseDragThumb, [releaseDragThumb]);
+
+  const handleDragToPreview = useCallback(() => {
+    if (!uploadedRef) return;
+    releaseDragThumb();
+    let thumbnailUrl = uploadedRef.sourceUrl;
+    if (!thumbnailUrl && file) {
+      thumbnailUrl = URL.createObjectURL(file);
+      dragThumbUrlRef.current = thumbnailUrl;
+    }
+    requestPlacementPick({
+      payload: {
+        kind: "image",
+        label: uploadedRef.filename,
+        ...(thumbnailUrl ? { thumbnailUrl } : {}),
+      },
+      requester: "asset",
+    });
+    // OBS: onOpenChange direkt (inte handleClose) — uppladdningen och
+    // hint-texten ska överleva medan dialogen är stängd under draget.
+    onOpenChange(false);
+  }, [uploadedRef, file, releaseDragThumb, requestPlacementPick, onOpenChange]);
+
+  // Konsumera platsvalet ÄVEN när dialogen är stängd: "Placera här" är
+  // operatörens bekräftelse → bygg direkt med platskontexten i
+  // instruktionen. Dialogen återöppnas inte längre efter bekräftat
+  // släpp (operatörskrav 2026-06-10 — BuilderShell visar 0–100-bannern
+  // i stället); komponenten är fortfarande monterad och bygger
+  // härifrån. Requester-gaten hindrar oss från att äta modul-dialogens
+  // pick. Avbruten pick (Esc) sätter aldrig lastPlacementPick.
+  useEffect(() => {
+    if (!lastPlacementPick || placementRequester !== "asset") return;
+    const timerId = window.setTimeout(() => {
+      const { point, coarsePosition, sizePercent } = lastPlacementPick;
+      clearPlacementPick();
+      releaseDragThumb();
+      // Plats + vald storlek från drag-mockupen — fritext som LLM-steget
+      // förstår: var (sektion + högt/långt ner), vilken sida (startsidan)
+      // och hur stor bilden ska vara (% av sidbredden).
+      const placementHint =
+        `Placera bilden ${point.label.toLowerCase()} på startsidan ` +
+        `(${coarsePosition === "top" ? "högt upp" : "långt ner"}). ` +
+        `Bilden ska vara ungefär ${sizePercent} % av sidbredden.`;
+      void applyAsset(placementHint);
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [
+    lastPlacementPick,
+    placementRequester,
+    clearPlacementPick,
+    releaseDragThumb,
+    applyAsset,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -354,6 +450,26 @@ export function AssetUploaderDialog({
                 disabled={isBusy}
                 className="min-h-[60px] resize-none text-base sm:text-[12.5px]"
               />
+              {/* Dra-till-plats: bara för roller där platsen är fri
+                  (logotypen sitter alltid i header/footer) och bara när
+                  en server-nåbar preview-URL finns (StackBlitz saknar). */}
+              {previewUrl && uploadedRef.role !== "logo" ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDragToPreview}
+                    disabled={isBusy || isUploading}
+                    className="border-border/60 hover:border-border text-foreground inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] transition disabled:opacity-50"
+                  >
+                    <MousePointerClick className="h-3.5 w-3.5" aria-hidden />
+                    Dra till plats i previewn
+                  </button>
+                  <span className="text-muted-foreground/70 text-[10.5px]">
+                    Bilden följer pekaren — bekräfta med ”Placera här” så
+                    byggs den in direkt.
+                  </span>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

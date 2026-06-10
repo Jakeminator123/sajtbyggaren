@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, X } from "lucide-react";
+import { Loader2, Move, X } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -8,8 +8,10 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { ModuleMockup } from "@/components/builder/module-mockups";
 import { usePreviewInspector } from "@/components/preview-inspector-context";
 import {
   extractSectionZones,
@@ -28,10 +30,14 @@ import { cn } from "@/lib/utils";
  * direkt):
  *
  *   - Placeringsläge (placementPickActive via context): sektionszoner
- *     ritas som kontur + etikett, en insättningslinje följer musen och
- *     klick väljer platsen. Ärlighet: backendens section_add-router kan
- *     idag bara "överst"/"längst ner", så valet visar BÅDE närmaste
- *     insättningspunkt OCH vilken grovposition den faktiskt mappar till.
+ *     ritas som kontur + etikett, en insättningslinje följer musen.
+ *     Bär picken en drag-payload (modulkort/bild-thumbnail) följer även
+ *     en ghost-bricka pekaren. Klick SLÄPPER vid närmaste insättnings-
+ *     punkt och operatören bekräftar med "Placera här" (eller flyttar
+ *     genom att klicka någon annanstans / Esc för att ångra släppet).
+ *     Ärlighet: backendens section_add-router kan idag bara "överst"/
+ *     "längst ner", så valet visar BÅDE närmaste insättningspunkt OCH
+ *     vilken grovposition den faktiskt mappar till.
  *   - Inspektionsläge (inspectModeActive via context, startas från
  *     Verktyg-menyn i FloatingChat): hovring markerar minsta elementet
  *     under musen; klick visar ett info-kort (tag, text, närmaste
@@ -62,6 +68,38 @@ const COARSE_LABELS: Record<"top" | "bottom", string> = {
   bottom: "hamnar längst ner",
 };
 
+/** Storleksgränser för den dockade mockupen (% av sidbredden). */
+const DROP_SIZE_MIN = 20;
+const DROP_SIZE_MAX = 96;
+/** Startstorlek per payload-typ — moduler är sektioner, bilder mindre. */
+const DROP_SIZE_DEFAULTS: Record<"module" | "image", number> = {
+  module: 60,
+  image: 36,
+};
+
+function clampDropSize(percent: number): number {
+  return Math.min(DROP_SIZE_MAX, Math.max(DROP_SIZE_MIN, percent));
+}
+
+/**
+ * Resize-handtag runt den dockade mockupen — samma åtta-punkts-layout
+ * som fönster-resizen i FloatingChat (operatörskrav 2026-06-10: "som
+ * floating chat-fönstret"). Kanterna är smala band strax utanför boxen,
+ * hörnen större träffytor med diagonal-cursor.
+ */
+type DropResizeEdge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+const DROP_RESIZE_HANDLES: ReadonlyArray<[DropResizeEdge, string]> = [
+  ["n", "-top-1.5 right-4 left-4 h-3 cursor-ns-resize"],
+  ["s", "right-4 -bottom-1.5 left-4 h-3 cursor-ns-resize"],
+  ["e", "top-4 -right-1.5 bottom-4 w-3 cursor-ew-resize"],
+  ["w", "top-4 bottom-4 -left-1.5 w-3 cursor-ew-resize"],
+  ["ne", "-top-2 -right-2 h-5 w-5 cursor-nesw-resize"],
+  ["nw", "-top-2 -left-2 h-5 w-5 cursor-nwse-resize"],
+  ["se", "-right-2 -bottom-2 h-5 w-5 cursor-nwse-resize"],
+  ["sw", "-bottom-2 -left-2 h-5 w-5 cursor-nesw-resize"],
+];
+
 type InspectedElement = {
   item: ElementMapItem;
   nearestHeading: string | null;
@@ -80,6 +118,7 @@ export function PreviewInspectorOverlay({
     placementPickActive,
     cancelPlacementPick,
     completePlacementPick,
+    placementDragPayload,
     inspectModeActive,
     setInspectModeActive,
   } = usePreviewInspector();
@@ -96,6 +135,35 @@ export function PreviewInspectorOverlay({
   );
   const [hoveredInsertion, setHoveredInsertion] =
     useState<InsertionPoint | null>(null);
+  // Släppt-men-obekräftad insättningspunkt i drag-läget: klick släpper
+  // brickan här, "Placera här" bekräftar, nytt klick flyttar, Esc ångrar.
+  const [pendingDrop, setPendingDrop] = useState<InsertionPoint | null>(null);
+  // Vald storlek (% av sidbredden) för den dockade mockupen — justeras
+  // med resize-handtagen på boxens kanter/hörn och följer med i picken
+  // så prompten kan beskriva hur stor sektionen/bilden ska vara.
+  const [dropSizePercent, setDropSizePercent] = useState(
+    DROP_SIZE_DEFAULTS.module,
+  );
+  // Pågående kant-/hörn-drag på den dockade boxen: edge + startposition
+  // + startbredd.
+  const dropResizeRef = useRef<{
+    edge: DropResizeEdge;
+    pointerX: number;
+    pointerY: number;
+    originPercent: number;
+  } | null>(null);
+  const [isDropResizing, setIsDropResizing] = useState(false);
+  // Pågående direkt-drag av den dockade boxen (grab-och-flytta).
+  const dropDragRef = useRef<{ pointerId: number } | null>(null);
+  const [isDropDragging, setIsDropDragging] = useState(false);
+  // Ghost-brickan följer pekaren via DIREKTA style-skrivningar på den här
+  // ref:en — inte via state. Ett setState per mousemove re-renderade hela
+  // overlayn (zoner + mockup-SVG) och kändes laggigt (operatörsfynd
+  // 2026-06-10); style.left/top på en befintlig nod är en ren composite.
+  const ghostRef = useRef<HTMLDivElement | null>(null);
+  // Senast satta insättningspunkt — så hover bara gör setState när
+  // NÄRMASTE punkt faktiskt byts (linjen flyttar sig), inte per pixel.
+  const lastInsertionRef = useRef<InsertionPoint | null>(null);
   const [inspected, setInspected] = useState<InspectedElement | null>(null);
   const [copied, setCopied] = useState(false);
   const fetchTokenRef = useRef(0);
@@ -194,21 +262,45 @@ export function PreviewInspectorOverlay({
     const timerId = window.setTimeout(() => {
       setHoveredElement(null);
       setHoveredInsertion(null);
+      setPendingDrop(null);
       setInspected(null);
       setCopied(false);
       setMapState("idle");
       setMapError(null);
       setElementMap([]);
+      dropResizeRef.current = null;
+      setIsDropResizing(false);
+      dropDragRef.current = null;
+      setIsDropDragging(false);
+      lastInsertionRef.current = null;
     }, 0);
     return () => window.clearTimeout(timerId);
   }, [overlayActive]);
 
-  // Esc avbryter placeringsläget (och stänger inspektionsläget).
+  // Startstorlek per payload-typ när ett nytt placeringsläge öppnas
+  // (moduler dockas som halvbreda sektioner, bilder mindre).
+  useEffect(() => {
+    if (!placementPickActive) return;
+    const kind = placementDragPayload?.kind ?? "module";
+    const timerId = window.setTimeout(() => {
+      setDropSizePercent(DROP_SIZE_DEFAULTS[kind]);
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [placementPickActive, placementDragPayload]);
+
+  // Esc: ångra ett obekräftat släpp först; annars avbryt placerings-
+  // läget (och stäng inspektionsläget).
   useEffect(() => {
     if (!overlayActive) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (placementPickActive) cancelPlacementPick();
+      if (placementPickActive) {
+        if (pendingDrop) {
+          setPendingDrop(null);
+          return;
+        }
+        cancelPlacementPick();
+      }
       setInspectModeActive(false);
     };
     window.addEventListener("keydown", onKeyDown);
@@ -216,6 +308,7 @@ export function PreviewInspectorOverlay({
   }, [
     overlayActive,
     placementPickActive,
+    pendingDrop,
     cancelPlacementPick,
     setInspectModeActive,
   ]);
@@ -249,13 +342,41 @@ export function PreviewInspectorOverlay({
     [],
   );
 
+  // Sätt insättnings-state BARA när närmaste punkt faktiskt byts —
+  // nearestInsertionPoint returnerar nytt objekt per anrop, så en naiv
+  // setState per mousemove re-renderade hela overlayn i onödan.
+  const applyHoveredInsertion = useCallback((next: InsertionPoint) => {
+    const prev = lastInsertionRef.current;
+    if (
+      prev &&
+      prev.placement === next.placement &&
+      prev.lineYPercent === next.lineYPercent
+    ) {
+      return;
+    }
+    lastInsertionRef.current = next;
+    setHoveredInsertion(next);
+  }, []);
+
   const handleMouseMove = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       const point = relativePercent(event);
       if (!point) return;
 
       if (placementPickActive) {
-        setHoveredInsertion(nearestInsertionPoint(point.y, sectionZones));
+        // Ghost-brickan flyttas via direkta style-skrivningar (ingen
+        // re-render per pixel — det var lagg-källan).
+        const ghost = ghostRef.current;
+        if (ghost) {
+          ghost.style.left = `${point.x}%`;
+          ghost.style.top = `${point.y}%`;
+          ghost.style.visibility = "visible";
+        }
+        // Efter ett släpp ligger linjen kvar tills operatören bekräftar
+        // eller drar/klickar till en ny plats — hovring flyttar den inte.
+        if (!pendingDrop) {
+          applyHoveredInsertion(nearestInsertionPoint(point.y, sectionZones));
+        }
         return;
       }
 
@@ -285,9 +406,11 @@ export function PreviewInspectorOverlay({
     [
       relativePercent,
       placementPickActive,
+      pendingDrop,
       inspectMode,
       elementMap,
       sectionZones,
+      applyHoveredInsertion,
     ],
   );
 
@@ -313,12 +436,12 @@ export function PreviewInspectorOverlay({
       if (!point) return;
 
       if (placementPickActive) {
+        // Klick = SLÄPP vid närmaste insättningspunkt. Bekräftelsen sker
+        // via "Placera här"-knappen (eller flytt genom nytt klick) så
+        // operatören aldrig binder sig vid ett feltryck.
         const insertion = nearestInsertionPoint(point.y, sectionZones);
-        completePlacementPick({
-          point: insertion,
-          coarsePosition: coarsePositionFor(insertion),
-          pickedAt: Date.now(),
-        });
+        setPendingDrop(insertion);
+        setHoveredInsertion(insertion);
         return;
       }
 
@@ -334,11 +457,138 @@ export function PreviewInspectorOverlay({
       relativePercent,
       placementPickActive,
       sectionZones,
-      completePlacementPick,
       inspectMode,
       hoveredElement,
       nearestHeadingFor,
     ],
+  );
+
+  const handleConfirmDrop = useCallback(() => {
+    if (!pendingDrop) return;
+    completePlacementPick({
+      point: pendingDrop,
+      coarsePosition: coarsePositionFor(pendingDrop),
+      sizePercent: Math.round(clampDropSize(dropSizePercent)),
+      pickedAt: Date.now(),
+    });
+  }, [pendingDrop, dropSizePercent, completePlacementPick]);
+
+  // Kant-/hörn-drag på den dockade mockupen: boxen är centrerad så
+  // draget är symmetriskt (faktor 2 på delta). Pointern fångas på
+  // handtaget och stopPropagation hindrar overlayns klick-handler från
+  // att tolka släppet som "flytta droppen". Hörnen kombinerar x- och
+  // y-deltat (utåt = större åt båda hållen) så det känns som fönster-resizen
+  // i FloatingChat oavsett vilket hörn operatören tar tag i.
+  const handleDropResizePointerDown = useCallback(
+    (edge: DropResizeEdge) => (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dropResizeRef.current = {
+        edge,
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        originPercent: dropSizePercent,
+      };
+      setIsDropResizing(true);
+    },
+    [dropSizePercent],
+  );
+
+  const handleDropResizePointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const start = dropResizeRef.current;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!start || !rect || rect.width <= 0) return;
+      const dx = event.clientX - start.pointerX;
+      const dy = event.clientY - start.pointerY;
+      // Teckenjustera per sida: drag UTÅT från boxen = växa. Rena
+      // vertikalhandtag (n/s) skalar också bredden — boxen har EN
+      // storleksdimension (% av sidbredden) så alla handtag styr samma
+      // värde, precis som operatören förväntar sig av "höj/sänk i hörnet".
+      const horizontal = start.edge.includes("e")
+        ? dx
+        : start.edge.includes("w")
+          ? -dx
+          : 0;
+      const vertical = start.edge.includes("s")
+        ? dy
+        : start.edge.includes("n")
+          ? -dy
+          : 0;
+      const deltaPercent = ((horizontal + vertical) / rect.width) * 200;
+      setDropSizePercent(clampDropSize(start.originPercent + deltaPercent));
+    },
+    [],
+  );
+
+  const handleDropResizePointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!dropResizeRef.current) return;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Capture kan redan vara släppt — inget att göra.
+      }
+      dropResizeRef.current = null;
+      setIsDropResizing(false);
+    },
+    [],
+  );
+
+  // Direkt-drag av den dockade boxen: ta tag var som helst i mockupen
+  // och dra — boxen snäpper till närmaste insättningspunkt medan du
+  // drar och ligger kvar där du släpper. Ersätter inte "Flytta"-knappen
+  // (som plockar upp brickan till pekar-ghosten) utan är den snabba
+  // vägen (operatörskrav 2026-06-10: "lättare kunna dra runt den").
+  const handleDropBoxPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dropDragRef.current = { pointerId: event.pointerId };
+      setIsDropDragging(true);
+    },
+    [],
+  );
+
+  const handleDropBoxPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!dropDragRef.current) return;
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect || rect.height <= 0) return;
+      const y =
+        (Math.min(Math.max(event.clientY - rect.top, 0), rect.height) /
+          rect.height) *
+        100;
+      const next = nearestInsertionPoint(y, sectionZones);
+      // Behåll referensen när närmaste punkt är oförändrad — annars
+      // re-renderas overlayn per pixel (samma lagg-klass som ghosten).
+      setPendingDrop((prev) =>
+        prev &&
+        prev.placement === next.placement &&
+        prev.lineYPercent === next.lineYPercent
+          ? prev
+          : next,
+      );
+    },
+    [sectionZones],
+  );
+
+  const handleDropBoxPointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!dropDragRef.current) return;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Capture kan redan vara släppt — inget att göra.
+      }
+      dropDragRef.current = null;
+      setIsDropDragging(false);
+    },
+    [],
   );
 
   const handleCopyDescription = useCallback(async () => {
@@ -370,7 +620,14 @@ export function PreviewInspectorOverlay({
           onClick={handleClick}
           onMouseLeave={() => {
             setHoveredElement(null);
-            setHoveredInsertion(null);
+            if (ghostRef.current) {
+              ghostRef.current.style.visibility = "hidden";
+            }
+            // Ett släpp ligger kvar även om pekaren lämnar ytan.
+            if (!pendingDrop) {
+              lastInsertionRef.current = null;
+              setHoveredInsertion(null);
+            }
           }}
           className={cn(
             "absolute inset-0 z-[7]",
@@ -383,33 +640,43 @@ export function PreviewInspectorOverlay({
               : "Inspektera förhandsvisningen"
           }
         >
-          {/* Statusrad högst upp. */}
-          <div className="pointer-events-none absolute inset-x-0 top-3 z-[9] flex justify-center px-12">
-            <div className="border-border/60 bg-background/90 text-foreground flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] shadow-sm backdrop-blur">
-              {mapState === "loading" ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                  Kartlägger förhandsvisningen…
-                </>
-              ) : mapState === "failed" ? (
-                <span className="text-amber-700 dark:text-amber-300">
-                  {mapError}
-                </span>
-              ) : placementPickActive ? (
-                <>
-                  Klicka där modulen ska placeras
-                  <span className="text-muted-foreground">· Esc avbryter</span>
-                </>
-              ) : (
-                <>
-                  Hovra och klicka för att identifiera element
-                  <span className="text-muted-foreground">
-                    · gäller sajtens topp-vy
+          {/* Statusrad högst upp. Döljs medan ett släpp väntar på
+              bekräftelse — knappraden vid linjen (Placera här / flytta /
+              avbryt) är självförklarande, och när släppet snäpper högt
+              upp skulle pillen annars täcka knapparna (operatörsfynd
+              2026-06-10). */}
+          {pendingDrop ? null : (
+            <div className="pointer-events-none absolute inset-x-0 top-3 z-[9] flex justify-center px-12">
+              <div className="border-border/60 bg-background/90 text-foreground flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] shadow-sm backdrop-blur">
+                {mapState === "loading" ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    Kartlägger förhandsvisningen…
+                  </>
+                ) : mapState === "failed" ? (
+                  <span className="text-amber-700 dark:text-amber-300">
+                    {mapError}
                   </span>
-                </>
-              )}
+                ) : placementPickActive ? (
+                  <>
+                    {placementDragPayload
+                      ? `Dra ${placementDragPayload.label} till önskad plats och klicka`
+                      : "Klicka där modulen ska placeras"}
+                    <span className="text-muted-foreground">
+                      · Esc avbryter
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    Hovra och klicka för att identifiera element
+                    <span className="text-muted-foreground">
+                      · gäller sajtens topp-vy
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Stäng-knapp — avbryter platsvalet resp. stänger inspektionen.
               Syns BARA medan ett läge är aktivt (ren canvas annars). */}
@@ -449,25 +716,261 @@ export function PreviewInspectorOverlay({
               ))
             : null}
 
-          {/* Insättningslinje + ärlig grovpositions-chip. */}
-          {placementPickActive && hoveredInsertion ? (
+          {/* Insättningslinje + ärlig grovpositions-chip. Efter ett släpp
+              låses linjen vid släpp-punkten och bekräftelseknapparna tar
+              chipens plats. translate-y lyfter knappraden ovanför linjen
+              nära botten så den aldrig klipps. */}
+          {placementPickActive && (pendingDrop ?? hoveredInsertion) ? (
+            (() => {
+              const line = pendingDrop ?? hoveredInsertion!;
+              const yPercent = Math.min(
+                Math.max(line.lineYPercent, 0.5),
+                99.5,
+              );
+              const flipChip = yPercent > 88;
+              return (
+                <div
+                  className="pointer-events-none absolute inset-x-0 z-[8]"
+                  style={{ top: `${yPercent}%` }}
+                >
+                  <div
+                    className={cn(
+                      "h-[2px] w-full shadow-[0_0_0_1px_rgba(255,255,255,0.6)]",
+                      pendingDrop ? "bg-emerald-500" : "bg-foreground",
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "absolute left-1/2 -translate-x-1/2",
+                      flipChip ? "bottom-1.5" : "top-1.5",
+                    )}
+                  >
+                    {pendingDrop ? (
+                      <div className="pointer-events-auto flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleConfirmDrop();
+                          }}
+                          className="bg-foreground text-background rounded-full px-3 py-1.5 text-[11.5px] font-medium whitespace-nowrap shadow transition hover:opacity-90 active:scale-95"
+                        >
+                          Placera här
+                          <span className="opacity-75">
+                            {" "}
+                            · {COARSE_LABELS[coarsePositionFor(pendingDrop)]}
+                          </span>
+                        </button>
+                        {/* Flytta: ta upp modulen igen så den följer
+                            pekaren (operatörskrav 2026-06-10) — samma
+                            effekt som att klicka en ny plats, men som
+                            explicit knapp. */}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setPendingDrop(null);
+                          }}
+                          aria-label="Flytta — ta upp och välj ny plats"
+                          title="Flytta — ta upp och välj ny plats"
+                          className="border-border/60 bg-background/95 text-muted-foreground hover:text-foreground inline-flex h-7 w-7 items-center justify-center rounded-full border shadow backdrop-blur transition active:scale-95"
+                        >
+                          <Move className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                        {/* X: avbryt HELA placeringen (dialogen öppnas
+                            igen utan val) — tidigare ångrade X:et bara
+                            släppet, vilket var otydligt när flytta-
+                            knappen tillkom. */}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            cancelPlacementPick();
+                          }}
+                          aria-label="Avbryt placeringen"
+                          title="Avbryt placeringen"
+                          className="border-border/60 bg-background/95 text-muted-foreground hover:text-foreground inline-flex h-7 w-7 items-center justify-center rounded-full border shadow backdrop-blur transition active:scale-95"
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="bg-foreground text-background rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap shadow">
+                        {line.label}
+                        <span className="opacity-75">
+                          {" "}
+                          → {COARSE_LABELS[coarsePositionFor(line)]}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
+          ) : null}
+
+          {/* Ghost som följer pekaren i drag-läget (payload från dialogen):
+              moduler visas som wireframe-mockup av sektionen (operatörs-
+              krav 2026-06-10 — kunden ska se ungefär hur det kommer se
+              ut, inte bara en etikett), bilder som thumbnail. Efter
+              släpp dockar mockupen i full bredd vid linjen nedan.
+
+              Positionen styrs via DIREKTA style-skrivningar i
+              handleMouseMove (ghostRef) — inte state — så brickan följer
+              pekaren utan en re-render per pixel. Osynlig tills första
+              mousemove ger en position. */}
+          {placementPickActive && placementDragPayload && !pendingDrop ? (
             <div
-              className="pointer-events-none absolute inset-x-0 z-[8]"
-              style={{
-                top: `${Math.min(Math.max(hoveredInsertion.lineYPercent, 0.5), 99.5)}%`,
-              }}
+              ref={ghostRef}
+              className="pointer-events-none absolute z-[9] -translate-x-1/2 -translate-y-[110%] will-change-[left,top]"
+              style={{ visibility: "hidden" }}
             >
-              <div className="bg-foreground h-[2px] w-full shadow-[0_0_0_1px_rgba(255,255,255,0.6)]" />
-              <div className="absolute top-1.5 left-1/2 -translate-x-1/2">
-                <span className="bg-foreground text-background rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap shadow">
-                  {hoveredInsertion.label}
-                  <span className="opacity-75">
-                    {" "}
-                    → {COARSE_LABELS[coarsePositionFor(hoveredInsertion)]}
-                  </span>
-                </span>
-              </div>
+              {placementDragPayload.kind === "image" &&
+              placementDragPayload.thumbnailUrl ? (
+                // Ren förhandsvisnings-ghost — inte sajtinnehåll, så
+                // next/image:s optimering är inte relevant här.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={placementDragPayload.thumbnailUrl}
+                  alt={placementDragPayload.label}
+                  className="border-border/60 max-h-24 w-28 rounded-lg border object-cover opacity-90 shadow-lg"
+                />
+              ) : (
+                <div className="w-56 opacity-95">
+                  <ModuleMockup
+                    moduleId={placementDragPayload.moduleId ?? ""}
+                  />
+                  <div className="mt-1 flex justify-center">
+                    <span className="bg-foreground text-background rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap shadow">
+                      {placementDragPayload.label}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
+          ) : null}
+
+          {/* Dockad mockup vid släpp-punkten: visar hur sektionen/bilden
+              ungefär kommer ligga på platsen medan operatören tar
+              ställning till "Placera här". Boxen är storleksjusterbar
+              via åtta handtag (kanter + hörn, samma layout som
+              fönster-resizen i FloatingChat) och kan dras direkt med
+              pekaren till en ny insättningspunkt (operatörskrav
+              2026-06-10). Vald bredd i % följer med picken så prompten
+              kan beskriva storleken. flip:en speglar chip-raden så
+              mockupen aldrig klipps vid sidans botten. */}
+          {placementPickActive && pendingDrop && placementDragPayload ? (
+            (() => {
+              const yPercent = Math.min(
+                Math.max(pendingDrop.lineYPercent, 0.5),
+                99.5,
+              );
+              const flip = yPercent > 70;
+              return (
+                <div
+                  className={cn(
+                    "pointer-events-none absolute left-1/2 z-[8] -translate-x-1/2",
+                    flip ? "-translate-y-full pb-8" : "pt-8",
+                  )}
+                  style={{
+                    top: `${yPercent}%`,
+                    width: `${clampDropSize(dropSizePercent)}%`,
+                  }}
+                >
+                  <div className="relative">
+                    {/* Grab-yta: hela mockupen är dragbar. pointerdown
+                        fångar pekaren och boxen snäpper till närmaste
+                        insättningspunkt medan den dras; handtagen nedan
+                        stopPropagation:ar så resize aldrig startar ett
+                        boxdrag. */}
+                    <div
+                      onPointerDown={handleDropBoxPointerDown}
+                      onPointerMove={handleDropBoxPointerMove}
+                      onPointerUp={handleDropBoxPointerUp}
+                      onPointerCancel={handleDropBoxPointerUp}
+                      onClick={(event) => event.stopPropagation()}
+                      role="presentation"
+                      className={cn(
+                        "pointer-events-auto touch-none select-none",
+                        isDropDragging ? "cursor-grabbing" : "cursor-grab",
+                      )}
+                    >
+                      {placementDragPayload.kind === "image" &&
+                      placementDragPayload.thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={placementDragPayload.thumbnailUrl}
+                          alt={placementDragPayload.label}
+                          className="border-border/60 pointer-events-none w-full rounded-lg border object-cover opacity-95 shadow-xl"
+                          draggable={false}
+                        />
+                      ) : (
+                        <ModuleMockup
+                          moduleId={placementDragPayload.moduleId ?? ""}
+                          className="pointer-events-none w-full opacity-95"
+                        />
+                      )}
+                    </div>
+
+                    {/* Storleks-badge — uppdateras live under resize-draget. */}
+                    <span
+                      className={cn(
+                        "bg-foreground text-background absolute -top-2 right-2 -translate-y-full rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap shadow transition-opacity",
+                        isDropResizing ? "opacity-100" : "opacity-80",
+                      )}
+                    >
+                      ≈ {Math.round(clampDropSize(dropSizePercent))} % av
+                      sidbredden
+                    </span>
+
+                    {/* Åtta resize-handtag (kanter + hörn) — samma mönster
+                        som fönster-resizen i FloatingChat. stopPropagation i
+                        alla handlers så draget aldrig tolkas som "flytta
+                        droppen" av overlayns klick. */}
+                    {DROP_RESIZE_HANDLES.map(([edge, cls]) => (
+                      <div
+                        key={edge}
+                        onPointerDown={handleDropResizePointerDown(edge)}
+                        onPointerMove={handleDropResizePointerMove}
+                        onPointerUp={handleDropResizePointerUp}
+                        onPointerCancel={handleDropResizePointerUp}
+                        onClick={(event) => event.stopPropagation()}
+                        role="presentation"
+                        className={cn(
+                          "pointer-events-auto absolute touch-none",
+                          cls,
+                        )}
+                      />
+                    ))}
+
+                    {/* Synliga grepp-markörer: streck mitt på kanterna +
+                        punkter i hörnen så det syns var boxen kan dras
+                        ut. pointer-events-none — träffytorna ovanför äger
+                        interaktionen. */}
+                    <span className="bg-foreground/70 pointer-events-none absolute top-1/2 -left-1 h-9 w-1 -translate-y-1/2 rounded-full shadow" />
+                    <span className="bg-foreground/70 pointer-events-none absolute top-1/2 -right-1 h-9 w-1 -translate-y-1/2 rounded-full shadow" />
+                    <span className="bg-foreground/70 pointer-events-none absolute -top-1 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full shadow" />
+                    <span className="bg-foreground/70 pointer-events-none absolute -bottom-1 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full shadow" />
+                    {(
+                      [
+                        "-top-1 -left-1",
+                        "-top-1 -right-1",
+                        "-bottom-1 -left-1",
+                        "-bottom-1 -right-1",
+                      ] as const
+                    ).map((pos) => (
+                      <span
+                        key={pos}
+                        className={cn(
+                          "bg-background border-foreground/80 pointer-events-none absolute h-2.5 w-2.5 rounded-full border-2 shadow",
+                          pos,
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })()
           ) : null}
 
           {/* Hover-highlight i inspektionsläget. */}

@@ -124,6 +124,18 @@ export function BuilderShell({
   onOpenConsole,
   onOpenHistory,
 }: BuilderShellProps) {
+  // Preview-inspector-state — destruktureras före handleBuildEnd som
+  // refererar setPlacementBuildActive i sin deps-array.
+  const {
+    placementPickResolvedSignal,
+    placementRequester,
+    lastPlacementPick,
+    previewUrl: inspectorPreviewUrl,
+    inspectModeActive,
+    setInspectModeActive,
+    setPlacementBuildActive,
+  } = usePreviewInspector();
+
   // Wrappar onBuildStart så den även registrerar pending-build-state
   // åt Versions-tab. Föräldern (page.tsx) får en utvidgad signatur som
   // innehåller siteId + ev. prompt-snippet. Befintliga dialoger som
@@ -147,7 +159,9 @@ export function BuilderShell({
   // Wrappar onBuildEnd så vi alltid rensar pending-state samtidigt
   // som föräldern markeras klar. Om bygget misslyckas hamnar vi
   // också här eftersom useFollowupBuild/FloatingChat alltid anropar
-  // onBuildEnd i finally.
+  // onBuildEnd i finally. OBS: placerings-banner-flaggan nollas INTE
+  // här — ViewerPanel äger den (bannern ska leva genom finalize-fasen
+  // tills previewn tagit över, annars studsar UI:t via stegkortet).
   const handleBuildEnd = useCallback(() => {
     onPendingBuildClear();
     onBuildEnd();
@@ -172,27 +186,41 @@ export function BuilderShell({
   );
   const [openDialog, setOpenDialog] = useState<DialogId | null>(null);
 
-  // Peka-i-previewn (platsval): AddModuleDialog stänger sig själv när
-  // operatören väljer "Peka i förhandsvisningen". När picken avslutas
-  // (klick i previewn ELLER Esc/avbryt) bumpar contexten
-  // placementPickResolvedSignal — då öppnar vi modul-dialogen igen så
-  // operatören landar där den var, med (eller utan) vald plats.
+  // Peka-i-previewn (platsval): dialogen stänger sig själv när draget
+  // startar. När picken avslutas bumpar contexten
+  // placementPickResolvedSignal — två utfall (operatörskrav 2026-06-10:
+  // bekräftad placering ska INTE studsa tillbaka till dialogen):
+  //
+  //   - Bekräftad ("Placera här", lastPlacementPick satt): dialogen
+  //     förblir stängd — den är fortfarande monterad och konsumerar
+  //     picken + startar bygget i bakgrunden. Vi visar i stället den
+  //     nordiska 0–100-bannern över previewn tills bygget är klart.
+  //   - Avbruten (Esc/X, lastPlacementPick null): öppna dialogen igen
+  //     så operatören landar där den var.
+  //
   // setState:n deferras via setTimeout för React 19:s
   // react-hooks/set-state-in-effect-regel (samma mönster som
   // DevicePresetProvider-hydreringen).
-  const {
-    placementPickResolvedSignal,
-    previewUrl: inspectorPreviewUrl,
-    inspectModeActive,
-    setInspectModeActive,
-  } = usePreviewInspector();
   const lastPlacementSignalRef = useRef(placementPickResolvedSignal);
   useEffect(() => {
     if (placementPickResolvedSignal === lastPlacementSignalRef.current) return;
     lastPlacementSignalRef.current = placementPickResolvedSignal;
-    const timerId = window.setTimeout(() => setOpenDialog("module"), 0);
+    if (lastPlacementPick) {
+      const timerId = window.setTimeout(
+        () => setPlacementBuildActive(true),
+        0,
+      );
+      return () => window.clearTimeout(timerId);
+    }
+    const dialogId: DialogId = placementRequester === "asset" ? "asset" : "module";
+    const timerId = window.setTimeout(() => setOpenDialog(dialogId), 0);
     return () => window.clearTimeout(timerId);
-  }, [placementPickResolvedSignal]);
+  }, [
+    placementPickResolvedSignal,
+    placementRequester,
+    lastPlacementPick,
+    setPlacementBuildActive,
+  ]);
 
   const openDialogFactory = useCallback(
     (id: DialogId) => () => setOpenDialog(id),

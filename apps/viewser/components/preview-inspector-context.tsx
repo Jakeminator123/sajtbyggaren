@@ -35,13 +35,52 @@ import type { InsertionPoint } from "@/lib/inspector/section-zones";
  * "längst ner". Insättningspunkten snäpper därför till topp/botten —
  * zonerna visas som visuell kontext, och anchorSection följer med i
  * picken så finare placering kan aktiveras när backend stöder det.
+ *
+ * Drag-läget (operatörskrav 2026-06-10): platsvalet kan bära en
+ * payload (modulkort eller bild-thumbnail) som overlayn ritar som en
+ * ghost-bricka som följer pekaren. Operatören släpper med klick och
+ * bekräftar med "Placera här" — först då fullbordas picken. Vilken
+ * dialog som bad om picken (requester) följer med så BuilderShell kan
+ * öppna rätt dialog igen efteråt.
  */
 
 export type PlacementPick = {
   point: InsertionPoint;
   /** Grovposition som backendens router faktiskt kan styra idag. */
   coarsePosition: "top" | "bottom";
+  /**
+   * Vald storlek i procent av sidbredden (20–96, avrundad) — sätts av
+   * resize-handtagen på den dockade mockupen (operatörskrav
+   * 2026-06-10). Dialogen översätter till en storleksfras i prompten
+   * (+ sizePercent i toolIntent) så LLM/bygget vet hur stor
+   * sektionen/bilden ska vara.
+   */
+  sizePercent: number;
   pickedAt: number;
+};
+
+/** Ghost-brickan som följer pekaren i drag-läget. */
+export type PlacementDragPayload = {
+  kind: "module" | "image";
+  /** Operatörsvänlig etikett ("Galleri", filnamn). */
+  label: string;
+  /** Förhandsbild för kind="image" (object-URL eller publik URL). */
+  thumbnailUrl?: string;
+  /**
+   * Modul-id (MODULE_CATALOG-nyckel) för kind="module" — låter overlayn
+   * rendera en wireframe-mockup av sektionen i stället för en etikett-
+   * bricka, så operatören ser ungefär hur modulen kommer se ut
+   * (operatörskrav 2026-06-10).
+   */
+  moduleId?: string;
+};
+
+/** Vilken dialog som bad om platsvalet — styr återöppningen. */
+export type PlacementRequester = "module" | "asset";
+
+type RequestPlacementPickOptions = {
+  payload?: PlacementDragPayload;
+  requester?: PlacementRequester;
 };
 
 type PreviewInspectorContextValue = {
@@ -50,9 +89,13 @@ type PreviewInspectorContextValue = {
   setPreviewUrl: (url: string | null) => void;
   /** True medan operatören väljer plats i förhandsvisningen. */
   placementPickActive: boolean;
-  requestPlacementPick: () => void;
+  requestPlacementPick: (options?: RequestPlacementPickOptions) => void;
   cancelPlacementPick: () => void;
   completePlacementPick: (pick: PlacementPick) => void;
+  /** Ghost-payload för pågående drag-pick (null = klassisk linjepick). */
+  placementDragPayload: PlacementDragPayload | null;
+  /** Dialogen som bad om aktuell/senaste pick (default "module"). */
+  placementRequester: PlacementRequester;
   /** Senast valda platsen — konsumeras (nollas) av dialogen som bad om den. */
   lastPlacementPick: PlacementPick | null;
   clearPlacementPick: () => void;
@@ -65,6 +108,15 @@ type PreviewInspectorContextValue = {
    */
   inspectModeActive: boolean;
   setInspectModeActive: (active: boolean) => void;
+  /**
+   * True medan ett bygge som startades av "Placera här" pågår.
+   * BuilderShell sätter true vid bekräftat släpp; ViewerPanel renderar
+   * då den nordiska 0–100-bannern I STÄLLET för BuildProgressCard och
+   * nollar flaggan när previewn tagit över igen (operatörskrav
+   * 2026-06-10: ingen dialog-studs efter placering).
+   */
+  placementBuildActive: boolean;
+  setPlacementBuildActive: (active: boolean) => void;
 };
 
 const PreviewInspectorContext =
@@ -77,29 +129,41 @@ export function PreviewInspectorProvider({
 }) {
   const [previewUrl, setPreviewUrlInternal] = useState<string | null>(null);
   const [placementPickActive, setPlacementPickActive] = useState(false);
+  const [placementDragPayload, setPlacementDragPayload] =
+    useState<PlacementDragPayload | null>(null);
+  const [placementRequester, setPlacementRequester] =
+    useState<PlacementRequester>("module");
   const [lastPlacementPick, setLastPlacementPick] =
     useState<PlacementPick | null>(null);
   const [placementPickResolvedSignal, setPlacementPickResolvedSignal] =
     useState(0);
   const [inspectModeActive, setInspectModeActiveInternal] = useState(false);
+  const [placementBuildActive, setPlacementBuildActive] = useState(false);
 
   const setPreviewUrl = useCallback((url: string | null) => {
     setPreviewUrlInternal(url);
   }, []);
 
-  const requestPlacementPick = useCallback(() => {
-    setLastPlacementPick(null);
-    setPlacementPickActive(true);
-  }, []);
+  const requestPlacementPick = useCallback(
+    (options?: RequestPlacementPickOptions) => {
+      setLastPlacementPick(null);
+      setPlacementDragPayload(options?.payload ?? null);
+      setPlacementRequester(options?.requester ?? "module");
+      setPlacementPickActive(true);
+    },
+    [],
+  );
 
   const cancelPlacementPick = useCallback(() => {
     setPlacementPickActive(false);
+    setPlacementDragPayload(null);
     setLastPlacementPick(null);
     setPlacementPickResolvedSignal((n) => n + 1);
   }, []);
 
   const completePlacementPick = useCallback((pick: PlacementPick) => {
     setPlacementPickActive(false);
+    setPlacementDragPayload(null);
     setLastPlacementPick(pick);
     setPlacementPickResolvedSignal((n) => n + 1);
   }, []);
@@ -120,11 +184,15 @@ export function PreviewInspectorProvider({
       requestPlacementPick,
       cancelPlacementPick,
       completePlacementPick,
+      placementDragPayload,
+      placementRequester,
       lastPlacementPick,
       clearPlacementPick,
       placementPickResolvedSignal,
       inspectModeActive,
       setInspectModeActive,
+      placementBuildActive,
+      setPlacementBuildActive,
     }),
     [
       previewUrl,
@@ -133,11 +201,15 @@ export function PreviewInspectorProvider({
       requestPlacementPick,
       cancelPlacementPick,
       completePlacementPick,
+      placementDragPayload,
+      placementRequester,
       lastPlacementPick,
       clearPlacementPick,
       placementPickResolvedSignal,
       inspectModeActive,
       setInspectModeActive,
+      placementBuildActive,
+      setPlacementBuildActive,
     ],
   );
 
@@ -155,11 +227,15 @@ const FALLBACK_VALUE: PreviewInspectorContextValue = {
   requestPlacementPick: () => {},
   cancelPlacementPick: () => {},
   completePlacementPick: () => {},
+  placementDragPayload: null,
+  placementRequester: "module",
   lastPlacementPick: null,
   clearPlacementPick: () => {},
   placementPickResolvedSignal: 0,
   inspectModeActive: false,
   setInspectModeActive: () => {},
+  placementBuildActive: false,
+  setPlacementBuildActive: () => {},
 };
 
 /**

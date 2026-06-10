@@ -95,6 +95,14 @@ export type FollowupToolIntent =
         sectionType: string;
         /** Samma två slots som routerns _POSITION_PHRASES parsar. */
         position: "top" | "bottom";
+        /**
+         * Vald bredd i % av sidbredden (20–96) från den storleks-
+         * justerbara drop-mockupen. Optional: utelämnas i fallback-
+         * flödet utan platsval. Dagens backend strippar fältet tyst
+         * (icke-strict Zod) — storleksfrasen i prompten är kontraktet
+         * tills section_builder-pipelinen konsumerar fältet.
+         */
+        sizePercent?: number;
       };
     }
   | {

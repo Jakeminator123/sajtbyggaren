@@ -49,6 +49,7 @@ import {
   DEVICE_PRESET_WIDTHS,
   useDevicePreset,
 } from "@/components/device-preset-context";
+import { BuildProgressBanner } from "@/components/builder/build-progress-banner";
 import { usePreviewInspector } from "@/components/preview-inspector-context";
 import { PreviewInspectorOverlay } from "@/components/preview-inspector-overlay";
 import { cn } from "@/lib/utils";
@@ -372,7 +373,14 @@ export function ViewerPanel({
   // preview-URL till contexten så builder-dialogerna vet när platsval i
   // förhandsvisningen är möjligt. StackBlitz-vägen publicerar aldrig
   // (ingen server-nåbar URL) → peka-knappen döljs ärligt där.
-  const { setPreviewUrl: publishInspectorPreviewUrl } = usePreviewInspector();
+  // placementBuildActive: bygget kom från ett bekräftat "Placera här" —
+  // då renderas den nordiska 0–100-bannern i stället för
+  // BuildProgressCard (operatörskrav 2026-06-10).
+  const {
+    setPreviewUrl: publishInspectorPreviewUrl,
+    placementBuildActive,
+    setPlacementBuildActive,
+  } = usePreviewInspector();
 
   useEffect(() => {
     const visible = Boolean(localPreviewUrl) && !unavailable && Boolean(runId);
@@ -647,6 +655,21 @@ export function ViewerPanel({
     (showEmpty || showUnavailable) && !isBuilding && !isFinalizing;
   const showBuildCard = isBuilding || isFinalizing;
 
+  // Nolla placerings-flaggan när banner-bygget är klart (showBuildCard
+  // falskt igen) så nästa vanliga bygge får stegkortet. Fördröjningen
+  // täcker två fall: bannerns egen uttoning (~900 ms) ska hinna spela
+  // klart, och fönstret mellan "Placera här" och onBuildStart (flaggan
+  // sätts strax FÖRE isBuilding hinner bli true) får inte nolla i
+  // förtid. Startar ett bygge inom fördröjningen avbryts timern.
+  useEffect(() => {
+    if (!placementBuildActive || showBuildCard) return;
+    const timerId = window.setTimeout(
+      () => setPlacementBuildActive(false),
+      1500,
+    );
+    return () => window.clearTimeout(timerId);
+  }, [placementBuildActive, showBuildCard, setPlacementBuildActive]);
+
   // showDeviceToggle-flaggan tas bort härifrån: toggle-UI:t lever
   // numera i FloatingChat:s footer (DevicePresetToggleBar) och visas
   // när en sajt-preview är aktiv via samma synlighets-villkor där.
@@ -755,7 +778,7 @@ export function ViewerPanel({
           föregående preview. För första-bygge (ingen tidigare iframe)
           fungerar samma backdrop ovanpå tom canvas utan visuell
           skillnad. */}
-      {showBuildCard ? (
+      {showBuildCard && !placementBuildActive ? (
         <div className="bg-background/85 pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6 backdrop-blur-sm">
           <div className="pointer-events-auto">
             {/* key={buildStage} forces a full remount on every stage
@@ -766,6 +789,13 @@ export function ViewerPanel({
           </div>
         </div>
       ) : null}
+
+      {/* Nordisk 0–100-banner — ersätter BuildProgressCard för byggen
+          som startades av ett bekräftat "Placera här"-släpp. Bannern
+          äger sin egen backdrop + uttoning; den hålls aktiv genom hela
+          finalize-fasen så övergången går banner → ny preview utan att
+          studsa via stegkortet. */}
+      <BuildProgressBanner active={showBuildCard && placementBuildActive} />
 
       {/* Hero-text — visas alltid när StackBlitz inte aktivt visar en
           sajt (empty, unavailable, error).

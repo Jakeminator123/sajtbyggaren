@@ -102,6 +102,15 @@ export const VIEWPORT_PADDING = 16;
  * default-position nederst till höger).
  */
 export const TOOLBAR_ROW_HEIGHT = 40;
+/**
+ * Hur många pixlar resize-handtagen sticker ut UTANFÖR fönsterkanten.
+ * Handtags-lagret är ett fixed syskon till panelen (inte ett barn) så
+ * det varken klipps av panelens overflow-hidden eller stannar innanför
+ * bordern — man ska kunna greppa exakt på/utanför kanten precis som i
+ * ett OS-fönster (operatörsfynd 2026-06-10: östkant/nederkant gick
+ * inte att greppa eftersom yttersta pixlarna träffade bordern).
+ */
+export const RESIZE_HANDLE_OVERHANG = 4;
 
 export const PANEL_DEFAULT_SIZE: Size = {
   width: PANEL_WIDTH,
