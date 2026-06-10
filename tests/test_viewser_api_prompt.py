@@ -984,3 +984,39 @@ def test_prompt_builder_does_not_replay_stale_stage_on_callback_change() -> None
         "stage-effekten måste bail:a när stage är oförändrat så en ren "
         "callback-identitetsändring inte replayar ett stale stage (C5)."
     )
+
+
+@pytest.mark.tooling
+def test_conversation_answer_carries_build_history_memory() -> None:
+    """B193 (operatörsfynd 2026-06-10): dirigenten svarade 'jag ändrade inget
+    i den här turen' direkt efter att stylisten byggt v2 — rollerna delade
+    inget minne, så systemet motsade sig självt. Lås att svars-vägen bygger
+    en faktabaserad historik-rad ur senaste kompletta runens artefakter
+    (latestChangeSnippet) och trådar den in i systemprompten — som HISTORIK
+    (aldrig som en ändring i denna tur), med ärlig fallback utan historik.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "async function latestChangeSnippet(" in text, (
+        "route.ts måste ha latestChangeSnippet som läser senaste kompletta "
+        "runens version + ändringsprompt (roll-minnet, B193)."
+    )
+    assert "latestCompletedRunForSite(siteId)" in text, (
+        "Historiken måste härledas ur den befintliga B164-helpern "
+        "(senaste KOMPLETTA run), inte en egen run-scan."
+    )
+    assert "const historySnippet = await latestChangeSnippet(siteId);" in text, (
+        "generateConversationAnswer måste hämta historik-raden."
+    )
+    assert "Byggrollernas historik (FAKTA du får referera):" in text, (
+        "Systemprompten måste markera historiken som refererbara FAKTA så "
+        "dirigenten aldrig motsäger stylistens nyss byggda version."
+    )
+    assert "Du har INTE ändrat sajten i DENNA tur" in text, (
+        "Ärlighetslinjen kvarstår: historik får refereras, men denna tur "
+        "har inte ändrat något."
+    )
+    assert "payload.siteId ?? null," in text, (
+        "Gatens anrop måste tråda siteId in i generateConversationAnswer."
+    )
