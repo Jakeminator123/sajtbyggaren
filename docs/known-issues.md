@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 2 misplaced (av 24 öppna), 7 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 16 aktiva, 5 misplaced (av 28 öppna), 7 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -767,6 +767,49 @@ samma kodmönster lever vidare här — därav posten:
   `apps/viewser/app/api/prompt/route.ts` (i arbetsträdet). Test:
   `tests/test_viewser_api_prompt.py::test_b175_recovery_covers_first_completed_run`
   (uppdaterad: låser floor-jämförelsen + förbjuder bakåtsubtraktion).
+
+### Brief-reuse/latest-run-härdning 2026-06-10 (agent-triage, diff-verifierad)
+
+- **`B183` Medel** (fixad 2026-06-10) - latest-run-resolvers (`scripts/build_site.py:_latest_run_id_for_site`
+  + `packages/generation/followup/hero_headline_pin.py:latest_run_dir_for_site`)
+  plockade nyaste run med matchande siteId UTAN att filtrera på `status`. En
+  genuint `failed`-run skriver också `build-result.json` (med partiella/trasiga
+  artefakter), så den kunde bli basen en följdprompt itererar från / pinnar
+  hero-rubriken ur. Fix: hoppa över `status == "failed"`. `skipped`
+  (`--skip-build`) behåller fulla artefakter och förblir en giltig bas
+  (dev/eval-snabbläge), så den exkluderas medvetet INTE. Källa: agent-triage
+  2026-06-10, diff-verifierad i koden. Fix: `ac36f4d` (flytta till Stängda vid
+  Steward-pass). Test:
+  `tests/test_hero_headline_stability.py::test_latest_run_dir_skips_failed_runs`.
+
+- **`B184` Medel** (fixad 2026-06-10) - brief carry-forward (B180,
+  `reuse_previous_site_brief`) regenererade vid TILLAGD operator-/mood-not men
+  en BORTTAGEN direktiv-not levde tyst vidare: den återanvända briefens kreativa
+  copy var formad av noten, så en byte-stabil reuse behöll den slopade
+  instruktionens påverkan. Fix: omvänd guard - en `Operator: `/`Visual mood: `-
+  prefix i föregående brief som nya Project Input inte längre injicerar →
+  regenerera. Källa: agent-triage 2026-06-10, diff-verifierad. Fix: `ac36f4d`
+  (flytta till Stängda vid Steward-pass). Test:
+  `tests/test_brief_carry_forward.py::test_removed_operator_directive_regenerates`.
+
+- **`B185` Låg-Medel** (fixad 2026-06-10) - `run_followup_chain` tog emot en
+  explicit baseRunId ("Iterera från denna") utan att validera att den tillhör
+  samma siteId → en följdprompt kunde iterera från en annan sajts run (fel
+  artefakter, fel hero-pin). Fix: same-site-guard på den operatörs-angivna
+  baseRunId:n (auto-resolve-vägen är redan siteId-filtrerad). Källa: agent-triage
+  2026-06-10, diff-verifierad. Fix: `ac36f4d` (flytta till Stängda vid
+  Steward-pass). Test:
+  `tests/test_followup_chain_cli.py::test_followup_chain_rejects_cross_site_base_run_id`.
+
+- **`B186` Låg** - brief-reuse-beslutet i `write_phase1_understand` nycklar på
+  `latest_run_dir_for_site(...)` (senaste run), inte på en ev. explicit
+  baseRunId. På en "Iterera från denna"-följd (pinnad äldre bas) jämförs
+  brief-inputen alltså mot SENASTE runens brief, inte den pinnade basens. Liten
+  semantisk inkonsekvens (kedjan bygger från baseRunId men brief-reuse läser
+  latest). Lågt sannolik effekt (latest och bas har oftast samma maskade input),
+  men fixen kräver att baseRunId trådas in i `write_phase1_understand` →
+  deferrad som egen uppföljning. Källa: agent-triage 2026-06-10, diff-verifierad.
+  Fix: open. Test: open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
