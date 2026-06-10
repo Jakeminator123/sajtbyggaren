@@ -140,6 +140,7 @@ def apply_patch_plan(
     theme_directive: ThemeDirective | None = None,
     added_capabilities: list[str] | None = None,
     section_positions: dict[str, str] | None = None,
+    unapplied_followup_intents: list[dict[str, str]] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
 
@@ -175,6 +176,15 @@ def apply_patch_plan(
     never a *previous* run's directory (that would break the immutability
     diff). When supplied, **every** outcome is traced (applied, empty no-op,
     unmapped, rejected) so no apply is ever silently dropped (kor-7d FYND1).
+
+    ``unapplied_followup_intents`` (optional, B155 follow-up) carries bounded
+    ``{target, reason}`` posts the caller computed for compound follow-up parts
+    no executor applied (router subtask edit kinds with no owner, or owners that
+    materialised nothing). It is pure provenance on the meta sidecar - it never
+    drives the merge - written onto the new version's meta after the stale-scrub
+    so the deterministic builder surfaces it in ``build-result.json`` via the
+    EXISTING ``unappliedFollowupIntents`` channel. ``None``/empty (the default)
+    reproduces today's behaviour exactly: the field is only scrubbed, never set.
     Returns a transient :class:`ApplyResult`.
     """
     # Lazy import: keep ``import ...apply`` (models/mapping) free of the brief/
@@ -630,6 +640,13 @@ def apply_patch_plan(
         meta["followUpPrompt"] = follow_up_prompt
     if base_run_id is not None:
         meta["baseRunId"] = base_run_id
+    # B155 follow-up: re-set the honest unapplied-intents observer AFTER the
+    # stale-scrub, only when THIS apply call supplied a non-empty list (so a
+    # patch-driven apply with nothing unapplied keeps today's clean sidecar).
+    # The deterministic builder reads it from the sidecar and surfaces it in
+    # build-result.json via the existing unappliedFollowupIntents channel.
+    if unapplied_followup_intents:
+        meta["unappliedFollowupIntents"] = list(unapplied_followup_intents)
     # section_add visible surfacing: union the surfaced wizard ``mustHave``
     # labels into the next version's meta so the build emits the dedicated page.
     # Order-preserving + idempotent: re-surfacing the same page never duplicates

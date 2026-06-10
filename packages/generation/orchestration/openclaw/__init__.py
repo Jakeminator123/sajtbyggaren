@@ -29,6 +29,11 @@ F1 slice 3 (role-driven dispatch + answer-only signal):
     SECTION_ADD_SKILL                # the section_builder role's skill (dispatch key)
     ANSWER_ONLY_CONVERSATION_KINDS   # kinds the dispatcher answers (expectsAnswer)
     ConversationDecision.expectsAnswer
+
+B155 follow-up (honest compound follow-ups):
+    compute_unapplied_followup_chain_intents(decision, ...) -> bounded
+    {target, reason} posts for compound subtasks no executor applied, surfaced
+    through the existing unappliedFollowupIntents channel (no new mechanism).
 """
 
 from .core import decide, orchestrate
@@ -47,6 +52,7 @@ from .roles import (
     role_for_edit_kind,
     skill_for_edit_kind,
 )
+from .unapplied import compute_unapplied_followup_chain_intents
 
 __all__ = [
     "ANSWER_ONLY_CONVERSATION_KINDS",
@@ -62,6 +68,7 @@ __all__ = [
     "RoleDirectiveKind",
     "ToolCall",
     "classify_conversation",
+    "compute_unapplied_followup_chain_intents",
     "contract_for_role",
     "decide",
     "orchestrate",
