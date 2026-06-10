@@ -180,6 +180,67 @@ function extractConversationAnswer(payload: PromptApiResponse): string | null {
   return trimmed ? trimmed : null;
 }
 
+// F1 slice 3 (Scout #262): den explicita "dirigenten svarar i chatten, inget
+// bygge"-signalen ur ``conversation.expectsAnswer``. Läses defensivt; gäller
+// bara när inget riktigt bygge skedde (runId saknas) - en payload med runId är
+// ett bygge och går alltid genom den vanliga summeringen.
+function extractExpectsAnswer(payload: PromptApiResponse): boolean {
+  if (payload.runId) return false;
+  const conversation = payload.conversation;
+  if (!conversation || typeof conversation !== "object") return false;
+  return (conversation as Record<string, unknown>).expectsAnswer === true;
+}
+
+// F1 slice 3 (honest role-row): vilken conductor-roll som agerade + dess
+// conversationKind, härlett defensivt ur ``payload.conversation`` (samma
+// fält-drift-säkra mönster som extractConversation i route.ts). Renderas som en
+// liten dämpad rad under assistent-bubblan så operatören ärligt ser VEM som
+// agerade (t.ex. section_builder på en sektionsadd). Aldrig styr build/preview.
+function extractConversationMeta(
+  payload: PromptApiResponse,
+): { role: string | null; conversationKind: string | null } | null {
+  const conversation = payload.conversation;
+  if (!conversation || typeof conversation !== "object") return null;
+  const obj = conversation as Record<string, unknown>;
+  const role = typeof obj.role === "string" ? obj.role : null;
+  const conversationKind =
+    typeof obj.conversationKind === "string" ? obj.conversationKind : null;
+  if (role === null && conversationKind === null) return null;
+  return { role, conversationKind };
+}
+
+// Svenska etiketter för roll-raden. UPPER_CASE-konstanter (inte PascalCase) så
+// term-coverage --strict inte flaggar dem som okända domänbegrepp.
+const CONVERSATION_ROLE_LABELS: Record<string, string> = {
+  router: "dirigent",
+  section_builder: "sektionsbyggare",
+  stylist: "stylist",
+  copy: "text/copy",
+};
+
+const CONVERSATION_KIND_LABELS: Record<string, string> = {
+  edit: "ändring",
+  small_talk: "småprat",
+  site_opinion: "omdöme",
+  question: "fråga",
+  other: "övrigt",
+};
+
+// Bygg den ärliga roll-raden ("Roll: sektionsbyggare · ändring"). Returnerar
+// null när varken roll eller kind är känd så bubblan inte får en tom rad.
+// Okända värden ekas verbatim (aldrig påhittade) - React escapar texten.
+function formatRoleRow(
+  role: string | null | undefined,
+  conversationKind: string | null | undefined,
+): string | null {
+  const parts: string[] = [];
+  if (role) parts.push(`Roll: ${CONVERSATION_ROLE_LABELS[role] ?? role}`);
+  if (conversationKind) {
+    parts.push(CONVERSATION_KIND_LABELS[conversationKind] ?? conversationKind);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 // B155: avläs ``appliedVisibleEffect`` från build-result-payloaden utan
 // att lita på dess typ. Returnerar `null` när builden inte är en
 // follow-up (init-läge skriver inte fältet) eller när bygget gick i
@@ -1444,9 +1505,22 @@ export function FloatingChat({
         // bygge (skämt/omdöme/fråga). Visa det ärliga svaret som info-bubbla
         // och stanna: inget runId finns, onBuildDone anropas INTE (ingen
         // version, ingen preview-refresh) och stegmarkören nollas till idle.
-        const conversationAnswer = response.ok
+        // F1 slice 3: which conductor role acted (+ conversationKind) for the
+        // honest role-row under the bubble; and the explicit expectsAnswer
+        // signal (Scout #262) so an answer-only turn with an empty answerText
+        // still short-circuits with an honest line instead of a generic HTTP
+        // failure. extractConversationAnswer stays the primary source.
+        const conversationMeta = extractConversationMeta(payload);
+        const expectsAnswer = response.ok && extractExpectsAnswer(payload);
+        const answerOnlyText = response.ok
           ? extractConversationAnswer(payload)
           : null;
+        const conversationAnswer =
+          answerOnlyText !== null
+            ? answerOnlyText
+            : expectsAnswer
+              ? "Jag svarade i chatten utan att bygga om något."
+              : null;
         if (conversationAnswer !== null) {
           onStageChange?.("idle");
           setMessages((prev) =>
@@ -1457,6 +1531,8 @@ export function FloatingChat({
                 role: "assistant",
                 content: conversationAnswer,
                 variant: "info",
+                conversationRole: conversationMeta?.role ?? null,
+                conversationKind: conversationMeta?.conversationKind ?? null,
               }),
           );
           return;
@@ -1498,6 +1574,10 @@ export function FloatingChat({
               variant: summary.variant,
               changes: summary.changes,
               changesExact: summary.changesExact,
+              // F1 slice 3: which role acted (e.g. section_builder on a
+              // section_add) for the honest role-row; decorative metadata only.
+              conversationRole: conversationMeta?.role ?? null,
+              conversationKind: conversationMeta?.conversationKind ?? null,
               // Pipeline-failed bygge (variant "error", outcome "failed"):
               // erbjud "Försök igen" med samma prompt. Build-fel är ofta
               // transienta (npm-timeout, flakig codegen) så en retry är
@@ -2367,6 +2447,17 @@ function MessageBubble({
           message.content
         )}
       </span>
+      {/* F1 slice 3 — ärlig roll-rad: vilken conductor-roll som agerade
+          (dirigent/sektionsbyggare/stylist/text) + conversationKind, härlett ur
+          payload.conversation. Bara på assistent-bubblor som inte är pending;
+          dekorativ metadata, styr aldrig build/preview. */}
+      {!isUser &&
+      !message.isPending &&
+      formatRoleRow(message.conversationRole, message.conversationKind) ? (
+        <span className="text-muted-foreground/70 ml-1 font-mono text-[9.5px] tracking-[0.12em]">
+          {formatRoleRow(message.conversationRole, message.conversationKind)}
+        </span>
+      ) : null}
       {/* Success-change-list — visas under success-bubblan med en
           kort vänster-border per ändring. Rubriken växlar på
           message.changesExact: "Ändrat" för bekräftade deltas från en

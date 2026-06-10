@@ -52,6 +52,14 @@ export type ChatMessage = {
   changes?: BuildChange[];
   /** True när `changes` kommer från en exakt change-set, inte heuristik. */
   changesExact?: boolean;
+  /**
+   * F1 slice 3: vilken conductor-roll som agerade på följdprompten
+   * (router/section_builder/stylist/copy) + dess conversationKind, härlett ur
+   * `payload.conversation`. Renderas som en ärlig roll-rad under bubblan i
+   * FloatingChat. Valfria → äldre/utelämnade payloads visar ingen rad.
+   */
+  conversationRole?: string | null;
+  conversationKind?: string | null;
 };
 
 /**
