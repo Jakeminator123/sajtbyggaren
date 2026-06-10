@@ -49,6 +49,9 @@ from packages.generation.orchestration.patch import (  # noqa: E402
     RejectedPatch,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
 GENPKG = "generation-package.json"
 SITE_ID = "electrician-malmo"

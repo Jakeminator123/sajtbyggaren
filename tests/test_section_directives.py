@@ -33,6 +33,9 @@ from packages.generation.followup.section_directives import (  # noqa: E402
     resolve_visible_section_pages,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 # Each sanctioned type slug -> (capability, default Dossier it must mount). The
 # new section_builder broadening (gallery/pricing/hours/map/contact-form) reuses
 # the existing soft Dossiers; map's slug resolves to the ``location`` capability.

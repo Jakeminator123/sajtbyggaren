@@ -31,6 +31,9 @@ from packages.generation.orchestration.router import (  # noqa: E402
     classify_message,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 # ---------------------------------------------------------------------------
 # Clock examples A-E (02 §3) - the canonical acceptance criteria
 # ---------------------------------------------------------------------------

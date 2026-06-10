@@ -47,6 +47,9 @@ from packages.generation.orchestration.router.models import (  # noqa: E402
     MessageKind,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 # The router's locked eight messageKind values (kept in sync with
 # tests/test_router_schema.py::test_message_kind_enum_is_locked). The
 # conversation layer must never emit a router kind outside this set - it

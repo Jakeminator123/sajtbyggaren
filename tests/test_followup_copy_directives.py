@@ -36,6 +36,9 @@ from scripts.prompt_to_project_input import (
     merge_followup_project_input,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 OPERATOR_RENAME_PROMPT = "Gör om 'örhängsföretag' på headern till 'jakobs örhängen'"
 INCLUDE_TOKEN_PROMPT = (
     "Kan du ändra den där texten vid hero och lite överallt till att "

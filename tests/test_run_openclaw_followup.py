@@ -23,6 +23,9 @@ from scripts.run_openclaw_followup import (
     main,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 
 @pytest.mark.tooling
 def test_followup_question_is_answer_only_no_build():

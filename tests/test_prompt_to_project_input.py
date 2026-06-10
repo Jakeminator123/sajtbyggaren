@@ -50,6 +50,9 @@ from scripts.prompt_to_project_input import (  # noqa: E402
     slugify_site_id,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 
 @pytest.fixture(scope="module")
 def project_input_schema() -> dict:

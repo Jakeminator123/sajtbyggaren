@@ -43,6 +43,9 @@ from packages.generation.orchestration.apply import apply_patch_plan
 from packages.generation.orchestration.patch import PatchPlan
 from scripts.prompt_to_project_input import generate, generate_followup
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 INIT_PROMPT = "Skapa en hemsida för en målerifirma i Palma."
 SITE_ID = "painter-palma"
 PROJECT_ID = "hero-stability-project"

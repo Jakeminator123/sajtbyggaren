@@ -44,6 +44,9 @@ from packages.generation.orchestration.context import (  # noqa: E402
 )
 from packages.generation.orchestration.context.sources import sha256_bytes  # noqa: E402
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 FIXTURE_PATH = (
     REPO_ROOT / "tests" / "fixtures" / "blueprints" / "elektriker-malmo.blueprint.json"
 )

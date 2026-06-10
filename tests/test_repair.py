@@ -24,6 +24,9 @@ from packages.generation.repair import (
     run_repair_pipeline,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 
 def _make_quality_result(
     checks: list[CheckResult] | None = None,

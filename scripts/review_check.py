@@ -12,10 +12,13 @@ Usage:
 
     python scripts/review_check.py            # run the full chain
     python scripts/review_check.py --quick    # skip the slow pytest step
+    python scripts/review_check.py --core     # pytest core lane (-m core)
 
 The non-quick run mirrors the chain documented in
 `docs/agent-handbook.md` under "Reviewer-checklist" item 4 and the
-"Standard loop" step 5.
+"Standard loop" step 5. ``--core`` swaps the full pytest step for the
+fast core-loop lane (``-m core``, see docs/testing.md); the FULL suite
+stays the merge gate.
 """
 
 from __future__ import annotations
@@ -79,7 +82,17 @@ def main() -> int:
         action="store_true",
         help="skip pytest (use only for fast iteration, not for merge gates)",
     )
+    parser.add_argument(
+        "--core",
+        action="store_true",
+        help=(
+            "run the pytest core lane (-m core, docs/testing.md) instead of "
+            "the full suite (fast iteration; the FULL suite stays the merge gate)"
+        ),
+    )
     args = parser.parse_args()
+    if args.quick and args.core:
+        parser.error("--quick and --core are mutually exclusive")
 
     results: list[tuple[str, int, float]] = []
     first_failure: str | None = None
@@ -88,6 +101,12 @@ def main() -> int:
         if args.quick and not step.quick_ok:
             results.append((step.name, -1, 0.0))
             continue
+        if args.core and step.name == "pytest":
+            step = Step(
+                name="pytest_core_lane",
+                args=[sys.executable, "-m", "pytest", "tests/", "-q", "-m", "core"],
+                quick_ok=False,
+            )
 
         print(f"\n=== {step.name} ===", flush=True)
         code, elapsed = run_step(step)
@@ -116,6 +135,11 @@ def main() -> int:
 
     if args.quick:
         print("\nQuick run completed. Run without --quick before merge.")
+    elif args.core:
+        print(
+            "\nCore-lane run completed. Run the FULL suite (no --core) "
+            "before merge."
+        )
     else:
         print("\nAll guard steps passed.")
     return 0

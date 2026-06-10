@@ -45,6 +45,9 @@ from packages.generation.orchestration.router.models import (  # noqa: E402
     RouterSubtask,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 # ---------------------------------------------------------------------------
 # Capability-plan rows (kor-o1): messageKind -> V0 action
 # ---------------------------------------------------------------------------

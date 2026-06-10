@@ -25,6 +25,9 @@ from packages.generation.quality_gate.checks import (
 )
 from packages.generation.quality_gate.gate import _aggregate_status
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 
 def _write_page(target: Path, route: str, default_export: bool = True) -> None:
     """Helper: write a fake page.tsx at the route's expected location."""
