@@ -12,10 +12,16 @@ shells to. These tests lock the two contract guarantees that matter for the UI:
 from __future__ import annotations
 
 import json
+import sys
 
 import pytest
 
-from scripts.run_openclaw_followup import apply_followup_to_json, decide_to_json
+from scripts.run_openclaw_followup import (
+    BRIDGE_SENTINEL_PREFIX,
+    apply_followup_to_json,
+    decide_to_json,
+    main,
+)
 
 
 @pytest.mark.tooling
@@ -259,6 +265,109 @@ def test_decide_edit_decision_is_unchanged_with_role_metadata():
     assert payload["action"] == "patch_plan_request"
     ppr = payload["patchPlanRequest"]
     assert ppr["status"] == "action_bridge_missing"
+
+
+# ---------------------------------------------------------------------------
+# B174: the CLI's stdout contract — the payload is the FINAL line behind the
+# OPENCLAW_BRIDGE_JSON: sentinel, even when the chain prints build progress to
+# the same stream first. apps/viewser/lib/openclaw-runner.ts scans for this.
+# ---------------------------------------------------------------------------
+
+
+def _last_stdout_line(capsys) -> str:
+    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+    assert lines, "CLI printed nothing to stdout"
+    return lines[-1]
+
+
+def _payload_from_sentinel_line(line: str) -> dict:
+    assert line.startswith(BRIDGE_SENTINEL_PREFIX), (
+        f"sista stdout-raden måste börja med {BRIDGE_SENTINEL_PREFIX!r}, "
+        f"fick: {line[:80]!r}"
+    )
+    return json.loads(line[len(BRIDGE_SENTINEL_PREFIX) :])
+
+
+@pytest.mark.tooling
+def test_cli_readonly_emits_sentinel_prefixed_payload_line(monkeypatch, capsys):
+    """The read-only mode prints the decision behind the sentinel prefix so
+    the TS runner has one explicit contract line for BOTH modes."""
+    monkeypatch.setattr(
+        sys, "argv", ["run_openclaw_followup.py", "--", "vad ar klockan?"]
+    )
+    assert main() == 0
+    payload = _payload_from_sentinel_line(_last_stdout_line(capsys))
+    assert payload["action"] == "answer_only"
+
+
+@pytest.mark.tooling
+def test_cli_apply_sentinel_survives_build_progress_noise(monkeypatch, capsys):
+    """B174 regression shape: with --apply the chain (build_site.build) prints
+    human progress ("runId: ...", "Copying starter ...", npm notices) to the
+    SAME stdout BEFORE the payload. The sentinel line must still be the LAST
+    stdout line and parse cleanly to the {decision, bridge} object — the blind
+    JSON.parse(stdout) in the old TS runner threw on exactly this stream."""
+
+    def _noisy_chain(site_id, follow_up_prompt, **kwargs):
+        print(f"runId: 20260610-abcdef-{site_id}")
+        print("Copying starter into builds/20260610/ ...")
+        print("npm notice New minor version of npm available! 11.3.0 -> 11.4.1")
+        return {
+            "siteId": site_id,
+            "stage": "built",
+            "applied": True,
+            "appliedVisibleEffect": True,
+            "previewShouldRefresh": True,
+            "version": 2,
+            "runId": f"20260610-abcdef-{site_id}",
+        }
+
+    monkeypatch.setattr("scripts.build_site.run_followup_chain", _noisy_chain)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_openclaw_followup.py",
+            "--apply",
+            "--site-id",
+            "painter-palma",
+            "--",
+            "byt rubriken till Bryggans Surdegsbageri",
+        ],
+    )
+    assert main() == 0
+    out_lines = [
+        line for line in capsys.readouterr().out.splitlines() if line.strip()
+    ]
+    # The progress noise really was printed to stdout before the payload
+    # (the regression shape), and the sentinel line is LAST.
+    assert any(line.startswith("runId:") for line in out_lines[:-1])
+    payload = _payload_from_sentinel_line(out_lines[-1])
+    assert payload["decision"]["action"] == "patch_plan_request"
+    assert payload["bridge"]["applied"] is True
+    assert payload["bridge"]["chain"]["version"] == 2
+
+
+@pytest.mark.tooling
+def test_cli_apply_conversation_emits_sentinel_payload(monkeypatch, capsys):
+    """--apply on a conversation kind never builds, and the no-build payload
+    uses the same sentinel contract line."""
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_openclaw_followup.py",
+            "--apply",
+            "--site-id",
+            "painter-palma",
+            "--",
+            "vad ar klockan?",
+        ],
+    )
+    assert main() == 0
+    payload = _payload_from_sentinel_line(_last_stdout_line(capsys))
+    assert payload["decision"]["action"] == "answer_only"
+    assert payload["bridge"]["status"] == "no_build_needed"
 
 
 @pytest.mark.tooling
