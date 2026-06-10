@@ -23,6 +23,7 @@ texten/innehållet hade drivit från dagens modell - åtgärdas i denna PR), ell
 
 | Sektion / vy | Källa | Status | Kommentar |
 | --- | --- | --- | --- |
+| Status / Idag | `data/runs`, `data/evals/summaries/golden-path`, `governance/policies` | aktiv | Read-only landningsvy (default): senaste golden-path-eval, senaste körning, Quality Gate-sammandrag, kända brister och en färskhetsbricka per vy driven av registret. Inga subprocesser. |
 | Status / Översikt | `governance/policies`, `page-quality-traits.v1.json` | aktiv | Policy-/schema-/regel-/ADR-räknare + kvalitetsmål + snabbåtgärder. Får nu en read-only golden-status. |
 | Status / System Health | health-checks | aktiv | Kör governance-validate, rules-sync, term-coverage, pytest -m governance, API-nyckel-koll. |
 | Status / Cross-Policy Status | flera policies | aktiv | Realtids-konsistens (samma som `pytest -m governance`). |

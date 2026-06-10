@@ -53,15 +53,15 @@ def main() -> None:
         _hard_reset_caches()
         st.sidebar.success("Cache rensad.")
 
-    current = st.session_state.get("current_view", "Översikt")
+    current = st.session_state.get("current_view", "Idag")
 
     for pages in SECTIONS.values():
         if current in pages:
             pages[current]()
             return
 
-    # Fallback: render Översikt.
-    status.VIEWS["Översikt"]()
+    # Fallback: render the Idag landing view.
+    status.VIEWS["Idag"]()
 
 
 if __name__ == "__main__":

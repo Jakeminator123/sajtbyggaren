@@ -16,6 +16,15 @@
   ],
   "views": [
     {
+      "view": "Idag",
+      "section": "Status",
+      "ownerSource": "backoffice.views.status",
+      "status": "active",
+      "readsFrom": ["data/runs", "data/evals/summaries/golden-path", "governance/policies"],
+      "lastVerified": "2026-06-09",
+      "note": "Read-only landningsvy: senaste eval/körning, Quality Gate-sammandrag, kända brister och färskhetsbricka per vy."
+    },
+    {
       "view": "Översikt",
       "section": "Status",
       "ownerSource": "backoffice.views.status",
