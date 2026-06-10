@@ -303,7 +303,7 @@ async function generateConversationAnswer(
  */
 async function latestCompletedRunForSite(
   siteId: string,
-): Promise<{ runId: string; version: number | null } | null> {
+): Promise<{ runId: string; version: number | null; mtimeMs: number } | null> {
   const root = runsDir();
   let entries;
   try {
@@ -333,7 +333,7 @@ async function latestCompletedRunForSite(
   if (!live.length) return null;
   live.sort((a, b) => b.mtimeMs - a.mtimeMs);
 
-  for (const { name } of live) {
+  for (const { name, mtimeMs } of live) {
     let buildResult: Record<string, unknown>;
     try {
       buildResult = await readBuildResult(name);
@@ -348,7 +348,9 @@ async function latestCompletedRunForSite(
         typeof rawVersion === "number" && Number.isInteger(rawVersion)
           ? rawVersion
           : null;
-      return { runId: name, version };
+      // mtimeMs follows along so the B164/B175 recovery can tell a run that
+      // appeared DURING this request (chain landed it) from a stale one.
+      return { runId: name, version, mtimeMs };
     }
   }
   return null;
@@ -385,6 +387,12 @@ async function runPromptBuildOnce(
   // Phase 1+2 fallback below would silently build a SECOND version on top of
   // the one the chain already landed. We capture the pre-bridge runId here and
   // re-check after a null result (see the B164 recovery block below).
+  // B175: also capture WHEN the request started — when the site has NO
+  // completed run pre-bridge (first-run scenario: init's run pruned away or
+  // never completed), runId-diffing has nothing to compare against, so the
+  // recovery instead asks "did a completed run for this site appear DURING
+  // this request?" via the run-dir mtime.
+  const requestStartMs = Date.now();
   const preBridgeLatestRun =
     payload.mode === "followup" && payload.siteId
       ? await latestCompletedRunForSite(payload.siteId).catch(() => null)
@@ -526,19 +534,30 @@ async function runPromptBuildOnce(
   // (A non-null applyResult with bridge.applied===false is a real no-op — the
   // chain stopped at an honest gate BEFORE any build — so it is safe and we
   // intentionally do NOT trigger recovery for it.)
-  if (
-    applyResult === null &&
-    payload.mode === "followup" &&
-    payload.siteId &&
-    preBridgeLatestRun !== null
-  ) {
+  //
+  // B175: the recovery also covers the FIRST-run scenario. When the site had
+  // no completed run pre-bridge (preBridgeLatestRun === null — e.g. the init
+  // run was pruned by SAJTBYGGAREN_MAX_RUNS retention, or never completed)
+  // there is no runId to diff against, so we instead require the post-bridge
+  // run to have appeared DURING this request (run-dir mtime >= request start,
+  // minus a small fs-timestamp allowance). That keeps the original safety:
+  // a pre-bridge snapshot that failed for a transient reason can never make
+  // us re-surface a STALE run as if this prompt produced it.
+  if (applyResult === null && payload.mode === "followup" && payload.siteId) {
     const postBridgeLatestRun = await latestCompletedRunForSite(
       payload.siteId,
     ).catch(() => null);
-    if (
-      postBridgeLatestRun &&
-      postBridgeLatestRun.runId !== preBridgeLatestRun.runId
-    ) {
+    // Fs-timestamps are coarser than Date.now() and the run-dir is created
+    // moments after the request starts — 5 s allowance is generous without
+    // ever matching a genuinely stale run (minutes/hours old).
+    const FS_TIMESTAMP_ALLOWANCE_MS = 5_000;
+    const chainLandedNewRun =
+      postBridgeLatestRun !== null &&
+      (preBridgeLatestRun !== null
+        ? postBridgeLatestRun.runId !== preBridgeLatestRun.runId
+        : postBridgeLatestRun.mtimeMs >=
+          requestStartMs - FS_TIMESTAMP_ALLOWANCE_MS);
+    if (postBridgeLatestRun && chainLandedNewRun) {
       const recoveredRunId = postBridgeLatestRun.runId;
       // Mirror B163: stop the preview so the next start picks up the chain's
       // freshly published current.json instead of serving the old build dir.

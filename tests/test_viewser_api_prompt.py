@@ -430,6 +430,63 @@ def test_b164_prompt_route_recovers_chain_version_on_bridge_failure() -> None:
 
 
 @pytest.mark.tooling
+def test_b175_recovery_covers_first_completed_run() -> None:
+    """B175 (B164-uppföljning): recoveryn gällde bara sajter som redan HADE en
+    klar run före bridge-anropet (gaten krävde ``preBridgeLatestRun !== null``).
+    Om KÖR-7-kedjan landade sajtens FÖRSTA klara run (init-runen prunad via
+    SAJTBYGGAREN_MAX_RUNS, eller aldrig fullbordad) och bryggan sedan failade
+    rapportera, hoppades recoveryn över och legacy Phase 1+2 dubbelbyggde —
+    exakt det B164 skulle förhindra.
+
+    Fixen: gaten kräver inte längre ett pre-bridge-run; i stället avgörs
+    "kedjan landade en NY run" med runId-diff när ett pre-run finns, och med
+    run-katalogens mtime >= request-start (minus liten fs-tidsstämpel-marginal)
+    när pre-snapshotet är null. Mtime-kravet bevarar ursprungs-skyddet: ett
+    pre-snapshot som failade transient kan aldrig få en GAMMAL run att
+    re-surfas som om prompten producerade den.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+
+    # 1. Request-start måste fångas FÖRE bridge-anropet (mtime-jämförelsens
+    #    referenspunkt).
+    start_idx = text.index("const requestStartMs = Date.now();")
+    bridge_call_idx = text.index("await runOpenClawFollowupApply(")
+    assert start_idx < bridge_call_idx, (
+        "route.ts: requestStartMs måste fångas FÖRE runOpenClawFollowupApply — "
+        "annars kan first-run-recoveryn inte avgöra om runen skapades under "
+        "requesten (B175)."
+    )
+
+    # 2. Gaten får INTE längre kräva preBridgeLatestRun !== null.
+    assert (
+        'if (applyResult === null && payload.mode === "followup" && payload.siteId) {'
+        in text
+    ), (
+        "route.ts: B164-recovery-gaten får inte kräva preBridgeLatestRun !== "
+        "null — first-run-scenariot (B175) måste också kunna återvinnas."
+    )
+
+    # 3. First-run-grenen: mtime-färskhetskravet med fs-marginal.
+    assert "postBridgeLatestRun.mtimeMs >=" in text, (
+        "route.ts: när preBridgeLatestRun är null måste recoveryn kräva att "
+        "post-runen uppstod UNDER requesten (mtime >= requestStart - marginal) "
+        "— annars kan en stale run re-surfas (B175)."
+    )
+    assert "FS_TIMESTAMP_ALLOWANCE_MS" in text, (
+        "route.ts: mtime-jämförelsen behöver en liten fs-tidsstämpel-marginal "
+        "(grova fs-timestamps) — utan den missas legitima chain-runs (B175)."
+    )
+
+    # 4. Helpern måste exponera mtimeMs så jämförelsen alls är möjlig.
+    assert "return { runId: name, version, mtimeMs };" in text, (
+        "route.ts: latestCompletedRunForSite måste returnera run-katalogens "
+        "mtimeMs (B175)."
+    )
+
+
+@pytest.mark.tooling
 def test_prompt_runner_uses_double_dash_to_protect_dashed_prompts() -> None:
     """Audit fynd 3: vanliga prompter börjar med `-` eller `--` (t.ex.
     en inklistrad punktlista: "- skapa en sajt..."). Utan `--`-separator
