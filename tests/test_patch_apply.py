@@ -962,6 +962,9 @@ def test_apply_drops_stale_followup_provenance(
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
     meta["followUpPrompt"] = "lägg till en gammal grej"
     meta["baseRunId"] = "run-old-followup"
+    # B155 follow-up: a stale unappliedFollowupIntents from a prior version must
+    # also be scrubbed when THIS apply call supplies none.
+    meta["unappliedFollowupIntents"] = [{"target": "gammal", "reason": "stale"}]
     meta_path.write_text(json.dumps(meta), encoding="utf-8")
 
     apply_patch_plan(_capability_patch(), site_id=SITE_ID, output_dir=tmp_path)
@@ -972,6 +975,30 @@ def test_apply_drops_stale_followup_provenance(
     # Patch-driven apply did not supply either -> neither is inherited.
     assert "followUpPrompt" not in v2_meta
     assert "baseRunId" not in v2_meta
+    assert "unappliedFollowupIntents" not in v2_meta
+
+
+def test_apply_writes_unapplied_followup_intents_when_supplied(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """B155 follow-up: a non-empty list supplied by THIS apply call is persisted
+    on the new version's meta sidecar (the channel the deterministic builder
+    surfaces in build-result.json)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+    posts = [
+        {"target": "borttagning", "reason": "ingen utförare äger borttagning ännu"}
+    ]
+    apply_patch_plan(
+        _capability_patch(),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        unapplied_followup_intents=posts,
+    )
+    v2_meta = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.meta.json").read_text(encoding="utf-8")
+    )
+    assert v2_meta["unappliedFollowupIntents"] == posts
 
 
 def test_apply_keeps_followup_prompt_when_supplied(
