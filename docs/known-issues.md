@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 146 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 147 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -656,6 +656,34 @@ round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B174` Medel** (stängd 2026-06-10, samma PR som registreringen) - Falsk
+  "Quality Gate flaggade något"/degraded-varning på VARJE lyckad
+  /studio-följdprompt (painter-palma v2/v3 2026-06-10: gröna QG-resultat,
+  appliedVisibleEffect=true, ändå degraded i UI:t). Rotorsak i två steg:
+  (1) `scripts/run_openclaw_followup.py --apply` skrev sin bridge-JSON SIST
+  på stdout, men KÖR-7-kedjan (`build_site.build()`) skrev mänsklig progress
+  ("runId: ...", "Copying starter ...", npm-output) till SAMMA stdout FÖRE;
+  (2) `apps/viewser/lib/openclaw-runner.ts` gjorde blind JSON.parse på hela
+  stdout-strömmen -> kastade -> returnerade `null` på varje lyckad apply,
+  varpå route:ns B164-recovery (medvetet ärlighets-nät för ÄKTA bridge-fel)
+  hittade den nya runen på disk och tvingade degraded-status. Alla nattens
+  följdprompter gick alltså via recovery-nätet i stället för
+  apply-early-return. Fix: explicit stdout-kontrakt — Python-seamen skriver
+  payloaden på en EGEN slutrad bakom sentinel-prefixet
+  `OPENCLAW_BRIDGE_JSON:` (båda lägena); TS-runnern extraherar via
+  bakifrån-skannande `extractPayloadJson` (sentinel-pass först,
+  bare-JSON-fallback för gamla formatet, shape-guard på `decision`-fältet så
+  npm-JSON-brus aldrig misstas för payloaden), och stdout-cappen behåller nu
+  SVANSEN i stället för huvudet vid overflow (payloaden ligger sist). Äkta
+  haverier (tom stdout, rent skräp, exit!=0, timeout) degraderar fortfarande
+  till `null`, och B164-recoveryns degraded-semantik i route.ts är ORÖRD —
+  den slutar bara triggas i happy path. Källa: operatörsfynd 2026-06-10
+  manuella klick-checkar + rotorsaksutredning (fil:rad-verifierad). Fix:
+  `2178fe9`. Test:
+  `tests/test_run_openclaw_followup.py::test_cli_apply_sentinel_survives_build_progress_noise`
+  + `::test_cli_readonly_emits_sentinel_prefixed_payload_line`
+  + `::test_cli_apply_conversation_emits_sentinel_payload`
+  + `tests/test_viewser_floating_chat.py::test_openclaw_runner_extracts_bridge_json_from_noisy_stdout`.
 - **`B173` Medel** (stängd 2026-06-10, hero-stabilisering, samma PR som
   registreringen) - Hero-H1 fick NY text vid VARJE följdprompt trots att ingen
   prompt gällde rubriken (tre gånger bevisat på painter-palma: färgändring,
