@@ -12,6 +12,7 @@ import {
 } from "@/lib/hosted-python-runtime";
 import { stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertLocalhost } from "@/lib/localhost-guard";
+import { chatWithOpenAi, openaiEnv } from "@/lib/openai";
 import { runOpenClawFollowupApply } from "@/lib/openclaw-runner";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
 import { classifyMessage } from "@/lib/router-classify-runner";
@@ -173,6 +174,114 @@ function extractAppliedVisibleEffect(
 ): boolean | null {
   const value = buildResult.appliedVisibleEffect;
   return typeof value === "boolean" ? value : null;
+}
+
+// F1 slice 2 (conductor wiring): the conductor conversation kinds the
+// dispatcher answers in chat WITHOUT a build. Mirrors
+// _ANSWER_ONLY_CONVERSATION_KINDS in scripts/run_openclaw_followup.py.
+// ConversationKind is a conductor-layer concept (slice 1) — the router's
+// locked messageKind enum and router-decision.schema.json are untouched.
+const CONVERSATION_ANSWER_KINDS: ReadonlySet<string> = new Set([
+  "small_talk",
+  "site_opinion",
+  "question",
+]);
+
+type ConversationMetadata = {
+  conversationKind: string;
+  role: string | null;
+};
+
+// Read the additive ``conversation`` metadata block off the bridge's decision
+// payload defensively (same field-drift-safe pattern as extractBuildStatus):
+// a missing/malformed block degrades to null and the unchanged build flow runs.
+function extractConversation(
+  decision: Record<string, unknown> | null | undefined,
+): ConversationMetadata | null {
+  if (!decision) return null;
+  const raw = decision.conversation;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.conversationKind !== "string") return null;
+  return {
+    conversationKind: obj.conversationKind,
+    role: typeof obj.role === "string" ? obj.role : null,
+  };
+}
+
+// Honest no-key fallback: without OPENAI_API_KEY we never fake a conversation
+// — the operator gets a plain Swedish line saying exactly why there is no
+// answer. Mirrors briefModel's mock-no-key honesty (never a pretend chat).
+const CONVERSATION_NO_KEY_ANSWER =
+  "Jag kan inte svara utan API-nyckel (OPENAI_API_KEY saknas). Sajten är " +
+  "oförändrad. Lägg till nyckeln i repo-rotens .env så kan jag chatta.";
+
+const CONVERSATION_ERROR_ANSWER =
+  "Jag kunde inte ta fram ett svar just nu (chat-anropet misslyckades). " +
+  "Sajten är oförändrad — prova igen om en stund.";
+
+// Bounded site context for the chat helper: the bridge's decision already
+// carries the read-only AssembledContext payload (what the router asked for).
+// We pass at most ~6000 chars so lib/openai.ts's 8000-char/message cap never
+// trips; an empty payload yields null and the system prompt tells the model
+// to be honest about not seeing the site.
+function conversationContextSnippet(
+  decision: Record<string, unknown>,
+): string | null {
+  const context = decision.context;
+  if (!context || typeof context !== "object" || Array.isArray(context)) {
+    return null;
+  }
+  const payload = (context as Record<string, unknown>).payload;
+  if (!payload || typeof payload !== "object") return null;
+  try {
+    const json = JSON.stringify(payload);
+    if (!json || json === "{}") return null;
+    return json.slice(0, 6000);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * F1 slice 2: generate the honest chat answer for a conversation kind via the
+ * EXISTING lib/openai.ts chat helper. Never throws: no key → the honest
+ * no-key line; any helper failure → an honest error line. The answer text is
+ * plain chat copy — it never claims a site change (the gate guarantees no
+ * build ran, ``appliedVisibleEffect`` stays false and no version exists).
+ */
+async function generateConversationAnswer(
+  prompt: string,
+  conversation: ConversationMetadata,
+  decision: Record<string, unknown>,
+): Promise<string> {
+  if (!openaiEnv("OPENAI_API_KEY")) {
+    return CONVERSATION_NO_KEY_ANSWER;
+  }
+  const contextSnippet = conversationContextSnippet(decision);
+  const systemLines = [
+    "Du är OpenClaw, dirigenten i Sajtbyggaren — operatörens chattassistent.",
+    "Svara kort, vänligt och ärligt på svenska.",
+    "Du har INTE ändrat sajten i den här turen: påstå aldrig att något " +
+      "byggts eller ändrats.",
+    conversation.conversationKind === "site_opinion"
+      ? contextSnippet
+        ? "Frågan gäller operatörens sajt. Grunda omdömet ENBART i " +
+          `sajtkontexten nedan:\n${contextSnippet}`
+        : "Frågan gäller operatörens sajt, men du har ingen sajtkontext i " +
+          "den här turen — säg ärligt att du inte kan bedöma detaljerna."
+      : "Om frågan gäller sajtens detaljer och du saknar kontext: säg det " +
+        "ärligt i stället för att gissa.",
+  ];
+  try {
+    const { message } = await chatWithOpenAi([
+      { role: "system", content: systemLines.join("\n") },
+      { role: "user", content: prompt.slice(0, 8000) },
+    ]);
+    return message.content;
+  } catch {
+    return CONVERSATION_ERROR_ANSWER;
+  }
 }
 
 /**
@@ -359,6 +468,50 @@ async function runPromptBuildOnce(
         // previewShouldRefresh + chain) so FloatingChat shows a restyle /
         // capability success line and refreshes the preview.
         bridge: applyResult.bridge,
+      };
+    }
+  }
+
+  // F1 slice 2 (conversation gate): when the bridge classified the follow-up
+  // as a CONVERSATION (small_talk / site_opinion / question) it already
+  // stopped before any build (bridge.applied=false, decision=answer_only).
+  // Return an honest chat answer instead of falling through to the legacy
+  // Phase 1+2 build — a joke or an opinion question must never write a new
+  // version. Guarantees: no build starts, no version is written,
+  // appliedVisibleEffect is never true (buildResult stays empty and the
+  // decision's validator forces it false) and previewShouldRefresh stays
+  // false (the bridge said so). The answer text comes from the existing
+  // lib/openai.ts chat helper with an honest no-key fallback.
+  if (applyResult && !applyResult.bridge.applied) {
+    const conversation = extractConversation(applyResult.decision);
+    if (
+      conversation &&
+      CONVERSATION_ANSWER_KINDS.has(conversation.conversationKind)
+    ) {
+      const answerText = await generateConversationAnswer(
+        payload.prompt,
+        conversation,
+        applyResult.decision,
+      );
+      return {
+        runId: null,
+        siteId: payload.siteId ?? null,
+        projectId: null,
+        version: null,
+        briefSource: null,
+        buildStatus: null,
+        buildResult: {},
+        appliedCopyDirectives: [],
+        changeSet: null,
+        routerDecision: null,
+        // The honest answer-only decision (+ conversation metadata) so the
+        // client can see WHY no build ran; never rendered raw.
+        openClawDecision: applyResult.decision,
+        bridge: applyResult.bridge,
+        // F1 slice 2: the honest chat answer FloatingChat renders instead of
+        // a build summary. Never implies a site change.
+        answerText,
+        conversation,
       };
     }
   }

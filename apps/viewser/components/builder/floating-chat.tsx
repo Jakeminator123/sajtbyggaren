@@ -155,8 +155,30 @@ type PromptApiResponse = {
   // den och ``summarizeOpenClawBridge`` ger en ärlig success-rad. När
   // ``applied=false`` ignoreras bryggan (den vanliga/legacy-summeringen står).
   bridge?: Record<string, unknown>;
+  // F1 slice 2 (conversation gate): när dirigenten klassade följdprompten som
+  // en KONVERSATION (small_talk/site_opinion/question) stannade /api/prompt
+  // FÖRE bygget och skickar ett ärligt chat-svar här i stället för ett
+  // build-resultat. ``runId`` är då null (inget bygge, ingen version, ingen
+  // preview-refresh). Utelämnat på vanliga byggen → ``extractConversationAnswer``
+  // returnerar null → oförändrat beteende. Renderas som textnod (React escapar).
+  answerText?: string | null;
+  // Metadata-syskonet till answerText ({conversationKind, role}); läses inte
+  // av UI:t idag men trådas med för observability/test.
+  conversation?: Record<string, unknown>;
   error?: string;
 };
+
+// F1 slice 2: avläs konversations-svaret defensivt — samma fält-drift-säkra
+// mönster som extractAppliedVisibleEffect. Ett svar gäller BARA när routen
+// uttryckligen stannade före bygget (inget runId): ett payload med runId är
+// ett riktigt bygge och går alltid genom den vanliga summeringen.
+function extractConversationAnswer(payload: PromptApiResponse): string | null {
+  if (payload.runId) return null;
+  const raw = payload.answerText;
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return trimmed ? trimmed : null;
+}
 
 // B155: avläs ``appliedVisibleEffect`` från build-result-payloaden utan
 // att lita på dess typ. Returnerar `null` när builden inte är en
@@ -1418,6 +1440,27 @@ export function FloatingChat({
           }),
         });
         const payload = (await response.json()) as PromptApiResponse;
+        // F1 slice 2 (conversation gate): dirigenten svarade i chatten utan
+        // bygge (skämt/omdöme/fråga). Visa det ärliga svaret som info-bubbla
+        // och stanna: inget runId finns, onBuildDone anropas INTE (ingen
+        // version, ingen preview-refresh) och stegmarkören nollas till idle.
+        const conversationAnswer = response.ok
+          ? extractConversationAnswer(payload)
+          : null;
+        if (conversationAnswer !== null) {
+          onStageChange?.("idle");
+          setMessages((prev) =>
+            prev
+              .filter((m) => m.id !== pendingMessageId)
+              .concat({
+                id: `answer-${Date.now()}`,
+                role: "assistant",
+                content: conversationAnswer,
+                variant: "info",
+              }),
+          );
+          return;
+        }
         if (!response.ok || !payload.runId || !payload.siteId) {
           const errorText =
             payload.error ??
