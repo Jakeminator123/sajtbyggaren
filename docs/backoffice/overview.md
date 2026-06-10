@@ -48,6 +48,7 @@ texten/innehållet hade drivit från dagens modell - åtgärdas i denna PR), ell
 | Building Blocks / Reference Templates | `data/reference-templates` | aktiv | Inspirations-corpus. |
 | Runs / Engine Runs | `data/runs/` | aktiv | Inspektera artefakter + `trace.ndjson`. |
 | Playground / Playground | `scripts/dev_generate.py` | aktiv | Kör en engine run från backoffice (subprocess). |
+| Playground / Loop-bevis | `scripts/run_golden_path_eval.py`, `data/evals/artifacts/playground` | aktiv | Kör golden-path-loopen deterministiskt in-process (`generate` -> `build(do_build=False)`, ingen npm/nyckel) och visar scaffold/variant/starter, routelista, quality per check, brief-/planSource och en `app/page.tsx`-snutt. Plus read-only miljö-/adapter-diagnostik (visar aldrig secret-värden). |
 | Evals / Evals och telemetri | `scripts/run_eval_suite.py` + manuellt scorecard | aktiv | Smoke/regression + manuellt 1-10. Se `docs/evals.md`. |
 | Underhåll / Cleanup - Säker rensning | retention-helpers | aktiv | Säker rensning av artefakter. |
 | Underhåll / Cleanup - Med varning | retention-helpers | aktiv | Rensning med varning. |

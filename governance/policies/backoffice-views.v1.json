@@ -233,6 +233,15 @@
       "note": "Kör en Engine Run via subprocess (scripts/dev_generate.py) och pollar data/runs."
     },
     {
+      "view": "Loop-bevis",
+      "section": "Playground",
+      "ownerSource": "backoffice.views.playground",
+      "status": "active",
+      "readsFrom": ["scripts", "data/evals/artifacts/playground"],
+      "lastVerified": "2026-06-09",
+      "note": "Kör golden-path-loopen deterministiskt in-process (generate -> build, ingen npm/nyckel) + read-only miljö-/adapter-diagnostik. Skriver isolerat under data/evals/artifacts/playground."
+    },
+    {
       "view": "Evals och telemetri",
       "section": "Evals",
       "ownerSource": "backoffice.views.evals",
