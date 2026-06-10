@@ -50,7 +50,7 @@ och får aldrig committas (utom `apps/viewser/.env.example`, som bara är en mal
 | Variabel | Syfte |
 | --- | --- |
 | `VERCEL=1` | Sätts automatiskt hostat — detekteras av `isHostedVercelRuntime()` |
-| `VERCEL_OIDC_TOKEN` | Injiceras nativt i Vercel-funktioner; sandbox-runnern autentiserar med den (ingen lokal `vercel env pull`-dans hostat) |
+| `VERCEL_OIDC_TOKEN` | Sätts ALDRIG som statisk env-var hostat (en statisk token dör efter ~12 h och skuggar den färska). Plattformen levererar tokenen per request via request-kontexten; `resolveCredentials` adopterar den automatiskt |
 | `VIEWSER_PREVIEW_MODE` | Sätt till sandbox-läget för hostad förhandsvisning (exakt token finns dokumenterad i `apps/viewser/.env.example`) |
 | `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE` | Klient-spegel av samma läge (samma värde) |
 | `VIEWSER_ALLOWED_HOSTS` | Den hostade domänen, så `assertLocalhost` släpper in operatören på rätt host |
