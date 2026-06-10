@@ -2472,3 +2472,119 @@ def test_end_to_end_unquoted_replace_miss_is_honest_no_op(
     )
     assert token not in page
     assert build_result["appliedVisibleEffect"] is False
+
+
+# --- 2026-06-10 (B178): UNQUOTED demonstrative free-text replace --------------
+#
+# "Denna text: <OLD> ska bli <NEW>" is how an operator naturally points at a
+# specific visible string without quoting it. Before this slice the anchor-led
+# form (no leading replace verb, a "become" separator) was invisible to BOTH the
+# capability path (it only knew the verb-led "<verb> <OLD> till <NEW>") and the
+# honest-effect signal (it required a quoted span), so a free-text ask that did
+# not land was reported as a false "Klart! v1 -> v2". The fix is gated on an
+# explicit demonstrative text anchor so a style ("sajten ska bli mörkblå") or
+# section ("lägg till en sektion") follow-up never trips the copy-replace path.
+
+
+@pytest.mark.tooling
+def test_b178_demonstrative_anchor_replace_request_detected() -> None:
+    """The honest-effect signal fires for an UNQUOTED demonstrative replace
+    ("denna text: X ska bli Y") so a regenerated paraphrase can never pose as a
+    successful edit - regardless of whether OLD matches a stored field."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+    )
+
+    assert (
+        _followup_requested_copy_replace(
+            "Denna text: En lugn och tydlig servicesajt ska bli JAKOB"
+        )
+        is True
+    )
+    # "blir" / "så den blir" separators count too (neutral OLD/NEW so no target
+    # keyword like "rubrik" hijacks the classification).
+    assert (
+        _followup_requested_copy_replace("denna text: Gammalt värde blir Nytt värde")
+        is True
+    )
+    assert (
+        _followup_requested_copy_replace(
+            "den här texten: Gammalt värde så den blir Nytt"
+        )
+        is True
+    )
+
+
+@pytest.mark.tooling
+def test_b178_style_and_section_are_not_demonstrative_replace() -> None:
+    """A style or section follow-up carries no demonstrative text anchor, so the
+    copy-replace honesty signal stays silent (no false no-op on a real change)."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+        unquoted_literal_replace_status,
+    )
+
+    previous = _previous_project_input()
+    for prompt in (
+        "sajten ska bli mörkblå",
+        "gör hela sajten ljusare",
+        "lägg till en ny sektion längst ner",
+    ):
+        assert _followup_requested_copy_replace(prompt) is False, prompt
+        assert unquoted_literal_replace_status(prompt, previous)["status"] == "none"
+
+
+@pytest.mark.tooling
+def test_b178_anchor_led_replace_applies_on_stored_field() -> None:
+    """An anchor-led demonstrative replace whose OLD matches a stored field is
+    applied verbatim (the B155 capability half), across become separators."""
+    for prompt in (
+        "denna text: Handgjorda örhängen i Malmö ska bli Smycken i Lund",
+        "denna text: Handgjorda örhängen i Malmö blir Smycken i Lund",
+        "den här texten: Handgjorda örhängen i Malmö så den blir Smycken i Lund",
+    ):
+        merged = _merge(prompt)
+        assert merged["company"]["tagline"] == "Smycken i Lund", prompt
+        assert merged["company"]["heroHeadline"] == "Smycken i Lund", prompt
+        directive = merged["directives"]["copyDirectives"][0]
+        assert directive["operation"] == "replace-text"
+        assert directive["source"] == "prompt-rule"
+
+
+@pytest.mark.tooling
+def test_b178_anchor_led_replace_miss_is_honest_no_op() -> None:
+    """The operator's exact repro shape: the quoted-but-unquoted hero line is not
+    a stored field, so the change is an honest no-op (fields untouched, no
+    directive) WHILE the honest-effect signal still reports a replace request."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+        unquoted_literal_replace_status,
+    )
+
+    previous = _previous_project_input()
+    prompt = "Denna text: En lugn och tydlig servicesajt ska bli JAKOB"
+    status = unquoted_literal_replace_status(prompt, previous)
+    assert status["status"] == "no_match"
+    assert status["directives"] == []
+    merged = _merge(prompt, previous)
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert "copyDirectives" not in merged.get("directives", {})
+    # Honest-effect signal must still flag this as a replace REQUEST.
+    assert _followup_requested_copy_replace(prompt) is True
+
+
+@pytest.mark.tooling
+def test_b178_anchor_led_does_not_hijack_additive_or_target_prompt() -> None:
+    """A demonstrative anchor inside an additive ask, or a target-keyword prompt,
+    stays out of the anchor-led replace path."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+        unquoted_literal_replace_status,
+    )
+
+    previous = _previous_project_input()
+    # Additive wins even with a demonstrative anchor present.
+    additive = "lägg till en sektion med denna text: Hej ska bli Hå"
+    assert _followup_requested_copy_replace(additive) is False
+    assert unquoted_literal_replace_status(additive, previous)["status"] == "none"

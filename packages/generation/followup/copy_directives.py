@@ -713,6 +713,23 @@ _LITERAL_TEXT_ANCHOR_KEYWORDS: tuple[str, ...] = (
     "the text",
 )
 
+# DEMONSTRATIVE text anchors: an operator pointing at a specific visible string
+# they want swapped ("denna text: X ska bli Y"). Strictly narrower than
+# _LITERAL_TEXT_ANCHOR_KEYWORDS (which includes a bare "text"/"texten"): only
+# these explicit demonstratives engage the anchor-led UNQUOTED replace (B178)
+# and the honest-effect signal, so a style ("sajten ska bli mörkblå") or section
+# ("lägg till en sektion") follow-up - which carries no demonstrative anchor -
+# is never mis-read as a copy-replace.
+_DEMONSTRATIVE_TEXT_ANCHORS: tuple[str, ...] = (
+    "denna text",
+    "den har texten",
+    "den här texten",
+    "det har texten",
+    "det här texten",
+    "this text",
+    "the text",
+)
+
 
 def _extract_literal_old_new(
     follow_up_prompt: str,
@@ -881,6 +898,30 @@ _UNQUOTED_REPLACE_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# Anchor-led demonstrative form WITHOUT a leading replace verb:
+# "denna text: <OLD> ska bli <NEW>" (B178). The operator points at a specific
+# visible string and states what it should BECOME. A "become" separator
+# (ska bli / blir / ska vara / så den blir / vill jag (bara) ska bli) is the
+# natural Swedish phrasing here; restricting that wider separator vocabulary to
+# the demonstrative-anchored form keeps a style ask ("sajten ska bli mörkblå",
+# no demonstrative anchor) out of the copy-replace path. ``till``/``to`` are
+# kept too so "denna text: X till Y" also works. An optional colon/dash right
+# after the anchor is consumed.
+_DEMONSTRATIVE_ANCHOR_ALT = "|".join(
+    re.escape(anchor)
+    for anchor in sorted(_DEMONSTRATIVE_TEXT_ANCHORS, key=len, reverse=True)
+)
+_BECOME_SEPARATOR_ALT = (
+    r"vill\s+jag\s+(?:bara\s+)?ska\s+bli"
+    r"|ska\s+bli|ska\s+vara|s[åa]\s+den\s+blir|s[åa]\s+det\s+blir"
+    r"|\bblir\b|\bbli\b|\btill\b|\bto\b"
+)
+_UNQUOTED_ANCHOR_REPLACE_RE = re.compile(
+    rf"\b(?:{_DEMONSTRATIVE_ANCHOR_ALT})\b\s*[:\-\u2013\u2014]?\s*"
+    rf"(?P<old>.+?)\s+(?:{_BECOME_SEPARATOR_ALT})\s+(?P<new>.+?)\s*$",
+    re.IGNORECASE | re.DOTALL,
+)
+
 
 def _clean_unquoted_fragment(value: str | None) -> str:
     """Trim a captured OLD/NEW fragment (quotes + edge punctuation/whitespace)."""
@@ -896,15 +937,22 @@ def _extract_unquoted_old_new(
     """Pull ``(OLD, NEW)`` from an UNQUOTED ``<verb> <OLD> till <NEW>`` phrasing.
 
     Returns ``(None, None)`` when the prompt carries any quoted span (the quoted
-    path owns that case) or when the unquoted pattern does not match. The first
-    ``till``/``to`` after a replace verb is the separator (OLD is non-greedy), and
-    an optional literal-text anchor ("denna text"/"texten"/...) right after the
-    verb is dropped so it never becomes part of OLD.
+    path owns that case) or when neither unquoted pattern matches. Two phrasings
+    are understood:
+
+    - verb-led: ``<verb> <OLD> till/to <NEW>`` (first ``till``/``to`` after a
+      replace verb is the separator; an optional literal-text anchor right after
+      the verb is dropped so it never becomes part of OLD);
+    - anchor-led demonstrative: ``denna text: <OLD> ska bli <NEW>`` - no leading
+      verb, a wider "become" separator, only when an explicit demonstrative text
+      anchor is present (B178).
     """
     if _QUOTED_SPAN_RE.search(follow_up_prompt):
         return None, None
     match = _UNQUOTED_REPLACE_RE.search(follow_up_prompt)
-    if not match:
+    if match is None:
+        match = _UNQUOTED_ANCHOR_REPLACE_RE.search(follow_up_prompt)
+    if match is None:
         return None, None
     old_value = _clean_unquoted_fragment(match.group("old"))
     new_value = _clean_unquoted_fragment(match.group("new"))
@@ -976,7 +1024,11 @@ def _resolve_unquoted_literal_replace(
     has_replace = _contains_any_word(
         text, _COPY_DIRECTIVE_REPLACE_KEYWORDS
     ) or _contains_any(text, _REPLACE_MARKERS)
-    if not has_replace:
+    # A demonstrative text anchor ("denna text: X ska bli Y") engages the
+    # anchor-led form even without a leading replace verb (B178). The narrow
+    # demonstrative set keeps style/section asks (no such anchor) out.
+    has_demo_anchor = _contains_any(text, _DEMONSTRATIVE_TEXT_ANCHORS)
+    if not (has_replace or has_demo_anchor):
         return empty
     # A recognised target keyword ("taglinen"/"namnet"/"hero"/"tjänsten"/...) is
     # owned by _extract_copy_directives; an additive/section-add ask is never a
@@ -1090,12 +1142,20 @@ def _followup_requested_copy_replace(follow_up_prompt: str) -> bool:
     section noun inside the quoted OLD/NEW copy never drives the signal. The
     legitimate literal copy-replace honesty case (a quoted OLD span + replace
     verb that truly no-ops) still returns ``True``.
+
+    Broadened (B178): an UNQUOTED demonstrative free-text replace -
+    ``Denna text: <OLD> ska bli <NEW>`` - also counts as a replace REQUEST so a
+    regenerated paraphrase never masquerades as a successful edit when the
+    operator wrote no quotes. It is gated on an explicit demonstrative anchor
+    (``denna text``/``den här texten``/...) plus a matched OLD->NEW pair, so a
+    style ("sajten ska bli mörkblå") or section ("lägg till en sektion")
+    follow-up - which carries no demonstrative anchor - never trips the signal.
     """
     text = _normalise_followup_text(follow_up_prompt)
     if not text:
         return False
     if not _QUOTED_SPAN_RE.search(follow_up_prompt):
-        return False
+        return _unquoted_anchor_replace_requested(follow_up_prompt)
     # Match the operator's instruction skeleton, not the quoted OLD/NEW copy.
     # Fall back to the full text only when the entire message was quoted.
     skeleton = _text_outside_quotes(follow_up_prompt) or text
@@ -1104,6 +1164,27 @@ def _followup_requested_copy_replace(follow_up_prompt: str) -> bool:
     return _contains_any_word(
         skeleton, _COPY_DIRECTIVE_REPLACE_KEYWORDS
     ) or _contains_any(skeleton, _REPLACE_MARKERS)
+
+
+def _unquoted_anchor_replace_requested(follow_up_prompt: str) -> bool:
+    """True when an UNQUOTED follow-up points at a demonstrative copy string to
+    swap (``Denna text: X ska bli Y``) - the B178 honesty case.
+
+    Narrow by construction: requires an explicit demonstrative text anchor AND a
+    matched anchor-led OLD->NEW pair, and bails on additive/target-keyword asks.
+    A style or section follow-up (no demonstrative anchor) returns ``False`` so
+    it is never mis-reported as a failed copy-replace.
+    """
+    text = _normalise_followup_text(follow_up_prompt)
+    if not _contains_any(text, _DEMONSTRATIVE_TEXT_ANCHORS):
+        return False
+    skeleton = _text_outside_quotes(follow_up_prompt) or text
+    if _followup_is_additive_request(skeleton):
+        return False
+    if _classify_copy_target(skeleton) is not None:
+        return False
+    old_value, new_value = _extract_unquoted_old_new(follow_up_prompt)
+    return bool(old_value and new_value)
 
 
 def _extract_copy_directives(
