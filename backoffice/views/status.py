@@ -10,12 +10,62 @@ from typing import Any
 import streamlit as st
 
 from .. import health, loaders
+from ..freshness import compute_freshness
 from ..paths import (
     EVALS_GOLDEN_PATH_SUMMARIES_DIR,
     LEGACY_GOLDEN_PATH_DIR,
     REPO_ROOT,
+    RUNS_DIR,
 )
 from ._helpers import render_check, safe_render
+
+BACKOFFICE_VIEWS_POLICY = "backoffice-views.v1.json"
+
+
+def render_known_gaps() -> None:
+    """Render the honest 'known gaps' note shared by Idag + Översikt.
+
+    Surfaces gaps as gaps, not as features (ADR 0039 / docs/known-issues.md).
+    """
+    st.subheader("Kända brister")
+    st.caption(
+        "Synliggjorda som brister, inte som nya features. `section_add` monterar "
+        "dossiers men renderar ännu inte alltid synligt på sidan/positionen "
+        "(`applied=true`, `appliedVisibleEffect=false`). Följdprompt-copy gör "
+        "ibland parafras i stället för literal replace. Spårning i "
+        "`docs/known-issues.md` och "
+        "`docs/gaps/GAP-followup-prompt-content-passthrough.md`."
+    )
+
+
+def _read_run_json(run_dir: Path, name: str) -> dict[str, Any] | None:
+    """Read one run artefact as a dict, returning None for missing/broken JSON."""
+    path = run_dir / name
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def latest_run_artifacts() -> tuple[str | None, dict[str, Any] | None, dict[str, Any] | None]:
+    """Return ``(runId, build_result, quality_result)`` for the newest run.
+
+    Pure read-only helper (no subprocess): picks the newest runId from
+    ``data/runs/`` via ``loaders.list_run_ids`` and reads ``build-result.json``
+    + ``quality-result.json``. Returns ``(None, None, None)`` when there is no
+    run on disk.
+    """
+    run_ids = loaders.list_run_ids()
+    if not run_ids:
+        return None, None, None
+    run_id = run_ids[0]
+    run_dir = RUNS_DIR / run_id
+    return run_id, _read_run_json(run_dir, "build-result.json"), _read_run_json(
+        run_dir, "quality-result.json"
+    )
 
 
 def latest_golden_path_summary(
@@ -51,6 +101,109 @@ def latest_golden_path_summary(
 def _hard_reset_caches() -> None:
     loaders.load_json.clear()
     loaders.read_text.clear()
+
+
+def _render_freshness_table() -> None:
+    """Render one freshness badge per view, driven purely by the registry policy."""
+    policy, err = loaders.safe_load_policy(BACKOFFICE_VIEWS_POLICY)
+    if err or policy is None:
+        st.warning(err or f"{BACKOFFICE_VIEWS_POLICY} saknas")
+        return
+    rows = []
+    for entry in policy.get("views", []):
+        fresh = compute_freshness(entry, REPO_ROOT)
+        rows.append(
+            {
+                "Färskhet": fresh.badge,
+                "Vy": entry.get("view", "—"),
+                "Sektion": entry.get("section", "—"),
+                "Status": entry.get("status", "—"),
+                "Läser från": ", ".join(entry.get("readsFrom", []) or []),
+            }
+        )
+    st.dataframe(rows, width="stretch", hide_index=True)
+    st.caption(
+        "🟢 aktuell (data finns) · ⚪ tom datakälla · 🟡 driftar/legacy · "
+        "🟢 live-diagnostik. Driven av `governance/policies/backoffice-views.v1.json` "
+        "(låst av `tests/test_backoffice_registry.py`). Ingen vy får låtsas vara aktuell."
+    )
+
+
+def view_today() -> None:
+    st.title("Idag")
+    st.caption(
+        "Read-only landningsvy: senaste `Golden Path`-eval, senaste körningen ur "
+        "`data/runs/`, Quality Gate-sammandrag, kända brister och en färskhetsbricka "
+        "per vy. Kör inget — läser bara disk. Begreppskarta: `docs/glossary.md`; "
+        "vy-status: `docs/backoffice/overview.md`."
+    )
+
+    st.divider()
+    st.subheader("Senaste Golden Path-eval")
+    summary, summary_path = latest_golden_path_summary(
+        EVALS_GOLDEN_PATH_SUMMARIES_DIR, LEGACY_GOLDEN_PATH_DIR
+    )
+    if summary is None:
+        st.info(
+            "Ingen golden-path-eval än. Kör `python scripts/run_golden_path_eval.py "
+            "--mode deterministic` (offline, ingen API-nyckel)."
+        )
+    else:
+        g1, g2, g3 = st.columns(3)
+        g1.metric("Total score", f"{summary.get('totalScore', '—')} / 10")
+        g2.metric("Embeddings gate", str(summary.get("embeddingsReadiness", "—")))
+        g3.metric("Cases", summary.get("caseCount", "—"))
+        st.caption(
+            f"Eval `{summary.get('evalId', '—')}` ({summary.get('mode', '—')}, "
+            f"{summary.get('createdAt', '—')}). Detaljer i fliken Golden Path."
+        )
+
+    st.divider()
+    st.subheader("Senaste körning")
+    run_id, build_result, quality_result = latest_run_artifacts()
+    if run_id is None:
+        st.info(
+            "Inga körningar i `data/runs/` än. Skapa en via Playground eller "
+            '`python scripts/dev_generate.py "Skapa hemsida för en elektriker i Malmö"`.'
+        )
+    else:
+        r1, r2, r3, r4 = st.columns(4)
+        r1.metric("Run", run_id[:24])
+        if build_result is not None:
+            r2.metric("Build-status", str(build_result.get("status", "—")))
+            r3.metric("siteId", str(build_result.get("siteId", "—")))
+            r4.metric("Version", str(build_result.get("version", "—")))
+        else:
+            st.warning("build-result.json saknas eller är ogiltig för senaste run.")
+
+        st.markdown("**Quality Gate-sammandrag**")
+        if quality_result is None:
+            st.info("quality-result.json saknas för senaste run.")
+        else:
+            st.caption(f"Aggregerad status: `{quality_result.get('status', '—')}`.")
+            checks = quality_result.get("checks", [])
+            if isinstance(checks, list) and checks:
+                st.dataframe(
+                    [
+                        {
+                            "Check": c.get("name", "—"),
+                            "Status": c.get("status", "—"),
+                            "Severitet": c.get("severity", "blocking"),
+                            "Detalj": c.get("detail", ""),
+                        }
+                        for c in checks
+                        if isinstance(c, dict)
+                    ],
+                    width="stretch",
+                    hide_index=True,
+                )
+
+    st.divider()
+    render_known_gaps()
+
+    st.divider()
+    st.subheader("Färskhet per vy")
+    _render_freshness_table()
 
 
 def view_overview() -> None:
@@ -121,15 +274,7 @@ def view_overview() -> None:
         render_check(st.session_state["overview_check"])
 
     st.divider()
-    st.subheader("Kända brister")
-    st.caption(
-        "Synliggjorda som brister, inte som nya features. `section_add` monterar "
-        "dossiers men renderar ännu inte alltid synligt på sidan/positionen "
-        "(`applied=true`, `appliedVisibleEffect=false`). Följdprompt-copy gör "
-        "ibland parafras i stället för literal replace. Spårning i "
-        "`docs/known-issues.md` och "
-        "`docs/gaps/GAP-followup-prompt-content-passthrough.md`."
-    )
+    render_known_gaps()
 
 
 def view_golden_path_status() -> None:
@@ -359,6 +504,7 @@ def view_cross_policy() -> None:
 
 
 VIEWS = {
+    "Idag": lambda: safe_render(view_today),
     "Översikt": lambda: safe_render(view_overview),
     "Golden Path": lambda: safe_render(view_golden_path_status),
     "System Health": lambda: safe_render(view_system_health),

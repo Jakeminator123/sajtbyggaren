@@ -137,6 +137,77 @@ def test_status_views_include_golden_path():
 
 
 @pytest.mark.tooling
+def test_status_views_include_idag_landing():
+    """PR2: a read-only Idag landing view is registered first in the Status block."""
+    from backoffice.views import status
+
+    assert "Idag" in status.VIEWS
+    assert callable(status.VIEWS["Idag"])
+    # Idag is the first (top) view in the section.
+    assert next(iter(status.VIEWS)) == "Idag"
+
+
+@pytest.mark.tooling
+def test_latest_run_artifacts_none_when_no_runs(tmp_path: Path, monkeypatch):
+    """No runs on disk -> (None, None, None) so Idag renders an info state."""
+    from backoffice import loaders
+    from backoffice.views import status
+
+    monkeypatch.setattr(loaders, "RUNS_DIR", tmp_path / "runs", raising=False)
+    # list_run_ids reads paths.RUNS_DIR lazily; point it at an empty dir.
+    monkeypatch.setattr(status, "RUNS_DIR", tmp_path / "runs", raising=False)
+    monkeypatch.setattr(loaders, "list_run_ids", lambda: [])
+    run_id, build_result, quality_result = status.latest_run_artifacts()
+    assert run_id is None
+    assert build_result is None
+    assert quality_result is None
+
+
+@pytest.mark.tooling
+def test_latest_run_artifacts_reads_build_and_quality(tmp_path: Path, monkeypatch):
+    import json as _json
+
+    from backoffice import loaders
+    from backoffice.views import status
+
+    run_dir = tmp_path / "20260609T000000Z-abc-electrician"
+    run_dir.mkdir()
+    (run_dir / "build-result.json").write_text(
+        _json.dumps({"status": "ok", "siteId": "electrician", "version": 1}),
+        encoding="utf-8",
+    )
+    (run_dir / "quality-result.json").write_text(
+        _json.dumps({"status": "ok", "checks": [{"name": "typecheck", "status": "ok"}]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(status, "RUNS_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(loaders, "list_run_ids", lambda: [run_dir.name])
+
+    run_id, build_result, quality_result = status.latest_run_artifacts()
+    assert run_id == run_dir.name
+    assert build_result["status"] == "ok"
+    assert build_result["siteId"] == "electrician"
+    assert quality_result["checks"][0]["name"] == "typecheck"
+
+
+@pytest.mark.tooling
+def test_latest_run_artifacts_handles_broken_json(tmp_path: Path, monkeypatch):
+    from backoffice import loaders
+    from backoffice.views import status
+
+    run_dir = tmp_path / "20260609T000000Z-broken"
+    run_dir.mkdir()
+    (run_dir / "build-result.json").write_text("{ not valid", encoding="utf-8")
+    monkeypatch.setattr(status, "RUNS_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(loaders, "list_run_ids", lambda: [run_dir.name])
+
+    run_id, build_result, quality_result = status.latest_run_artifacts()
+    assert run_id == run_dir.name
+    assert build_result is None  # broken JSON skipped, not raised
+    assert quality_result is None
+
+
+@pytest.mark.tooling
 def test_latest_golden_path_summary_none_when_empty(tmp_path: Path):
     """No summary on disk -> (None, None), so the view renders an info state."""
     from backoffice.views.status import latest_golden_path_summary
