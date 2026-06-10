@@ -16,7 +16,11 @@ import {
   getSandboxSession,
   stopSandboxSessionForSite,
 } from "@/lib/vercel-sandbox-sessions";
-import type { PreviewResult, PreviewRuntimeKind } from "@preview-runtime";
+import type {
+  PreviewResult,
+  PreviewRuntimeKind,
+  PreviewTimings,
+} from "@preview-runtime";
 
 /**
  * /api/preview/[siteId] — hanterar preview för en genererad sajt så
@@ -99,6 +103,12 @@ interface PreviewStartOk {
   kind: PreviewRuntimeKind;
   /** Hållbar handle (sandbox.name) när adaptern äger en stoppbar resurs. */
   sessionId?: string;
+  /**
+   * Fas-timing (ms) från adapterns cold-start-mätning (B6-light, additivt
+   * fält): createMs/uploadMs/installMs/buildMs/readyMs/totalMs. Bara satt
+   * när adaptern mäter (idag vercel-sandbox); local-next-svaret är oförändrat.
+   */
+  timings?: PreviewTimings;
 }
 
 const VERCEL_AUTH_HINT =
@@ -338,6 +348,7 @@ export async function POST(
         status: "ready",
         kind: runtime.kind,
         sessionId: result.previewSession?.id,
+        timings: result.timings,
       };
       return NextResponse.json(body);
     }

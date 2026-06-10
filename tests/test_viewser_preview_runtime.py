@@ -6,7 +6,7 @@ import re
 
 import pytest
 
-from tests.support.viewser import VIEWSER_DIR
+from tests.support.viewser import REPO_ROOT, VIEWSER_DIR
 
 
 @pytest.mark.tooling
@@ -697,4 +697,273 @@ def test_viewer_panel_site_id_follows_selected_run() -> None:
     assert "siteId={runSiteId ?? selectedSiteId}" in text, (
         "ViewerPanel:s siteId måste följa den valda runens site (runSiteId) så "
         "preview-POST:en inte desynkar mot runId (C4)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tier 1 sandbox-smidighet (operatörsbeslut 2026-06-10): pre-built upload (B3),
+# OIDC-token-refresh före Sandbox.create (B1a), synliga timings (B6-light).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_vercel_sandbox_runner_prebuilt_upload_auto_killswitch_and_fallback() -> None:
+    """B3: när den aktiva immutable builden har en färdig ``.next/`` på disk
+    ska runnern ladda upp byggartefakterna och köra ENBART ``next start`` i
+    sandboxen (ingen ``next build``, prod-deps-install via ``--omit=dev``).
+    Sparar ~10-15 s av dagens ~25 s cold-start per preview.
+
+    Sex lås:
+      1. AUTO-beteende med kill-switch: ``VIEWSER_SANDBOX_UPLOAD_BUILT=0``
+         återställer dagens fulla väg — allt annat värde (inkl. osatt) ger
+         pre-built när ``.next`` finns. Låses som ``!== "0"``.
+      2. Readiness-signal: ``.next/BUILD_ID`` (skrivs sist i en lyckad build)
+         på den resolvade käll-katalogen — inte bara att ``.next/`` existerar.
+      3. Pre-built-grenen installerar prod-deps (``--omit=dev`` — typescript/
+         tailwind/eslint behövs bara av next build) och hoppar över
+         ``next build`` (gated på ``!prebuilt``).
+      4. ``.next/cache`` (webpack-disk-cache, merparten av .next-bytes) och
+         ``.next/trace`` (build-telemetri med operatörens absoluta paths)
+         laddas ALDRIG upp.
+      5. Ärlig en-gångs-fallback: failar pre-built-vägen i sandboxen körs
+         fulla vägen om EXAKT en gång (ingen loop), gated på
+         ``fallbackEligible && status === "failed"``.
+      6. Immutable-build-kontraktet: runnern muterar aldrig build-katalogen
+         (ingen writeFileSync/rmSync mot källan).
+    """
+    text = (VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts").read_text(encoding="utf-8")
+
+    # Lock 1: kill-switch-env + AUTO-default (!== "0" → på när osatt).
+    assert "VIEWSER_SANDBOX_UPLOAD_BUILT" in text, (
+        "vercel-sandbox-runner.ts saknar kill-switch-env "
+        "VIEWSER_SANDBOX_UPLOAD_BUILT (B3). =0 måste återställa fulla vägen."
+    )
+    assert re.search(r'process\.env\[UPLOAD_BUILT_ENV\]\s*!==\s*["\']0["\']', text), (
+        "Pre-built-läget måste vara AUTO (på när .next finns): gaten ska vara "
+        '``process.env[UPLOAD_BUILT_ENV] !== "0"`` så bara ett explicit ``0`` '
+        "stänger av."
+    )
+
+    # Lock 2: BUILD_ID-detektion på käll-katalogen.
+    assert re.search(
+        r'join\(\s*sourceDir,\s*["\']\.next["\'],\s*["\']BUILD_ID["\']\s*\)', text
+    ), (
+        "Pre-built-detektionen måste kolla ``<sourceDir>/.next/BUILD_ID`` "
+        "(skrivs sist i en lyckad next build) — en halvfärdig/avbruten build "
+        "får inte trigga pre-built-vägen."
+    )
+
+    # Lock 3: prod-deps-install + skippad next build i pre-built-grenen.
+    assert '"--omit=dev"' in text, (
+        "Pre-built-grenen ska installera med ``--omit=dev`` — dev-deps "
+        "(typescript/tailwind/eslint) behövs bara av next build, som hoppas över."
+    )
+    assert re.search(r'if\s*\(\s*!prebuilt\s*\)\s*\{[\s\S]{0,500}?"next",\s*"build"', text), (
+        "``npx next build`` måste vara gated på ``if (!prebuilt)`` så "
+        "pre-built-vägen aldrig bygger om i sandboxen."
+    )
+
+    # Lock 4: .next/cache + .next/trace exkluderas alltid.
+    assert '".next/cache"' in text, (
+        "``.next/cache`` (webpack-disk-cache, 60+ MB) får aldrig laddas upp — "
+        "den läses inte av next start."
+    )
+    assert '".next/trace"' in text, (
+        "``.next/trace`` (build-telemetri med operatörens absoluta paths) får "
+        "aldrig laddas upp."
+    )
+
+    # Lock 5: en-gångs-fallback utan loop.
+    assert len(re.findall(r"createSandboxPreviewAttempt\(request,\s*false\)", text)) == 1, (
+        "Fallbacken till fulla vägen ska ske EXAKT en gång "
+        "(createSandboxPreviewAttempt(request, false)) — ingen loop."
+    )
+    assert len(re.findall(r"createSandboxPreviewAttempt\(request,\s*true\)", text)) == 1, (
+        "Första försöket (allowPrebuilt=true) ska ske exakt en gång."
+    )
+    assert re.search(
+        r'first\.fallbackEligible\s*&&\s*first\.result\.status\s*===\s*["\']failed["\']',
+        text,
+    ), (
+        "Fallbacken måste vara gated på fallbackEligible && status === 'failed' "
+        "— auth-/valideringsfel (som failar identiskt på fulla vägen) får inte "
+        "trigga en andra kostsam sandbox-körning."
+    )
+
+    # Lock 6: immutable-build-kontraktet — runnern bara LÄSER källan.
+    assert "writeFileSync" not in text and "rmSync" not in text, (
+        "vercel-sandbox-runner.ts får aldrig mutera den immutable "
+        "build-katalogen på disk (B157 nivå 4)."
+    )
+
+
+@pytest.mark.tooling
+def test_vercel_sandbox_runner_refreshes_oidc_token_before_sandbox_create() -> None:
+    """B1a: OIDC-token från ``vercel env pull`` lever ~12 h lokalt — en lång
+    viewser-session överlever den gränsen och previews dör då med ett
+    kryptiskt SDK-fel. Refresh-logiken extraherades ur ``scripts/dev.mjs``
+    till den DELADE modulen ``lib/vercel-oidc-refresh.mjs`` och runnern
+    anropar den FÖRE ``Sandbox.create`` när OIDC-vägen används och JWT-exp
+    har < 1 h kvar.
+
+    Fem lås:
+      1. Delad modul finns med 1 h-margin och äger det enda
+         ``vercel env pull``-anropet.
+      2. ``scripts/dev.mjs`` importerar den delade modulen och har INGEN egen
+         inline-kopia kvar (två drift-känsliga kopior var hela problemet).
+      3. Runnern anropar guarden FÖRE ``Sandbox.create`` (index-ordning i
+         källan), gated på ``credentials.mode === "oidc"``.
+      4. Vid misslyckad refresh + död token: ärligt fel som behåller
+         ``VERCEL_OIDC_TOKEN`` i meddelandet (→ routens ``vercel_auth``-
+         klassning) OCH inkluderar ``expiresIn`` + hur-fixar-info.
+      5. En fräschare token från filen adopteras in i ``process.env`` —
+         det är därifrån SDK:n läser vid ``Sandbox.create``.
+    """
+    shared_path = VIEWSER_DIR / "lib" / "vercel-oidc-refresh.mjs"
+    assert shared_path.exists(), (
+        "apps/viewser/lib/vercel-oidc-refresh.mjs saknas — den delade "
+        "OIDC-refresh-modulen (B1a) som dev.mjs och sandbox-runnern delar."
+    )
+    shared = shared_path.read_text(encoding="utf-8")
+    dev = (VIEWSER_DIR / "scripts" / "dev.mjs").read_text(encoding="utf-8")
+    runner = (VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts").read_text(
+        encoding="utf-8"
+    )
+
+    # Lock 1: margin + det enda env-pull-anropet bor i den delade modulen.
+    assert re.search(
+        r"OIDC_REFRESH_MARGIN_SECONDS\s*=\s*60\s*\*\s*60", shared
+    ), "Den delade modulen ska refresha vid < 1 h kvar (60 * 60 s margin)."
+    assert re.search(r'\[\s*"env",\s*"pull"', shared), (
+        "vercel-oidc-refresh.mjs ska äga själva `vercel env pull`-spawnen."
+    )
+
+    # Lock 2: dev.mjs delegerar — ingen inline-kopia kvar.
+    assert re.search(
+        r'import\s*\{[^}]*ensureFreshVercelOidcToken[^}]*\}\s*from\s*'
+        r'["\']\.\./lib/vercel-oidc-refresh\.mjs["\']',
+        dev,
+    ), (
+        "scripts/dev.mjs måste importera ensureFreshVercelOidcToken från "
+        "../lib/vercel-oidc-refresh.mjs (delad implementation, B1a)."
+    )
+    assert "ensureFreshVercelOidcToken(" in dev, (
+        "scripts/dev.mjs måste fortsatt anropa refreshen i vercel-sandbox-läge "
+        "(predev-auth-beteendet är oförändrat)."
+    )
+    assert "function ensureFreshVercelOidcToken" not in dev, (
+        "scripts/dev.mjs får inte ha kvar en egen inline-implementation — "
+        "två drift-känsliga kopior av refresh-logiken var hela problemet."
+    )
+    assert not re.search(r'\[\s*"env",\s*"pull"', dev), (
+        "`vercel env pull`-spawnen får bara finnas i den delade modulen."
+    )
+
+    # Lock 3: runnern anropar guarden före Sandbox.create, gated på oidc.
+    assert re.search(
+        r'import\s*\{[^}]*ensureFreshVercelOidcToken[^}]*\}\s*from\s*'
+        r'["\']\./vercel-oidc-refresh\.mjs["\']',
+        runner,
+    ), (
+        "vercel-sandbox-runner.ts måste importera den delade refreshen från "
+        "./vercel-oidc-refresh.mjs."
+    )
+    guard_call_idx = runner.find("ensureFreshOidcTokenBeforeCreate(logs)")
+    create_idx = runner.find("Sandbox.create({")
+    assert guard_call_idx != -1, (
+        "Runnern saknar ensureFreshOidcTokenBeforeCreate(logs)-anropet (B1a)."
+    )
+    assert create_idx != -1 and guard_call_idx < create_idx, (
+        "OIDC-guarden måste anropas FÖRE Sandbox.create — efteråt är "
+        "token-utgången redan ett kryptiskt SDK-fel."
+    )
+    gate_idx = runner.find('credentials.mode === "oidc"')
+    assert gate_idx != -1 and gate_idx < guard_call_idx, (
+        "Guarden ska bara köras på OIDC-vägen (credentials.mode === 'oidc') — "
+        "access-token-trion har ingen exp att refresha."
+    )
+
+    # Lock 4: ärligt fel med expiresIn + fix-info, klassbart som vercel_auth.
+    failure_block = re.search(
+        r"VERCEL_OIDC_TOKEN är utgången[\s\S]{0,400}?expiresIn[\s\S]{0,400}?vercel env pull",
+        runner,
+    )
+    assert failure_block, (
+        "Misslyckad refresh + död token måste ge ett ärligt fel som nämner "
+        "VERCEL_OIDC_TOKEN (routens vercel_auth-regex), expiresIn och "
+        "hur-fixar-info (`vercel env pull ...`)."
+    )
+
+    # Lock 5: fräschare fil-token adopteras in i process.env före create.
+    assert re.search(
+        r"process\.env\.VERCEL_OIDC_TOKEN\s*=\s*fileToken", runner
+    ), (
+        "Runnern måste adoptera en fräschare token från .env.vercel.local in i "
+        "process.env — ensureVercelEnvLocalLoaded fyller bara tomma nycklar en "
+        "gång per process och räcker inte efter en refresh."
+    )
+
+
+@pytest.mark.tooling
+def test_preview_post_response_exposes_sandbox_timings() -> None:
+    """B6-light: runnern mäter redan createMs/uploadMs/installMs/buildMs/
+    readyMs/totalMs — kedjan upp till ``POST /api/preview/<siteId>``-svaret
+    ska exponera timings-objektet (additivt fält) så UI/operatör kan se var
+    cold-start-tiden går (och verifiera pre-built-vinsten i B3).
+
+    Kedjan har fyra länkar som alla låses:
+      1. ``PreviewResult`` (packages/preview-runtime) har ett additivt
+         ``timings?: PreviewTimings``-fält.
+      2. Adaptern (adapters/vercel-sandbox.ts) mappar ``info.timings`` vidare.
+      3. DI-wiringen (preview-runtime-server.ts) skickar runnerns
+         ``result.timings`` in i adaptern.
+      4. Routen lägger ``timings: result.timings`` i POST-svaret
+         (``PreviewStartOk``). local-next-grenen är OFÖRÄNDRAD (den svarar
+         via ``startPreviewServer`` precis som förr).
+    """
+    types_text = (
+        REPO_ROOT / "packages" / "preview-runtime" / "src" / "types.ts"
+    ).read_text(encoding="utf-8")
+    adapter_text = (
+        REPO_ROOT / "packages" / "preview-runtime" / "src" / "adapters" / "vercel-sandbox.ts"
+    ).read_text(encoding="utf-8")
+    wiring_text = (VIEWSER_DIR / "lib" / "preview-runtime-server.ts").read_text(
+        encoding="utf-8"
+    )
+    route_text = (
+        VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    # Lock 1: additivt timings-fält i PreviewResult.
+    assert re.search(r"timings\?:\s*PreviewTimings", types_text), (
+        "packages/preview-runtime/src/types.ts: PreviewResult måste ha ett "
+        "additivt ``timings?: PreviewTimings``-fält (B6-light)."
+    )
+    assert "interface PreviewTimings" in types_text, (
+        "packages/preview-runtime/src/types.ts saknar PreviewTimings-interfacet."
+    )
+
+    # Lock 2: adaptern släpper igenom runnerns timing.
+    assert "timings: info.timings" in adapter_text, (
+        "adapters/vercel-sandbox.ts måste mappa handler-resultatets timings "
+        "in i PreviewResult — annars dör kedjan i adapterlagret."
+    )
+
+    # Lock 3: DI-wiringen skickar runnerns timings till adaptern.
+    assert "timings: result.timings" in wiring_text, (
+        "preview-runtime-server.ts vercelSandbox.start måste returnera "
+        "``timings: result.timings`` från createSandboxPreview."
+    )
+
+    # Lock 4: routen exponerar timings i POST-svaret, additivt.
+    assert re.search(r"timings\?:\s*PreviewTimings", route_text), (
+        "route.ts PreviewStartOk måste ha det additiva timings-fältet."
+    )
+    assert "timings: result.timings" in route_text, (
+        "route.ts POST-svaret (icke-lokala adaptrar) måste inkludera "
+        "``timings: result.timings`` så operatören ser var cold-start-tiden går."
+    )
+    # local-next-grenen oförändrad (svarar via startPreviewServer som förr).
+    assert "await startPreviewServer(siteId)" in route_text, (
+        "local-next-grenen ska vara orörd av timings-exponeringen."
     )

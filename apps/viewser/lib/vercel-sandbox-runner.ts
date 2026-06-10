@@ -43,8 +43,23 @@ import {
   collectSourceFromBlob,
   type CollectedBlobSource,
 } from "./generated-blob-source";
+import {
+  decodeJwtExpirySeconds,
+  ensureFreshVercelOidcToken,
+  OIDC_REFRESH_MARGIN_SECONDS,
+  readVercelOidcTokenFromFile,
+} from "./vercel-oidc-refresh.mjs";
 
 const TTL_ENV = "VIEWSER_SANDBOX_SPIKE_TTL_MS";
+
+/**
+ * Kill-switch för pre-built-vägen (B3). Default är AUTO: när den aktiva
+ * immutable builden redan har en färdig ``.next/`` på disk laddas den upp och
+ * ``next build`` hoppas över i sandboxen (~10 s + dev-deps-install sparas per
+ * preview). ``VIEWSER_SANDBOX_UPLOAD_BUILT=0`` återställer dagens fulla väg
+ * (full npm install + next build i sandboxen).
+ */
+const UPLOAD_BUILT_ENV = "VIEWSER_SANDBOX_UPLOAD_BUILT";
 
 const PREVIEW_PORT = 3000;
 const SANDBOX_RUNTIME = "node24";
@@ -62,7 +77,13 @@ const READY_POLL_INTERVAL_MS = 2_500;
 const MAX_FILES = 4_000;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 
-/** Kataloger som aldrig kopieras in (rebuildas/installeras i sandboxen). */
+/**
+ * Kataloger som aldrig kopieras in (rebuildas/installeras i sandboxen).
+ * Kirurgiskt undantag (B3): i pre-built-läget följer rot-nivåns ``.next/``
+ * med upp (det är hela poängen) — men aldrig ``.next/cache`` (webpack-cache,
+ * ~95 % av .next-bytes, behövs aldrig av ``next start``) och aldrig
+ * ``.next/trace`` (build-telemetri med operatörens absoluta paths).
+ */
 const SKIP_DIRS = new Set([
   "node_modules",
   ".next",
@@ -95,6 +116,11 @@ export interface SandboxPreviewResult {
   error?: string;
   /** TTL i ms som sattes på sandboxen. */
   ttlMs?: number;
+  /**
+   * True när previewn serverades via pre-built-vägen (B3): färdig ``.next/``
+   * uppladdad, ``next build`` hoppad i sandboxen.
+   */
+  prebuilt?: boolean;
   /** Fas-timing för cold-start-analys (ms). */
   timings?: {
     createMs?: number;
@@ -218,6 +244,71 @@ export function hasVercelSandboxAuth(): boolean {
   return resolveCredentials() !== null;
 }
 
+/**
+ * B1a — token-hållbarhet: OIDC-token från ``vercel env pull`` lever ~12 h
+ * lokalt. En lång viewser-session överlever den gränsen, och utan denna
+ * guard dör previews mitt i med ett kryptiskt SDK-fel. Anropas FÖRE
+ * ``Sandbox.create`` när OIDC-vägen används:
+ *
+ *   - > 1 h kvar på JWT-exp → no-op (ingen pull-kostnad i normalfallet).
+ *   - < 1 h kvar / oläsbar exp → kör den DELADE refreshen
+ *     (``vercel-oidc-refresh.mjs``, samma logik som scripts/dev.mjs predev)
+ *     och adoptera en fräschare token från ``.env.vercel.local`` in i
+ *     ``process.env`` (det är därifrån SDK:n läser ``VERCEL_OIDC_TOKEN``;
+ *     ``ensureVercelEnvLocalLoaded`` fyller bara TOMMA nycklar en gång per
+ *     process och hjälper inte här).
+ *   - Refresh misslyckades men token lever fortfarande → fortsätt ärligt
+ *     med varningslogg (previewn hinner förmodligen klart).
+ *   - Refresh misslyckades och token är död/saknas → ärligt fel med
+ *     expiresIn + hur-fixar-info (klassas som ``vercel_auth`` av preview-
+ *     routen — meddelandet innehåller "VERCEL_OIDC_TOKEN").
+ */
+function ensureFreshOidcTokenBeforeCreate(
+  logs: string[],
+): { ok: true } | { ok: false; error: string } {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const currentExp = decodeJwtExpirySeconds(process.env.VERCEL_OIDC_TOKEN);
+  if (currentExp !== null && currentExp - nowSeconds > OIDC_REFRESH_MARGIN_SECONDS) {
+    return { ok: true };
+  }
+  ensureFreshVercelOidcToken({
+    log: (message: string) => logs.push(`OIDC-refresh: ${message}`),
+    warn: (message: string) => logs.push(`OIDC-refresh: ${message}`),
+  });
+  const fileToken = readVercelOidcTokenFromFile();
+  if (fileToken) {
+    const fileExp = decodeJwtExpirySeconds(fileToken);
+    if (fileExp !== null && (currentExp === null || fileExp > currentExp)) {
+      process.env.VERCEL_OIDC_TOKEN = fileToken;
+    }
+  }
+  const effectiveExp = decodeJwtExpirySeconds(process.env.VERCEL_OIDC_TOKEN);
+  if (effectiveExp !== null && effectiveExp > nowSeconds) {
+    const minutesLeft = Math.round((effectiveExp - nowSeconds) / 60);
+    if (effectiveExp - nowSeconds <= OIDC_REFRESH_MARGIN_SECONDS) {
+      logs.push(
+        "Varning: OIDC-refresh misslyckades — fortsätter på nuvarande token " +
+          `(~${minutesLeft} min kvar).`,
+      );
+    } else {
+      logs.push(`OIDC-token färsk (~${minutesLeft} min kvar).`);
+    }
+    return { ok: true };
+  }
+  const expiresIn =
+    effectiveExp === null
+      ? "okänd (token saknas eller har oläsbar exp)"
+      : `${effectiveExp - nowSeconds} s (utgången)`;
+  return {
+    ok: false,
+    error:
+      "VERCEL_OIDC_TOKEN är utgången och kunde inte uppdateras automatiskt " +
+      `(expiresIn: ${expiresIn}). Kör \`vercel env pull ` +
+      "apps/viewser/.env.vercel.local` (kräver `vercel link` + inloggad " +
+      "vercel-CLI) och försök igen — en färsk token gäller ~12 h.",
+  };
+}
+
 // Var ``build_site.py`` skrivit den genererade sajten resolveras av den
 // DELADE ``resolveGeneratedDir`` i ``./generated-dir`` (en enda resolver för
 // både local-preview-servern och denna runner, med samma regler som Pythons
@@ -331,28 +422,72 @@ interface CollectedSource {
 }
 
 /**
+ * True om pre-built-upload (B3) är aktiverad. Default AUTO (på); kill-switch
+ * ``VIEWSER_SANDBOX_UPLOAD_BUILT=0`` återställer dagens fulla väg.
+ */
+function prebuiltUploadEnabled(): boolean {
+  return process.env[UPLOAD_BUILT_ENV] !== "0";
+}
+
+/**
+ * True om käll-katalogen har en FÄRDIG ``next build``-output. ``BUILD_ID``
+ * skrivs sist i en lyckad build, så dess närvaro är readiness-signalen
+ * (samma kontrakt som ``local-preview-server.ts`` förlitar sig på).
+ * Immutable-build-kontraktet respekteras: vi LÄSER bara — build-katalogen
+ * på disk muteras aldrig.
+ */
+function hasCompletedNextBuild(sourceDir: string): boolean {
+  return existsSync(path.join(sourceDir, ".next", "BUILD_ID"));
+}
+
+/**
  * Samla in alla käll-filer under ``rootDir`` (utom ``SKIP_DIRS``,
  * ``.env*``-filer och symlinks) som ``writeFiles``-deskriptorer med
  * POSIX-relativa paths. Kastar om projektet är orimligt stort (oftast ett
  * tecken på att ``node_modules`` inte exkluderades) så vi aldrig laddar upp
  * gigabyte. ``.env*`` blockeras (utom ``.env.example``) så inga secrets
  * läcker till den publika sandboxen.
+ *
+ * ``includeBuiltNext`` (B3): tar med rot-nivåns färdiga ``.next/`` så
+ * sandboxen kan köra ``next start`` direkt utan ``next build``. Kirurgiska
+ * undantag inom ``.next``: ``cache/`` (webpack-disk-cache, 60+ MB, aldrig
+ * läst av ``next start``) och ``trace`` (build-telemetri med operatörens
+ * absoluta paths) hoppas alltid över.
+ *
+ * Windows→Linux-portabilitet (verifierad mot faktisk genererad ``.next``):
+ * runtime-manifesten (``pages-manifest``, ``app-paths-manifest``,
+ * ``routes-manifest`` m.fl.) använder POSIX-relativa paths även när bygget
+ * skedde på Windows. De absoluta Windows-paths som FINNS i
+ * ``server/chunks/*`` och ``*client-reference-manifest*`` är opaka modul-ID-
+ * strängar som bara matchas mot varandra (RSC-proxy ↔ manifest, byggda
+ * ihop) — de resolvas aldrig mot filsystemet av ``next start``.
+ * ``required-server-files.json`` läses bara av standalone-läget (används ej
+ * här). Om något ändå skiljer: den ärliga fallbacken i
+ * ``createSandboxPreview`` tar fulla vägen.
  */
-function collectSource(rootDir: string): CollectedSource {
+function collectSource(rootDir: string, includeBuiltNext = false): CollectedSource {
   const files: { relPath: string; content: Buffer }[] = [];
   const dirSet = new Set<string>();
   let totalBytes = 0;
 
-  const walk = (absDir: string): void => {
+  const walk = (absDir: string, relDir: string): void => {
     for (const entry of readdirSync(absDir, { withFileTypes: true })) {
+      const relPath = relDir ? `${relDir}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
-        if (SKIP_DIRS.has(entry.name)) continue;
-        walk(path.join(absDir, entry.name));
+        if (SKIP_DIRS.has(entry.name)) {
+          // Kirurgiskt B3-undantag: BARA rot-nivåns ``.next`` släpps igenom,
+          // och bara i pre-built-läget. Nästlade ``.next``/övriga SKIP_DIRS
+          // skippas precis som förr.
+          if (!(includeBuiltNext && relPath === ".next")) continue;
+        }
+        if (includeBuiltNext && relPath === ".next/cache") continue;
+        walk(path.join(absDir, entry.name), relPath);
         continue;
       }
       // Symlinks hoppas över: ``Dirent.isFile()`` är ``false`` för en
       // symlink (typen speglar katalog-entryn, inte målet).
       if (!entry.isFile()) continue;
+      if (includeBuiltNext && relPath === ".next/trace") continue;
       // Säkerhet (samma B54/B58-mönster som stackblitz-files.ts): ladda
       // ALDRIG upp ``.env*`` till den publika sandboxen — bara
       // ``.env.example`` (ofarlig placeholder) är tillåten. Case-insensitivt
@@ -362,7 +497,6 @@ function collectSource(rootDir: string): CollectedSource {
         continue;
       }
       const absPath = path.join(absDir, entry.name);
-      const relPath = path.relative(rootDir, absPath).split(path.sep).join("/");
       const size = statSync(absPath).size;
       totalBytes += size;
       if (files.length >= MAX_FILES || totalBytes > MAX_TOTAL_BYTES) {
@@ -378,7 +512,7 @@ function collectSource(rootDir: string): CollectedSource {
     }
   };
 
-  walk(rootDir);
+  walk(rootDir, "");
   return { files, dirs: Array.from(dirSet).sort(), totalBytes };
 }
 
@@ -433,59 +567,109 @@ async function waitForPublicUrl(url: string): Promise<boolean> {
  * löper ut eller ``stopSandboxPreview`` anropas. Vid fel städas en redan
  * skapad sandbox upp så vi inte läcker kostnad.
  *
+ * Pre-built-vägen (B3): när disk-källan har en färdig ``.next/`` laddas den
+ * upp och sandboxen kör bara ``npm install --omit=dev`` + ``next start``
+ * (ingen ``next build``). Failar pre-built-vägen i sandboxen loggas det
+ * ärligt och fulla vägen körs om EN gång — ingen loop.
+ *
  * Spike-agnostisk: konsumenter (CLI vs adapter) ansvarar för sin egen gating.
  */
 export async function createSandboxPreview(
   request: SandboxPreviewRequest,
 ): Promise<SandboxPreviewResult> {
+  const first = await createSandboxPreviewAttempt(request, true);
+  if (first.fallbackEligible && first.result.status === "failed") {
+    const honestLog =
+      "Pre-built .next misslyckades i sandboxen — faller ärligt tillbaka " +
+      "till fulla vägen (npm install + next build) EN gång, ingen loop.";
+    const second = await createSandboxPreviewAttempt(request, false);
+    return {
+      ...second.result,
+      logs: [...(first.result.logs ?? []), honestLog, ...(second.result.logs ?? [])],
+    };
+  }
+  return first.result;
+}
+
+/**
+ * Intern attempt-körning. ``fallbackEligible`` är true bara när pre-built-
+ * vägen faktiskt valdes OCH felet uppstod i en pre-built-beroende fas
+ * (collect/sandbox-exekvering) — auth-/valideringsfel skulle faila identiskt
+ * på fulla vägen och får aldrig trigga en andra (kostsam) sandbox-körning.
+ */
+async function createSandboxPreviewAttempt(
+  request: SandboxPreviewRequest,
+  allowPrebuilt: boolean,
+): Promise<{ result: SandboxPreviewResult; fallbackEligible: boolean }> {
   const logs: string[] = [];
 
   const siteIdError = validateSiteId(request.siteId ?? "");
   if (siteIdError) {
-    return failed(`Ogiltigt siteId: ${siteIdError}`);
+    return { result: failed(`Ogiltigt siteId: ${siteIdError}`), fallbackEligible: false };
   }
 
   const credentials = resolveCredentials();
   if (!credentials) {
-    return failed(
-      "Vercel-credentials saknas. Sätt antingen VERCEL_OIDC_TOKEN (via " +
-        "`vercel link` + `vercel env pull`) eller trion VERCEL_TOKEN + " +
-        "VERCEL_TEAM_ID + VERCEL_PROJECT_ID. Runnern degraderar hellre ärligt " +
-        "än kraschar.",
-    );
+    return {
+      result: failed(
+        "Vercel-credentials saknas. Sätt antingen VERCEL_OIDC_TOKEN (via " +
+          "`vercel link` + `vercel env pull`) eller trion VERCEL_TOKEN + " +
+          "VERCEL_TEAM_ID + VERCEL_PROJECT_ID. Runnern degraderar hellre ärligt " +
+          "än kraschar.",
+      ),
+      fallbackEligible: false,
+    };
   }
   logs.push(`Auth-läge: ${credentials.mode}.`);
 
   // Käll-filer: disk lokalt, blob hostat (FAS 2B, migrationsplanens G2). Disk-
-  // vägen är byte-identisk med tidigare. Blob-vägen aktiveras bara när ingen
-  // byggd sajt finns på disk — det normala fallet hostat på Vercel där det inte
-  // finns någon beständig repo-disk. En redan byggd sajt görs förhandsvisbar
-  // hostat genom att snapshotta dess generated-files till blob lokalt via
-  // scripts/snapshot-site-to-blob.mjs (icke-publik operatör-CLI, #156).
+  // vägen är byte-identisk med tidigare (pre-built-läget undantaget, B3).
+  // Blob-vägen aktiveras bara när ingen byggd sajt finns på disk — det normala
+  // fallet hostat på Vercel där det inte finns någon beständig repo-disk. En
+  // redan byggd sajt görs förhandsvisbar hostat genom att snapshotta dess
+  // generated-files till blob lokalt via scripts/snapshot-site-to-blob.mjs
+  // (icke-publik operatör-CLI, #156).
   const sourceDir = resolveSourceDir(request.siteId);
+  // Pre-built-vägen (B3) är disk-only: blob-snapshots innehåller ingen .next.
+  const prebuilt =
+    allowPrebuilt &&
+    prebuiltUploadEnabled() &&
+    sourceDir !== null &&
+    hasCompletedNextBuild(sourceDir);
   let collected: CollectedSource;
   if (sourceDir) {
     logs.push(`Käll-katalog: ${sourceDir}.`);
+    if (prebuilt) {
+      logs.push(
+        "Pre-built .next hittad (BUILD_ID) — laddar upp byggartefakter och " +
+          `hoppar över next build i sandboxen (${UPLOAD_BUILT_ENV}=0 stänger av).`,
+      );
+    }
     try {
-      collected = collectSource(sourceDir);
+      collected = collectSource(sourceDir, prebuilt);
     } catch (error) {
-      return failed(messageFromError(error), logs);
+      // Collect-fel i pre-built-läget (t.ex. fil-/byte-taket nås på grund av
+      // .next-innehållet) kan lyckas på fulla vägen → fallback-berättigat.
+      return { result: failed(messageFromError(error), logs), fallbackEligible: prebuilt };
     }
   } else {
     let fromBlob: CollectedBlobSource | null;
     try {
       fromBlob = await collectSourceFromBlob(request.siteId);
     } catch (error) {
-      return failed(messageFromError(error), logs);
+      return { result: failed(messageFromError(error), logs), fallbackEligible: false };
     }
     if (!fromBlob) {
-      return failed(
-        `Hittade ingen byggd sajt för siteId="${request.siteId}" — varken på ` +
-          `disk (${resolveGeneratedDir()}) eller som blob-snapshot ` +
-          `(${blobPrefixForSite(request.siteId)}). Kör build_site.py lokalt, ` +
-          "eller snapshotta sajten till blob med scripts/snapshot-site-to-blob.mjs.",
-        logs,
-      );
+      return {
+        result: failed(
+          `Hittade ingen byggd sajt för siteId="${request.siteId}" — varken på ` +
+            `disk (${resolveGeneratedDir()}) eller som blob-snapshot ` +
+            `(${blobPrefixForSite(request.siteId)}). Kör build_site.py lokalt, ` +
+            "eller snapshotta sajten till blob med scripts/snapshot-site-to-blob.mjs.",
+          logs,
+        ),
+        fallbackEligible: false,
+      };
     }
     collected = fromBlob;
     logs.push(
@@ -496,12 +680,15 @@ export async function createSandboxPreview(
 
   const sdk = await loadSandboxSdk();
   if (!sdk) {
-    return failed(
-      "@vercel/sandbox är inte installerad i apps/viewser. Kör " +
-        "`cd apps/viewser && npm install` (paketet ligger i package.json). " +
-        "Runnern degraderar ärligt istället för att krascha.",
-      logs,
-    );
+    return {
+      result: failed(
+        "@vercel/sandbox är inte installerad i apps/viewser. Kör " +
+          "`cd apps/viewser && npm install` (paketet ligger i package.json). " +
+          "Runnern degraderar ärligt istället för att krascha.",
+        logs,
+      ),
+      fallbackEligible: false,
+    };
   }
   const { Sandbox } = sdk;
 
@@ -512,6 +699,15 @@ export async function createSandboxPreview(
 
   const ttlMs = clampTtl(request.ttlMs);
   const sandboxName = `sajtbyggaren-preview-${slug(request.siteId)}-${Date.now()}`;
+
+  // B1a: håll OIDC-token färsk FÖRE Sandbox.create (refresh vid < 1 h kvar).
+  // Auth-fel är aldrig fallback-berättigade — fulla vägen failar identiskt.
+  if (credentials.mode === "oidc") {
+    const oidcGuard = ensureFreshOidcTokenBeforeCreate(logs);
+    if (!oidcGuard.ok) {
+      return { result: failed(oidcGuard.error, logs), fallbackEligible: false };
+    }
+  }
 
   const t0 = Date.now();
   let createMs: number | undefined;
@@ -550,39 +746,58 @@ export async function createSandboxPreview(
     uploadMs = Date.now() - tUpload;
     logs.push(`Filer uppladdade på ${uploadMs} ms.`);
 
+    // ``next start`` behöver node_modules (next/react/react-dom + runtime-
+    // deps — ett node_modules-träd går inte att ladda upp, det spränger
+    // fil-taket många gånger om). I pre-built-läget räcker prod-deps:
+    // ``--omit=dev`` hoppar över typescript/tailwind/eslint m.fl. som bara
+    // behövs av ``next build`` (next.config.ts transpileras av Nexts egna
+    // bundlade tooling vid start, kräver inte typescript-paketet).
     const tInstall = Date.now();
+    const installArgs = prebuilt
+      ? ["install", "--omit=dev", "--no-audit", "--no-fund", "--loglevel", "warn"]
+      : ["install", "--no-audit", "--no-fund", "--loglevel", "warn"];
     const install = await sandbox.runCommand({
       cmd: "npm",
-      args: ["install", "--no-audit", "--no-fund", "--loglevel", "warn"],
+      args: installArgs,
       stdout: process.stdout,
       stderr: process.stderr,
     });
     installMs = Date.now() - tInstall;
     if (install.exitCode !== 0) {
       await safeStop(sandbox);
-      return failed(
-        `npm install misslyckades (exit ${install.exitCode}) i sandboxen.`,
-        logs,
-      );
+      return {
+        result: failed(
+          `npm install misslyckades (exit ${install.exitCode}) i sandboxen.`,
+          logs,
+        ),
+        fallbackEligible: prebuilt,
+      };
     }
-    logs.push(`npm install klar på ${installMs} ms.`);
+    logs.push(`npm install${prebuilt ? " --omit=dev" : ""} klar på ${installMs} ms.`);
 
-    const tBuild = Date.now();
-    const build = await sandbox.runCommand({
-      cmd: "npx",
-      args: ["next", "build"],
-      stdout: process.stdout,
-      stderr: process.stderr,
-    });
-    buildMs = Date.now() - tBuild;
-    if (build.exitCode !== 0) {
-      await safeStop(sandbox);
-      return failed(
-        `next build misslyckades (exit ${build.exitCode}) i sandboxen.`,
-        logs,
-      );
+    if (!prebuilt) {
+      const tBuild = Date.now();
+      const build = await sandbox.runCommand({
+        cmd: "npx",
+        args: ["next", "build"],
+        stdout: process.stdout,
+        stderr: process.stderr,
+      });
+      buildMs = Date.now() - tBuild;
+      if (build.exitCode !== 0) {
+        await safeStop(sandbox);
+        return {
+          result: failed(
+            `next build misslyckades (exit ${build.exitCode}) i sandboxen.`,
+            logs,
+          ),
+          fallbackEligible: false,
+        };
+      }
+      logs.push(`next build klar på ${buildMs} ms.`);
+    } else {
+      logs.push("Hoppar över next build — pre-built .next används (B3).");
     }
-    logs.push(`next build klar på ${buildMs} ms.`);
 
     // Detached: ``next start`` håller porten öppen tills TTL löper ut.
     await sandbox.runCommand({
@@ -597,35 +812,53 @@ export async function createSandboxPreview(
     readyMs = Date.now() - tReady;
     if (!isUp) {
       await safeStop(sandbox);
-      return failed(
-        `next start svarade inte på ${url} inom ` +
-          `${Math.round(READY_POLL_TIMEOUT_MS / 1000)} s. Sandbox stoppad.`,
-        logs,
-      );
+      // Pre-built-läget: en .next som av någon anledning inte är portabel
+      // (t.ex. framtida Next-version som bakar in resolvade paths) yttrar
+      // sig exakt här — ``next start`` svarar aldrig. Ärlig fallback.
+      return {
+        result: failed(
+          `next start svarade inte på ${url} inom ` +
+            `${Math.round(READY_POLL_TIMEOUT_MS / 1000)} s. Sandbox stoppad.` +
+            (prebuilt ? " (pre-built-läge — fulla vägen provas en gång)" : ""),
+          logs,
+        ),
+        fallbackEligible: prebuilt,
+      };
     }
 
     const totalMs = Date.now() - t0;
-    logs.push(`Preview live på ${url} (cold-start totalt ${totalMs} ms).`);
+    logs.push(
+      `Preview live på ${url} (cold-start totalt ${totalMs} ms` +
+        `${prebuilt ? ", pre-built .next" : ""}).`,
+    );
 
     return {
-      status: "ready",
-      url,
-      sandboxId: sandbox.name,
-      ttlMs,
-      timings: { createMs, uploadMs, installMs, buildMs, readyMs, totalMs },
-      cost: {
-        runtime: SANDBOX_RUNTIME,
-        vcpus: sandbox.vcpus,
-        memoryMb: sandbox.memory,
+      result: {
+        status: "ready",
+        url,
+        sandboxId: sandbox.name,
         ttlMs,
-        fileCount: collected.files.length,
-        uploadBytes: collected.totalBytes,
+        prebuilt,
+        timings: { createMs, uploadMs, installMs, buildMs, readyMs, totalMs },
+        cost: {
+          runtime: SANDBOX_RUNTIME,
+          vcpus: sandbox.vcpus,
+          memoryMb: sandbox.memory,
+          ttlMs,
+          fileCount: collected.files.length,
+          uploadBytes: collected.totalBytes,
+        },
+        logs,
       },
-      logs,
+      fallbackEligible: false,
     };
   } catch (error) {
+    // Kast FÖRE en lyckad Sandbox.create (sandbox === null, t.ex. auth/nät)
+    // är inte pre-built-specifika och skulle faila identiskt på fulla vägen
+    // — ingen fallback då. Kast efter create (upload/kommandon) kan vara det.
+    const fallbackEligible = prebuilt && sandbox !== null;
     if (sandbox) await safeStop(sandbox);
-    return failed(messageFromError(error), logs);
+    return { result: failed(messageFromError(error), logs), fallbackEligible };
   }
 }
 

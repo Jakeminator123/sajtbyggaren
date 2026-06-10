@@ -75,6 +75,22 @@ export interface PreviewSession {
 }
 
 /**
+ * Fas-timing (ms) för en preview-start — adaptrar som mäter sin cold-start
+ * (idag `vercel-sandbox`) rapporterar var tiden går så operatören kan se
+ * skillnaden mellan t.ex. install- och build-fasen. Alla fält är optionella:
+ * adaptrar utan mätning utelämnar hela objektet, och faser som hoppats över
+ * (t.ex. `buildMs` på pre-built-vägen) utelämnas individuellt.
+ */
+export interface PreviewTimings {
+  createMs?: number;
+  uploadMs?: number;
+  installMs?: number;
+  buildMs?: number;
+  readyMs?: number;
+  totalMs?: number;
+}
+
+/**
  * Resultat från PreviewRuntime efter en Engine Run.
  * Canonical: `Preview Result` (naming-dictionary v17:`previewResult`).
  */
@@ -88,6 +104,8 @@ export interface PreviewResult {
   logs?: string[];
   /** Mänsklig felförklaring vid `failed`/`unsupported`. */
   error?: string;
+  /** Fas-timing (ms) när adaptern mäter sin cold-start (additivt fält). */
+  timings?: PreviewTimings;
 }
 
 /**
