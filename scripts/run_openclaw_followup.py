@@ -31,6 +31,24 @@ Two modes:
       ``--apply`` is additive + opt-in: it does not change ``/api/prompt``'s
       current behaviour; the route can adopt it when christopher wires the UI.
 
+F1 slice 2 (conductor wiring, additive): BEFORE the existing flow runs, the
+message is classified with ``classify_conversation`` (the slice-1 conductor
+layer) and the owning role is looked up via ``role_for_edit_kind``:
+
+    - An edit keeps the EXACT same flow as before; the role (stylist /
+      section_builder / copy) is attached to the emitted decision payload as
+      ``conversation`` METADATA only - it never changes the chain's behaviour.
+    - A conversation kind (small_talk / site_opinion / question) stops BEFORE
+      any build with an honest answer-only decision - the same honesty-gate
+      pattern as the existing read-only kinds. No version is written, no
+      render runs, ``previewShouldRefresh`` stays False. The actual chat
+      answer text is produced by the Viewser chat helper (TS half), never
+      faked here.
+
+``ConversationKind`` stays a conductor-layer concept (slice-1 design):
+``governance/schemas/router-decision.schema.json`` is untouched and the
+embedded router decision keeps its locked eight-kind contract verbatim.
+
 The chain stays authoritative: ``appliedVisibleEffect`` / ``previewShouldRefresh``
 come from it, so a no-op never fakes a change. ``OpenClawDecision`` is never
 mutated (its V0 validator forces ``appliedVisibleEffect=False``); the real
@@ -56,6 +74,90 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Make packages/ importable when running this script directly.
 sys.path.insert(0, str(REPO_ROOT))
+
+# The conductor conversation kinds the dispatcher answers itself (F1 slice 2).
+# ``edit`` keeps the unchanged chain flow and ``other`` falls through to the
+# existing OpenClaw Core V0 mapping - only these three stop with an answer.
+_ANSWER_ONLY_CONVERSATION_KINDS = ("small_talk", "site_opinion", "question")
+
+# Honest per-kind answer placeholders for the emitted decision. The REAL chat
+# answer text is produced by the Viewser chat helper (lib/openai.ts) on the TS
+# side - this seam stays deterministic and never fakes a conversation.
+_CONVERSATION_DECISION_ANSWERS = {
+    "small_talk": (
+        "Det här är småprat - sajten behöver inte ändras. Ingen build "
+        "startas; själva svarstexten produceras av chat-hjälpen i Viewser."
+    ),
+    "site_opinion": (
+        "Det här är en fråga om omdöme på sajten - ingen ändring behövs. "
+        "Ingen build startas; själva svarstexten produceras av chat-hjälpen "
+        "i Viewser."
+    ),
+    "question": (
+        "Det här är en ren fråga som inte kräver någon ändring av sajten. "
+        "Ingen build startas; själva svarstexten produceras av chat-hjälpen "
+        "i Viewser."
+    ),
+}
+
+
+def _classify_conversation(message: str, *, site_id: str | None):
+    """Run the slice-1 conductor classification (deterministic, no LLM).
+
+    Deferred import for the same import-light reason as ``_decide``. The
+    classification composes the unchanged router; ``model_fallback`` stays
+    False so this seam never costs an ``OPENAI_API_KEY`` call.
+    """
+    from packages.generation.orchestration.openclaw import classify_conversation
+    from packages.generation.orchestration.router import RouterContext
+
+    router_context = RouterContext(siteId=site_id) if site_id else None
+    return classify_conversation(message, context=router_context)
+
+
+def _conversation_metadata(conversation) -> dict[str, object]:
+    """The additive ``conversation`` block attached to the decision payload.
+
+    Pure metadata: for an edit it carries the owning role
+    (``role_for_edit_kind`` already resolved it inside the classification);
+    for a conversation it explains why the dispatcher answers. It never
+    mutates ``OpenClawDecision`` itself (the Pydantic contract is untouched).
+    """
+    return {
+        "conversationKind": conversation.conversationKind,
+        "role": conversation.role,
+        "source": conversation.source,
+        "rationale": conversation.rationale,
+    }
+
+
+def _conversation_answer_decision(
+    message: str,
+    conversation,
+    *,
+    site_id: str | None,
+    base_run_id: str | None,
+):
+    """Build the honest answer-only decision for a conversation kind.
+
+    Reuses the unchanged Core V0 seam for router + context (so the payload
+    stays schema-stable) and only swaps the action to ``answer_only`` - the
+    same honesty-gate pattern as the existing read-only kinds. The decision's
+    validator keeps ``appliedVisibleEffect`` forced to False.
+    """
+    from packages.generation.orchestration.openclaw import OpenClawDecision
+
+    base = _decide(message, site_id=site_id, base_run_id=base_run_id)
+    return OpenClawDecision(
+        router=base.router,
+        context=base.context,
+        action="answer_only",
+        answer=_CONVERSATION_DECISION_ANSWERS[conversation.conversationKind],
+        rationale=(
+            f"conversation/{conversation.conversationKind}: dispatchern "
+            "(router-rollen) svarar i chatten, ingen build (F1 slice 2)."
+        ),
+    )
 
 
 def _decide(message: str, *, site_id: str | None, base_run_id: str | None):
@@ -85,9 +187,24 @@ def decide_to_json(
     site_id: str | None = None,
     base_run_id: str | None = None,
 ) -> str:
-    """Return the read-only OpenClaw follow-up decision for ``message`` as JSON."""
-    decision = _decide(message, site_id=site_id, base_run_id=base_run_id)
-    return json.dumps(decision.model_dump(), ensure_ascii=False)
+    """Return the read-only OpenClaw follow-up decision for ``message`` as JSON.
+
+    F1 slice 2 (additive): the payload carries a ``conversation`` metadata
+    block (conversationKind + owning role), and a conversation kind
+    (small_talk / site_opinion / question) is emitted as an honest
+    answer-only decision instead of e.g. a clarification. Everything else -
+    edits included - keeps the exact same decision as before.
+    """
+    conversation = _classify_conversation(message, site_id=site_id)
+    if conversation.conversationKind in _ANSWER_ONLY_CONVERSATION_KINDS:
+        decision = _conversation_answer_decision(
+            message, conversation, site_id=site_id, base_run_id=base_run_id
+        )
+    else:
+        decision = _decide(message, site_id=site_id, base_run_id=base_run_id)
+    payload = decision.model_dump()
+    payload["conversation"] = _conversation_metadata(conversation)
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def apply_followup_to_json(
@@ -115,16 +232,35 @@ def apply_followup_to_json(
     lives in the separate ``bridge`` object.
 
     Output shape (the seam apps/viewser consumes):
-        {"decision": <OpenClawDecision>, "bridge": {status, applied,
-         previewShouldRefresh, chain}}
+        {"decision": <OpenClawDecision + conversation metadata>,
+         "bridge": {status, applied, previewShouldRefresh, chain}}
+
+    F1 slice 2 (conductor wiring): the conversation classification runs FIRST.
+    A conversation kind (small_talk / site_opinion / question) stops here with
+    an honest answer-only decision - the chain is never imported, no version
+    is written, no render runs (the same honesty gate as the read-only kinds).
+    An edit keeps the EXACT flow below unchanged; its owning role is attached
+    as ``conversation`` metadata only.
     """
-    decision = _decide(message, site_id=site_id, base_run_id=base_run_id)
+    conversation = _classify_conversation(message, site_id=site_id)
     bridge: dict[str, object] = {
         "status": "no_build_needed",
         "applied": False,
         "previewShouldRefresh": False,
         "chain": None,
     }
+    if conversation.conversationKind in _ANSWER_ONLY_CONVERSATION_KINDS:
+        decision = _conversation_answer_decision(
+            message, conversation, site_id=site_id, base_run_id=base_run_id
+        )
+        decision_payload = decision.model_dump()
+        decision_payload["conversation"] = _conversation_metadata(conversation)
+        return json.dumps(
+            {"decision": decision_payload, "bridge": bridge},
+            ensure_ascii=False,
+        )
+
+    decision = _decide(message, site_id=site_id, base_run_id=base_run_id)
     if decision.action == "patch_plan_request":
         from scripts.build_site import run_followup_chain
 
@@ -154,8 +290,10 @@ def apply_followup_to_json(
                 "previewShouldRefresh": bool(chain.get("previewShouldRefresh", False)),
                 "chain": chain,
             }
+    decision_payload = decision.model_dump()
+    decision_payload["conversation"] = _conversation_metadata(conversation)
     return json.dumps(
-        {"decision": decision.model_dump(), "bridge": bridge},
+        {"decision": decision_payload, "bridge": bridge},
         ensure_ascii=False,
     )
 
