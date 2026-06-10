@@ -68,7 +68,7 @@ få add-kommandon.
 > (vendorering via granskad PR + capability-mappning), aldrig labbet
 > mönster "agent skriver TSX direkt" mot en kundsajt.
 
-Tre hårda regler:
+Fyra hårda regler:
 
 - MCP-uppslaget är ett byggtids-/agentverktyg. Den genererade sajten får
   aldrig ett runtime-beroende på MCP:n.
@@ -77,6 +77,12 @@ Tre hårda regler:
   (`governance/rules/09-openclaw-and-site-mutations.md` gäller).
 - Nya komponenter vendoreras in i startern via en granskad PR (CLI-add +
   manifest-regenerering), inte on-the-fly under ett kundbygge.
+- Separata MCP-instanser (operatörskrav 2026-06-10): motorn spawnar sin
+  EGEN MCP-serverprocess (stdio, t.ex. `npx shadcn@latest mcp`) med egen
+  konfiguration när rollen behöver uppslaget. `.cursor/mcp.json` är
+  IDE-lokal (Cursor-agenternas verktyg) och får ALDRIG läsas av motorn —
+  verifierat 2026-06-10: ingen kod i `packages/`/`scripts/` refererar den
+  i dag, och så ska det förbli.
 
 ## Avgränsningar
 
