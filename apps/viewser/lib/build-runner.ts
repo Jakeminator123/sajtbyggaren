@@ -144,7 +144,7 @@ async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<vo
   );
 }
 
-async function detectLatestRunIdByMtime(): Promise<string | null> {
+async function detectLatestRunIdByMtime(siteId: string): Promise<string | null> {
   const root = runsDir();
   let entries;
   try {
@@ -171,7 +171,30 @@ async function detectLatestRunIdByMtime(): Promise<string | null> {
   const live = stats.filter((entry): entry is { name: string; mtimeMs: number } => entry !== null);
   if (!live.length) return null;
   live.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  return live[0].name;
+
+  // B172: only consider run-dirs that belong to THIS siteId. The previous
+  // implementation returned the GLOBALLY newest run-dir, but builds for
+  // different siteIds serialise independently (the per-site mutex above lets
+  // them run in parallel), so on a SUCCESS whose stdout was truncated before
+  // the `runId:` line a concurrent build on ANOTHER site could be the newest
+  // dir and get mislabelled as this build's run in the /api/prompt response.
+  // Read each candidate's build-result.json (the canonical siteId source) in
+  // mtime order and return the first match. The success path only reaches here
+  // after exitCode === 0, so THIS build's run-dir already has a
+  // build-result.json with the right siteId — the filter never starves it.
+  for (const { name } of live) {
+    try {
+      const buildResult = await readBuildResult(name);
+      if (buildResult.siteId === siteId) {
+        return name;
+      }
+    } catch {
+      // No build-result.json (partial/aborted run) → not a completed build for
+      // any site; skip and keep scanning older dirs.
+      continue;
+    }
+  }
+  return null;
 }
 
 async function runBuildOnce(
@@ -360,8 +383,9 @@ async function runBuildOnce(
 
   // Success path: mtime-fallback is safe because exitCode === 0 means
   // build_site.py wrote the run-dir successfully even if the stdout
-  // buffer was truncated mid-line.
-  const runId = runIdFromStdout ?? (await detectLatestRunIdByMtime());
+  // buffer was truncated mid-line. B172: the fallback is now filtered by
+  // siteId so a parallel build on another site can't be picked as this run.
+  const runId = runIdFromStdout ?? (await detectLatestRunIdByMtime(siteId));
   if (!runId) {
     throw new Error("Kunde inte hitta runId från build-resultatet.");
   }

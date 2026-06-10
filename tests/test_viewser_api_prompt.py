@@ -188,18 +188,244 @@ def test_prompt_route_supports_followup_mode_without_schema_migration() -> None:
 
 
 @pytest.mark.tooling
-def test_prompt_route_serializes_prompt_helper_before_build() -> None:
-    """Sidecar version bump + Project Input write must not race before build."""
+def test_b169_prompt_route_uses_per_site_mutex_not_global_inflight() -> None:
+    """B169 (bug-sweep 2026-06-10): the prompt route's mutex must be
+    per-siteId, not a single global ``promptInFlight``.
+
+    DELIBERATE UPDATE (was ``test_prompt_route_serializes_prompt_helper_
+    before_build``): the prior version of this test locked the GLOBAL
+    ``let promptInFlight: Promise | null`` queue and only asserted that the
+    queue wraps both Phase 1 (helper) and Phase 2 (build). That global queue
+    was exactly the B169 antipattern — it serialised ALL sites, so a slow /
+    hanging build on site A blocked init/follow-up on site B. ``build-runner.ts``
+    already fixed the identical antipattern with a per-site ``Map`` (Reviewer
+    Round 2 #5); this route must do the same. We rewrite the lock here on
+    purpose so the new per-site contract is the one that's enforced.
+
+    Per-site serialisation MUST be preserved: two follow-ups for the SAME
+    siteId still queue (Phase 1 reads/bumps ``meta.version`` + writes the PI
+    snapshot — that must not race). Init has no siteId at the API boundary and
+    generates a collision-free one in Phase 1, so inits get a unique key and
+    run in parallel.
+
+    Source-lock mönstret (speglar test_build_runner_uses_per_site_mutex_...):
+      1. NEGATIVT: ingen ``let promptInFlight: Promise<...> | null`` (skalär).
+      2. POSITIVT: ``const promptInFlight = new Map<string, Promise<...>>()``.
+      3. POSITIVT: serialiserings-loopen kollar ``promptInFlight.has(queueKey)``
+         (per-site), inte ``while (promptInFlight)`` (truthy global).
+      4. POSITIVT: ``queueKey`` deriveras ur ``payload.siteId`` så follow-ups
+         serialiseras per sajt.
+      5. POSITIVT: rensning via ``promptInFlight.delete(queueKey)`` med
+         identity-guard så en samtidig follow-up inte nukas av misstag.
+      6. Ordningen Phase 1 (helper) före Phase 2 (build) bevaras.
+    """
     text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
-    assert "promptInFlight" in text, (
-        "/api/prompt måste serialisera prompt-helpern före runBuild så två "
-        "följdpromptar för samma siteId inte läser samma meta.version."
+
+    # 1. NEGATIVT: gamla globala scalar-formen får inte återinföras.
+    forbidden_global = re.compile(
+        r"let\s+promptInFlight\s*:\s*Promise\s*<[^>]*>\s*\|\s*null",
+        re.MULTILINE,
     )
+    assert not forbidden_global.search(text), (
+        "route.ts: ``let promptInFlight: Promise<...> | null`` är den gamla "
+        "globala mutex:en som blockerade ALLA sajter (B169). Använd "
+        "``const promptInFlight = new Map<string, Promise<...>>()`` istället."
+    )
+
+    # 2. POSITIVT: Map-deklaration keyat på siteId (string) -> Promise.
+    map_decl = re.compile(
+        r"const\s+promptInFlight\s*=\s*new\s+Map\s*<\s*string\s*,\s*Promise\s*<[^>]*>\s*>\s*\(\s*\)",
+        re.MULTILINE,
+    )
+    assert map_decl.search(text), (
+        "route.ts saknar ``const promptInFlight = new Map<string, "
+        "Promise<...>>()``. Per-siteId-mutex kräver Map keyat på siteId "
+        "så olika sajter (och parallella inits) kan köra samtidigt (B169)."
+    )
+
+    # 3. POSITIVT: loopen väntar per-queueKey, inte på den globala instansens
+    #    truthy:hood.
+    while_check = re.compile(
+        r"while\s*\(\s*promptInFlight\s*\.\s*has\s*\(\s*queueKey\s*\)\s*\)",
+        re.MULTILINE,
+    )
+    assert while_check.search(text), (
+        "route.ts: ``while (promptInFlight.has(queueKey))`` saknas. Tidigare "
+        "``while (promptInFlight)`` blockerade alla sajter — den nya per-site-"
+        "mutex:en måste vänta bara på pending prompt-build för EXAKT denna "
+        "queueKey (B169)."
+    )
+
+    # 4. POSITIVT: queueKey deriveras ur siteId så follow-ups serialiseras per
+    #    sajt (versionsrace-skyddet bevaras).
+    assert re.search(r"const\s+queueKey\s*=\s*payload\.siteId\s*\?\?", text), (
+        "route.ts måste derivera ``const queueKey = payload.siteId ?? ...`` så "
+        "follow-ups serialiseras per sajt och inits (utan siteId) får en unik "
+        "nyckel (B169)."
+    )
+
+    # 5. POSITIVT: rensning via Map.delete med identity-guard.
+    delete_with_guard = re.compile(
+        r"if\s*\(\s*promptInFlight\s*\.\s*get\s*\(\s*queueKey\s*\)\s*===\s*promise\s*\)\s*\{\s*"
+        r"promptInFlight\s*\.\s*delete\s*\(\s*queueKey\s*\)",
+        re.MULTILINE,
+    )
+    assert delete_with_guard.search(text), (
+        "route.ts: ``finally``-rensningen ska göra "
+        "``if (promptInFlight.get(queueKey) === promise) "
+        "promptInFlight.delete(queueKey)`` så en samtidig follow-up för samma "
+        "siteId inte nukas (B169, speglar build-runner.ts:s identity-guard)."
+    )
+
+    # 6. Phase 1 (helper) före Phase 2 (build) — serialiseringen omfattar båda
+    #    via runPromptBuildOnce.
     helper_index = text.index("const helper = await runPromptToProjectInput")
     build_index = text.index("runBuild(helper.siteId, helper.dossierPath)")
-    queue_index = text.index("promptInFlight")
-    assert queue_index < helper_index < build_index, (
-        "Prompt-queue måste omfatta både helpern och builden, inte bara runBuild-steget."
+    assert helper_index < build_index, (
+        "Phase 1 (prompt-helper) måste köra före Phase 2 (runBuild) inom den "
+        "per-site-serialiserade runPromptBuildOnce."
+    )
+
+
+@pytest.mark.tooling
+def test_b172_detect_latest_run_filters_by_site_id() -> None:
+    """B172 (bug-sweep 2026-06-10): ``detectLatestRunIdByMtime`` saknade ett
+    siteId-filter. På en SUCCESS med trunkerad stdout (ingen ``runId:``-rad)
+    plockade den GLOBALT nyaste run-mappen under ``data/runs/``. Eftersom
+    byggen för olika siteIds serialiseras oberoende (per-site-mutex:en låter
+    dem köra parallellt) kunde ett parallellt bygge på en ANNAN sajt vara den
+    nyaste mappen och returneras som DENNA build:s runId i /api/prompt-svaret.
+
+    Fix: filtrera kandidaterna på siteId (läs ``build-result.json``:s
+    ``siteId``) i mtime-ordning innan valet. Failure-vägen (B42) är oförändrad
+    och rörs inte — den får ALDRIG falla tillbaka på mtime-detektionen.
+
+    Source-lock:
+      1. Funktionen tar en ``siteId``-parameter.
+      2. Anropet på success-vägen skickar in siteId.
+      3. Filtret jämför mot ``build-result.json``:s siteId (readBuildResult +
+         ``buildResult.siteId === siteId``).
+    """
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+
+    # 1. Signaturen måste ta en siteId-parameter.
+    assert re.search(
+        r"async\s+function\s+detectLatestRunIdByMtime\s*\(\s*siteId\s*:\s*string\s*\)",
+        text,
+    ), (
+        "build-runner.ts: detectLatestRunIdByMtime måste ta en ``siteId: "
+        "string``-parameter så fallbacken kan filtrera kandidater på sajt (B172)."
+    )
+
+    # 2. Success-vägens anrop måste skicka in siteId.
+    assert re.search(
+        r"detectLatestRunIdByMtime\s*\(\s*siteId\s*\)",
+        text,
+    ), (
+        "build-runner.ts: success-vägens mtime-fallback måste anropas som "
+        "``detectLatestRunIdByMtime(siteId)`` (B172)."
+    )
+
+    # 3. Filtret måste matcha mot build-result.json:s siteId.
+    function_start = text.index("async function detectLatestRunIdByMtime")
+    function_body = text[function_start : text.index("async function runBuildOnce")]
+    assert "readBuildResult" in function_body, (
+        "build-runner.ts: detectLatestRunIdByMtime måste läsa "
+        "build-result.json (readBuildResult) för att avgöra varje kandidats "
+        "siteId (B172)."
+    )
+    assert re.search(r"buildResult\.siteId\s*===\s*siteId", function_body), (
+        "build-runner.ts: detectLatestRunIdByMtime måste filtrera kandidater "
+        "på ``buildResult.siteId === siteId`` innan mtime-valet (B172)."
+    )
+    # Behåll ENOENT-toleransen (test_build_runner_latest_run_fallback_...).
+    assert 'code === "ENOENT"' in function_body and "return null" in function_body, (
+        "detectLatestRunIdByMtime måste fortsatt returnera null när data/runs "
+        "saknas i en färsk miljö (oförändrat efter B172-filtret)."
+    )
+
+
+@pytest.mark.tooling
+def test_b164_prompt_route_recovers_chain_version_on_bridge_failure() -> None:
+    """B164 (bug-sweep 2026-06-10): ett OpenClaw-bridge-fel EFTER att KÖR-7-
+    kedjan redan skrivit en ny version gav ett tyst DUBBELBYGGE.
+    ``runOpenClawFollowupApply`` returnerar ``null`` vid timeout/exit!=0/
+    trunkerad stdout/parse-fel, och route:n föll då igenom till legacy Phase
+    1+2 — som byggde en ANDRA version ovanpå den kedjan redan landat
+    (``build_site.py`` skriver PI före targeted render).
+
+    Fix: snapshot:a senaste KLARA run för siteId FÖRE bridge-anropet, och om
+    bridge:n returnerar null på en follow-up — jämför mot senaste run EFTER.
+    Om en ny runId dykt upp landade kedjan en version: re-surfa DEN runen med
+    ärlig degraded-status i stället för att dubbelbygga. Ingen retry, ingen ny
+    modellroll. En vanlig no-op (``applied=false``) är säker och triggar INTE
+    recovery (kedjan stannade vid en ärlig gate före bygget).
+
+    Source-lock:
+      1. Pre-bridge-snapshot via latestCompletedRunForSite FÖRE
+         runOpenClawFollowupApply-anropet.
+      2. Recovery-grenen är gated på ``applyResult === null`` + follow-up.
+      3. Den jämför pre/post runId och re-surfar bara vid skillnad.
+      4. Den returnerar en degraderad status (aldrig tyst grön success).
+      5. Recovery sker FÖRE legacy-bygget (runBuild) i koden.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
+
+    # 1. Pre-bridge-snapshot måste tas FÖRE bridge-anropet.
+    assert "latestCompletedRunForSite" in text, (
+        "route.ts måste ha en latestCompletedRunForSite-helper som snapshot:ar "
+        "senaste klara run för siteId (B164)."
+    )
+    snapshot_idx = text.index("const preBridgeLatestRun")
+    bridge_call_idx = text.index("await runOpenClawFollowupApply(")
+    assert snapshot_idx < bridge_call_idx, (
+        "route.ts: pre-bridge-snapshotet (preBridgeLatestRun) måste tas FÖRE "
+        "runOpenClawFollowupApply-anropet — annars kan vi inte avgöra om "
+        "kedjan landat en version under ett bridge-fel (B164)."
+    )
+
+    # 2. Recovery-grenen gated på null-bridge + follow-up.
+    assert re.search(r"applyResult\s*===\s*null", text), (
+        "route.ts: B164-recovery måste vara gated på ``applyResult === null`` "
+        "(bridge-felvägen) — en applied=false-no-op är säker och får inte "
+        "trigga recovery."
+    )
+
+    # 3. Jämför pre/post runId och re-surfa bara vid skillnad.
+    assert "const postBridgeLatestRun" in text, (
+        "route.ts: B164-recovery måste läsa om senaste run EFTER bridge-felet "
+        "(postBridgeLatestRun)."
+    )
+    assert re.search(
+        r"postBridgeLatestRun\.runId\s*!==\s*preBridgeLatestRun\.runId",
+        text,
+    ), (
+        "route.ts: B164-recovery får bara re-surfa när en NY runId dykt upp "
+        "(postBridgeLatestRun.runId !== preBridgeLatestRun.runId) — annars "
+        "skrev kedjan ingen version och legacy-bygget ska köra."
+    )
+
+    # 4. Ärlig degraded-status — aldrig tyst grön success över ett bridge-fel.
+    recovery_idx = text.index("postBridgeLatestRun.runId !== preBridgeLatestRun.runId")
+    # Avgränsa recovery-grenen vid KÖR-6a-kommentaren som följer den, så vi
+    # läser hela return-blocket (degraded-status + bridge-markör).
+    recovery_block = text[recovery_idx : text.index("// KÖR-6a", recovery_idx)]
+    assert '"degraded"' in recovery_block, (
+        "route.ts: den re-surfade runen måste få en ärlig degraded-status "
+        "(B164) — inte presenteras som en ren success."
+    )
+    assert '"degraded-recovered"' in recovery_block, (
+        "route.ts: B164-recovery ska markera bridgen som "
+        "``status: \"degraded-recovered\"`` så UI:t ser att en version landat "
+        "men att apply-bryggan degraderade."
+    )
+
+    # 5. Recovery måste returnera FÖRE legacy-bygget (runBuild).
+    return_in_recovery_idx = text.index("return {", recovery_idx)
+    legacy_build_idx = text.index("runBuild(helper.siteId, helper.dossierPath)")
+    assert return_in_recovery_idx < legacy_build_idx, (
+        "route.ts: B164-recovery-grenen måste ``return`` innan legacy-bygget "
+        "(runBuild) — annars dubbelbyggs en andra version (B164)."
     )
 
 
