@@ -28,6 +28,9 @@ from scripts.prompt_to_project_input import (
     merge_followup_project_input,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 
 def _previous_project_input() -> dict[str, object]:
     """A schema-valid Project Input standing in for a previous version."""

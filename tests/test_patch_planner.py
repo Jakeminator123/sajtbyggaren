@@ -52,6 +52,9 @@ from packages.generation.orchestration.router import (  # noqa: E402
     classify_message,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 FIXTURE_PATH = (
     REPO_ROOT / "tests" / "fixtures" / "blueprints" / "elektriker-malmo.blueprint.json"
 )

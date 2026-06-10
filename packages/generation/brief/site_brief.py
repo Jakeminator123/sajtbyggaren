@@ -17,6 +17,10 @@ keep resolving):
         Thin wrapper around ``packages.generation.brief.resolve_brief_model``.
     project_input_to_brief_prompt(dossier) -> str
         Deterministic briefModel input restated from a Project Input.
+    reuse_previous_site_brief(run_id, dossier, previous_run_dir) -> dict | None
+        B180 carry-forward: reuse the previous run's Site Brief on a follow-up
+        build whose brief input is unchanged (masked comparison), so a pure
+        restyle/section/capability follow-up never re-rolls the creative copy.
 
 ``utc_now`` stays in ``scripts/build_site.py`` (the io-helpers slice has not
 landed yet), so ``build_site_brief_mock`` bridges it via a lazy
@@ -26,7 +30,11 @@ used for ``load_json`` / ``_to_repo_relative``).
 
 from __future__ import annotations
 
+import copy
+import json
+import re
 import sys
+from pathlib import Path
 from typing import Any
 
 from packages.generation.build.assets import _iter_mood_refs
@@ -201,6 +209,150 @@ def project_input_to_brief_prompt(dossier: dict) -> str:
         "Trust signals:\n"
         f"{trust}\n"
     )
+
+
+# --- B180: Site Brief carry-forward on follow-up builds ---------------------
+#
+# Every build (init AND follow-up) used to call briefModel anew, so all
+# brief-derived copy (about-story, hero subheadline, "quick facts", ...)
+# drifted on EVERY follow-up even when the prompt was a pure restyle ("gör
+# sajten mörkblå"). B173 pinned only the hero H1; this is the root-cause fix
+# for the rest: when the brief INPUT is unchanged, the previous run's brief is
+# reused byte-stably, with a deterministic refresh of exactly the fields
+# planning consumes from the new Project Input.
+
+# Prompt lines masked in the reuse comparison. These drive structure/typography
+# deterministically through the Project Input itself (planning reads
+# requestedCapabilities from the refreshed brief, tone/dossiers from the PI),
+# not creative copy - so a capability/tone-only follow-up still reuses the
+# creative brief instead of re-rolling all copy.
+_MASKED_BRIEF_PROMPT_LINE_PREFIXES = (
+    "Tone primary:",
+    "Tone secondary:",
+    "Tone avoid:",
+    "Requested capabilities:",
+    "Required dossiers:",
+)
+
+# The exact preamble extract_site_brief prepends to the model's user message
+# ("[language hint: sv]\n\n..."); the model echoes it back in rawPrompt.
+_LANGUAGE_HINT_PREFIX_RE = re.compile(r"^\[language hint: [^\]\n]*\]\n\n")
+
+
+def _masked_brief_input(prompt: str) -> str:
+    """Project a brief prompt onto the lines that drive CREATIVE copy.
+
+    Strips the optional ``[language hint: ...]`` preamble and drops the masked
+    lines above, so two brief inputs compare equal exactly when the creative
+    content (company facts, story, services, trust signals, ...) is unchanged.
+    """
+    body = _LANGUAGE_HINT_PREFIX_RE.sub("", prompt or "")
+    kept = [
+        line
+        for line in body.splitlines()
+        if not line.startswith(_MASKED_BRIEF_PROMPT_LINE_PREFIXES)
+    ]
+    return "\n".join(kept)
+
+
+def _deterministic_note_blocks(dossier: dict) -> list[str]:
+    """The note blocks ``_apply_operator_directive_note`` derives from a PI."""
+    blocks: list[str] = []
+    directives = dossier.get("directives")
+    if isinstance(directives, dict):
+        raw_note = directives.get("notesForPlanner")
+        if isinstance(raw_note, str) and raw_note.strip():
+            blocks.append(f"{_OPERATOR_DIRECTIVE_NOTE_PREFIX}{raw_note.strip()}")
+    blocks.extend(_mood_visual_note_blocks(dossier))
+    return blocks
+
+
+def reuse_previous_site_brief(
+    run_id: str,
+    dossier: dict,
+    previous_run_dir: Path,
+) -> dict | None:
+    """Carry the previous run's Site Brief forward when its input is unchanged.
+
+    Returns the carried brief (deepcopy, schema-stable) or ``None`` when the
+    brief must be regenerated. Read-only: only the previous run's
+    ``site-brief.json`` is read, nothing is written.
+
+    Reuse requires ALL of:
+
+    - The previous brief exists and parses.
+    - Source parity: previous ``briefSource == "real"`` while a key is set, or
+      ``"mock-no-key"`` while no key is set. An error fallback
+      (mock-llm-error / mock-import-error) or a no-key -> key upgrade always
+      regenerates.
+    - The masked brief input (``project_input_to_brief_prompt`` minus the
+      language-hint preamble and the masked capability/tone/dossier lines)
+      is byte-identical to the previous run's ``rawPrompt``.
+    - Every deterministic note block the new PI would inject (operator
+      directive + mood-vision notes) is already present in the previous
+      brief's ``notesForPlanner`` - a new directive must reach the planner,
+      so it regenerates.
+
+    The carried brief refreshes ONLY deterministic fields: ``runId``,
+    ``createdAt``, ``rawPrompt`` (the new prompt, same preamble form) and the
+    fields planning consumes from the new PI - ``requestedCapabilities`` (so a
+    capability/section follow-up still mounts, plan.py reads it from the
+    brief) and ``tone`` (PI tone block, mirroring the mock derivation). All
+    creative fields (positioning/contentStrategy/businessFacts/conversion/
+    notesForPlanner/...) stay byte-stable. ``briefSource`` is carried
+    unchanged: the schema enum is locked, and the reuse is reported as a
+    trace event by the caller, not as a new artefakt field.
+    """
+    from packages.generation.brief import has_openai_api_key
+
+    try:
+        previous = json.loads(
+            (previous_run_dir / "site-brief.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(previous, dict):
+        return None
+
+    expected_source = "real" if has_openai_api_key() else "mock-no-key"
+    if previous.get("briefSource") != expected_source:
+        return None
+
+    previous_raw = previous.get("rawPrompt")
+    if not isinstance(previous_raw, str) or not previous_raw.strip():
+        return None
+    new_prompt = project_input_to_brief_prompt(dossier)
+    if _masked_brief_input(new_prompt) != _masked_brief_input(previous_raw):
+        return None
+
+    previous_notes = previous.get("notesForPlanner")
+    notes_text = previous_notes if isinstance(previous_notes, str) else ""
+    for block in _deterministic_note_blocks(dossier):
+        if block not in notes_text:
+            return None
+
+    from scripts.build_site import utc_now
+
+    carried = copy.deepcopy(previous)
+    carried["runId"] = run_id
+    carried["createdAt"] = utc_now().isoformat(timespec="seconds")
+    if _LANGUAGE_HINT_PREFIX_RE.match(previous_raw):
+        carried["rawPrompt"] = (
+            f"[language hint: {dossier.get('language')}]\n\n{new_prompt}"
+        )
+    else:
+        carried["rawPrompt"] = new_prompt
+    requested = dossier.get("requestedCapabilities")
+    if requested is None:
+        requested = [svc["id"] for svc in dossier.get("services", [])]
+    carried["requestedCapabilities"] = list(requested)
+    tone_block = dossier.get("tone") or {}
+    if isinstance(tone_block, dict):
+        tone_words = [tone_block.get("primary")] + list(tone_block.get("secondary") or [])
+        carried["tone"] = [t for t in tone_words if t]
+    else:
+        carried["tone"] = list(tone_block)
+    return carried
 
 
 def _mock_brief_after_llm_failure(

@@ -35,6 +35,9 @@ import pytest
 from scripts.build_site import build
 from scripts.prompt_to_project_input import generate
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 # The deterministic mock truth-fields. The mock brief path stamps
 # ``briefSource = mock-no-key``; the builder pins scaffold/variant from the
 # Project Input, so ``produce_site_plan`` returns ``planSource = pinned``

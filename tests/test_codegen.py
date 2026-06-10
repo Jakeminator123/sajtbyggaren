@@ -36,6 +36,9 @@ from packages.generation.codegen.codegen import (
     _summarise_generation_package,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LLM_MODELS_POLICY = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
 

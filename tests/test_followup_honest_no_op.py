@@ -26,6 +26,9 @@ from scripts.prompt_to_project_input import (
     generate_followup,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 INIT_PROMPT = "Skapa en hemsida för Surdegsbagaren i Malmö."
 NO_OP_FOLLOWUP_PROMPT = "Lägg till mycket mer info om surdegsbröd"
 SITE_ID = "surdegsbagaren-malmo"

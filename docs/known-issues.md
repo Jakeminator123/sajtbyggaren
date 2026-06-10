@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 148 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (av 0), 7 unknown, 151 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -747,6 +747,84 @@ round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B180` Medel** (stängd 2026-06-10, samma PR som registreringen) -
+  Följdprompter regenererade Site Brief ⇒ copy-drift på HELA sajten.
+  Repro (volt-watt, riktig briefModel-nyckel): en ren färgändring
+  ("gör sajten mörkblå") via `run_followup_chain` ändrade om-oss-stycket,
+  hero-subheadline och "snabba fakta"-raderna. Rotorsak:
+  `write_phase1_understand` → `build_site_brief()` anropade briefModel
+  (LLM, icke-deterministisk) på VARJE bygge, även följdversioner —
+  `planSource=pinned` skyddar scaffold/variant/starter men `contentBlocks`
+  (blueprint-copyn) härleds ur briefen. B173 pinnade bara hero-H1:an;
+  detta är rotorsaksfixen för resten av copyn. Fix: ny
+  `reuse_previous_site_brief` i `packages/generation/brief/site_brief.py`
+  — på följdbyggen jämförs brief-inputen (`project_input_to_brief_prompt`)
+  mot föregående runs `rawPrompt` (language-hint-prefixet strippat;
+  raderna Requested capabilities/Required dossiers/Tone primary/secondary/
+  avoid maskade — de driver struktur deterministiskt via PI, inte kreativ
+  copy). Vid träff återanvänds briefen byte-stabilt (deepcopy) med
+  deterministisk uppfräschning av exakt de fält planeringen läser:
+  `runId`, `createdAt`, `rawPrompt` (samma prefix-form),
+  `requestedCapabilities` (från nya PI:n — krävs för att en ny capability
+  ska monteras, plan.py läser fältet ur briefen) och `tone`
+  (PI-toneblocket, samma härledning som mocken). Skyddsräcken: reuse bara
+  vid källparitet (`real` med nyckel, `mock-no-key` utan; error-fallbacks
+  och no-key→key-uppgradering regenererar alltid), och ett nytt
+  operator-directive-block som inte återfinns i föregående
+  `notesForPlanner` regenererar. Wiring i `write_phase1_understand`
+  (mode followup, föregående run via `latest_run_dir_for_site` från B173)
+  + trace-event `site_brief.reused`. `briefSource` lämnas oförändrad
+  (schemats enum är låst); återanvändningen syns i trace, inte som nytt
+  artefaktfält. Stretch (Tagline-maskning så "byt rubriken till X" inte
+  regenererar övrig copy) är medvetet INTE med — uppföljning vid behov.
+  Källa: cloud-agent-repro 2026-06-10 (volt-watt, diff av
+  `generated-files/`), verifierad mot kod lokalt. Fix: `d84c078`. Test:
+  `tests/test_brief_carry_forward.py` (20 fall: reuse-beslut,
+  källparitet, fältuppfräschning, schema, mock-no-key-integration över
+  riktiga `run_followup_chain` för restyle + section_add, namn-ändring
+  regenererar).
+- **`B181` Medel** (stängd 2026-06-10, samma PR som registreringen) -
+  Hälsningsfras kapade konversationsklassningen: "hej, vad tycker du om
+  sajten?" → `small_talk` i stället för `site_opinion` (chatten tappade
+  sajtkontexten — /api/prompt skickar bara context-snippet för
+  site_opinion), och "hallå, sidan funkar inte" → `small_talk` medan
+  "sidan funkar inte" → `other` — en buggrapport besvarades som småprat
+  beroende på om operatören hälsade. Dessutom föll `bug_report`/
+  `reference_analysis` som slutar på "?" in i question-grenen. Rotorsak:
+  grenordningen i `classify_conversation`
+  (`packages/generation/orchestration/openclaw/roles.py`) testade
+  småprats-cues ("hej", "hallå", ...) före opinion-grenen, och saknade
+  guard för kinds med egen nedströmshantering. Fix: guard direkt efter
+  edit-passthrough (`bug_report`/`reference_analysis` → `other`, aldrig
+  om-etiketterade av hälsning/frågetecken) + `site_opinion`-grenen
+  flyttad före `small_talk`. Edit-vinner-först-regeln orörd; alla pinnade
+  småpratsexempel ("dra ett skämt", "hej, hur är läget?", "tjena, vad
+  heter du?") gröna. Källa: cloud-agent-repro 2026-06-10, verifierad mot
+  kod lokalt. Fix: `0e7d30e`. Test:
+  `tests/test_openclaw_roles.py::test_b181_greeting_plus_opinion_is_site_opinion`
+  + `::test_b181_greeting_plus_bug_report_is_other`
+  + `::test_b181_bug_report_label_is_greeting_invariant`
+  + `::test_b181_question_mark_does_not_relabel_bug_report`
+  + `::test_b181_question_mark_does_not_relabel_reference`
+  + `::test_b181_pure_greeting_is_still_small_talk`.
+- **`B182` Medel** (stängd 2026-06-10, samma PR som registreringen) -
+  OpenClaw-beslut fick TOM sajtkontext utan explicit baseRunId:
+  `decide_to_json("vad tycker du om sajten?", site_id=...)` gav
+  `context.payload == {}` + noten "missing required 'run_id'" trots
+  körbara runs på disk, eftersom /api/prompt normalt inte skickar
+  `baseRunId` (bara vid "Iterera från denna") — operatören fick "jag kan
+  inte se sajten". Fix: `_decide` i `scripts/run_openclaw_followup.py`
+  auto-resolvar senaste kompletta run read-only via
+  `latest_run_dir_for_site(ContextPaths().runs, site_id)` (respekterar
+  `VIEWSER_RUNS_DIR`) när `site_id` är satt och `base_run_id` saknas, och
+  skickar `run_id` till context-assemblern. Ingen build, ingen skrivning;
+  explicit `baseRunId` vinner fortfarande, och utan runs på disk behålls
+  dagens ärliga tomma kontext. Källa: cloud-agent-repro 2026-06-10,
+  verifierad mot kod lokalt. Fix: `fc667e8`. Test:
+  `tests/test_run_openclaw_followup.py::test_b182_site_opinion_without_base_run_gets_populated_context`
+  + `::test_b182_resolution_filters_on_site_id`
+  + `::test_b182_explicit_base_run_id_still_wins`
+  + `::test_b182_no_runs_on_disk_keeps_honest_empty_context`.
 - **`B175` Medel** (stängd 2026-06-10, samma PR som registreringen) -
   B164-recoveryn täckte inte first-run-scenariot: gaten i
   `apps/viewser/app/api/prompt/route.ts` krävde `preBridgeLatestRun !== null`,

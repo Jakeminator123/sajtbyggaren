@@ -8,6 +8,9 @@ import pytest
 
 from tests.support.viewser import VIEWSER_DIR
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 
 @pytest.mark.tooling
 def test_build_runner_whitelists_dossier_path_overrides() -> None:

@@ -56,6 +56,9 @@ from packages.generation.orchestration.patch import (  # noqa: E402
     PatchPlan,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 GENPKG = "generation-package.json"
 SITE_ID = "electrician-malmo"
 PROJECT_ID = "stable-project-id"

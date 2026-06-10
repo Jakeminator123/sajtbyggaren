@@ -28,6 +28,9 @@ from packages.generation.orchestration.router import (  # noqa: E402
     classify_message,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "router-decision.schema.json"
 
 

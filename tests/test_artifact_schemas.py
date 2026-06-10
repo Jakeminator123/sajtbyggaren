@@ -23,6 +23,9 @@ from packages.generation.artifacts import (
     validate_site_plan,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS_DIR = REPO_ROOT / "governance" / "schemas"
 

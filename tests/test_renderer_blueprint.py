@@ -54,6 +54,9 @@ from packages.generation.build.renderers import (  # noqa: E402
     render_section_trust_proof,
 )
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "blueprints"
 
 # branch -> (offer section id used by the scaffold)

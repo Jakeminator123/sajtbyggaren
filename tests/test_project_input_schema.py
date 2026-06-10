@@ -32,6 +32,9 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+# Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
+pytestmark = pytest.mark.core
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = REPO_ROOT / "examples"
 SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"

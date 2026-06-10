@@ -173,6 +173,26 @@ def _conversation_answer_decision(
     )
 
 
+def _latest_run_id(site_id: str) -> str | None:
+    """Resolve the site's newest completed run id, read-only (B182).
+
+    /api/prompt normally sends NO ``baseRunId`` (only "Iterera från denna"
+    does), so without this lookup a site_opinion/site_review question got an
+    EMPTY context payload despite runs on disk - the operator was told "jag
+    kan inte se sajten". Reuses the shared stdlib helper from B173
+    (``latest_run_dir_for_site``) against ``ContextPaths().runs`` so the
+    ``VIEWSER_RUNS_DIR`` override is honoured; only ``build-result.json``
+    files are read and nothing is ever written.
+    """
+    from packages.generation.followup.hero_headline_pin import (
+        latest_run_dir_for_site,
+    )
+    from packages.generation.orchestration.context import ContextPaths
+
+    run_dir = latest_run_dir_for_site(ContextPaths().runs, site_id)
+    return run_dir.name if run_dir is not None else None
+
+
 def _decide(message: str, *, site_id: str | None, base_run_id: str | None):
     """Run OpenClaw Core V0 read-only and return the ``OpenClawDecision``.
 
@@ -187,6 +207,12 @@ def _decide(message: str, *, site_id: str | None, base_run_id: str | None):
     context_kwargs: dict[str, object] = {}
     if site_id:
         context_kwargs["site_id"] = site_id
+    if base_run_id is None and site_id:
+        # B182: auto-resolve the latest completed run (read-only) so a
+        # site-scoped question without an explicit baseRunId still gets a
+        # populated context. No runs on disk -> the assembler keeps today's
+        # honest empty context + missing-run_id note.
+        base_run_id = _latest_run_id(site_id)
     if base_run_id:
         # The context level is taken from the router; run_id only matters when
         # the router asks for site/run context. Forwarded verbatim (read-only).
