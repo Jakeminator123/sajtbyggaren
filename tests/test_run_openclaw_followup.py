@@ -200,6 +200,9 @@ def test_apply_conversation_is_answer_only_and_never_builds(
     conversation = decision["conversation"]
     assert conversation["conversationKind"] == expected_kind
     assert conversation["role"] == "router"
+    # F1 slice 3 (Scout #262): the answer-only kinds carry expectsAnswer=True so
+    # /api/prompt + the UI can short-circuit without inferring it from "no runId".
+    assert conversation["expectsAnswer"] is True
     bridge = payload["bridge"]
     assert bridge["status"] == "no_build_needed"
     assert bridge["applied"] is False
@@ -249,6 +252,47 @@ def test_decide_conversation_is_answer_only_with_metadata():
     assert payload["action"] == "answer_only"
     assert payload["patchPlanRequest"] is None
     assert payload["conversation"]["conversationKind"] == "small_talk"
+    # F1 slice 3 (Scout #262): the conversation metadata carries expectsAnswer.
+    assert payload["conversation"]["expectsAnswer"] is True
+
+
+# ---------------------------------------------------------------------------
+# F1 slice 3: expectsAnswer signal in the decision payload (Scout #262) + the
+# seam/conductor answer-only set stay in lockstep.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ("dra ett skämt", True),
+        ("vad tycker du om sajten?", True),
+        ("vad kostar en hemsida?", True),
+        ("gör sajten mörkblå", False),
+        ("lägg till en faq-sektion", False),
+    ],
+)
+def test_decide_metadata_carries_expects_answer(message: str, expected: bool):
+    """decide_to_json threads expectsAnswer to the decision payload: True for a
+    chat answer (joke/opinion/question), False for an edit."""
+    payload = json.loads(decide_to_json(message, site_id="painter-palma"))
+    assert payload["conversation"]["expectsAnswer"] is expected
+
+
+@pytest.mark.tooling
+def test_answer_only_kinds_stay_in_lockstep_with_conductor():
+    """The seam's local _ANSWER_ONLY_CONVERSATION_KINDS literal MUST equal the
+    conductor's ANSWER_ONLY_CONVERSATION_KINDS (the expectsAnswer source of
+    truth) so the gate and the signal can never drift."""
+    from packages.generation.orchestration.openclaw import (
+        ANSWER_ONLY_CONVERSATION_KINDS,
+    )
+    from scripts.run_openclaw_followup import _ANSWER_ONLY_CONVERSATION_KINDS
+
+    assert tuple(_ANSWER_ONLY_CONVERSATION_KINDS) == tuple(
+        ANSWER_ONLY_CONVERSATION_KINDS
+    )
 
 
 @pytest.mark.tooling
@@ -262,6 +306,8 @@ def test_decide_edit_decision_is_unchanged_with_role_metadata():
     assert conversation == {
         "conversationKind": "edit",
         "role": "stylist",
+        # F1 slice 3 (Scout #262): an edit never expects a chat answer.
+        "expectsAnswer": False,
         "source": conversation["source"],
         "rationale": conversation["rationale"],
     }

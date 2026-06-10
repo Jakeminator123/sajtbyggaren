@@ -190,6 +190,11 @@ const CONVERSATION_ANSWER_KINDS: ReadonlySet<string> = new Set([
 type ConversationMetadata = {
   conversationKind: string;
   role: string | null;
+  // F1 slice 3 (Scout #262): the conductor's explicit "this turn expects a chat
+  // answer, not a build" signal (ConversationDecision.expectsAnswer). Read
+  // defensively; the UI short-circuits answer-only on it instead of inferring
+  // from "no runId".
+  expectsAnswer: boolean;
 };
 
 // Read the additive ``conversation`` metadata block off the bridge's decision
@@ -206,6 +211,7 @@ function extractConversation(
   return {
     conversationKind: obj.conversationKind,
     role: typeof obj.role === "string" ? obj.role : null,
+    expectsAnswer: obj.expectsAnswer === true,
   };
 }
 
@@ -406,6 +412,12 @@ async function runPromptBuildOnce(
         }).catch(() => null)
       : null;
 
+  // F1 slice 3: the additive ``conversation`` metadata (which role acted +
+  // conversationKind + expectsAnswer) extracted once from the bridge decision,
+  // so every follow-up return path can thread it to the client for the honest
+  // role-row in FloatingChat. Null on init / bridge failure (graceful).
+  const conversationMeta = extractConversation(applyResult?.decision);
+
   if (applyResult && applyResult.bridge.applied) {
     const chain = applyResult.bridge.chain ?? {};
     const chainRunId = typeof chain.runId === "string" ? chain.runId : null;
@@ -476,6 +488,9 @@ async function runPromptBuildOnce(
         // previewShouldRefresh + chain) so FloatingChat shows a restyle /
         // capability success line and refreshes the preview.
         bridge: applyResult.bridge,
+        // F1 slice 3: which role acted (e.g. section_builder) for the honest
+        // role-row; threaded but never controls build/preview.
+        conversation: conversationMeta,
       };
     }
   }
@@ -636,6 +651,9 @@ async function runPromptBuildOnce(
           previewShouldRefresh: recoveredLanded,
           chain: null,
         },
+        // F1 slice 3: role-row metadata (null here - the bridge failed before
+        // reporting a decision, so we honestly carry no role).
+        conversation: conversationMeta,
       };
     }
   }
@@ -758,6 +776,9 @@ async function runPromptBuildOnce(
     // Skiva 1b: the action-bridge outcome (applied=false on this fallback path)
     // for transparency; null on init. FloatingChat ignores a non-applied bridge.
     bridge: applyResult?.bridge ?? null,
+    // F1 slice 3: which role acted (stylist/copy/section_builder or null) for
+    // the honest role-row; threaded but never controls build/preview.
+    conversation: conversationMeta,
   };
 }
 

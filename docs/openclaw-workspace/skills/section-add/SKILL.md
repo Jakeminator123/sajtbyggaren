@@ -45,6 +45,16 @@ dossier -> `apply_patch_plan` (requestedCapabilities + selectedDossiers.required
 samma maskineri som component_add) -> targeted render -> ny immutabel version.
 Endast per-sajt Project Input/version ändras; delade mallar rörs aldrig.
 
+**Roll-driven dispatch (F1 slice 3):** `run_followup_chain` väljer numera
+section-add-handläggningen via den KLASSADE ROLLEN, inte den råa `editKind`:n.
+`skill_for_edit_kind(editKind)` slår upp `section_builder`-rollen
+(`role_for_edit_kind`) och läser dess `RoleContract.skill`; grinden jämför det
+mot `SECTION_ADD_SKILL` (= section_builder-kontraktets skill,
+`skills/section-add/SKILL.md`). Det gör rollvalet auktoritativt för dispatch och
+gör att `RoleContract.skill` faktiskt läses. Beteende-ekvivalent med den gamla
+`editKind == "section_add"`-grinden (bara section_add mappar till denna skill);
+stylist/copy behåller sin `editKind`-gating tills de får egna slices.
+
 ## Honesty
 Okänd/ostödd sektionstyp -> ärlig no-op (`stage=section_unsupported`) med
 anledning. Synlig-effekt-signalen (`appliedVisibleEffect`/

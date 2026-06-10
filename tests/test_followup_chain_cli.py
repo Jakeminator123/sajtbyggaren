@@ -621,6 +621,31 @@ def test_followup_chain_section_add_unsupported_type_is_honest_no_op(
     assert any("sektionstyp" in note.lower() for note in result["notes"])
 
 
+def test_followup_chain_section_dispatch_is_role_driven() -> None:
+    """F1 slice 3: the section_add dispatch in run_followup_chain is selected by
+    the CLASSIFIED ROLE's skill (skill_for_edit_kind == SECTION_ADD_SKILL), not
+    the raw editKind. Source-lock so a refactor can't silently revert to
+    editKind-branching (which would stop the role from driving dispatch).
+    """
+    build_site_src = (
+        REPO_ROOT / "scripts" / "build_site.py"
+    ).read_text(encoding="utf-8")
+    assert "skill_for_edit_kind" in build_site_src, (
+        "run_followup_chain must select section_add via skill_for_edit_kind "
+        "(role-driven), reading RoleContract.skill."
+    )
+    assert "SECTION_ADD_SKILL" in build_site_src, (
+        "The section_add gate must compare against SECTION_ADD_SKILL "
+        "(the section_builder role's contract skill)."
+    )
+    assert (
+        'is_section_add = decision.editKind == "section_add"' not in build_site_src
+    ), (
+        "The old editKind-only section_add gate must be gone — dispatch is "
+        "role/skill-driven now (F1 slice 3)."
+    )
+
+
 def test_followup_question_is_honest_no_op(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

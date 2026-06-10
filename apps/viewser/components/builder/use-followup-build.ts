@@ -156,6 +156,18 @@ function readFollowupVisibleEffect(
   return "unknown";
 }
 
+/**
+ * F1 slice 3 (Scout #262): den explicita "dirigenten svarar i chatten, inget
+ * bygge"-signalen ur ``conversation.expectsAnswer`` (ConversationDecision).
+ * Läses defensivt (samma fält-drift-säkra mönster som ``readFollowupVisibleEffect``)
+ * så en saknad/äldre payload ger ``false`` → oförändrat svarstext-beteende.
+ */
+function readExpectsAnswer(payload: PromptApiResponse): boolean {
+  const conversation = payload.conversation;
+  if (!conversation || typeof conversation !== "object") return false;
+  return (conversation as Record<string, unknown>).expectsAnswer === true;
+}
+
 export function useFollowupBuild({
   siteId,
   onBuildStart,
@@ -213,13 +225,18 @@ export function useFollowupBuild({
         // ``answerText``. Surface the reply (not a generic failure) so a question
         // asked from a dialog reads as an answer, matching FloatingChat. The
         // dialog stays open (no build to apply); ``isAnswer`` marks it non-error.
+        const expectsAnswer = readExpectsAnswer(payload);
         if (
           response.ok &&
           !payload.runId &&
-          typeof payload.answerText === "string" &&
-          payload.answerText.trim()
+          (expectsAnswer ||
+            (typeof payload.answerText === "string" &&
+              payload.answerText.trim()))
         ) {
-          const answer = payload.answerText.trim();
+          const answer =
+            (typeof payload.answerText === "string" &&
+              payload.answerText.trim()) ||
+            "Jag svarade i chatten utan att bygga om något.";
           setError(answer);
           return { ok: false, error: answer, isAnswer: true };
         }

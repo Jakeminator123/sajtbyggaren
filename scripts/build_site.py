@@ -3356,8 +3356,26 @@ def run_followup_chain(
     #     no-op with a clear reason - never a faked section.
     added_capabilities: list[str] = []
     section_unsupported: list[dict[str, str]] = []
-    is_section_add = decision.editKind == "section_add" or any(
-        subtask.editKind == "section_add" for subtask in decision.subtasks
+    # F1 slice 3: the CLASSIFIED ROLE drives which skill handles this follow-up.
+    # role_for_edit_kind(section_add) -> section_builder, whose locked contract
+    # skill is SECTION_ADD_SKILL; selecting on that skill (not the raw editKind)
+    # is what makes the role decision authoritative for dispatch and makes
+    # RoleContract.skill actually read. Behaviour-equivalent to the old editKind
+    # gate (only section_add maps to the section-add skill); skill_for_edit_kind
+    # is defensive about "none"/unknown kinds, so the editKind branches below
+    # stay the honest fallback for kinds no role owns yet (restyle/copy/etc.).
+    from packages.generation.orchestration.openclaw import (
+        SECTION_ADD_SKILL,
+        skill_for_edit_kind,
+    )
+
+    followup_edit_kinds = [
+        decision.editKind,
+        *(subtask.editKind for subtask in decision.subtasks),
+    ]
+    is_section_add = any(
+        skill_for_edit_kind(edit_kind) == SECTION_ADD_SKILL
+        for edit_kind in followup_edit_kinds
     )
     # Capability -> coarse inline position from the router target ("överst"/
     # "längst ner"), threaded into apply so ADR 0038 can place an injected

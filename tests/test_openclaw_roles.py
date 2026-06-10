@@ -32,13 +32,16 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from packages.generation.orchestration.openclaw import (  # noqa: E402
+    ANSWER_ONLY_CONVERSATION_KINDS,
     ROLE_CONTRACTS,
+    SECTION_ADD_SKILL,
     ConversationDecision,
     Role,
     RoleContract,
     classify_conversation,
     contract_for_role,
     role_for_edit_kind,
+    skill_for_edit_kind,
 )
 from packages.generation.orchestration.router import (  # noqa: E402
     classify_message,
@@ -140,6 +143,74 @@ def test_each_produced_directive_maps_back_to_its_role():
 
 
 # ---------------------------------------------------------------------------
+# 1b. F1 slice 3: role-driven dispatch reads RoleContract.skill
+# ---------------------------------------------------------------------------
+
+
+def test_section_add_skill_constant_matches_contract():
+    """SECTION_ADD_SKILL is read from the section_builder contract (not
+    hardcoded) and is the section-add SKILL.md path the chain dispatches on."""
+    assert SECTION_ADD_SKILL == contract_for_role("section_builder").skill
+    assert SECTION_ADD_SKILL == "skills/section-add/SKILL.md"
+    assert SECTION_ADD_SKILL  # non-empty
+
+
+@pytest.mark.parametrize(
+    ("edit_kind", "expected_skill"),
+    [
+        ("section_add", "skills/section-add/SKILL.md"),
+        ("visual_style", "skills/restyle/SKILL.md"),
+        ("copy_change", "skills/copy-change/SKILL.md"),
+        # Edit kinds no role owns in this slice -> None (honest surface).
+        ("component_add", None),
+        ("component_remove", None),
+        ("layout_change", None),
+        ("route_add", None),
+    ],
+)
+def test_skill_for_edit_kind_maps_role_skill(
+    edit_kind: str, expected_skill: str | None
+):
+    """skill_for_edit_kind resolves the owning role and returns its
+    RoleContract.skill (the conductor bridge editKind -> skill)."""
+    assert skill_for_edit_kind(edit_kind) == expected_skill
+
+
+def test_skill_for_edit_kind_agrees_with_role_contracts():
+    """For every editing role, skill_for_edit_kind(directive) equals the role's
+    own contract skill (no drift between the helper and the contracts)."""
+    for _role, contract in ROLE_CONTRACTS.items():
+        for directive in contract.producesDirectives:
+            assert skill_for_edit_kind(directive) == contract.skill
+
+
+def test_router_role_has_no_skill():
+    """The router dispatcher owns no editing directive and declares no skill."""
+    assert contract_for_role("router").skill == ""
+
+
+@pytest.mark.parametrize("edit_kind", [None, "", "none"])
+def test_skill_for_edit_kind_is_defensive(edit_kind):
+    """decision.editKind can be 'none'/missing: skill_for_edit_kind must return
+    None and never raise (adjustment 3b)."""
+    assert skill_for_edit_kind(edit_kind) is None
+
+
+def test_section_add_dispatch_is_equivalent_to_old_edit_kind_gate():
+    """The role-driven gate (skill == SECTION_ADD_SKILL) is byte-for-byte
+    equivalent to the old `editKind == "section_add"` gate: ONLY section_add
+    maps to the section-add skill, every other kind does not."""
+    all_edit_kinds = [
+        "section_add", "visual_style", "copy_change", "component_add",
+        "component_remove", "layout_change", "route_add", "none",
+    ]
+    for edit_kind in all_edit_kinds:
+        role_driven = skill_for_edit_kind(edit_kind) == SECTION_ADD_SKILL
+        old_gate = edit_kind == "section_add"
+        assert role_driven == old_gate, edit_kind
+
+
+# ---------------------------------------------------------------------------
 # 2. Conversation classification - at least 8 Swedish examples
 # ---------------------------------------------------------------------------
 
@@ -179,6 +250,37 @@ def test_at_least_eight_swedish_conversation_examples_covered():
 
 
 # ---------------------------------------------------------------------------
+# 2b. F1 slice 3 (Scout #262): expectsAnswer signal
+# ---------------------------------------------------------------------------
+
+
+def test_answer_only_conversation_kinds_constant_is_locked():
+    """The expectsAnswer source-of-truth set is exactly the three chat kinds."""
+    assert ANSWER_ONLY_CONVERSATION_KINDS == (
+        "small_talk", "site_opinion", "question",
+    )
+
+
+@pytest.mark.parametrize(("message", "expected"), _CONVERSATION_EXAMPLES)
+def test_conversation_kinds_expect_an_answer(message: str, expected: str):
+    """small_talk / site_opinion / question expect a chat answer (no build)."""
+    decision = classify_conversation(message)
+    assert decision.expectsAnswer is True
+    assert decision.conversationKind in ANSWER_ONLY_CONVERSATION_KINDS
+
+
+def test_other_kinds_do_not_expect_an_answer():
+    """`other` (reference/bug/unclear) has its own downstream handling: it is
+    not a chat answer, so expectsAnswer is False."""
+    reference = classify_conversation("samma klocka som på aftonbladet.se")
+    assert reference.conversationKind == "other"
+    assert reference.expectsAnswer is False
+    bug = classify_conversation("hallå, sidan funkar inte")
+    assert bug.conversationKind == "other"
+    assert bug.expectsAnswer is False
+
+
+# ---------------------------------------------------------------------------
 # 3. Edit prompts STILL classify as edit (the non-negotiable guarantee)
 # ---------------------------------------------------------------------------
 
@@ -204,6 +306,24 @@ def test_edit_prompts_still_classify_as_edit(message: str, expected_role: str | 
     )
     assert decision.role == expected_role
     assert decision.editKind != "none"
+
+
+@pytest.mark.parametrize(("message", "_expected_role"), _EDIT_EXAMPLES)
+def test_edit_prompts_do_not_expect_an_answer(message: str, _expected_role):
+    """An edit is built/no-op'd by the chain, never a chat answer (F1 slice 3)."""
+    decision = classify_conversation(message)
+    assert decision.conversationKind == "edit"
+    assert decision.expectsAnswer is False
+
+
+def test_expects_answer_matches_conversation_kind_membership():
+    """expectsAnswer is exactly membership of ANSWER_ONLY_CONVERSATION_KINDS
+    across both conversation and edit examples (F1 slice 3)."""
+    for message, _ in _CONVERSATION_EXAMPLES + _EDIT_EXAMPLES:
+        decision = classify_conversation(message)
+        assert decision.expectsAnswer == (
+            decision.conversationKind in ANSWER_ONLY_CONVERSATION_KINDS
+        )
 
 
 def test_multi_intent_edit_is_still_edit():
