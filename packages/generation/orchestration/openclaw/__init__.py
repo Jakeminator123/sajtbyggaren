@@ -23,12 +23,20 @@ F1 slice 1 (conductor role contracts + conversation classification):
     contract_for_role(role) / role_for_edit_kind(edit_kind)
     classify_conversation(message, ...) -> ConversationDecision
     ConversationDecision, ConversationKind
+
+F1 slice 3 (role-driven dispatch + answer-only signal):
+    skill_for_edit_kind(edit_kind) -> the SKILL.md path the owning role runs
+    SECTION_ADD_SKILL                # the section_builder role's skill (dispatch key)
+    ANSWER_ONLY_CONVERSATION_KINDS   # kinds the dispatcher answers (expectsAnswer)
+    ConversationDecision.expectsAnswer
 """
 
 from .core import decide, orchestrate
 from .models import OpenClawAction, OpenClawDecision, PatchPlanRequest, ToolCall
 from .roles import (
+    ANSWER_ONLY_CONVERSATION_KINDS,
     ROLE_CONTRACTS,
+    SECTION_ADD_SKILL,
     ConversationDecision,
     ConversationKind,
     Role,
@@ -37,10 +45,13 @@ from .roles import (
     classify_conversation,
     contract_for_role,
     role_for_edit_kind,
+    skill_for_edit_kind,
 )
 
 __all__ = [
+    "ANSWER_ONLY_CONVERSATION_KINDS",
     "ROLE_CONTRACTS",
+    "SECTION_ADD_SKILL",
     "ConversationDecision",
     "ConversationKind",
     "OpenClawAction",
@@ -55,4 +66,5 @@ __all__ = [
     "decide",
     "orchestrate",
     "role_for_edit_kind",
+    "skill_for_edit_kind",
 ]

@@ -91,6 +91,10 @@ BRIDGE_SENTINEL_PREFIX = "OPENCLAW_BRIDGE_JSON:"
 # The conductor conversation kinds the dispatcher answers itself (F1 slice 2).
 # ``edit`` keeps the unchanged chain flow and ``other`` falls through to the
 # existing OpenClaw Core V0 mapping - only these three stop with an answer.
+# Kept as a local literal so this seam stays import-light (the packages import
+# is deferred), but it MUST equal ``ANSWER_ONLY_CONVERSATION_KINDS`` in
+# packages/generation/orchestration/openclaw/roles.py (the single source of
+# truth for ``ConversationDecision.expectsAnswer``); a lockstep test asserts it.
 _ANSWER_ONLY_CONVERSATION_KINDS = ("small_talk", "site_opinion", "question")
 
 # Honest per-kind answer placeholders for the emitted decision. The REAL chat
@@ -139,6 +143,10 @@ def _conversation_metadata(conversation) -> dict[str, object]:
     return {
         "conversationKind": conversation.conversationKind,
         "role": conversation.role,
+        # F1 slice 3 (Scout #262): explicit "expects a chat answer, not a build"
+        # signal so /api/prompt + use-followup-build + floating-chat can
+        # short-circuit answer-only without inferring it from "no runId".
+        "expectsAnswer": conversation.expectsAnswer,
         "source": conversation.source,
         "rationale": conversation.rationale,
     }

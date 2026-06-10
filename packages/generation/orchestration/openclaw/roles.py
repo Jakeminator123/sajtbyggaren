@@ -54,15 +54,18 @@ from ..router.models import (
 )
 
 __all__ = [
+    "ANSWER_ONLY_CONVERSATION_KINDS",
     "ConversationDecision",
     "ConversationKind",
     "ROLE_CONTRACTS",
     "Role",
     "RoleContract",
     "RoleDirectiveKind",
+    "SECTION_ADD_SKILL",
     "classify_conversation",
     "contract_for_role",
     "role_for_edit_kind",
+    "skill_for_edit_kind",
 ]
 
 # ---------------------------------------------------------------------------
@@ -196,6 +199,37 @@ def role_for_edit_kind(edit_kind: str) -> Role | None:
     return _ROLE_BY_EDIT_KIND.get(edit_kind)  # type: ignore[arg-type]
 
 
+# F1 slice 3: the skill the section_builder role runs, read FROM the locked
+# contract (not hardcoded) so the chain's dispatch key can never drift from
+# ``ROLE_CONTRACTS``. ``run_followup_chain`` selects the section-add handling by
+# comparing ``skill_for_edit_kind(edit_kind)`` against this value, which is what
+# makes the classified ROLE (not the raw editKind) authoritative for dispatch.
+SECTION_ADD_SKILL: str = ROLE_CONTRACTS["section_builder"].skill
+
+
+def skill_for_edit_kind(edit_kind: str | None) -> str | None:
+    """Return the SKILL.md path the owning role runs for ``edit_kind``.
+
+    The conductor's bridge from a router ``EditKind`` to the skill that handles
+    it: it resolves the owning role via ``role_for_edit_kind`` and reads that
+    role's ``RoleContract.skill``. The role *selects* the skill; the
+    deterministic apply chain still validates and applies (conductor principle).
+
+    Returns ``None`` when ``edit_kind`` is missing/``"none"``, when no role owns
+    the kind (component_add/remove, layout_change, route_add), or when the owning
+    role declares no skill (the router dispatcher). Defensive on purpose:
+    ``decision.editKind`` can be ``"none"``, so this accepts ``str | None`` and
+    never raises.
+    """
+    if not edit_kind or edit_kind == "none":
+        return None
+    role = role_for_edit_kind(edit_kind)
+    if role is None:
+        return None
+    skill = ROLE_CONTRACTS[role].skill
+    return skill or None
+
+
 # ---------------------------------------------------------------------------
 # Conversation classification (additive extension of router messageKind)
 # ---------------------------------------------------------------------------
@@ -210,6 +244,19 @@ ConversationKind = Literal[
     "edit",
     "other",
 ]
+
+# The conversation kinds the dispatcher (router role) answers in chat WITHOUT a
+# build - the honest answer-only gate. ``ConversationDecision.expectsAnswer`` is
+# True iff ``conversationKind`` is one of these. This is the single source of
+# truth mirrored by ``_ANSWER_ONLY_CONVERSATION_KINDS`` in
+# scripts/run_openclaw_followup.py and ``CONVERSATION_ANSWER_KINDS`` in
+# apps/viewser/app/api/prompt/route.ts. ``edit`` keeps the unchanged chain flow
+# and ``other`` falls through to the existing OpenClaw Core V0 mapping.
+ANSWER_ONLY_CONVERSATION_KINDS: tuple[ConversationKind, ...] = (
+    "small_talk",
+    "site_opinion",
+    "question",
+)
 
 # Small talk / jokes / greetings / chit-chat. Swedish-first, a few English cues.
 _SMALL_TALK_CUES = (
@@ -291,14 +338,19 @@ class ConversationDecision:
     the deterministic router (the single classification truth), and
     ``conversationKind`` is the conductor's added label. ``role`` is the
     editing role for an edit (or None when no role owns it), and ``router`` for
-    a conversation the dispatcher answers itself. ``source`` reports no-key
-    parity; ``rationale`` is a short trace line, never customer copy.
+    a conversation the dispatcher answers itself. ``expectsAnswer`` is the
+    explicit "this turn expects a chat answer, not a build" signal (True iff
+    ``conversationKind`` is one of ``ANSWER_ONLY_CONVERSATION_KINDS``) that the
+    seam threads to /api/prompt + the UI so they can short-circuit answer-only
+    without a build (Scout #262). ``source`` reports no-key parity;
+    ``rationale`` is a short trace line, never customer copy.
     """
 
     conversationKind: ConversationKind
     role: Role | None
     messageKind: MessageKind
     editKind: EditKind
+    expectsAnswer: bool
     source: str
     rationale: str
 
@@ -346,6 +398,9 @@ def classify_conversation(
             role=role,
             messageKind=router.messageKind,
             editKind=edit_kind,
+            # An edit is built (or honestly no-op'd) by the chain, never a chat
+            # answer - so the dispatcher does not expect to answer it.
+            expectsAnswer=False,
             source=source,
             rationale=(
                 f"Router edit ({router.messageKind}/{edit_kind}) preserved as "
@@ -416,6 +471,10 @@ def _conversation(
         role="router",
         messageKind=router.messageKind,
         editKind=router.editKind,
+        # The dispatcher answers small_talk/site_opinion/question in chat (no
+        # build); ``other`` (bug_report/reference/unclear) has its own
+        # downstream handling and is not a chat answer here.
+        expectsAnswer=kind in ANSWER_ONLY_CONVERSATION_KINDS,
         source=source,
         rationale=rationale,
     )
