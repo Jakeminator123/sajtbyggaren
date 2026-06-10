@@ -13,21 +13,11 @@ Run:
 
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import streamlit as st
 
 from backoffice import loaders
-from backoffice.views import (
-    building_blocks,
-    engine_runs,
-    evals,
-    governance,
-    llm_engine,
-    maintenance,
-    playground,
-    status,
-)
+from backoffice.view_registry import SECTIONS
+from backoffice.views import status
 
 st.set_page_config(
     page_title="Sajtbyggaren Backoffice",
@@ -35,18 +25,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-
-SECTIONS: dict[str, dict[str, Callable[[], None]]] = {
-    "Status": status.VIEWS,
-    "Governance": governance.VIEWS,
-    "LLM Engine": llm_engine.VIEWS,
-    "Building Blocks": building_blocks.VIEWS,
-    "Runs": engine_runs.VIEWS,
-    "Playground": playground.VIEWS,
-    "Evals": evals.VIEWS,
-    "Underhåll": maintenance.VIEWS,
-}
 
 
 def _hard_reset_caches() -> None:
@@ -75,15 +53,15 @@ def main() -> None:
         _hard_reset_caches()
         st.sidebar.success("Cache rensad.")
 
-    current = st.session_state.get("current_view", "Översikt")
+    current = st.session_state.get("current_view", "Idag")
 
     for pages in SECTIONS.values():
         if current in pages:
             pages[current]()
             return
 
-    # Fallback: render Översikt.
-    status.VIEWS["Översikt"]()
+    # Fallback: render the Idag landing view.
+    status.VIEWS["Idag"]()
 
 
 if __name__ == "__main__":

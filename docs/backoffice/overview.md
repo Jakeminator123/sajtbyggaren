@@ -23,6 +23,7 @@ texten/innehållet hade drivit från dagens modell - åtgärdas i denna PR), ell
 
 | Sektion / vy | Källa | Status | Kommentar |
 | --- | --- | --- | --- |
+| Status / Idag | `data/runs`, `data/evals/summaries/golden-path`, `governance/policies` | aktiv | Read-only landningsvy (default): senaste golden-path-eval, senaste körning, Quality Gate-sammandrag, kända brister och en färskhetsbricka per vy driven av registret. Inga subprocesser. |
 | Status / Översikt | `governance/policies`, `page-quality-traits.v1.json` | aktiv | Policy-/schema-/regel-/ADR-räknare + kvalitetsmål + snabbåtgärder. Får nu en read-only golden-status. |
 | Status / System Health | health-checks | aktiv | Kör governance-validate, rules-sync, term-coverage, pytest -m governance, API-nyckel-koll. |
 | Status / Cross-Policy Status | flera policies | aktiv | Realtids-konsistens (samma som `pytest -m governance`). |
@@ -47,6 +48,7 @@ texten/innehållet hade drivit från dagens modell - åtgärdas i denna PR), ell
 | Building Blocks / Reference Templates | `data/reference-templates` | aktiv | Inspirations-corpus. |
 | Runs / Engine Runs | `data/runs/` | aktiv | Inspektera artefakter + `trace.ndjson`. |
 | Playground / Playground | `scripts/dev_generate.py` | aktiv | Kör en engine run från backoffice (subprocess). |
+| Playground / Loop-bevis | `scripts/run_golden_path_eval.py`, `data/evals/artifacts/playground` | aktiv | Kör golden-path-loopen deterministiskt in-process (`generate` -> `build(do_build=False)`, ingen npm/nyckel) och visar scaffold/variant/starter, routelista, quality per check, brief-/planSource och en `app/page.tsx`-snutt. Plus read-only miljö-/adapter-diagnostik (visar aldrig secret-värden). |
 | Evals / Evals och telemetri | `scripts/run_eval_suite.py` + manuellt scorecard | aktiv | Smoke/regression + manuellt 1-10. Se `docs/evals.md`. |
 | Underhåll / Cleanup - Säker rensning | retention-helpers | aktiv | Säker rensning av artefakter. |
 | Underhåll / Cleanup - Med varning | retention-helpers | aktiv | Rensning med varning. |
@@ -55,6 +57,21 @@ texten/innehållet hade drivit från dagens modell - åtgärdas i denna PR), ell
 **Inga vyer klassas som obsoleta/legacy i nuläget.** Om en vy i framtiden inte
 kan hållas ärlig mot motorn ska den märkas legacy/diagnostic här hellre än att
 låtsas vara aktuell.
+
+### Maskinverifierat vy-register (governance-lås)
+
+Tabellen ovan är den mänskliga kartan. Den maskinläsbara sanningskällan är
+`governance/policies/backoffice-views.v1.json` (schema:
+`governance/schemas/backoffice-views.schema.json`): ett register där varje vy
+har `section`, `ownerSource` (ägande modul), `status`
+(`active`/`stale`/`legacy`/`diagnostic`), `readsFrom` (datakällor) och
+`lastVerified`. Sektion↔vy-kopplingen bor i `backoffice/view_registry.py` som
+både sidomenyn (`backoffice.py`) och registret läser.
+
+`tests/test_backoffice_registry.py` låser de två dubbelriktat: en vy som finns i
+koden men saknar entry = rött, och ett entry utan motsvarande vy i koden = rött.
+Samma disciplin som naming-dictionary + `check_term_coverage` redan har — en ny
+vy kan inte smyga in utan att registreras och statusbedömas.
 
 ## Vad som speglar dagens motor (och var)
 

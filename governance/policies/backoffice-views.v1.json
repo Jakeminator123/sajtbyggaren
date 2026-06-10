@@ -1,0 +1,277 @@
+{
+  "$schema": "../schemas/backoffice-views.schema.json",
+  "policyId": "backoffice-views.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Maskinverifierat register over varje backoffice-vy. For varje vy: vilken sektion den ligger i, vilken modul som ager den (ownerSource), dess status (active = speglar dagens motor och laser en riktig datayta; diagnostic = kor live-checks i stallet for att lasa en lagrad yta; stale/legacy = drift/pensioneringskandidat), vilka datakallor den laser (readsFrom) och nar entryn senast verifierades. tests/test_backoffice_registry.py laser bade detta register och backoffice.view_registry dubbelriktat: en ny vy i koden utan entry har = rott, och ett entry utan motsvarande vy i koden = rott. Vy-status speglar docs/backoffice/overview.md. Detta ar operatorens redigeringsyta (ADR 0002), inte anvandarens runtime.",
+  "sections": [
+    "Status",
+    "Governance",
+    "LLM Engine",
+    "Building Blocks",
+    "Runs",
+    "Playground",
+    "Evals",
+    "Underhåll"
+  ],
+  "views": [
+    {
+      "view": "Idag",
+      "section": "Status",
+      "ownerSource": "backoffice.views.status",
+      "status": "active",
+      "readsFrom": ["data/runs", "data/evals/summaries/golden-path", "governance/policies"],
+      "lastVerified": "2026-06-09",
+      "note": "Read-only landningsvy: senaste eval/körning, Quality Gate-sammandrag, kända brister och färskhetsbricka per vy."
+    },
+    {
+      "view": "Översikt",
+      "section": "Status",
+      "ownerSource": "backoffice.views.status",
+      "status": "active",
+      "readsFrom": ["governance/policies", "data/evals/summaries/golden-path"],
+      "lastVerified": "2026-06-09",
+      "note": "Policy-/schema-/regel-/ADR-räknare, kvalitetsmål, read-only golden-status och kända brister."
+    },
+    {
+      "view": "Golden Path",
+      "section": "Status",
+      "ownerSource": "backoffice.views.status",
+      "status": "active",
+      "readsFrom": ["data/evals/summaries/golden-path"],
+      "lastVerified": "2026-06-09",
+      "note": "Read-only status för senaste golden-path-eval (ADR 0039)."
+    },
+    {
+      "view": "System Health",
+      "section": "Status",
+      "ownerSource": "backoffice.views.status",
+      "status": "diagnostic",
+      "readsFrom": ["governance/policies", "governance/rules"],
+      "lastVerified": "2026-06-09",
+      "note": "Kör governance-validate, rules-sync, term-coverage, pytest -m governance och API-nyckel-koll."
+    },
+    {
+      "view": "Cross-Policy Status",
+      "section": "Status",
+      "ownerSource": "backoffice.views.status",
+      "status": "diagnostic",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09",
+      "note": "Realtidskonsistens mellan policies (samma logik som pytest -m governance)."
+    },
+    {
+      "view": "Policies",
+      "section": "Governance",
+      "ownerSource": "backoffice.views.governance",
+      "status": "active",
+      "readsFrom": ["governance/policies", "governance/schemas"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Naming Dictionary",
+      "section": "Governance",
+      "ownerSource": "backoffice.views.governance",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Page Quality Traits",
+      "section": "Governance",
+      "ownerSource": "backoffice.views.governance",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Rules",
+      "section": "Governance",
+      "ownerSource": "backoffice.views.governance",
+      "status": "active",
+      "readsFrom": ["governance/rules"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "ADR",
+      "section": "Governance",
+      "ownerSource": "backoffice.views.governance",
+      "status": "active",
+      "readsFrom": ["governance/decisions"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Mindmap",
+      "section": "LLM Engine",
+      "ownerSource": "backoffice.views.llm_engine",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Init Flow",
+      "section": "LLM Engine",
+      "ownerSource": "backoffice.views.llm_engine",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Follow-up Flow",
+      "section": "LLM Engine",
+      "ownerSource": "backoffice.views.llm_engine",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Model Roles",
+      "section": "LLM Engine",
+      "ownerSource": "backoffice.views.llm_engine",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Fix Types",
+      "section": "LLM Engine",
+      "ownerSource": "backoffice.views.llm_engine",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Embeddings",
+      "section": "LLM Engine",
+      "ownerSource": "backoffice.views.llm_engine",
+      "status": "active",
+      "readsFrom": ["governance/policies"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Kontrollplan",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["packages/generation/orchestration"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Scaffolds",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["packages/generation/orchestration/scaffolds"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Selection Profiles",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["packages/generation/orchestration/scaffolds"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Variants",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["packages/generation/orchestration/scaffolds"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Variant Candidates",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["data/variant-candidates"],
+      "lastVerified": "2026-06-09",
+      "note": "Tooling: genererar variant-kandidater; datakällan kan vara tom."
+    },
+    {
+      "view": "Dossiers",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["packages/generation/orchestration/dossiers"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Dossier Candidates",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["data/dossier-candidates"],
+      "lastVerified": "2026-06-09",
+      "note": "Tooling: kandidat-intag + generering; datakällan kan vara tom."
+    },
+    {
+      "view": "Reference Templates",
+      "section": "Building Blocks",
+      "ownerSource": "backoffice.views.building_blocks",
+      "status": "active",
+      "readsFrom": ["data/reference-templates"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Engine Runs",
+      "section": "Runs",
+      "ownerSource": "backoffice.views.engine_runs",
+      "status": "active",
+      "readsFrom": ["data/runs"],
+      "lastVerified": "2026-06-09",
+      "note": "Inspekterar artefakter + trace.ndjson; datakällan kan vara tom innan första körningen."
+    },
+    {
+      "view": "Playground",
+      "section": "Playground",
+      "ownerSource": "backoffice.views.playground",
+      "status": "active",
+      "readsFrom": ["scripts", "data/runs"],
+      "lastVerified": "2026-06-09",
+      "note": "Kör en Engine Run via subprocess (scripts/dev_generate.py) och pollar data/runs."
+    },
+    {
+      "view": "Loop-bevis",
+      "section": "Playground",
+      "ownerSource": "backoffice.views.playground",
+      "status": "active",
+      "readsFrom": ["scripts", "data/evals/artifacts/playground"],
+      "lastVerified": "2026-06-09",
+      "note": "Kör golden-path-loopen deterministiskt in-process (generate -> build, ingen npm/nyckel) + read-only miljö-/adapter-diagnostik. Skriver isolerat under data/evals/artifacts/playground."
+    },
+    {
+      "view": "Evals och telemetri",
+      "section": "Evals",
+      "ownerSource": "backoffice.views.evals",
+      "status": "active",
+      "readsFrom": ["data/evals/summaries", "scripts"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Cleanup - Säker rensning",
+      "section": "Underhåll",
+      "ownerSource": "backoffice.views.maintenance",
+      "status": "active",
+      "readsFrom": ["data/runs", "data/evals"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Cleanup - Med varning",
+      "section": "Underhåll",
+      "ownerSource": "backoffice.views.maintenance",
+      "status": "active",
+      "readsFrom": ["data/runs", "data/evals", "data/starters"],
+      "lastVerified": "2026-06-09"
+    },
+    {
+      "view": "Toggle - Aktivera/inaktivera",
+      "section": "Underhåll",
+      "ownerSource": "backoffice.views.maintenance",
+      "status": "active",
+      "readsFrom": ["packages/generation/orchestration", "data/starters"],
+      "lastVerified": "2026-06-09"
+    }
+  ]
+}

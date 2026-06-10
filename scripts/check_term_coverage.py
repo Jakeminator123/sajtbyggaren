@@ -242,6 +242,16 @@ COMMON_WORDS = {
     # Backoffice maintenance implementation dataclasses. They are local UI
     # helper containers, not canonical domain terms.
     "CleanupItem", "CleanupPlan", "CleanupResult", "ToggleRow",
+    # backoffice/freshness.py local dataclass that holds the resolved
+    # per-view freshness badge (state/label/emoji). Same treatment as the
+    # CleanupResult / CheckResult containers above - an internal UI helper
+    # symbol, not a canonical domain term. The badge logic is driven by the
+    # backoffice-views.v1.json registry, not by a new vocabulary entry.
+    "Freshness",
+    # backoffice/env_panel.py local dataclass holding the set/missing state of
+    # one tracked env key (never its value). Same internal-UI-symbol treatment
+    # as Freshness / CleanupResult above; not a canonical domain term.
+    "EnvKeyState",
     # Starter Candidate Auditor v1 implementation symbol
     # (scripts/audit_starter_candidate.py). ``AuditResult`` is a local
     # Python dataclass that holds the read-only audit output for an

@@ -17,9 +17,14 @@ from typing import Any
 
 import streamlit as st
 
+from .. import health, loaders
+from ..env_panel import resolve_preview_adapter, scan_env_keys
+from ..loop_proof import baseline_prompt_choices, run_loop_proof, slugify
 from ..paths import REPO_ROOT, RUNS_DIR, SCRIPTS_DIR
-from ._helpers import safe_render
+from ._helpers import render_check, safe_render
 from ._trace import load_trace_events, render_trace_viewer
+
+PREVIEW_RUNTIME_POLICY = "preview-runtime-policy.v1.json"
 
 PLAYGROUND_TIMEOUT_SECONDS = 180
 LOG_EXCERPT_LINES = 80
@@ -353,6 +358,160 @@ def view_playground() -> None:
                 st.info("trace.ndjson skapas i fas 1.")
 
 
+def _render_env_panel() -> None:
+    """Read-only 'Miljö & adaptrar'-panel. Visar aldrig secret-värden."""
+    st.subheader("Miljö & adaptrar")
+    st.caption(
+        "Read-only diagnostik. Visar bara om en nyckel är satt — aldrig värdet. "
+        "Aktiv preview-adapter resolveras ur `VIEWSER_PREVIEW_MODE` + "
+        "`preview-runtime-policy.v1.json` (descriptor-mappning, se "
+        "`packages/preview-runtime` + ADR 0033)."
+    )
+
+    col_env, col_adapter = st.columns(2)
+
+    with col_env:
+        st.markdown("**Env-nycklar**")
+        st.dataframe(
+            [
+                {"Nyckel": s.name, "Status": "satt" if s.is_set else "saknas"}
+                for s in scan_env_keys()
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+    with col_adapter:
+        st.markdown("**Preview-adapter**")
+        policy, err = loaders.safe_load_policy(PREVIEW_RUNTIME_POLICY)
+        adapter = resolve_preview_adapter(
+            os.environ.get("VIEWSER_PREVIEW_MODE"), policy if not err else None
+        )
+        st.metric("Aktiv kind", adapter["canonicalKind"])
+        suffix = " (default, env ej satt)" if adapter["isDefaultUnset"] else ""
+        st.caption(
+            f"Raw mode: `{adapter['rawMode']}`{suffix}. "
+            f"Policy-status för aktiv runtime: `{adapter['activeRuntimeStatus']}`. "
+            f"Policy default: `{adapter['policyDefault']}`."
+        )
+        if adapter["runtimeStatuses"]:
+            st.dataframe(
+                [
+                    {"Runtime": kind, "Policy-status": status}
+                    for kind, status in adapter["runtimeStatuses"].items()
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+
+    st.markdown("**Schema-valideringsstatus**")
+    st.caption("Kör `governance_validate.py` på begäran (subprocess, read-only).")
+    if st.button("Kör governance-validering", key="loop_proof_validate"):
+        st.session_state["loop_proof_validate_result"] = health.run_governance_validate()
+    if "loop_proof_validate_result" in st.session_state:
+        render_check(st.session_state["loop_proof_validate_result"])
+
+
+def view_loop_proof() -> None:
+    st.title("Loop-bevis")
+    st.caption(
+        "Bevisar `Golden Path`-loopen DETERMINISTISKT och på riktigt: kör "
+        "`generate` -> `build(do_build=False)` in-process (ingen `OPENAI_API_KEY`, "
+        "ingen npm) och bygger en faktisk sajt i en isolerad katalog under "
+        "`data/evals/artifacts/playground/`. Återanvänder "
+        "`scripts/run_golden_path_eval.py`-mönstret — ingen ny motor. Ingen mockad "
+        "visning."
+    )
+
+    choices = baseline_prompt_choices()
+    labels = [f"{case_id}: {prompt}" for case_id, prompt in choices] + ["Fri svensk prompt"]
+    pick = st.radio("Välj prompt", labels, key="loop_proof_pick")
+
+    if pick == "Fri svensk prompt":
+        prompt = st.text_input(
+            "Fri prompt (svenska)",
+            value="Skapa en hemsida för ett bageri i Uppsala.",
+            key="loop_proof_free_prompt",
+        ).strip()
+        site_id = slugify(prompt) if prompt else None
+    else:
+        idx = labels.index(pick)
+        case_id, prompt = choices[idx]
+        site_id = case_id
+
+    run = st.button(
+        "Kör deterministiskt bygge", type="primary", key="loop_proof_run", disabled=not prompt
+    )
+    if run and prompt:
+        with st.spinner("Bygger sajt deterministiskt (generate -> build, ingen npm)..."):
+            try:
+                st.session_state["loop_proof_result"] = run_loop_proof(prompt, site_id=site_id)
+            except Exception as exc:  # noqa: BLE001
+                st.session_state["loop_proof_result"] = None
+                st.error(f"Bygget misslyckades: {type(exc).__name__}: {exc}")
+
+    result = st.session_state.get("loop_proof_result")
+    if result:
+        st.divider()
+        st.subheader("Resultat")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Scaffold", str(result.get("scaffoldId") or "—"))
+        c2.metric("Variant", str(result.get("variantId") or "—"))
+        c3.metric("Starter", str(result.get("starterId") or "—"))
+        c4.metric("Build", str(result.get("buildStatus") or "—"))
+        st.caption(
+            f"runId `{result.get('runId')}` · briefSource `{result.get('briefSource')}` · "
+            f"planSource `{result.get('planSource')}` · Quality `{result.get('qualityStatus')}`."
+        )
+
+        st.markdown("**Route-lista**")
+        planned = result.get("plannedRoutes", [])
+        generated = result.get("generatedRoutes", [])
+        all_routes = sorted(set(planned) | set(generated))
+        st.dataframe(
+            [
+                {
+                    "Route": r,
+                    "Planerad": "ja" if r in planned else "nej",
+                    "Genererad": "ja" if r in generated else "nej",
+                }
+                for r in all_routes
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+        st.markdown("**Quality Gate-checkar**")
+        quality_checks = result.get("qualityChecks", [])
+        if quality_checks:
+            st.dataframe(
+                [
+                    {
+                        "Check": c.get("name", "—"),
+                        "Status": c.get("status", "—"),
+                        "Severitet": c.get("severity", "blocking"),
+                        "Detalj": c.get("detail", ""),
+                    }
+                    for c in quality_checks
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+        else:
+            st.info("Inga quality-checks i resultatet.")
+
+        st.markdown("**Genererad `app/page.tsx` (snutt)**")
+        snippet = result.get("pageSnippet") or ""
+        if snippet:
+            st.code(snippet, language="tsx")
+        else:
+            st.info("Ingen app/page.tsx genererades för denna körning.")
+
+    st.divider()
+    _render_env_panel()
+
+
 VIEWS = {
     "Playground": lambda: safe_render(view_playground),
+    "Loop-bevis": lambda: safe_render(view_loop_proof),
 }
