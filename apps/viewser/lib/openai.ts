@@ -114,11 +114,14 @@ export async function chatWithOpenAi(messages: ChatMessage[]): Promise<{
   const client = getClient();
   const model = DEFAULT_MODEL;
 
+  // B176: nyare modeller (gpt-5.x) avvisar `max_tokens` med 400
+  // "Unsupported parameter" — `max_completion_tokens` är ersättaren och
+  // accepteras även av äldre chat-modeller.
   const completion = await client.chat.completions.create({
     model,
     messages,
     temperature: 0.3,
-    max_tokens: maxOutputTokens(),
+    max_completion_tokens: maxOutputTokens(),
   });
 
   const answer = completion.choices[0]?.message?.content?.trim();

@@ -88,6 +88,17 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
    för sharp (npm-varningar i genererade sajter), spåra transitiva
    msw/unrs-resolver, samt beslut om docs-base/portfolio-base ska mappas
    in i runtime (idag medvetet omappade i scaffold-kontraktet).
+6. **Komponent-medvetet LLM-flöde via shadcn (operatörsprio 2026-06-10):**
+   starters vendorerar redan shadcn-komponenter (CLI i devDependencies,
+   `components.json` per starter), men brief/plan/codegen-kedjan är inte
+   komponent-medveten — LLM-flödet kan inte välja/referera komponenter.
+   Slice: exponera komponentkatalogen för kedjan (registry/manifest +
+   governance-mappning). Börja med kort design-not innan bygge.
+7. **Begreppssession (operatör + agent):** blueprint/variant/dossier/DNA
+   m.fl. överlappar i dag och ingen av termerna finns i naming-dictionaryn.
+   Utgå från ADR 0036 (blueprint-and-router-vocabulary), begrepps-PR:en
+   #246 och `governance/policies/naming-dictionary.v1.json`; utfall =
+   ADR + dictionary-poster.
 
 **Öppna blockers / att-göra:**
 
@@ -106,13 +117,15 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   multi-field, route/element-targeting). B169-uppföljning för Christopher
   noterad i msg-0061.
 
-Last verified state: `9a7c9f6` (2026-06-10 ~06:00 UTC+2; `jakob-be` HEAD
-efter #266+#267-mergarna + trace-katalog-härdningen `472e150` +
-markdown-lint-fixen `0bfdbbd`. Rent träd, i sync med origin, alla mergade
-PR-brancher städade lokalt+remote. `main = 7486145` — sync väntar
-operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #262, #263, #264, #265, #266, #267
-(alla mergade till `jakob-be`).
+Last verified state: `01bab96` (2026-06-10 ~08:00 UTC+2; `jakob-be` HEAD
+efter morgonpassets bugg-runda: B176-chatfix (`max_completion_tokens`),
+B179-fix (B175-recovery accepterar inte längre stale runs) + docs
+B177/B178 + köpunkter 6/7. Pushad till `origin/jakob-be`.
+`main = 7486145` — sync väntar operatörsbeslut).
+Nya commits sedan föregående checkpoint: `ced8ca0`, `90d7150`, `01bab96`.
+Morgonpassets fynd: B176 (fixad), B177 (font-@import i byggd CSS, öppen),
+B178 (falsk framgång vid icke-applicerad fri-text-ändring, öppen, kopplad
+B155), B179 (fixad).
 
 ## Öppna PR att känna till
 

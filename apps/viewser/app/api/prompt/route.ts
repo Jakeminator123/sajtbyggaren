@@ -539,24 +539,42 @@ async function runPromptBuildOnce(
   // no completed run pre-bridge (preBridgeLatestRun === null — e.g. the init
   // run was pruned by SAJTBYGGAREN_MAX_RUNS retention, or never completed)
   // there is no runId to diff against, so we instead require the post-bridge
-  // run to have appeared DURING this request (run-dir mtime >= request start,
-  // minus a small fs-timestamp allowance). That keeps the original safety:
-  // a pre-bridge snapshot that failed for a transient reason can never make
-  // us re-surface a STALE run as if this prompt produced it.
+  // run to have appeared DURING this request (run-dir mtime >= request start
+  // FLOORED to the fs-timestamp granularity — see the floor rationale below).
+  // That keeps the original safety: a pre-bridge snapshot that failed for a
+  // transient reason can never make us re-surface a STALE run as if this
+  // prompt produced it.
   if (applyResult === null && payload.mode === "followup" && payload.siteId) {
     const postBridgeLatestRun = await latestCompletedRunForSite(
       payload.siteId,
     ).catch(() => null);
-    // Fs-timestamps are coarser than Date.now() and the run-dir is created
-    // moments after the request starts — 5 s allowance is generous without
-    // ever matching a genuinely stale run (minutes/hours old).
-    const FS_TIMESTAMP_ALLOWANCE_MS = 5_000;
+    // A legitimately-new run is created by the bridge SECONDS into the request
+    // (Python spawn + KÖR-7 chain + targeted build), so its run-dir mtime lands
+    // at/after requestStartMs. The only reason any tolerance is needed is
+    // filesystem timestamp coarseness: some filesystems floor mtime to whole
+    // seconds (FAT/exFAT, older Unix), which can round a brand-new run's mtime
+    // DOWN into the same clock-tick as requestStartMs. We therefore compare
+    // against requestStartMs FLOORED to that granularity — never against a flat
+    // window SUBTRACTED from it.
+    //
+    // B175-followup fix (review 2026-06-10): the previous flat 5 s subtraction
+    // admitted runs whose mtime was up to 5 s BEFORE the request started, i.e.
+    // genuinely STALE runs, which contradicts "appeared during this request"
+    // and could re-surface a stale run as if this prompt produced it. The
+    // earlier `<requestStart> minus window` shape is exactly what we drop.
+    // Flooring only tolerates the sub-granularity
+    // rounding of the request-start instant itself (< 1 tick), so a run created
+    // in any earlier tick is correctly rejected. (NTFS/ext4/APFS are sub-ms, so
+    // on the normal dev disk this is effectively `mtimeMs >= requestStartMs`.)
+    const FS_TIMESTAMP_GRANULARITY_MS = 2_000;
+    const requestStartFloorMs =
+      Math.floor(requestStartMs / FS_TIMESTAMP_GRANULARITY_MS) *
+      FS_TIMESTAMP_GRANULARITY_MS;
     const chainLandedNewRun =
       postBridgeLatestRun !== null &&
       (preBridgeLatestRun !== null
         ? postBridgeLatestRun.runId !== preBridgeLatestRun.runId
-        : postBridgeLatestRun.mtimeMs >=
-          requestStartMs - FS_TIMESTAMP_ALLOWANCE_MS);
+        : postBridgeLatestRun.mtimeMs >= requestStartFloorMs);
     if (postBridgeLatestRun && chainLandedNewRun) {
       const recoveredRunId = postBridgeLatestRun.runId;
       // Mirror B163: stop the preview so the next start picks up the chain's
