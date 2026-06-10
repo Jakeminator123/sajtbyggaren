@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  HOSTED_LOCAL_ONLY_NOTICE,
+  isHostedVercelRuntime,
+} from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { readRunArtefacts } from "@/lib/runs";
 
@@ -18,6 +22,14 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
+
+  // No persistent repo disk hosted → run artefakter live under `data/runs/`.
+  if (isHostedVercelRuntime()) {
+    return NextResponse.json(
+      { error: HOSTED_LOCAL_ONLY_NOTICE, hostedNotice: HOSTED_LOCAL_ONLY_NOTICE },
+      { status: 404 },
+    );
+  }
 
   let runId: string;
   try {

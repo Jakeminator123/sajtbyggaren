@@ -981,6 +981,7 @@ COMMON_WORDS = {
     "ErrorBoundaryState",
     "ErrorInfo",  # React-typ från `import type { ErrorInfo } from "react"`
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
+    "HostedNoticeBanner",  # lokal info-banner i apps/viewser/app/(console)/studio/page.tsx (hostad Vercel-notis)
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
     "ComparePreviewLoadError",  # lokal felkomponent i versions-tab/diff-view.tsx (modal-import-fallback)
@@ -1190,6 +1191,10 @@ COMMON_WORDS = {
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
     "SandboxStopResult",
+    # FAS 2B hostad artefaktkälla (apps/viewser/lib/generated-blob-source.ts):
+    # lokala TS-implementation-shapes för blob-snapshot-läsningen. Inte canonical
+    # domain terms — samma kategori som CollectedSource ovan.
+    "CollectedBlobSource", "BlobSdkListItem",
     # Heavy-LLM-flow run-plan docs (docs/heavy-llm-flow/, commit 8c0e7c4).
     # These docs were pushed directly to jakob-be without a CI run, so
     # term-coverage first surfaced them on later PRs. They are NOT canonical
@@ -1283,6 +1288,23 @@ COMMON_WORDS = {
     # (no saved file, no ADR) - same local-allowlist treatment as the
     # OpenClawDecision / RouterDecision families above.
     "PatchPlanRequest", "ToolCall",
+    # OpenClaw F1 slice 1 conductor role-contract symbols
+    # (packages/generation/orchestration/openclaw/roles.py). ``RoleContract`` is
+    # the frozen dataclass locking each conductor role's input/output contract;
+    # ``RoleDirectiveKind`` is the Literal alias for the directive kinds an
+    # editing role may emit; ``ConversationKind`` / ``ConversationDecision`` are
+    # the conductor-level conversation-intent label + result that ADD to (never
+    # mutate) the router's locked messageKind. Implementation symbols, not new
+    # canonical domain terms - same treatment as the OpenClawDecision / ToolCall
+    # / RouterDecision families above (the canonical router terms MessageKind /
+    # EditKind / ContextLevel are already allowlisted).
+    "RoleContract", "RoleDirectiveKind",
+    "ConversationKind", "ConversationDecision",
+    # Python stdlib exception raised when assigning to a frozen dataclass,
+    # asserted by tests/test_openclaw_roles.py to prove the role contracts are
+    # immutable. Same treatment as the other Python builtin exception names
+    # above (KeyError / TimeoutError / ProcessLookupError) - not a domain term.
+    "FrozenInstanceError",
     # docs/diagnosis-and-handoff-2026-06-08.md prose-emphasis labels. The
     # diagnosis frames two future mutation modes ("Safe Mode" = current
     # sanctioned-contract conductor, "Agent Code Mode" = future sandboxed free

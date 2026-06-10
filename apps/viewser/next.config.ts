@@ -198,6 +198,23 @@ const nextConfig: NextConfig = {
       "@preview-runtime": "../../packages/preview-runtime/src/index.ts",
     },
   },
+  // Hostad deploybarhet (FAS 2A): ``/api/discovery-options`` läser
+  // governance-policyfiler och scaffold-variant-JSON via ``fs`` vid runtime.
+  // På Vercel inkluderar output-tracern bara filer som faktiskt importeras —
+  // runtime-``fs``-läsningar utanför app-roten bundlas inte automatiskt och
+  // skulle saknas i funktionen (routern degraderar då ärligt, men wizarden
+  // tappar sina alternativ). ``outputFileTracingRoot`` breddar spårnings-roten
+  // till repo-roten så monorepo-filer utanför app-katalogen får följa med, och
+  // ``outputFileTracingIncludes`` pekar ut exakt de policy-/variantfiler routern
+  // behöver så de hamnar i serverless-bundlen.
+  outputFileTracingRoot: REPO_ROOT,
+  outputFileTracingIncludes: {
+    "/api/discovery-options": [
+      "../../governance/policies/discovery-taxonomy.v1.json",
+      "../../governance/policies/scaffold-contract.v1.json",
+      "../../packages/generation/orchestration/scaffolds/**/variants/*.json",
+    ],
+  },
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
   // på det (t.ex. skippa StackBlitz-fallbacken när vi vet att vi kör
   // LocalRuntime). NEXT_PUBLIC_-prefixet är vad Next.js kräver för att

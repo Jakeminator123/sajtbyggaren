@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, WifiOff } from "lucide-react";
+import { Cloud, RefreshCw, WifiOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BuilderShell } from "@/components/builder/builder-shell";
@@ -25,11 +25,16 @@ type RunsApiPayload = {
   runs?: RunHistoryItem[];
   projectInputs?: ProjectInputOption[];
   error?: string;
+  // Hostad Vercel-vy: bygge/run-historik körs lokalt i denna version. Sätts
+  // av /api/runs när VERCEL=1 så UI:t kan visa en ärlig banner i stället för
+  // en tyst tom lista.
+  hostedNotice?: string;
 };
 
 type FetchedRunsPayload = {
   nextRuns: RunHistoryItem[];
   nextInputs: ProjectInputOption[];
+  hostedNotice: string | null;
 };
 
 function headerStatusForOutcome(
@@ -56,6 +61,7 @@ async function fetchRuns(): Promise<FetchedRunsPayload> {
   return {
     nextRuns: payload.runs ?? [],
     nextInputs: payload.projectInputs ?? [],
+    hostedNotice: payload.hostedNotice ?? null,
   };
 }
 
@@ -76,6 +82,10 @@ export default function Home() {
   // när allt är OK eller ännu inte laddat. Sätts av `loadRuns()` nedan.
   const [runsLoadError, setRunsLoadError] = useState<string | null>(null);
   const [runsLoading, setRunsLoading] = useState(true);
+  // Hostad Vercel-vy: när /api/runs svarar med en hostedNotice (VERCEL=1) visar
+  // vi en ärlig banner — bygge/följdprompt/run-historik körs lokalt i denna
+  // version. Null lokalt (oförändrad upplevelse).
+  const [hostedNotice, setHostedNotice] = useState<string | null>(null);
   const toast = useToast();
   // Live Build Sync: pending-build-state delas mellan BuilderShell
   // (som äger FloatingChat + dialogerna) och Versions-tab. Sätts
@@ -123,7 +133,7 @@ export default function Home() {
     (!activeRun.siteId || activeRun.siteId === "unknown");
 
   function applyRunsData(
-    { nextRuns, nextInputs }: FetchedRunsPayload,
+    { nextRuns, nextInputs, hostedNotice: nextHostedNotice }: FetchedRunsPayload,
     ctx?: {
       selectedRunId: string | null;
       selectedSiteId: string;
@@ -134,6 +144,7 @@ export default function Home() {
 
     setRuns(nextRuns);
     setProjectInputs(nextInputs);
+    setHostedNotice(nextHostedNotice);
     // Auto-väljer INTE senaste run vid mount. Det orsakade att
     // ViewerPanel direkt triggade en /api/runs/:runId/files-fetch
     // mot en gammal run innan operatören överhuvudtaget bett om något,
@@ -455,6 +466,8 @@ export default function Home() {
         hideBrand={builderActive}
       />
 
+      {hostedNotice ? <HostedNoticeBanner message={hostedNotice} /> : null}
+
       <ErrorBoundary area="Förhandsvisningen" className="h-full w-full">
         {/* C4: preview-POST:en går mot /api/preview/<siteId> medan runId
             driver fil-/StackBlitz-fallbacken. Project Input-väljaren i
@@ -599,6 +612,23 @@ export default function Home() {
       />
     </main>
     </DevicePresetProvider>
+  );
+}
+
+// Hostad Vercel-vy: en lugn, icke-blockerande info-banner högst upp som ärligt
+// säger att bygge/följdprompt/run-historik körs lokalt i denna version. Visas
+// bara när /api/runs svarat med en hostedNotice (VERCEL=1) — aldrig lokalt.
+function HostedNoticeBanner({ message }: { message: string }) {
+  return (
+    <div
+      role="status"
+      className="pointer-events-none fixed inset-x-0 top-16 z-30 mx-auto flex w-full max-w-2xl justify-center px-4"
+    >
+      <div className="border-border bg-card/95 text-muted-foreground pointer-events-auto flex items-start gap-2 rounded-xl border px-3 py-2 text-[12px] leading-relaxed shadow-sm backdrop-blur">
+        <Cloud className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <p>{message}</p>
+      </div>
+    </div>
   );
 }
 
