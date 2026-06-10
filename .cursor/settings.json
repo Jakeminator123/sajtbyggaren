@@ -5,6 +5,9 @@
     },
     "docs-canvas": {
       "enabled": true
+    },
+    "paper-desktop": {
+      "enabled": false
     }
   }
 }

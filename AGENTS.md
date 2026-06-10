@@ -1,5 +1,12 @@
 ## Cursor Cloud specific instructions
 
+### Notis om shell-kommandon på Windows (Jakob/jakob-be)
+> ⚠️ **OBS! (Gäller endast för "jakob" och "jakob-be"):**  
+> De agenter som körs av användaren "jakob" eller "jakob-be" är nästan alltid i PowerShell-miljö på Windows. Detta kan påverka tillförlitligheten kring EOL (radslut), heredoc-block, och kommandon såsom `cat` eller bash-liknande script (exempel: multiline-kommando med pipe eller heredoc).  
+> **Särskilt viktigt:** Bash-skript eller kommandon som körs eller kopieras mot t.ex. GitHub Actions, unix-miljö eller moln-VM (Linux) kan få oväntade radslut/avslut eller funktionsfel när de genereras/körs i PowerShell (Windows) – exempelvis kan heredoc/kat, EOF-hantering och fil-pipelines brytas!  
+> Om ett kommando är kritiskt för pipeline/bygg, se till att explicit ange Unix-EOL och gärna testa separat i bash-miljö om det är ämnat för icke-Windows-miljö.  
+> Detta gäller dock *enbart* sessioner/agentkörningar för "jakob" och "jakob-be".
+
 ### Codex-IDE agent parity
 
 When working from Codex-IDE, act as a Cursor-compatible repo agent for this
