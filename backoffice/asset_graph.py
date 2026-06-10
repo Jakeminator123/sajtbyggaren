@@ -47,6 +47,25 @@ def _metadata_string(
     return value if isinstance(value, str) and value else default
 
 
+def _metadata_int(metadata: dict[str, Any], key: str) -> int | None:
+    """Return an int metadata value, or ``None`` when absent/non-numeric.
+
+    The 'absent' sentinel MUST be ``None`` (a nullable column), never an empty
+    string: these provenance dicts become Streamlit dataframe rows, and a column
+    that mixes ``int`` with ``""`` breaks Arrow serialization
+    (``pyarrow.lib.ArrowInvalid: Could not convert '' with type str: tried to
+    convert to int64``) which crashes the Backoffice graph view.
+    """
+    value = metadata.get(key)
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().lstrip("-").isdigit():
+        return int(value.strip())
+    return None
+
+
 def _candidate_provenance(meta_path: Path) -> dict[str, Any]:
     metadata = _read_candidate_metadata(meta_path)
     provenance = {
@@ -59,7 +78,7 @@ def _candidate_provenance(meta_path: Path) -> dict[str, Any]:
         "createdAt": _metadata_string(metadata, "createdAt"),
         "metaPath": repo_relative(meta_path) if metadata else "",
         "sourcePath": _metadata_string(metadata, "sourcePath"),
-        "sourceFileCount": metadata.get("sourceFileCount", ""),
+        "sourceFileCount": _metadata_int(metadata, "sourceFileCount"),
         "intakeReportHash": _metadata_string(metadata, "intakeReportHash"),
         "intakeRecommendedClass": _metadata_string(
             metadata,
