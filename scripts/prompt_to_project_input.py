@@ -2301,6 +2301,12 @@ def _copy_directive_llm_eligible(
     """
     if intent not in _COPY_DIRECTIVE_LLM_ELIGIBLE_INTENTS:
         return False
+    # bildbyte-guard (2026-06-11): an asset request ("byt ut till en unsplash
+    # bild") must not reach copyDirectiveModel either - the model would face
+    # the same temptation as the deterministic rules to publish the trailing
+    # value as copy. Same outside-quotes media-noun check as the rules path.
+    if _copy_directives.is_media_change_request(follow_up_prompt):
+        return False
     # The additive guard reads the instruction OUTSIDE quotes so an "add"
     # keyword inside quoted OLD copy does not wrongly block the LLM fallback.
     text = _text_outside_quotes(follow_up_prompt) or _normalise_followup_text(
@@ -2991,6 +2997,14 @@ _UNAPPLIED_HERO_REASON = (
     "Hjältesektionens rubrik kan inte skrivas om via följdprompt ännu – just "
     "nu går det bara att ändra namn, tagline, om-oss-text eller tjänstetext."
 )
+# bildbyte-guard (2026-06-11): a free-text image/video change is recognised
+# but has no deterministic consumer (the structured asset_set path is the
+# supported route), so the guard no-ops it and this post names the miss.
+_UNAPPLIED_MEDIA_TARGET = "image-asset"
+_UNAPPLIED_MEDIA_REASON = (
+    "Bild-/filmbyte via fritext stöds inte ännu – använd 'Byt bild här' i "
+    "sektionsmenyn eller fliken Bild & film under Verktyg."
+)
 # Hero/"hjältesektion" scope, matched as substrings so inflected forms
 # ("hjältesektionen", "hjältesektionens") are covered. The hero H1 renders from
 # company.name and the subheading from company.tagline; "hjältesektion" maps to
@@ -3162,6 +3176,27 @@ def compute_unapplied_followup_intents(
                 {
                     "target": _UNAPPLIED_AMBIGUOUS_REPLACE_TARGET,
                     "reason": str(replace_status["reason"]),
+                }
+            )
+
+    # Rule 4 (bildbyte-guard, 2026-06-11): a change-verb + media-noun prompt
+    # ("byt ut hero-bilden till en unsplash bild") is no-op:ed by
+    # is_media_change_request in the copyDirective path; name the miss here so
+    # build-result.json points the operator to the structured asset tools
+    # instead of implying the swap happened. Verb gate uses the same
+    # outside-quotes skeleton as the guard so a media noun in quoted copy
+    # never triggers the post.
+    if _copy_directives.is_media_change_request(follow_up_prompt):
+        skeleton = _text_outside_quotes(follow_up_prompt) or normalised_text
+        if _contains_any_word(
+            skeleton, _copy_directives._COPY_DIRECTIVE_REPLACE_KEYWORDS
+        ) or _contains_any(
+            skeleton, _copy_directives._COPY_DIRECTIVE_INCLUDE_KEYWORDS
+        ):
+            posts.append(
+                {
+                    "target": _UNAPPLIED_MEDIA_TARGET,
+                    "reason": _UNAPPLIED_MEDIA_REASON,
                 }
             )
 
