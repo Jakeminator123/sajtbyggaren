@@ -36,6 +36,13 @@ routerns `_SECTION_TYPES` OCH en implementerande dossier i
 Ej sanktionerat: `hero`/`services` (sidsektioner, inte add-mål), `cta-banner`
 (saknar dossier).
 
+## Förhandsinfo (obligatorisk för dossier-arbete)
+Dossier-formatet — manifest-fälten, de fem instructions-sektionerna,
+soft/hard-reglerna och konsumtionsvägen — är låst i
+`packages/generation/orchestration/dossiers/AGENT-GUIDE.md`. Läs den innan du
+monterar eller författar en dossier; schema:
+`governance/schemas/dossier.schema.json`.
+
 ## Väg
 router (section_add, typ-slug på componentIntent) -> `run_followup_chain`
 resolverar typ -> capability (`faq`→faq-section, `reviews`→reviews, `team`→

@@ -90,6 +90,12 @@ class RoleContract:
     and produce (``producesDirectives`` - the directive kinds it may emit),
     plus the minimum context level it needs and an honest maturity status.
     Frozen so a caller can read the contract but never mutate it at runtime.
+
+    ``mountOnly`` means mount-only BY DEFAULT; ``visibleTypes`` lists the
+    exceptions that render visibly. Both mirror the operational truth in
+    ``docs/openclaw-workspace/action-registry.json`` and are cross-validated
+    by ``tests/test_openclaw_registry_consistency.py`` so the two surfaces
+    can never drift apart again (audit 2026-06-11).
     """
 
     role: Role
@@ -100,6 +106,7 @@ class RoleContract:
     mountOnly: bool
     skill: str
     summary: str
+    visibleTypes: tuple[str, ...] = ()
 
     def accepts(self, edit_kind: str) -> bool:
         """True when this role handles ``edit_kind`` as input."""
@@ -139,10 +146,13 @@ ROLE_CONTRACTS: dict[Role, RoleContract] = {
         skill="skills/section-add/SKILL.md",
         summary=(
             "Mounts a sanctioned section's capability + dossier through the "
-            "existing apply chain. Mount-only by default (faq/team can render "
-            "visibly on the local-service-business scaffold); an unknown type "
-            "is an honest no-op, never an invented section."
+            "existing apply chain. Mount-only by default; the types in "
+            "visibleTypes (mirrored from action-registry.json, the "
+            "operational truth) render visibly on the local-service-business "
+            "scaffold via a grounded dedicated route. An unknown type is an "
+            "honest no-op, never an invented section."
         ),
+        visibleTypes=("faq", "team"),
     ),
     "stylist": RoleContract(
         role="stylist",
