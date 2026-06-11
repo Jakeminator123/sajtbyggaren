@@ -73,18 +73,20 @@ synkar. PR:ar från arbets-branchen till `main` när "sanningen" ska uppdateras.
 1. **Skapa en gång:** `git switch main && git switch -c <branch> && git push -u origin <branch>`. Arbets-branchen lever ovanpå main.
 2. **Commit + push** dina ändringar på arbets-branchen löpande. Två commits per logiskt steg är OK, men håll ofta små.
 3. **PR till main när du vill släppa något:** `gh pr create --base main --head <branch>`. Squash-merge i regel.
-4. **Efter merge:** synka arbets-branchen mot main innan nästa commit:
+4. **Efter merge:** synka arbets-branchen mot din synk-bas innan nästa commit. Synk-basen är den branch du PR:ar in i: `main` för `jakob-be`, `jakob-be` för `christopher`.
 
    ```
    git switch <branch>
-   git fetch origin
-   git reset --hard origin/main
+   git fetch origin --prune
+   git reset --hard origin/<din-synk-bas>
    git push --force-with-lease origin <branch>
    ```
 
-   `--force-with-lease` är OK eftersom arbets-branchen är solo-ägd (regeln i `branch-scope-ui-ux.md` tillåter det explicit).
+   `--force-with-lease` är OK eftersom arbets-branchen är solo-ägd (regeln i [`04-branch-and-team.md`](../governance/rules/04-branch-and-team.md) tillåter det explicit).
 
-5. **Pulla aldrig en redan squash-mergad branch** med `git pull` — det skapar en merge-commit + konflikter mot squash-en på main. Reset eller skapa om från main.
+5. **Pulla aldrig en redan squash-mergad branch** med `git pull` — det skapar en merge-commit + konflikter mot squash-en. Reset eller skapa om från synk-basen.
+
+> **Smidig synk + delade löpnummer:** håll lane-divergensen liten genom att synka ofta och släppa i små PR:ar, och re-derivera alltid ADR-nummer och policy-versioner (`naming-dictionary`, `llm-models`) från färskt `origin/jakob-be` vid rebase — lita aldrig på ett nummer som lovats i inbox. Fullt protokoll: [`04-branch-and-team.md`](../governance/rules/04-branch-and-team.md) under "Smidig lane-synk" och "Delade löpnummer".
 
 ### Tillfälliga feature-branches (när uppgiften är stor eller delas)
 

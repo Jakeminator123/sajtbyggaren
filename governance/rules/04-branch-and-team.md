@@ -1,5 +1,5 @@
 ---
-description: Branchmodell (Jakob på jakob-be, Christopher på christopher, main canonical, christopher-ui fryst), team-/contract-first-workflow, de fyra guards före push, och säker push/PR-disciplin.
+description: Branchmodell (Jakob på jakob-be, Christopher på christopher, main canonical, christopher-ui fryst), team-/contract-first-workflow, de fyra guards före push, smidig lane-synk med delade löpnummer, och säker push/PR-disciplin.
 alwaysApply: true
 ---
 
@@ -35,7 +35,55 @@ Kör i ordning; alla ska vara gröna. Aldrig commit + push på rött.
 - Pusha aldrig `main` med `--force`. Direkt-push till `main` är undantag (pure docs/governance-steward-bumpar, operatörens egna commits, steward-auto-bump-workflow).
 - På `jakob-be`/`christopher`: pusha bara branchens egna ändringar.
 - Om push nekas: stoppa, `git fetch origin && git status`, rapportera. Rebase/merge/force-push inte på impuls — fråga operatören.
-- **Post-merge-sync** (efter PR mergats till `main`): `git fetch origin --prune`, sen på arbets-branchen `git reset --hard origin/main` och `git push --force-with-lease origin <branch>`. **Pulla aldrig** en redan squash-mergad branch. `--force-with-lease` är OK på de solo-ägda arbets-branchema, aldrig på `main`/delad branch.
+- **Post-merge-sync** (efter att din PR mergats): `git fetch origin --prune`, sen på arbets-branchen `git reset --hard origin/<din-synk-bas>` och `git push --force-with-lease origin <branch>`. Din synk-bas är den branch du PR:ar in i: `main` för `jakob-be`, `jakob-be` för `christopher`. **Pulla aldrig** en redan squash-mergad branch. `--force-with-lease` är OK på de solo-ägda arbets-branchema, aldrig på `main`/delad branch. Tankemodell: arbets-branchen är en engångsstege — efter merge är det en `reset` mot synk-basen, inte en rebase-konflikt som ska "lösas". Detaljer: se avsnittet om smidig lane-synk nedan.
+
+## Smidig lane-synk (mindre rebase-smärta)
+
+Syftet är att `christopher`-lanen ska kunna hänga med `jakob-be` utan stora,
+sällsynta och smärtsamma rebaser. Tre vanor:
+
+- **Synka ofta, i början av varje pass.** Kör en ren synk mot din synk-bas
+  (`origin/jakob-be` för `christopher`) vid passets start utan att vänta på
+  klartecken. Klartecken behövs bara när motparten uttryckligen flaggat en
+  pågående ändring i en delad fil du just nu redigerar — inte för en ren synk.
+  Ju oftare du synkar, desto mindre divergens och desto färre konflikter.
+- **Släpp i små, täta PR:ar.** PR:a varje klar slice i stället för att batcha
+  en stor leverans. Bryt ut delgrunder till egna PR:ar (som #277/#285) så en
+  delad grund landar en gång och inte ackumulerar konflikter i en jätte-PR.
+- **Engångsstege.** Efter att din PR mergats är arbets-branchen färdiganvänd:
+  `reset --hard` mot synk-basen och bygg vidare. Det är ingen rebase som ska
+  "lösas", det är en återställning. Bär du oppushat arbete: rebasa det lilla
+  ovanpå färsk synk-bas, inte tvärtom.
+
+## Delade löpnummer (ADR-nummer och policy-versioner)
+
+Vissa nummer är en delad seriell resurs över båda lanes och är den vanligaste
+tysta krockytan: ADR-nummer i `governance/decisions/` och heltals-`version` i
+`governance/policies/naming-dictionary.v1.json` och
+`governance/policies/llm-models.v1.json`. Protokoll:
+
+- **Lita aldrig på ett lovat nummer.** Ett nummer som utlovats i inbox eller
+  handoff kan tas av motparten innan din PR landar (det har hänt: en utlovad
+  `naming-dictionary`-version togs av andra lanen samma dag).
+- **Re-derivera vid rebase/strax före PR.** Läs alltid nästa lediga nummer från
+  färskt `origin/jakob-be` (integrationspunkten), aldrig från ett tidigare
+  löfte. Nästa lediga = högsta befintliga + 1.
+- **Bumpa sist.** Lägg version-/ADR-bumpen i sista committen före PR så
+  race-fönstret blir så litet som möjligt.
+- **Först till jakob-be vinner numret.** Den efterföljande lanen omnumrerar sitt
+  eget bump mot faktisk HEAD vid sin rebase.
+
+Läs de auktoritativa värdena direkt från integrationsbranchen:
+
+```
+git fetch origin --prune
+git show origin/jakob-be:governance/policies/naming-dictionary.v1.json
+git show origin/jakob-be:governance/policies/llm-models.v1.json
+git ls-tree --name-only origin/jakob-be governance/decisions/
+```
+
+Läs `version`-fältet överst i policy-JSON:en och ta ADR-filen med högsta
+nummer; ditt bump tar nästa heltal ovanför det.
 
 ## UI/backend-scope
 
