@@ -274,6 +274,13 @@ COMMON_WORDS = {
     # Same treatment as PruneReport / AuditResult - implementation
     # details for a tooling helper, not canonical domain terms.
     "BumpResult", "PullRequestSummary",
+    # scripts/eval_gate.py implementation symbols (eval-baseline regression
+    # gate). GateResult / GateTolerance are local dataclasses; same treatment
+    # as PruneReport / AuditResult / BumpResult above - tooling implementation,
+    # not canonical domain terms. TemporaryDirectory is the Python stdlib
+    # context manager the gate uses for isolated work dirs (same category as
+    # ArgumentParser / SimpleNamespace above).
+    "GateResult", "GateTolerance", "TemporaryDirectory",
     # Sprintvakt V1 local tooling implementation symbols. Sprintvakt is
     # an operator workflow/tooling label, while these names are Python
     # exception/type-alias identifiers inside tooling/sprintvakt_mcp.

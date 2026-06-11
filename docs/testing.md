@@ -24,6 +24,43 @@ för full pytest. Full svit är fortsatt kravet före merge, men den körs
 av CI på PR:en (governance-workflowet kör `python -m pytest tests/ -v`
 på `pull_request`): lokalt räcker riktade tester som default.
 
+## Eval-baseline-grind (regressionsgrind)
+
+`scripts/eval_gate.py` är en regressionsgrind ovanpå den deterministiska
+golden-path-evalen (`scripts/run_golden_path_eval.py --mode deterministic`).
+Den körs Node-fritt och kräver ingen LLM-nyckel.
+
+- **Vad grinden gör:** kör de fyra golden-path-casen i deterministiskt läge,
+  destillerar de bit-stabila poängen (per-case `totalScore`, aggregerat
+  `totalScore`, `embeddingsReadiness`) och jämför mot en committad baseline.
+  Den fäller (exit 1) bara vid regression utöver tolerans; en förbättring
+  fäller aldrig.
+- **Tolerans:** aggregat-snittet får inte sjunka mer än `0.2`, och inget
+  enskilt case mer än `0.5` (0–10-skalan). En försämring av
+  `embeddingsReadiness` från `go` till `no-go` fäller också. Konstanterna bor
+  i `scripts/eval_gate.py` (`AGGREGATE_MAX_DROP` / `CASE_MAX_DROP`) och valdes
+  så att en enskild trait som tippar på ett case ryms inom tolerans, medan en
+  bred copy-/render-regression fäller.
+- **Var baseline ligger:** `tests/evals/golden-path-baseline.json` (spårad i
+  git — hela `data/evals/` är gitignorad och dög därför inte som committad
+  path). Filen har bara poäng plus ett `_meta`-block; inga timestamps,
+  run-id:n eller sökvägar, så den är byte-stabil och diffbar.
+- **Regenerera baseline:** `python scripts/eval_gate.py --update-baseline`
+  efter en avsiktlig, granskad kvalitetsändring. Committa baseline-diffen för
+  sig.
+- **Utan nyckel:** grinden är aldrig en tyst no-op. Deterministiskt läge tar
+  bort `OPENAI_API_KEY` internt, så den producerar och validerar riktiga
+  poäng oavsett om en nyckel finns eller inte.
+- **I CI:** eget Node-fritt jobb `eval-baseline` i
+  `.github/workflows/governance.yml`, parallellt med `governance`-jobbet. Samma
+  jobb kör även `scripts/mini_eval.py` (no-LLM follow-up-eval) mot en
+  tmp-katalog (`--evals-dir "$RUNNER_TEMP/..."`) så `data/`-trädet aldrig
+  smutsas ner. npm-tunga lanen (full svit + next build) ligger kvar i
+  `builder-smoke`.
+- **Gate-logiken testas:** i `tests/test_eval_gate.py` — lika-med-baseline
+  passerar, regression utöver tolerans fäller, förbättring passerar, och
+  nyckel-satt kör ändå deterministiskt (ingen tyst no-op).
+
 ## Parallellkörning (pytest-xdist)
 
 `pytest-xdist` ligger i dev-beroendena (`requirements.txt` /
@@ -82,7 +119,8 @@ assets/tokens/prompt-meta-paritet, mediarendering, favicon/og-bild,
 kontaktrutter och CTA-mål, section treatments, planering/blueprint-
 detaljer, dossier-montering och discovery, wizard- och Viewser-UI-låsen
 (`test_viewser_*`), quality-gate-specialfallen samt eval-tooling
-(`test_mini_eval`, `test_golden_path_eval`, `test_run_eval_suite`).
+(`test_mini_eval`, `test_golden_path_eval`, `test_run_eval_suite`,
+`test_eval_gate`).
 
 ### Tooling/infrastruktur
 

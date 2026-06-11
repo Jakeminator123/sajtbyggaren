@@ -1,0 +1,21 @@
+{
+  "_meta": {
+    "schemaVersion": 1,
+    "description": "Committed deterministic golden-path baseline. The eval-baseline gate (scripts/eval_gate.py) compares fresh deterministic scores to these values and fails CI on a regression beyond tolerance.",
+    "source": "scripts/run_golden_path_eval.py --mode deterministic",
+    "regenerate": "python scripts/eval_gate.py --update-baseline",
+    "fields": "Per-case totalScore (0-10), aggregate totalScore and embeddingsReadiness only. No timestamps, run ids or paths.",
+    "tolerance": {
+      "aggregateAverageMaxDrop": 0.2,
+      "perCaseMaxDrop": 0.5
+    }
+  },
+  "embeddingsReadiness": "go",
+  "totalScore": 7.75,
+  "cases": {
+    "ceramics-shop": 8.12,
+    "electrician-malmo": 7.47,
+    "naprapat-stockholm": 7.96,
+    "salon-goteborg": 7.47
+  }
+}
