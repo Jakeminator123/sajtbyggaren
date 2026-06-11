@@ -42,11 +42,20 @@ Tre lager, i prioritetsordning (senare vinner):
    `VIEWSER_PREVIEW_MODE`, `VIEWSER_MAX_CHAT_TOKENS`, sandbox-flaggor.
    Duplicera aldrig nycklar som bor i roten (då uppstår drift mellan kopior).
 3. **Vercel-projektets env** (dashboard eller `vercel env`) — allt som den
-   hostade driften behöver: `OPENAI_API_KEY`, blob-tokens (auto-injicerade),
-   redis-nycklarna (auto-injicerade av marketplace-integrationen),
-   `VIEWSER_ENABLE_HOSTED_BUILD`, `VIEWSER_ENABLE_HOSTED_SANDBOX`,
-   `VIEWSER_ALLOW_NON_LOCALHOST`, `VIEWSER_BUILD_CONTEXT_URL`,
-   `VIEWSER_PREVIEW_MODE` + `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`.
+   hostade driften behöver. Konsoliderat 2026-06-11: varje variabel ligger
+   som **en** post för alla miljöer (Production + Preview + Development,
+   samma värde överallt) och branch-specifika avvikelser är borttagna.
+   Listan utöver integrationsägda `BLOB_*`/`KV_*`/`REDIS_URL`:
+   `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_VISION_MODEL`,
+   `OPENAI_IMAGE_MODEL`, `OPENAI_IMAGE_QUALITY`, `OPENAI_INPUT_USD_PER_1K`,
+   `OPENAI_OUTPUT_USD_PER_1K`, `ASSET_STORE_DRIVER=vercel-blob`,
+   `VIEWSER_PREVIEW_MODE` + `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`
+   (`vercel-sandbox`), `VIEWSER_ALLOW_NON_LOCALHOST=true`,
+   `VIEWSER_ENABLE_HOSTED_SANDBOX=1`, `VIEWSER_ENABLE_HOSTED_BUILD=1` och
+   `VIEWSER_BUILD_CONTEXT_URL`. (`VIEWSER_ALLOWED_HOSTS` behövs inte så
+   länge `VIEWSER_ALLOW_NON_LOCALHOST=true` — bypassen kortsluter
+   host-listan. `ANTHROPIC_API_KEY` är borttagen: ingen kod anropar
+   Anthropic.) Env-ändringar slår igenom först vid NÄSTA deploy.
 
 Specialfilen `apps/viewser/.env.vercel.local` skrivs av `vercel env pull`
 (dev-skriptet gör det automatiskt i sandbox-läge) och innehåller den
