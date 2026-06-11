@@ -16,11 +16,18 @@ Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
 > `backup_*`/`backup-160-BRA` raderade lokalt (finns kvar på origin). Inga extra
 > worktrees. Prod deployas från `main`.
 >
-> **Main-sync-status (VIKTIGT för nästa agent):** `main` på GitHub ligger
-> fortfarande på `cb0f6a5d` och saknar hela kvällspasset (#296–#303 + #269 +
-> `/kort`), dvs. ~14 commits efter `jakob-be`. Main-sync körs i ett parallellt
-> operatörsspår (separat agent). Pusha INTE `jakob-be → main` på eget bevåg —
-> bekräfta med operatören / kontrollera parallellspåret först.
+> **Main-sync-status (UPPDATERAD ~23:55 samma kväll):** main-syncen är KLAR
+> (operatörsbekräftad). `main` = `jakob-be` på GitHub igen, production deployar
+> från `main`. Efter checkpointen mergades dessutom **#305** (Vercel Web
+> Analytics, Vercel-agentens PR, retargetad mot jakob-be), **#292** (hostad
+> asset_set-forwarding) och **#304** (B194 — hostad run-state-persistens, inkl.
+> naming-dictionary v38 `HostedRunStatePointer`), så hostade följdprompter är
+> live. Build-context-tarballen omuppladdad från färska trädet (den gamla från
+> 2026-06-10 saknade kvällens Python-ändringar). Backup av för-sync-main:
+> `backup-main-2026-06-11-pre-evening-sync-cb0f6a5`. OBS `ignoreCommand`-
+> beteendet: en main-push vars SISTA commit är docs-only får sitt Vercel-bygge
+> cancelat (HEAD^-diffen ser bara pushens sista commit) — toppa med en
+> appkods-commit eller promota manuellt.
 >
 > **Kvällens merges (till jakob-be):** **#297** KÖR-6b i bryggan (routerModel-
 > fallback för tvetydiga följdprompter, kill-switch `OPENCLAW_ROUTER_LLM_FALLBACK`,
