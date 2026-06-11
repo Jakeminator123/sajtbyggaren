@@ -294,6 +294,17 @@ upload_file() {
   return 1
 }
 
+# Fil-listan gar via en manifest-fil i stallet for processsubstitution —
+# "< <(lista)" ar inte palitlig i sandboxens icke-interaktiva bash, och utan
+# set -e blev en trasig redirect ett TYST noll-varvs-loop med falsk "done"
+# (rotorsaken till site-a7cd97e7: done-status men 0 blobbar). Varje led
+# verifieras nu hart: listningen, att listan inte ar tom, och att minst en
+# fil faktiskt laddades upp.
+find . \\( -name node_modules -o -name .next -o -name .git -o -name .turbo -o -name .vercel -o -name .cache -o -name out \\) -prune -o -type f -print | sed 's|^\\./||' > /tmp/upload-manifest.txt \\
+  || fail "Kunde inte lista build-filerna for blob-upload."
+[ -s /tmp/upload-manifest.txt ] || fail "Fil-listan for blob-upload ar tom — build-katalogen ser tom ut."
+
+uploaded=0
 rm -f /tmp/blob-upload-error.txt
 while IFS= read -r rel; do
   base=$(basename "$rel")
@@ -302,7 +313,10 @@ while IFS= read -r rel; do
     .env*) continue ;;
   esac
   upload_file "$rel" || fail "Blob-upload misslyckades: $(cat /tmp/blob-upload-error.txt 2>/dev/null)"
-done < <(find . \\( -name node_modules -o -name .next -o -name .git -o -name .turbo -o -name .vercel -o -name .cache -o -name out \\) -prune -o -type f -print | sed 's|^\\./||')
+  uploaded=$((uploaded + 1))
+done < /tmp/upload-manifest.txt
+[ "$uploaded" -gt 0 ] || fail "0 filer laddades upp till blob — inget att publicera."
+echo "hosted-build: $uploaded filer uppladdade till blob."
 
 # Hostad current.json-motsvarighet: viewser:site:<siteId>:current (ingen TTL —
 # pekaren ar durabel tills nasta lyckade bygge skriver over den).
