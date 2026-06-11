@@ -1,14 +1,76 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-11 ~11:20 UTC+2, checkpoint efter #287 (B195-fix /
-manifest-servering) + #286 (Vercel-env-konsolidering) mergade till jakob-be och
-main-sync (`main` ff till `jakob-be`). Verifierad `origin/jakob-be =
-origin/main` (identiska, se Last verified i `docs/current-focus.md`).
+**Datum:** 2026-06-11 ~13:30 UTC+2, checkpoint efter dagens eftermiddagspass:
+#288 (review-sweep) + #289 (guard-snabbning) + #290 (analysrapporten) mergade
+till jakob-be och main-sync nr 2 (`main` ff till `jakob-be`). Verifierad
+`origin/jakob-be = origin/main = a314fe5a`.
 
-## PASS 2026-06-11 ~11:20 — #287 + #286 MERGADE + MAIN-SYNC (AUKTORITATIVT BLOCK)
+## PASS 2026-06-11 ~13:30 — PUBLIK HOSTAD DRIFT LIVE + #288/#289/#290 (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Git:** `origin/jakob-be = origin/main = a314fe5a` (tom diff, rent träd).
+> Backuper: `backup-main-2026-06-11-pre-sync` (= `26b2464`), äldre
+> `backup-170-BRA`/`backup-160-BRA`. Produktionen deployas från `main` och
+> kör HEAD (verifierad Ready efter syncen).
+>
+> **DRIFTLÄGE (operatörsbeslut 2026-06-11): publik hostad Viewser är PÅ.**
+> Den tidigare driftspärren är HÄVD (known-issues uppdaterad + inbox
+> msg-0071): `VIEWSER_ENABLE_HOSTED_BUILD=1` + `VIEWSER_ALLOW_NON_LOCALHOST=true`
+> i alla Vercel-miljöer. Vem som helst kan skapa en sajt på
+> `sajtbyggaren-viewser.vercel.app` (~2 min/bygge). Skydd: rate-limit per IP
+> (ADR 0050; chat 20/min, bild 5/min, preview 6/min, bygge 3/5 min),
+> sandbox-TTL 15 min, B195 manifest-servering, B196 siteId-bunden statusroute.
+> Sätt INTE flaggorna till av utan nytt operatörsbeslut.
+>
+> **Eftermiddagens merges:** **#288** review-sweep — B196 stängd
+> (`GET /api/hosted-build/<runId>` kräver `?siteId=`, ingen orakel-läcka),
+> KV-preflight före `Sandbox.create` (hostat failar ärligt utan Upstash-env),
+> hostad icke-stream-väg väntar in done/failed server-side (202-buggen där
+> floating-chat/use-followup-build rapporterade "klart" under pågående bygge
+> är eliminerad — klientkontraktet är åter identiskt med lokalt), #283-fyndens
+> tre fixar (sektionsmedveten bastext i `section_base_text`, tom-bas no-op i
+> editPlan, hero-pin-paritet i apply), deploy-dokumentet omskrivet för publik
+> v1, B197 trackad (discovery-paritet hostat, P3). **#289** guard-snabbning
+> (operatörsbeslut): riktade tester är lokal default; full svit = CI:s ansvar
+> på PR; lokalt heltest med pytest-xdist `-n auto` (uppmätt 291 s mot ~13 min
+> seriellt). Regelkälla: `governance/rules/04-branch-and-team.md` guard 5.
+> **#290** analysrapporten `docs/reports/sajtmaskin-vs-sajtbyggaren-analys-2026-06-10.md`
+> landad (form-only term-disciplin; GoDaddy → COMMON_WORDS, legacy-citat via
+> testets EXCLUDE_FILES) — term-coverage helt grön för alla agenter igen.
+>
+> **Förmiddagens merges (samma dag):** #284 (hostat bygge, ADR 0048/0049/0050),
+> #286 (env-konsolidering: 22 rader All Environments, manual i
+> `docs/operations/hosted-viewser-manual.md`), #287 (B195). Prod-buggen
+> "Blob-upload misslyckades" (tyst noll-varvs-loop i upload-skriptet) fixad +
+> live-verifierad (`fa268c5`, `0494e7f`).
+>
+> **Christopher-koordinering:** klartecken för lane-rebasen skickat
+> (msg-0072): #269 + Verktyg fas 1–3 + bildbyte-guarden (`0f3f243`) + #285
+> (retargetad mot jakob-be) konsolideras mot HEAD; route.ts-threading läggs
+> OVANPÅ hostade grenen/rate-limiten; naming-dictionary tar v35 (v34 orörd).
+> Christopher-lanen använder msg-c-*-prefix framåt. Deras lane äger
+> `use-followup-build.ts` + dialogerna + inspector (B192 deferrad dit).
+>
+> **Riktning efter analysrapporten (operatörens kritiska gallring — rapporten
+> är uppslagsbok, inte backlog):** antaget: resend-contact-form som första
+> hard-dossier (stänger contact-svagheten, 8.2/10-evalen), eval-baseline-grind,
+> autofix som arbetsregel. Avvisat/parkerat: radgräns-CI, truth_level-svep,
+> scaffold-expansion, apps/web, deploy-paket.
+>
+> **ADR-nummerliggare:** 0047 (mergad #283), 0048/0049/0050 (mergade #284),
+> **0046 hålls av öppna #285**. Nästa lediga: **0051** (contact-dossierns
+> schema v2-ADR är första kandidat).
+>
+> **Kvarvarande öppet:** B192 (deferrad bakom #269-rebasen), B194/B197
+> (P3-spår), B155 (kvarvarande targets), #156 (parkerad referens — kan
+> stängas, ersatt av P2-leveransen). Token Meter-priser i Vercel-env står
+> på 0 (operatörsval att sätta riktiga).
+>
+> Kön + detaljer: `docs/current-focus.md` (alltid först).
+
+## PASS 2026-06-11 ~11:20 — #287 + #286 MERGADE + MAIN-SYNC (HISTORIK)
 >
 > **Git:** `origin/jakob-be = origin/main = 758d8dd` (efter denna sync). #287
 > (`8377868`, B195-fix / manifest-servering + known-issues-format) och #286
