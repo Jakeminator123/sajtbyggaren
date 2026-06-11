@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 165 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 165 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -721,13 +721,13 @@ grindat). **Driftspärr:** publik hostad deploy ska vara AV tills B195+B196 är
 fixade (`VIEWSER_ENABLE_HOSTED_BUILD` ej satt; `VIEWSER_ALLOW_NON_LOCALHOST` ej
 `true` i prod).
 
-- **`B194` Låg (P3-spår)** - hostade följdpromptar (`startHostedBuild(...
+- **`B194` Låg** (P3-spår) - hostade följdpromptar (`startHostedBuild(...
   followup: true)`) kan inte härleda föregående version utan persisterad
   run-historik; failar i dag ärligt men funkar inte förrän run-state
   persisteras (KV/blob). Kräver state-persistens-slice innan hosted followups
   aktiveras. Källa: extern granskning #284 (fynd A), bekräftad ej-blockerare
   för jakob-be (hostat default AV). Fix: open. Test: open.
-- **`B195` Medel (publik-deploy-defekt, fix i PR)** - blob-upload skriver över
+- **`B195` Medel** (publik-deploy-defekt, fix i PR) - blob-upload skriver över
   `generated/<siteId>/...` men raderade aldrig gamla filer → en borttagen
   route/asset blev kvar i preview vid ombygge mot samma `siteId` (stale fil).
   Åtgärdad med manifest-baserad servering (approach a): det hostade bygget
@@ -740,7 +740,7 @@ fixade (`VIEWSER_ENABLE_HOSTED_BUILD` ej satt; `VIEWSER_ALLOW_NON_LOCALHOST` ej
   `fix/b195-stale-blob-cleanup` (PR mot jakob-be, inväntar merge). Test:
   `apps/viewser/lib/generated-blob-source.test.ts` (`selectServedRelPaths`) +
   `tests/test_viewser_hosted_blob_cleanup.py`.
-- **`B196` Medel (publik-deploy-härdning)** - `GET /api/hosted-build/<runId>`
+- **`B196` Medel** (publik-deploy-härdning) - `GET /api/hosted-build/<runId>`
   exponerar bygg-status för valfritt `runId` utan site-binding/auth. På
   jakob-be ofarligt (localhost-grindat + UUID-skyddat), men i publikt läge en
   enumererings-/informationsläckage-yta. Bind runId till siteId eller kräv
