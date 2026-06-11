@@ -28,7 +28,9 @@ export type UsageSummary = {
   model: string;
 };
 
-const DEFAULT_MODEL = openaiEnv("OPENAI_MODEL") ?? "gpt-4o";
+// Fallback lyft från gpt-4o -> gpt-5.5 (2026-06-11): prod kör redan gpt-5.5
+// via env; fallbacken ska inte tyst hamna två generationer efter.
+const DEFAULT_MODEL = openaiEnv("OPENAI_MODEL") ?? "gpt-5.5";
 // B170: USD-priserna gick tidigare bara via process.env, till skillnad från
 // nyckel/modell ovan — Token Meter visade $0 när priserna bara stod i rotens
 // .env. Samma openaiEnv-fallback som övriga OpenAI-inställningar.
@@ -41,7 +43,7 @@ const MAX_MESSAGES_PER_REQUEST = 40;
 // Fråga.. vad är max-tokengränsen här då?
 // Svar: max-tokengränsen (per svar, dvs max antalet tokens som modellen får generera) sätts av DEFAULT_MAX_OUTPUT_TOKENS,
 // dvs 1500 tokens som default, men kan överskrivas via env-variabeln VIEWSER_MAX_CHAT_TOKENS. Modeller har olika absoluta gränser
-// (t.ex. gpt-4o har 128k tokens totalt för prompt+output), men denna kod begränsar *svarstokens* till maxOutputTokens().
+// för prompt+output, men denna kod begränsar *svarstokens* till maxOutputTokens().
 
 let openaiClient: OpenAI | null = null;
 let openaiClientKey: string | null = null;

@@ -101,8 +101,8 @@ vad (varje rad har en verifierad läsare i koden).
 | Variabel | Läses av | Default / not |
 |---|---|---|
 | `OPENAI_API_KEY` | `lib/openai.ts`, `lib/asset-store/vision.ts`, `app/api/generate-image/route.ts` | Krävs för riktiga anrop; annars mock/fel. |
-| `OPENAI_MODEL` | `lib/openai.ts` | Fallback `gpt-4o`. |
-| `OPENAI_VISION_MODEL` | `lib/asset-store/vision.ts` | Fallback `gpt-4o`. |
+| `OPENAI_MODEL` | `lib/openai.ts` | Fallback `gpt-5.5`. |
+| `OPENAI_VISION_MODEL` | `lib/asset-store/vision.ts` | Fallback `gpt-5.5`. |
 | `OPENAI_IMAGE_MODEL` / `OPENAI_IMAGE_QUALITY` | `app/api/generate-image/route.ts` | Fallback `gpt-image-1.5` / `medium`. |
 | `OPENAI_INPUT_USD_PER_1K` / `OPENAI_OUTPUT_USD_PER_1K` | `lib/openai.ts` | Token Meter-prislapp, default `0`. |
 | `VIEWSER_RUNS_DIR` | `lib/runs.ts`, `lib/build-runner.ts`, `packages/generation/orchestration/context/sources.py` | Default `../../data/runs`. |
@@ -119,13 +119,15 @@ På Python-sidan (root) styrs generationens modell-routing av
 codegenModel) — **inte** av `OPENAI_MODEL`. Root-skripten läser bara
 `OPENAI_API_KEY` (plus `SAJTBYGGAREN_*` prune/path-vars) ur env.
 
-### Känd inkonsekvens: modell-fallback
+### Modell-fallback
 
 `OPENAI_MODEL` (`lib/openai.ts`) och `OPENAI_VISION_MODEL`
-(`lib/asset-store/vision.ts`) faller båda tillbaka till `gpt-4o` när de inte är
-satta. Eftersom Viewser inte läser `/.env` når rotens `OPENAI_MODEL=gpt-5.4`
-aldrig Viewser. Vill du att Viewser ska matcha root måste du sätta dem i
-`apps/viewser/.env.local`; annars kör Viewser på `gpt-4o`.
+(`lib/asset-store/vision.ts`) faller båda tillbaka till `gpt-5.5` när de inte
+är satta (lyft från `gpt-4o` 2026-06-11). Vision-anropet är dessutom
+reasoning-medvetet: `reasoning_effort: "low"` skickas bara till
+gpt-5.x/o-modeller, och svarsbudgeten är 600 tokens eftersom reasoning-tokens
+räknas in i `max_completion_tokens`. Env-värden (process.env, annars repo-
+rotens `/.env` via `readRepoEnvVar`) vinner alltid över fallbacken.
 
 ### Två driftlägen
 

@@ -35,7 +35,14 @@ export interface VisionResult {
   usedFallback: boolean;
 }
 
-const VISION_MODEL = openaiEnv("OPENAI_VISION_MODEL") ?? "gpt-4o";
+// Fallback lyft från gpt-4o -> gpt-5.5 (2026-06-11). OBS: gpt-5.x är
+// reasoning-modeller — reasoning-tokens räknas in i max_completion_tokens,
+// så budgeten är höjd och reasoning_effort hålls lågt (se anropet nedan).
+const VISION_MODEL = openaiEnv("OPENAI_VISION_MODEL") ?? "gpt-5.5";
+
+// reasoning_effort skickas bara till reasoning-modeller (gpt-5.x / o-serien);
+// en äldre modell som gpt-4o avvisar parametern med 400.
+const VISION_MODEL_IS_REASONING = /^(gpt-5|o\d)/.test(VISION_MODEL);
 
 const SYSTEM_INSTRUCTIONS = [
   "You analyse photos uploaded by an operator who is building a small business website.",
@@ -177,7 +184,12 @@ export async function classifyAsset(args: {
       model: VISION_MODEL,
       temperature: 0.2,
       // B176: gpt-5.x avvisar `max_tokens` (400); ersättaren funkar brett.
-      max_completion_tokens: 200,
+      // 600 (inte 200): på reasoning-modeller räknas reasoning-tokens in i
+      // budgeten — 200 åts upp av tänkandet och gav tomt svar -> mock.
+      max_completion_tokens: 600,
+      // Lågt effort: enkel klassificering behöver inget djupt resonemang,
+      // och varje reasoning-token tas från svarsbudgeten ovan.
+      ...(VISION_MODEL_IS_REASONING ? { reasoning_effort: "low" as const } : {}),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTIONS },

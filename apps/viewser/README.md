@@ -52,7 +52,7 @@ npm run dev
 | Variabel                       | Syfte                                                                |
 |--------------------------------|----------------------------------------------------------------------|
 | `OPENAI_API_KEY`               | Server-side OpenAI-anrop. Aldrig exponerad till klient.              |
-| `OPENAI_MODEL`                 | Modell-id (default `gpt-4o`).                                   |
+| `OPENAI_MODEL`                 | Modell-id (default `gpt-5.5`).                                  |
 | `OPENAI_INPUT_USD_PER_1K`      | Pris per 1k input-tokens. Token Meter använder detta.                |
 | `OPENAI_OUTPUT_USD_PER_1K`     | Pris per 1k output-tokens.                                           |
 | `VIEWSER_RUNS_DIR`             | Path till `data/runs` (default `../../data/runs`).                   |

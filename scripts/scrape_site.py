@@ -465,7 +465,9 @@ def _llm_synthesize(corpus: ScrapedCorpus) -> dict[str, Any] | None:
     except ImportError:  # pragma: no cover - install guard
         return None
 
-    model = os.environ.get("SAJTBYGGAREN_DISCOVERY_MODEL", "gpt-4o")
+    # Fallback lyft från gpt-4o -> gpt-5.5 (2026-06-11); Responses API utan
+    # extra parametrar, så modellens defaults gäller precis som tidigare.
+    model = os.environ.get("SAJTBYGGAREN_DISCOVERY_MODEL", "gpt-5.5")
 
     instructions = (
         "Du är Sajtbyggarens discovery-assistent. Du läser HTML-text "
