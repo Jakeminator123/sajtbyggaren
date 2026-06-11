@@ -92,8 +92,12 @@ export class UpstashRedisKvStore implements KvStore {
 
   async incr(key: string, options?: KvSetOptions): Promise<number> {
     const next = Number(await this.command(["INCR", key]));
-    if (options?.ttlSeconds !== undefined && next === 1) {
-      // Bara på första träffen i fönstret — TTL ska inte rulla framåt.
+    if (options?.ttlSeconds !== undefined) {
+      // ``EXPIRE ... NX`` sätter TTL endast när nyckeln saknar en — så
+      // fönstret rullar aldrig framåt (sätts en gång på första träffen),
+      // men en TTL som tappats (t.ex. INCR lyckades men en tidigare EXPIRE
+      // föll på nätfel) läks vid nästa anrop i stället för att nyckeln blir
+      // TTL-lös och rate-limitar IP:n permanent. Idempotent och billigt.
       await this.command(["EXPIRE", key, options.ttlSeconds, "NX"]);
     }
     return next;

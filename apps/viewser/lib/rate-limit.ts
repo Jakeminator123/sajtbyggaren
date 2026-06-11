@@ -29,15 +29,25 @@ import { getKvStore } from "./kv-store";
 
 const RATE_KEY_PREFIX = "viewser:rate:";
 
-/** IP ur proxy-headers: första x-forwarded-for, annars x-real-ip, annars "unknown". */
+/**
+ * IP ur proxy-headers — spoofsäkert på Vercel.
+ *
+ * Klienten kan sätta ett godtyckligt ``x-forwarded-for`` och Vercels edge
+ * *appendar* den äkta käll-IP:n som SISTA entry (och sätter ``x-real-ip`` till
+ * samma äkta IP). Att läsa FÖRSTA XFF-entryt vore alltså klient-styrt: en
+ * angripare roterar headern och hamnar i en ny rate-limit-bucket per request →
+ * skyddet kringgås helt. Därför: lita på ``x-real-ip`` först, annars sista
+ * XFF-entryt, annars ``"unknown"`` (delad bucket = fail-safe, inte per-klient).
+ */
 function clientIp(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first) return first;
-  }
   const realIp = request.headers.get("x-real-ip")?.trim();
   if (realIp) return realIp;
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const parts = forwardedFor.split(",");
+    const last = parts[parts.length - 1]?.trim();
+    if (last) return last;
+  }
   return "unknown";
 }
 
