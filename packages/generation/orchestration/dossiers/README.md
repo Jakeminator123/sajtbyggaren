@@ -4,6 +4,12 @@ Den här mappen är ägar-pathen för alla **Dossier**-definitioner enligt
 [`repo-boundaries.v1.json`](../../../../governance/policies/repo-boundaries.v1.json)
 och [`naming-dictionary.v1.json`](../../../../governance/policies/naming-dictionary.v1.json).
 
+> **Agent som ska författa eller konsumera en dossier?** Läs
+> [`AGENT-GUIDE.md`](AGENT-GUIDE.md) först — den låser formatet
+> (manifest-fälten, instructions-strukturens fem sektioner, soft/hard-reglerna,
+> konsumtionsvägen och arbetsgången för nya dossiers) enligt 80%-principen:
+> dossiern bär merparten av implementationen, agenten anpassar resten.
+
 ## Dossier i en mening
 
 En Dossier är en återanvändbar capability/legokloss som kan kopplas på vilken
