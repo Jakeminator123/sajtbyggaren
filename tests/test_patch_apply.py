@@ -277,6 +277,86 @@ def test_section_add_dossier_preference_mounts_named_dossier(
     )
 
 
+def test_dossier_preference_displaces_previously_mounted_sibling(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Extern granskning 2026-06-11 (fynd 3): en namngiven dossier-preferens
+    är EXKLUSIV per capability även SEKVENTIELLT - en sajt som monterade
+    mailto-defaulten i v2 och väljer resend i v3 får inte behålla båda
+    kontaktformulären (ingen hybrid)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+
+    # v2: vanlig section_add av contact-form -> mailto-defaulten monteras.
+    first = apply_patch_plan(
+        PatchPlan(patches=[], valid=True),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        added_capabilities=["contact-form"],
+    )
+    assert first.applied is True
+    v2_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    assert "mailto-contact-form" in v2_pi["selectedDossiers"]["required"]
+
+    # v3: namngiven preferens (resend) -> mailto-syskonet ska bort.
+    second = apply_patch_plan(
+        PatchPlan(patches=[], valid=True),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        added_capabilities=["contact-form"],
+        dossier_preferences={"contact-form": "resend-contact-form"},
+    )
+    assert second.applied is True
+    v3_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v3.project-input.json").read_text(encoding="utf-8")
+    )
+    required = v3_pi["selectedDossiers"]["required"]
+    assert "resend-contact-form" in required
+    assert "mailto-contact-form" not in required, (
+        "den carry-forwardade mailto-monteringen måste ersättas av den "
+        f"namngivna preferensen, inte samexistera; got {required!r}"
+    )
+
+
+def test_apply_without_preference_never_removes_mounted_dossiers(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Exklusivitets-fixens säkerhetsgräns: ett apply UTAN preferens får
+    aldrig ta bort en redan monterad dossier (displacement sker ENBART vid
+    en uttryckligen namngiven preferens)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+
+    first = apply_patch_plan(
+        PatchPlan(patches=[], valid=True),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        added_capabilities=["contact-form"],
+        dossier_preferences={"contact-form": "resend-contact-form"},
+    )
+    assert first.applied is True
+
+    # v3: orelaterad section_add (hours) utan preferens.
+    second = apply_patch_plan(
+        PatchPlan(patches=[], valid=True),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        added_capabilities=["hours"],
+    )
+    assert second.applied is True
+    v3_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v3.project-input.json").read_text(encoding="utf-8")
+    )
+    required = v3_pi["selectedDossiers"]["required"]
+    assert "resend-contact-form" in required, (
+        "en monterad dossier får aldrig försvinna av ett senare apply utan "
+        f"preferens; got {required!r}"
+    )
+    assert "opening-hours" in required
+
+
 def test_section_add_invalid_dossier_preference_falls_back_to_default(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
