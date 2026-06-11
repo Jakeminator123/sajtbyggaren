@@ -6,13 +6,32 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-11 ~19:05 — eftermiddagspasset stängt: ADR 0051–0053 inne, inspector-grund + eval-grind mergade)
+## Status nu (2026-06-11 ~21:05 — kvällspasset: OpenClaw-smartness-sviten mergad, #296–#298 + #301)
 
-**Git:** `jakob-be = ab8755a6` (rent träd, local == origin). **OBS: `main`
-släpar ~31 commits** — main-sync är ett VÄNTANDE operatörsbeslut. Prod
-(`sajtbyggaren-viewser.vercel.app`) deployas från `main` och kör därmed
-fortfarande förmiddagsläget (inkl. gamla gpt-4o-fallbackarna) tills syncen
-görs.
+**Git:** `jakob-be = 05e62911` (rent träd, local == origin). Main-sync hanteras
+i parallellt operatörsspår (separat agent); kvällens fyra merges adderar till
+main-eftersläpet tills nästa sync. Prod (`sajtbyggaren-viewser.vercel.app`)
+deployas från `main`.
+
+**Kvällens facit (2026-06-11 kväll, fyra PR:ar mergade till jakob-be):**
+
+- **#297** KÖR-6b i bryggan: `run_openclaw_followup.py` eskalerar nu
+  tvetydiga/långa följdprompter till routerModel (samma väg som kedjan i
+  `build_site.py` redan hade); EN router-klassificering per anrop via
+  router-injektion i `orchestrate`/`classify_conversation`; kill-switch
+  `OPENCLAW_ROUTER_LLM_FALLBACK=0`; TS-runner-timeout 15→45 s.
+- **#298** Dirigent-bekräftelse: efter en SYNLIGT applicerad ändring
+  (`previewShouldRefresh=true`) genererar dirigenten 1–2 meningars
+  bekräftelse i chatten, grundad enbart i kedjans fakta; mount-only- och
+  ärlighetsrader röjs aldrig; no-key → deterministisk rad som förut.
+- **#301** B198 del a: prompt som NAMNGER en dossier ("resend") monterar
+  `resend-contact-form` i stället för mailto-defaulten (nya router-cues för
+  resend/mejlformulär → contact-form + validerad dossier-preferens i
+  section_add→apply). Synlig render på ecommerce-lite kvarstår (B198 del b).
+- **#296** B198 registrerad i known-issues (19 aktiva / 25 öppna).
+- Operatörs-env: prune-taken höjda 6→12 (`SAJTBYGGAREN_MAX_RUNS/GENERATED/
+  PROMPT_INPUTS` i lokala `.env`); operatörens manuella radering av
+  `data/runs` bekräftad ofarlig (PI-snapshotkedjan intakt).
 
 **Stora bilden:** oförändrad sedan förmiddagen — P2 skeppad, hostad publik
 drift PÅ med rate-limit/TTL/B195/B196 (fullt block i arkivet:
@@ -76,10 +95,11 @@ direktcommits):**
 - `christopher`-lanen äger: `use-followup-build.ts`, dialogerna,
   viewser-frontend/inspector — rör ej.
 
-Last verified state: `ab8755a6` (2026-06-11 ~19:05 UTC+2; `origin/jakob-be =
-ab8755a6`, rent träd. Eftermiddagen: #285/#291/#293/#294/#295 mergade till
-jakob-be, #156 stängd, inbox msg-0073–0077 skickade. Main-sync VÄNTAR
-operatörsbeslut — `origin/main` ligger ~31 commits efter. ADR-liggare: nästa
+Last verified state: `05e62911` (2026-06-11 ~21:05 UTC+2; `origin/jakob-be =
+05e62911`, rent träd. Kvällen: #296/#297/#298/#301 mergade till jakob-be
+(OpenClaw-smartness-sviten + B198 del a). Eftermiddagen dessförinnan:
+#285/#291/#293/#294/#295. Main-sync hanteras i parallellt spår; #299/#300
+(env-dok + deploy-ignoreCommand) är öppna i det spåret. ADR-liggare: nästa
 lediga **0055**; 0054 är reserverad för MCP-intagsgrinden.)
 
 ## Öppna PR att känna till
