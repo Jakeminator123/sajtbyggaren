@@ -936,6 +936,51 @@ const HOSTED_POLL_INTERVAL_MS = 3_000;
 const HOSTED_STREAM_BUDGET_MS = 280_000;
 
 /**
+ * Polla KV-statusen för ett hostat bygge tills done/failed eller tills
+ * svarsbudgeten är slut (``null``). Delas av NDJSON-streamen och den synkrona
+ * JSON-vägen så båda svarslägen väntar in samma sanning. ``onBuilding``
+ * anropas (en gång) när sandboxen nått bygg-/upload-fasen — streamen använder
+ * den för sitt ``building``-event.
+ */
+async function pollHostedRunUntilSettled(
+  runId: string,
+  options?: { onBuilding?: () => void },
+): Promise<HostedBuildRunStatus | null> {
+  const store = getKvStore();
+  const deadline = Date.now() + HOSTED_STREAM_BUDGET_MS;
+  let buildingSignalled = false;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, HOSTED_POLL_INTERVAL_MS));
+    const status = await kvGetJson<HostedBuildRunStatus>(
+      store,
+      hostedRunKey(runId),
+    );
+    if (!status) continue;
+    if (
+      !buildingSignalled &&
+      (status.phase === "building" || status.phase === "uploading")
+    ) {
+      buildingSignalled = true;
+      options?.onBuilding?.();
+    }
+    if (status.phase === "done" || status.phase === "failed") {
+      return status;
+    }
+  }
+  return null;
+}
+
+/** Ärlig budget-slut-text: bygget i sandboxen fortsätter, klienten kan följa
+ * status via den siteId-bundna status-routen (B196). */
+function hostedBudgetExhaustedMessage(runId: string, siteId: string): string {
+  return (
+    `Bygget pågår fortfarande (runId ${runId}) men svarsbudgeten är slut. ` +
+    `Följ status via GET /api/hosted-build/${runId}?siteId=${siteId} — ` +
+    "previewen funkar när bygget är klart."
+  );
+}
+
+/**
  * Hostad prompt-väg (P2): bygget kör detached i en sandbox via
  * ``startHostedBuild``; status landar i KV. Två svarslägen, samma kontrakt
  * som den lokala vägen så prompt-builder.tsx fungerar oförändrad:
@@ -944,13 +989,20 @@ const HOSTED_STREAM_BUDGET_MS = 280_000;
  *     ignoreras av dagens klient men bär runId för curl/framtida UI), sedan
  *     ``building`` när sandboxen nått bygg-fasen, sist ``done``/``error``.
  *     Tar bygget längre än stream-budgeten avslutas streamen ärligt med ett
- *     error-event som pekar på GET /api/hosted-build/<runId> — bygget i
- *     sandboxen fortsätter och pekaren sätts när det blir klart.
- *   - Synkron JSON: 202 med ``{ accepted, runId, siteId }`` direkt; klienten
- *     pollar status-routen själv.
+ *     error-event som pekar på GET /api/hosted-build/<runId>?siteId=<siteId>
+ *     — bygget i sandboxen fortsätter och pekaren sätts när det blir klart.
+ *   - Synkron JSON: väntar in done/failed server-side via samma KV-pollning
+ *     som streamen och svarar med det gamla synkrona kontraktet
+ *     (``{ runId, siteId, buildStatus, ... }`` eller ``{ error }``).
+ *     Review-fynd #284 (fynd 2): det tidigare omedelbara 202-svaret
+ *     ``{ accepted, runId, ... }`` tolkades av icke-streamande klienter
+ *     (floating-chat.tsx, use-followup-build.ts) som ett FÄRDIGT bygge —
+ *     de läste runId + HTTP ok och rapporterade "klart"/refreshade preview
+ *     medan sandboxen fortfarande byggde (eller var på väg att faila, B194).
+ *     Vid budget-slut: ärligt fel (504) med status-route-hänvisning.
  *
  * Följdprompter hostat failar ärligt i sandboxen tills run-historiken
- * persisteras (P3) — statusen i KV förklarar varför.
+ * persisteras (P3, B194) — statusen i KV förklarar varför.
  */
 async function runHostedPromptFlow(
   payload: z.infer<typeof PromptPayloadSchema>,
@@ -977,66 +1029,90 @@ async function runHostedPromptFlow(
   }
 
   if (!wantsStream) {
-    return NextResponse.json(
-      { accepted: true, runId, siteId, hosted: true },
-      { status: 202 },
-    );
+    // Det synkrona kontraktet bevaras hostat: vänta in done/failed via samma
+    // KV-pollning som streamen i stället för att svara 202 direkt (se JSDoc
+    // ovan — det omedelbara accepted-svaret lästes som ett färdigt bygge).
+    try {
+      const settled = await pollHostedRunUntilSettled(runId);
+      if (settled?.phase === "done") {
+        return NextResponse.json({
+          runId,
+          siteId,
+          projectId: null,
+          version: null,
+          briefSource: null,
+          buildStatus: "ok",
+          hosted: true,
+          buildId: settled.buildId ?? null,
+        });
+      }
+      if (settled?.phase === "failed") {
+        return NextResponse.json(
+          {
+            error: settled.error ?? "Det hostade bygget misslyckades.",
+            runId,
+            siteId,
+            hosted: true,
+          },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json(
+        {
+          error: hostedBudgetExhaustedMessage(runId, siteId),
+          runId,
+          siteId,
+          hosted: true,
+        },
+        { status: 504 },
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Okänt fel under status-pollningen av det hostade bygget.";
+      return NextResponse.json(
+        { error: message, runId, siteId, hosted: true },
+        { status: 500 },
+      );
+    }
   }
 
   const encoder = new TextEncoder();
-  const store = getKvStore();
   const stream = new ReadableStream({
     async start(controller) {
       const enqueueLine = (line: Record<string, unknown>) => {
         controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
       };
       enqueueLine({ stage: "accepted", runId, siteId, hosted: true });
-      const deadline = Date.now() + HOSTED_STREAM_BUDGET_MS;
-      let buildingEmitted = false;
       try {
-        while (Date.now() < deadline) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, HOSTED_POLL_INTERVAL_MS),
-          );
-          const status = await kvGetJson<HostedBuildRunStatus>(
-            store,
-            hostedRunKey(runId),
-          );
-          if (!status) continue;
-          if (
-            !buildingEmitted &&
-            (status.phase === "building" || status.phase === "uploading")
-          ) {
-            buildingEmitted = true;
-            enqueueLine({ stage: "building" });
-          }
-          if (status.phase === "done") {
-            enqueueLine({
-              stage: "done",
-              runId,
-              siteId,
-              projectId: null,
-              version: null,
-              briefSource: null,
-              buildStatus: "ok",
-              hosted: true,
-              buildId: status.buildId ?? null,
-            });
-            return;
-          }
-          if (status.phase === "failed") {
-            enqueueLine({
-              stage: "error",
-              error: status.error ?? "Det hostade bygget misslyckades.",
-            });
-            return;
-          }
+        const settled = await pollHostedRunUntilSettled(runId, {
+          onBuilding: () => enqueueLine({ stage: "building" }),
+        });
+        if (settled?.phase === "done") {
+          enqueueLine({
+            stage: "done",
+            runId,
+            siteId,
+            projectId: null,
+            version: null,
+            briefSource: null,
+            buildStatus: "ok",
+            hosted: true,
+            buildId: settled.buildId ?? null,
+          });
+          return;
+        }
+        if (settled?.phase === "failed") {
+          enqueueLine({
+            stage: "error",
+            error: settled.error ?? "Det hostade bygget misslyckades.",
+          });
+          return;
         }
         enqueueLine({
           stage: "error",
-          error:
-            `Bygget pågår fortfarande (runId ${runId}) men svarsbudgeten är slut. ` +
-            `Följ status via GET /api/hosted-build/${runId} — previewen funkar när bygget är klart.`,
+          error: hostedBudgetExhaustedMessage(runId, siteId),
         });
       } catch (error) {
         enqueueLine({

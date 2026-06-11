@@ -536,6 +536,39 @@ def test_current_section_text_falls_back_to_blueprint_copy() -> None:
     assert current_section_text(pi, "home", "hero", "subheadline") == "Tag"
 
 
+def test_section_base_text_is_section_aware() -> None:
+    """Review-fynd #283 (fynd 1): bastexten resolvas per sektion. company-copyn
+    (story/tagline/heroHeadline/name) hör bara hemma i story-/hero-sektionerna —
+    en faq-/kontakt-/services-edit får ALDRIG company.story som bas."""
+    pi = {
+        "company": {
+            "story": "Historien",
+            "tagline": "Tag",
+            "name": "Bolaget",
+            "heroHeadline": "Stora rubriken",
+        }
+    }
+    # Hero/story behåller den semantiskt riktiga strukturerade copyn.
+    assert current_section_text(pi, "home", "story", "body") == "Historien"
+    assert current_section_text(pi, "about", "about-story", "body") == "Historien"
+    assert current_section_text(pi, "home", "hero", "headline") == "Stora rubriken"
+    assert current_section_text(pi, "home", "hero", "subheadline") == "Tag"
+    # Övriga sektioner saknar strukturerad PI-copy -> ärlig None (aldrig fel bas).
+    assert current_section_text(pi, "home", "faq", "body") is None
+    assert current_section_text(pi, "home", "contact-cta", "headline") is None
+    assert current_section_text(pi, "home", "service-summary", "subheadline") is None
+
+
+def test_current_section_text_override_wins_for_non_hero_sections() -> None:
+    """En tidigare operatörs-override för exakt målet är fortfarande aktuell
+    copy även för sektioner utan strukturerad PI-copy (faq m.fl.)."""
+    pi = {
+        "company": {"story": "Historien"},
+        "directives": {"sectionContentOverrides": {"home.faq.body": "FAQ-copyn"}},
+    }
+    assert current_section_text(pi, "home", "faq", "body") == "FAQ-copyn"
+
+
 # --- unit: the generative wrapper (mocked model + guards) -------------------
 
 
@@ -551,6 +584,28 @@ def test_plan_section_edit_via_llm_generates_replace(
         language="sv",
     )
     assert edit == ("replace", new_text)
+
+
+def test_plan_section_edit_via_llm_empty_base_is_honest_no_op(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Review-fynd #283 (fynd 2): utan bastext finns inget att skriva om —
+    modellen får ALDRIG anropas med tom aktuell copy (påhittad copy utan
+    grund). Den mockade plannern returnerar giltig text, så ett None-resultat
+    bevisar att basen kortslöt FÖRE modellanropet."""
+    monkeypatch.setattr(
+        _SECTION_PLANNER_PATH, lambda *a, **k: "Helt påhittad sektionstext"
+    )
+    for empty_base in (None, "", "   "):
+        assert (
+            plan_section_edit_via_llm(
+                "body",
+                "gör om faq-texten så den blir varmare",
+                base_text=empty_base,
+                language="sv",
+            )
+            is None
+        )
 
 
 def test_plan_section_edit_via_llm_no_key_is_none(
@@ -707,6 +762,93 @@ def test_apply_section_rewrite_ungrounded_number_is_no_op(
     assert result.applied is False
     assert result.unmapped
     assert not (tmp_path / f"{SITE_ID}.v2.project-input.json").exists()
+
+
+def test_apply_faq_body_mention_never_uses_story_as_base(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Review-fynd #283 (fynd 1, include-vägen): en mention-edit mot en
+    icke-story-sektion (home.faq.body) får INTE appendas på company.story.
+    Utan strukturerad PI-copy för sektionen är basen ärligt None och
+    override:n blir fragmentet ensamt."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    v1, *_ = _init_site(tmp_path)
+    base_story = v1["company"]["story"]
+    result = apply_patch_plan(
+        _copy_plan("contentBlocks.home.faq.body"),
+        site_id=SITE_ID,
+        follow_up_prompt="gör om faq-texten så den nämner att vi har jour dygnet runt",
+        output_dir=tmp_path,
+    )
+    assert result.applied is True
+    override = _overrides(_read_v(tmp_path, 2)).get("home.faq.body")
+    assert override is not None
+    assert "jour dygnet runt" in override
+    # Före fixet: override == "<company.story> att vi har jour dygnet runt".
+    assert base_story not in override
+
+
+def test_apply_section_rewrite_without_base_is_honest_no_op(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Review-fynd #283 (fynd 1+2, editPlan-vägen): en vibe-rewrite av en
+    sektion utan aktuell copy (home.faq.body, ingen tidigare override) är en
+    ärlig no-op — modellen anropas aldrig och ingen version skrivs."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(
+        _SECTION_PLANNER_PATH, lambda *a, **k: "Glatt påhittad FAQ-text"
+    )
+    _init_site(tmp_path)
+    result = apply_patch_plan(
+        _copy_plan("contentBlocks.home.faq.body"),
+        site_id=SITE_ID,
+        follow_up_prompt="gör om faq-texten så den blir varmare",
+        output_dir=tmp_path,
+    )
+    assert result.applied is False
+    assert result.unmapped
+    assert not (tmp_path / f"{SITE_ID}.v2.project-input.json").exists()
+
+
+def test_apply_hero_headline_rewrite_base_is_previous_rendered_h1(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Review-fynd #283 (fynd 3): basen för en hero-H1-rewrite är samma rubrik
+    som föregående bygge FAKTISKT renderade (B173-pinkällan: blueprint-
+    headline ur run-diren), inte company.name."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    rendered_h1 = "Trygg el för hela Malmö"
+    seen_bases: list[str] = []
+
+    def _fake(prompt, *, field, current_text, language, model):  # noqa: ANN001
+        seen_bases.append(current_text)
+        return "Premium el i hela Malmö"
+
+    monkeypatch.setattr(_SECTION_PLANNER_PATH, _fake)
+    _init_site(tmp_path)
+    runs = tmp_path / "runs"
+    run_dir = runs / "run-previous"
+    run_dir.mkdir(parents=True)
+    (run_dir / "build-result.json").write_text(
+        json.dumps({"siteId": SITE_ID, "status": "ok"}), encoding="utf-8"
+    )
+    (run_dir / "generation-package.json").write_text(
+        json.dumps({"contentBlocks": {"home.hero": {"headline": rendered_h1}}}),
+        encoding="utf-8",
+    )
+    result = apply_patch_plan(
+        _copy_plan("contentBlocks.home.hero.headline"),
+        site_id=SITE_ID,
+        follow_up_prompt="skriv om heron så den låter mer premium",
+        output_dir=tmp_path,
+        runs_dir=runs,
+    )
+    assert result.applied is True
+    # Modellen såg den renderade H1:an som bas (inte company.name-fallbacken).
+    assert seen_bases == [rendered_h1]
+    assert _overrides(_read_v(tmp_path, 2)) == {
+        "home.hero.headline": "Premium el i hela Malmö"
+    }
 
 
 def test_apply_section_rewrite_builds_on_carried_forward_override(

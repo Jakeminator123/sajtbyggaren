@@ -44,6 +44,7 @@
 
 import { randomUUID } from "node:crypto";
 
+import { isHostedVercelRuntime } from "./hosted-python-runtime";
 import { getKvStore, kvSetJson } from "./kv-store";
 import { upstashRestToken, upstashRestUrl } from "./kv-store/upstash-redis";
 import {
@@ -423,6 +424,21 @@ export async function startHostedBuild(
   if (!blobToken) {
     return failRun(
       "BLOB_READ_WRITE_TOKEN saknas — bygg-outputen kan inte publiceras till blob.",
+    );
+  }
+
+  // KV-preflight (review-fynd #284, fynd 1): hostat (VERCEL=1) MÅSTE en riktig
+  // kv-store finnas FÖRE Sandbox.create. Utan Upstash-env får sandboxen tomma
+  // KV_REST_URL/KV_REST_TOKEN, orkestrerings-skriptet hoppar ärligt över alla
+  // status-POST:ar och klientens status-pollning hänger till timeout i stället
+  // för att fela direkt. Lokalt (utan VERCEL=1) blockeras inget: memory-drivern
+  // i samma process är fortfarande ett ärligt dev-läge.
+  if (isHostedVercelRuntime() && !(upstashRestUrl() && upstashRestToken())) {
+    return failRun(
+      "Hostat bygge kräver kv-store (Upstash-integrationens KV_REST_API_URL/" +
+        "KV_REST_API_TOKEN saknas) — utan den kan sandboxen aldrig rapportera " +
+        "status eller publicera bygg-pekaren. Koppla Upstash-integrationen i " +
+        "Vercel-projektet eller sätt VIEWSER_KV_REST_URL/VIEWSER_KV_REST_TOKEN.",
     );
   }
 

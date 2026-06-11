@@ -226,26 +226,49 @@ def render_section_override_text(
     return text or None
 
 
+# Section ids whose copy genuinely lives in the structured Project Input
+# company fields. Mirrors the renderer's own mapping:
+# ``_STORY_SECTION_IDS`` i packages/generation/build/blueprint_render.py
+# (story-body <- company.story) och render_section_hero i renderers.py
+# (hero-H1 <- company.heroHeadline/name, hero-underrubrik <- company.tagline).
+# Sektions-id:n är scaffold-unika (samma antagande som
+# ``resolve_section_content_override``), så route_id behövs inte för matchen.
+_HERO_SECTION_IDS: tuple[str, ...] = ("hero",)
+_STORY_SECTION_IDS: tuple[str, ...] = ("story", "about-story", "about-story-block")
+
+
 def section_base_text(
     project_input: dict[str, Any], route_id: str, section_id: str, field: str
 ) -> str | None:
     """Resolve the current copy a section field renders, for an ``include`` edit.
 
-    Reuses the structured Project Input copy fields the renderer already reads:
+    Reuses the structured Project Input copy fields the renderer already reads
+    — but ONLY for the sections where that mapping is semantically true
+    (review-fynd #283 / ADR 0047 "läs aktuell copy för exakt sektion/fält"):
     a story/about ``body`` is ``company.story``; a hero ``headline`` is
     ``company.heroHeadline`` or ``company.name``; a hero ``subheadline`` is
-    ``company.tagline``. Returns ``None`` when no base copy is available (the
-    caller then falls back to the value alone).
+    ``company.tagline``. Every OTHER section (faq, contact, services, ...)
+    renders blueprint copy that does not live in Project Input, so this
+    honestly returns ``None`` — the previous behaviour handed e.g. a
+    ``home.faq.body`` edit ``company.story`` as its base, which appended/
+    rewrote the wrong text. ``None`` means: an ``include`` falls back to the
+    value alone and the generative editPlan stays an honest no-op.
     """
     company = project_input.get("company")
     company = company if isinstance(company, dict) else {}
     if field == "body":
+        if section_id not in _STORY_SECTION_IDS:
+            return None
         story = company.get("story")
         return story.strip() if isinstance(story, str) and story.strip() else None
     if field == "subheadline":
+        if section_id not in _HERO_SECTION_IDS:
+            return None
         tagline = company.get("tagline")
         return tagline.strip() if isinstance(tagline, str) and tagline.strip() else None
     if field == "headline":
+        if section_id not in _HERO_SECTION_IDS:
+            return None
         for key in ("heroHeadline", "name"):
             value = company.get(key)
             if isinstance(value, str) and value.strip():
@@ -383,19 +406,24 @@ def plan_section_edit_via_llm(
     or ``None`` when nothing safe can be generated. ``None`` is returned without
     an ``OPENAI_API_KEY`` (honest no-op / mock parity), when the gate rejects the
     request, on any model error, or when the generated payload trips the same
-    public-copy guard (`_safe_copy_payload`) or grounding guard
+    public-copy guard (`_safe_copy_payload`) or     grounding guard
     (`_planned_payload_grounded`) as copyDirectives - the raw instruction can
     never become customer copy and an ungrounded number is dropped. ``base_text``
     is the section's current copy (resolved by the caller via
     ``current_section_text``); it is the rewrite base shown to the model and the
-    grounding source. Generation is always a ``replace`` (full new text), like
-    the about-text editPlan precedent.
+    grounding source. An EMPTY base is an honest no-op (review-fynd #283 /
+    ADR 0047): an editPlan REWRITES the section's current copy — with nothing
+    to rewrite, generation would be invented copy with no grounding source, so
+    the model is never called. Generation is always a ``replace`` (full new
+    text), like the about-text editPlan precedent.
     """
     if field not in SECTION_OVERRIDE_FIELDS:
         return None
     if not is_section_content_rewrite_request(field, follow_up_prompt):
         return None
     base = (base_text or "").strip()
+    if not base:
+        return None
     # Lazy import (cycle break): mirrors copy_directives._plan_copy_directives_via_llm.
     try:
         from packages.generation.brief.extract import plan_section_copy_rewrite_llm
