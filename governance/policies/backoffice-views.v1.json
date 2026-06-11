@@ -21,11 +21,7 @@
       "section": "Status",
       "ownerSource": "backoffice.views.status",
       "status": "active",
-      "readsFrom": [
-        "data/runs",
-        "data/evals/summaries/golden-path",
-        "governance/policies"
-      ],
+      "readsFrom": ["data/runs", "data/evals/summaries/golden-path", "governance/policies"],
       "lastVerified": "2026-06-11",
       "note": "Read-only landningsvy: senaste eval/körning, Quality Gate-sammandrag, kända brister och färskhetsbricka per vy."
     },
@@ -34,10 +30,7 @@
       "section": "Status",
       "ownerSource": "backoffice.views.status",
       "status": "active",
-      "readsFrom": [
-        "governance/policies",
-        "data/evals/summaries/golden-path"
-      ],
+      "readsFrom": ["governance/policies", "data/evals/summaries/golden-path"],
       "lastVerified": "2026-06-11",
       "note": "Policy-/schema-/regel-/ADR-räknare, kvalitetsmål, read-only golden-status och kända brister."
     },
@@ -46,9 +39,7 @@
       "section": "Status",
       "ownerSource": "backoffice.views.status",
       "status": "active",
-      "readsFrom": [
-        "data/evals/summaries/golden-path"
-      ],
+      "readsFrom": ["data/evals/summaries/golden-path"],
       "lastVerified": "2026-06-11",
       "note": "Read-only status för senaste golden-path-eval (ADR 0039)."
     },
@@ -57,10 +48,7 @@
       "section": "Status",
       "ownerSource": "backoffice.views.status",
       "status": "diagnostic",
-      "readsFrom": [
-        "governance/policies",
-        "governance/rules"
-      ],
+      "readsFrom": ["governance/policies", "governance/rules"],
       "lastVerified": "2026-06-11",
       "note": "Kör governance-validate, rules-sync, term-coverage, pytest -m governance och API-nyckel-koll."
     },
@@ -69,9 +57,7 @@
       "section": "Status",
       "ownerSource": "backoffice.views.status",
       "status": "diagnostic",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11",
       "note": "Realtidskonsistens mellan policies (samma logik som pytest -m governance)."
     },
@@ -80,10 +66,7 @@
       "section": "Governance",
       "ownerSource": "backoffice.views.governance",
       "status": "active",
-      "readsFrom": [
-        "governance/policies",
-        "governance/schemas"
-      ],
+      "readsFrom": ["governance/policies", "governance/schemas"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -91,9 +74,7 @@
       "section": "Governance",
       "ownerSource": "backoffice.views.governance",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -101,9 +82,7 @@
       "section": "Governance",
       "ownerSource": "backoffice.views.governance",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -111,9 +90,7 @@
       "section": "Governance",
       "ownerSource": "backoffice.views.governance",
       "status": "active",
-      "readsFrom": [
-        "governance/rules"
-      ],
+      "readsFrom": ["governance/rules"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -121,9 +98,7 @@
       "section": "Governance",
       "ownerSource": "backoffice.views.governance",
       "status": "active",
-      "readsFrom": [
-        "governance/decisions"
-      ],
+      "readsFrom": ["governance/decisions"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -131,9 +106,7 @@
       "section": "Identitet",
       "ownerSource": "backoffice.views.identity",
       "status": "active",
-      "readsFrom": [
-        "docs/openclaw-workspace"
-      ],
+      "readsFrom": ["docs/openclaw-workspace"],
       "lastVerified": "2026-06-11",
       "note": "Redigerbar dirigent-konstitution (chatt-persona, path-låst till SOUL.md) + read-only TOOLS (sanktionerade actions). Chatt-personan laddar SOUL server-side. ADR 0044."
     },
@@ -142,9 +115,7 @@
       "section": "LLM Engine",
       "ownerSource": "backoffice.views.llm_engine",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -152,9 +123,7 @@
       "section": "LLM Engine",
       "ownerSource": "backoffice.views.llm_engine",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -162,9 +131,7 @@
       "section": "LLM Engine",
       "ownerSource": "backoffice.views.llm_engine",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -172,9 +139,7 @@
       "section": "LLM Engine",
       "ownerSource": "backoffice.views.llm_engine",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -182,9 +147,7 @@
       "section": "LLM Engine",
       "ownerSource": "backoffice.views.llm_engine",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -192,9 +155,7 @@
       "section": "LLM Engine",
       "ownerSource": "backoffice.views.llm_engine",
       "status": "active",
-      "readsFrom": [
-        "governance/policies"
-      ],
+      "readsFrom": ["governance/policies"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -202,9 +163,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "packages/generation/orchestration"
-      ],
+      "readsFrom": ["packages/generation/orchestration"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -212,9 +171,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "packages/generation/orchestration/scaffolds"
-      ],
+      "readsFrom": ["packages/generation/orchestration/scaffolds"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -222,9 +179,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "packages/generation/orchestration/scaffolds"
-      ],
+      "readsFrom": ["packages/generation/orchestration/scaffolds"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -232,9 +187,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "packages/generation/orchestration/scaffolds"
-      ],
+      "readsFrom": ["packages/generation/orchestration/scaffolds"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -242,9 +195,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "data/variant-candidates"
-      ],
+      "readsFrom": ["data/variant-candidates"],
       "lastVerified": "2026-06-11",
       "note": "Tooling: genererar variant-kandidater; datakällan kan vara tom."
     },
@@ -253,9 +204,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "packages/generation/orchestration/dossiers"
-      ],
+      "readsFrom": ["packages/generation/orchestration/dossiers"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -263,9 +212,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "data/dossier-candidates"
-      ],
+      "readsFrom": ["data/dossier-candidates"],
       "lastVerified": "2026-06-11",
       "note": "Tooling: kandidat-intag + generering; datakällan kan vara tom."
     },
@@ -274,9 +221,7 @@
       "section": "Building Blocks",
       "ownerSource": "backoffice.views.building_blocks",
       "status": "active",
-      "readsFrom": [
-        "data/reference-templates"
-      ],
+      "readsFrom": ["data/reference-templates"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -284,9 +229,7 @@
       "section": "Runs",
       "ownerSource": "backoffice.views.engine_runs",
       "status": "active",
-      "readsFrom": [
-        "data/runs"
-      ],
+      "readsFrom": ["data/runs"],
       "lastVerified": "2026-06-11",
       "note": "Inspekterar artefakter + trace.ndjson; datakällan kan vara tom innan första körningen."
     },
@@ -295,10 +238,7 @@
       "section": "Playground",
       "ownerSource": "backoffice.views.playground",
       "status": "active",
-      "readsFrom": [
-        "scripts",
-        "data/runs"
-      ],
+      "readsFrom": ["scripts", "data/runs"],
       "lastVerified": "2026-06-11",
       "note": "Kör en Engine Run via subprocess (scripts/dev_generate.py) och pollar data/runs."
     },
@@ -307,10 +247,7 @@
       "section": "Playground",
       "ownerSource": "backoffice.views.playground",
       "status": "active",
-      "readsFrom": [
-        "scripts",
-        "data/evals/artifacts/playground"
-      ],
+      "readsFrom": ["scripts", "data/evals/artifacts/playground"],
       "lastVerified": "2026-06-11",
       "note": "Kör golden-path-loopen deterministiskt in-process (generate -> build, ingen npm/nyckel) + read-only miljö-/adapter-diagnostik. Skriver isolerat under data/evals/artifacts/playground."
     },
@@ -319,10 +256,7 @@
       "section": "Evals",
       "ownerSource": "backoffice.views.evals",
       "status": "active",
-      "readsFrom": [
-        "data/evals/summaries",
-        "scripts"
-      ],
+      "readsFrom": ["data/evals/summaries", "scripts"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -330,10 +264,7 @@
       "section": "Underhåll",
       "ownerSource": "backoffice.views.maintenance",
       "status": "active",
-      "readsFrom": [
-        "data/runs",
-        "data/evals"
-      ],
+      "readsFrom": ["data/runs", "data/evals"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -341,11 +272,7 @@
       "section": "Underhåll",
       "ownerSource": "backoffice.views.maintenance",
       "status": "active",
-      "readsFrom": [
-        "data/runs",
-        "data/evals",
-        "data/starters"
-      ],
+      "readsFrom": ["data/runs", "data/evals", "data/starters"],
       "lastVerified": "2026-06-11"
     },
     {
@@ -353,10 +280,7 @@
       "section": "Underhåll",
       "ownerSource": "backoffice.views.maintenance",
       "status": "active",
-      "readsFrom": [
-        "packages/generation/orchestration",
-        "data/starters"
-      ],
+      "readsFrom": ["packages/generation/orchestration", "data/starters"],
       "lastVerified": "2026-06-11"
     }
   ]
