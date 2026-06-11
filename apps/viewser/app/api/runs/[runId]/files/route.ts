@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  HOSTED_LOCAL_ONLY_NOTICE,
+  hostedRuntimeNotice,
   isHostedVercelRuntime,
 } from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
@@ -19,7 +19,7 @@ export async function GET(request: Request, context: RouteContext) {
   // Degrade honestly instead of surfacing an opaque 500/404.
   if (isHostedVercelRuntime()) {
     return NextResponse.json(
-      { error: HOSTED_LOCAL_ONLY_NOTICE, hostedNotice: HOSTED_LOCAL_ONLY_NOTICE },
+      { error: hostedRuntimeNotice(), hostedNotice: hostedRuntimeNotice() },
       { status: 404 },
     );
   }

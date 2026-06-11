@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  HOSTED_LOCAL_ONLY_NOTICE,
+  hostedRuntimeNotice,
   isHostedVercelRuntime,
 } from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       runs: [],
       projectInputs: [],
-      hostedNotice: HOSTED_LOCAL_ONLY_NOTICE,
+      hostedNotice: hostedRuntimeNotice(),
     });
   }
 

@@ -36,12 +36,37 @@ export function isHostedSandboxPreviewEnabled(): boolean {
   return process.env.VIEWSER_ENABLE_HOSTED_SANDBOX === "1";
 }
 
+/**
+ * True when the operator has opted the hosted deployment in to the full
+ * hosted build chain (init build + follow-up prompts via Vercel Sandbox,
+ * ADR 0048/B194). Same env contract as the gate in `/api/prompt`.
+ */
+export function isHostedBuildEnabled(): boolean {
+  return process.env.VIEWSER_ENABLE_HOSTED_BUILD === "1";
+}
+
 /** Shared Swedish notice surfaced to the UI for hosted-only-degraded views. */
 export const HOSTED_LOCAL_ONLY_NOTICE =
   "Den här hostade vyn visar gränssnittet och kan förhandsvisa redan byggda " +
   "sajter. Att skapa nya sajter — bygge, följdprompt och run-historik — sker i " +
   "operatörens lokala miljö i den här versionen, inte i den hostade vyn, tills " +
   "bygg-kedjan flyttas till en riktig backend-runtime.";
+
+/**
+ * Honest notice for hosted deployments where the build chain IS enabled:
+ * building works, but disk-backed views (run-historik, artefakter, inspector)
+ * still read local repo disk and stay empty hosted.
+ */
+export const HOSTED_BUILD_ENABLED_NOTICE =
+  "Hostade byggen är PÅ: init-bygge och följdprompt körs i Vercel Sandbox " +
+  "direkt från den här vyn. Run-historik, artefakter och inspector läser dock " +
+  "fortfarande lokal disk och är tomma hostat — byggläget i fliken försvinner " +
+  "vid omladdning av sidan.";
+
+/** Pick the notice that matches the hosted deployment's actual capability. */
+export function hostedRuntimeNotice(): string {
+  return isHostedBuildEnabled() ? HOSTED_BUILD_ENABLED_NOTICE : HOSTED_LOCAL_ONLY_NOTICE;
+}
 
 export function hostedPythonRuntimeUnavailable(feature: string): NextResponse {
   return NextResponse.json(

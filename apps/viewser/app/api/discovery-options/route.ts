@@ -5,7 +5,7 @@ import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  HOSTED_LOCAL_ONLY_NOTICE,
+  hostedRuntimeNotice,
   isHostedVercelRuntime,
 } from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
     // degrade honestly (empty options + Swedish notice) instead of a raw 500
     // that would leave the wizard stuck with no explanation.
     if (isHostedVercelRuntime()) {
-      return NextResponse.json({ options: [], hostedNotice: HOSTED_LOCAL_ONLY_NOTICE });
+      return NextResponse.json({ options: [], hostedNotice: hostedRuntimeNotice() });
     }
     return NextResponse.json({ error: message }, { status: 500 });
   }
