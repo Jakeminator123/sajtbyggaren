@@ -30,6 +30,18 @@ import {
 // fallback är numera gpt-5.5 (vision: 600 tokens + reasoning_effort low).
 // ---------------------------------------------------------------------------
 
+// AUTOGEN_MODEL_FACTS_START -- skrivs av scripts/update_canvas_facts.py, redigera inte for hand
+const MODEL_FACTS = {
+  generatedAt: "2026-06-11",
+  llmModelsVersion: 10,
+  engineModels: ["gpt-5.4"],
+  embeddingModel: "text-embedding-3-small",
+  chatFallbackModel: "gpt-5.5",
+  visionFallbackModel: "gpt-5.5",
+  discoveryFallbackModel: "gpt-5.5",
+} as const;
+// AUTOGEN_MODEL_FACTS_END
+
 type LayerId = "modelRoles" | "conductor" | "persona" | "sideCalls" | "agents";
 
 type Layer = {
@@ -50,9 +62,9 @@ const LAYERS: Layer[] = [
     question: "VAR anropas en LLM?",
     oneLiner:
       "Namngivna anropspunkter i motorn (briefModel, planningModel, codegenModel …). Varje roll mappas mot en modellsträng. Ingen kod får anropa en LLM utan att gå via en registrerad roll.",
-    source: "governance/policies/llm-models.v1.json (v10)",
+    source: `governance/policies/llm-models.v1.json (v${MODEL_FACTS.llmModelsVersion})`,
     count: "12 roller",
-    model: "gpt-5.4 (alla generation-roller)",
+    model: `${MODEL_FACTS.engineModels.join(" + ")} (alla generation-roller)`,
     tone: "info",
   },
   {
@@ -85,7 +97,7 @@ const LAYERS: Layer[] = [
       "Viewser-chattens server-side helper, bild/vision-tolkning och webb-scrape vid discovery. Dessa går inte via Model Roles utan via egna env-variabler.",
     source: "apps/viewser/lib/openai.ts · lib/asset-store/vision.ts · scripts/scrape_site.py",
     count: "3 anropspunkter",
-    model: "gpt-5.5 (fallback sedan 2026-06-11)",
+    model: `${MODEL_FACTS.chatFallbackModel} (kod-fallback, env-styrd)`,
     tone: "warning",
   },
   {
@@ -255,7 +267,7 @@ export default function RollerVsAgenterModeller() {
           rows={MODEL_ROLES}
         />
         <Text size="small" tone="tertiary">
-          Källa: `governance/policies/llm-models.v1.json` (v10). Att byta modell för en roll är en
+          Källa: `governance/policies/llm-models.v1.json` (v{MODEL_FACTS.llmModelsVersion}). Att byta modell för en roll är en
           policy-bump (version-höjning) — inte en kodändring. Redigerbart i backoffice → "Model
           Roles".
         </Text>
@@ -349,7 +361,8 @@ export default function RollerVsAgenterModeller() {
 
       <Stack gap={4}>
         <Text size="small" tone="tertiary">
-          Källor (repo): `llm-models.v1.json` (v10), `roles.py` (ROLE_CONTRACTS), `lib/openai.ts`,
+          Källor (repo): `llm-models.v1.json` (v{MODEL_FACTS.llmModelsVersion}), `roles.py` (ROLE_CONTRACTS), `lib/openai.ts`,
+          fakta-block per {MODEL_FACTS.generatedAt} (autogenererat av `update_canvas_facts.py`),
           `lib/asset-store/vision.ts`, `scripts/scrape_site.py`, `SOUL.md`.
         </Text>
         <Text size="small" tone="tertiary">

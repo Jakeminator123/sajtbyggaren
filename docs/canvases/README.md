@@ -41,8 +41,11 @@ canvases följer inte med av misstag.
 Steward äger de delade canvaserna, på samma sätt som `docs/current-focus.md`
 och `docs/handoff.md`:
 
-- Fakta-blocket i begreppskartan (antal scaffolds/dossiers på disk,
-  kvalitetsmålen från `page-quality-traits.v1.json`) räknas fram från repot:
+- Fakta-blocken räknas fram från repot — begreppskartans block (antal
+  scaffolds/dossiers på disk, kvalitetsmålen från
+  `page-quality-traits.v1.json`) och roll/modell-kartans block
+  (llm-models-policyversionen, motorns distinkta modellsträngar och
+  kod-fallbackarna för chatt/vision/discovery, regex-parsade ur källfilerna):
 
   ```powershell
   python scripts/update_canvas_facts.py          # uppdatera blocket
