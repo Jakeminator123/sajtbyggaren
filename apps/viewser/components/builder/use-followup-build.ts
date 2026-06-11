@@ -126,6 +126,20 @@ export type FollowupToolIntent =
         role: string;
         assetId: string;
         filename: string;
+        /**
+         * Resten av AssetRef:en från /api/upload-asset (task A,
+         * 2026-06-11): Python-konsumenten bygger en schema-komplett
+         * AssetRef av params och skriver den till brand/gallery. Med
+         * lokal asset-store kan mimeType/sizeBytes kompletteras från
+         * manifest.json på disk, men blob-drivern saknar lokal disk —
+         * skicka därför alltid med hela refen (inkl. sourceUrl).
+         */
+        mimeType?: string;
+        sizeBytes?: number;
+        width?: number;
+        height?: number;
+        placement?: string;
+        sourceUrl?: string;
         alt?: string;
         /** Operatörens fria önskemål — kan kräva copy-specialisten. */
         hint?: string;

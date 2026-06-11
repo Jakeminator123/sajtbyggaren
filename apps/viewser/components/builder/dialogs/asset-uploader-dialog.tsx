@@ -241,12 +241,25 @@ export function AssetUploaderDialog({
       // är exakta — backend slipper regex:a fram referensraden ur prompten.
       // hint-fritexten följer med strukturerat; den kan kräva copy-
       // specialisten och är det enda LLM-värdiga i detta verktyg.
+      // Task A (2026-06-11): hela AssetRef:en följer med så Python-
+      // konsumenten kan bygga en schema-komplett ref utan disk-lookup
+      // (blob-drivern har ingen lokal manifest.json att falla tillbaka på).
       const toolIntent: FollowupToolIntent = {
         tool: "asset_set",
         params: {
           role: uploadedRef.role,
           assetId: uploadedRef.assetId,
           filename: uploadedRef.filename,
+          mimeType: uploadedRef.mimeType,
+          sizeBytes: uploadedRef.sizeBytes,
+          ...(uploadedRef.width ? { width: uploadedRef.width } : {}),
+          ...(uploadedRef.height ? { height: uploadedRef.height } : {}),
+          ...(uploadedRef.placement
+            ? { placement: uploadedRef.placement }
+            : {}),
+          ...(uploadedRef.sourceUrl
+            ? { sourceUrl: uploadedRef.sourceUrl }
+            : {}),
           ...(uploadedRef.alt ? { alt: uploadedRef.alt } : {}),
           ...(trimmedHint ? { hint: trimmedHint } : {}),
         },

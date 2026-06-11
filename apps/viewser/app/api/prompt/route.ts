@@ -152,6 +152,18 @@ const PromptPayloadSchema = z.object({
   // och triggar aldrig ensam en build. Max 5 (speglar MAX_MARKED_SECTIONS
   // i preview-inspector-context.tsx).
   markedSections: z.array(MarkedSectionSchema).max(5).optional(),
+  // Specialist-dispatch steg 2 (task A): strukturerat verktygs-intent från
+  // builder-dialogerna ({tool, params}). Skalet hålls permissivt — params
+  // djup-valideras per tool i sin konsument (asset_set re-valideras fält
+  // för fält i prompt-runner.ts + Python-helpern). Bara asset_set forwardas
+  // till CLI:t; övriga tools konsumeras i sina egna sömmar och ignoreras
+  // här precis som när fältet strippades tyst av det icke-stricta schemat.
+  toolIntent: z
+    .object({
+      tool: z.string().trim().min(1).max(40),
+      params: z.record(z.string(), z.unknown()),
+    })
+    .optional(),
 }).superRefine((payload, context) => {
   if (payload.mode === "followup" && !payload.siteId) {
     context.addIssue({
@@ -179,6 +191,13 @@ const PromptPayloadSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["markedSections"],
       message: "markedSections kan bara anges i follow-up-läge.",
+    });
+  }
+  if (payload.toolIntent && payload.mode !== "followup") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["toolIntent"],
+      message: "toolIntent kan bara anges i follow-up-läge.",
     });
   }
 });
@@ -913,6 +932,7 @@ async function runPromptBuildOnce(
     baseRunId: payload.baseRunId,
     discovery: payload.discovery,
     markedSections: payload.markedSections,
+    toolIntent: payload.toolIntent,
   });
   options?.onPhase1Done?.();
 

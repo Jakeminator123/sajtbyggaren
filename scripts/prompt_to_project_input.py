@@ -66,6 +66,10 @@ from packages.generation.discovery.resolve import (  # noqa: E402
 )
 from packages.generation.followup import copy_directives as _copy_directives  # noqa: E402
 from packages.generation.followup import theme_directives as _theme_directives  # noqa: E402
+from packages.generation.followup.asset_intent import (  # noqa: E402
+    apply_asset_set_intent,
+    parse_tool_intent,
+)
 from packages.generation.followup.hero_headline_pin import (  # noqa: E402
     latest_run_dir_for_site as _latest_run_dir_for_site,
 )
@@ -3096,6 +3100,28 @@ def _is_unapplied_hero_rewrite(
     return not name_changed and not tagline_changed
 
 
+def _media_assets_changed(
+    previous: dict[str, Any], merged: dict[str, Any]
+) -> bool:
+    """True when this follow-up actually changed an operator asset.
+
+    Compares the AssetRef-bearing surfaces (brand.logo, brand.heroImage,
+    gallery[]) between previous and merged. Used by rule 4 below to
+    suppress the "image-asset unapplied" post when the structured
+    asset_set intent (task A) DID land a swap.
+    """
+    previous_brand = (
+        previous.get("brand") if isinstance(previous.get("brand"), dict) else {}
+    )
+    merged_brand = (
+        merged.get("brand") if isinstance(merged.get("brand"), dict) else {}
+    )
+    for key in ("logo", "heroImage"):
+        if previous_brand.get(key) != merged_brand.get(key):
+            return True
+    return (previous.get("gallery") or []) != (merged.get("gallery") or [])
+
+
 def compute_unapplied_followup_intents(
     previous: dict[str, Any],
     merged: dict[str, Any],
@@ -3185,8 +3211,13 @@ def compute_unapplied_followup_intents(
     # build-result.json points the operator to the structured asset tools
     # instead of implying the swap happened. Verb gate uses the same
     # outside-quotes skeleton as the guard so a media noun in quoted copy
-    # never triggers the post.
-    if _copy_directives.is_media_change_request(follow_up_prompt):
+    # never triggers the post. Suppressed when an asset ACTUALLY landed in
+    # this follow-up (the structured asset_set intent wrote brand/gallery,
+    # task A) — posting "kunde inte byta bilden" over a swap that DID happen
+    # would be just as dishonest as implying one that did not.
+    if _copy_directives.is_media_change_request(
+        follow_up_prompt
+    ) and not _media_assets_changed(previous, merged):
         skeleton = _text_outside_quotes(follow_up_prompt) or normalised_text
         if _contains_any_word(
             skeleton, _copy_directives._COPY_DIRECTIVE_REPLACE_KEYWORDS
@@ -3406,12 +3437,21 @@ def generate(
     discovery: dict[str, Any] | None = None,
     enable_copy_directive_llm: bool = False,
     marked_sections: list[dict[str, str]] | None = None,
+    tool_intent: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """End-to-end: prompt -> Site Brief -> Project Input on disk.
 
     Returns (project_input, meta, project_input_path, meta_path). Used
     by both the CLI main() and the unit tests so the test path doesn't
     have to assemble argv-shaped input.
+
+    ``tool_intent`` (specialist-dispatch steg 2, task A) is the parsed
+    ``--tool-intent`` payload. Only ``asset_set`` is consumed Python-side
+    today: the validated AssetRef lands on the MERGED project input
+    (brand.logo / brand.heroImage / gallery[]) so the structured intent
+    wins even though the accompanying free-text prompt is no-op:ed by
+    the bildbyte-guard. Invalid intents are logged and skipped — never
+    a build failure.
     """
     language = detect_language(prompt)
     try:
@@ -3480,6 +3520,26 @@ def generate(
         )
     else:
         project_input = candidate_project_input
+
+    # asset_set-konsumenten (task A): den strukturerade refen appliceras
+    # EFTER merge så den vinner över alla textbaserade sömmar, men FÖRE
+    # _validate_against_schema så en ogiltig ref aldrig når disk. Fel
+    # loggas och hoppas över — fritextprompten är redan no-op:ad av
+    # bildbyte-guarden, så bygget blir ett ärligt no-op med rule 4-post
+    # i unappliedFollowupIntents i stället för ett kraschat bygge.
+    applied_tool_intent: dict[str, Any] | None = None
+    if (
+        base_project_input is not None
+        and tool_intent is not None
+        and tool_intent.get("tool") == "asset_set"
+    ):
+        params = tool_intent.get("params")
+        try:
+            applied_tool_intent = apply_asset_set_intent(
+                project_input, params if isinstance(params, dict) else {}
+            )
+        except ValueError as exc:
+            print(f"tool-intent: asset_set hoppades över: {exc}", file=sys.stderr)
 
     # Discovery Resolver (B121): konsoliderar wizard/scrape/brief/taxonomy
     # till ett deterministiskt Project Input + ``DiscoveryDecision``-sidecar
@@ -3605,6 +3665,11 @@ def generate(
         )
         if unapplied_followup_intents:
             meta["unappliedFollowupIntents"] = unapplied_followup_intents
+    # asset_set-spårbarhet (task A): meta-sidecaren namnger den landade
+    # refen så Backoffice/build-result kan visa VAD det strukturerade
+    # intentet faktiskt skrev — samma mönster som appliedFocusSections.
+    if applied_tool_intent is not None:
+        meta["appliedToolIntent"] = applied_tool_intent
     # B132 (Scout-orchestrator merge 2026-05-19): wizardMustHave från
     # _wizard_must_have_from_discovery() flödar genom meta-sidecaren och
     # konsumeras av _prompt_meta_wizard_must_have() i build_site.py för
@@ -3646,6 +3711,7 @@ def generate_followup(
     runs_dir: Path = DEFAULT_RUNS_DIR,
     enable_copy_directive_llm: bool = False,
     marked_sections: list[dict[str, str]] | None = None,
+    tool_intent: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """Generate a new Project Input version from an existing meta sidecar.
 
@@ -3752,6 +3818,7 @@ def generate_followup(
         discovery=discovery,
         enable_copy_directive_llm=enable_copy_directive_llm,
         marked_sections=applied_focus_sections or None,
+        tool_intent=tool_intent,
     )
 
 
@@ -3824,6 +3891,18 @@ def main() -> int:
             "with a warning."
         ),
     )
+    parser.add_argument(
+        "--tool-intent",
+        default=None,
+        help=(
+            "Structured tool intent JSON from the builder UI "
+            '({"tool": ..., "params": {...}}). Only valid with '
+            "--followup-site-id. Python consumes asset_set (the validated "
+            "AssetRef lands on brand.logo / brand.heroImage / gallery[]); "
+            "other tools are ignored here with a warning — their seams "
+            "live elsewhere."
+        ),
+    )
     args = parser.parse_args()
 
     if args.followup_site_id and args.discovery:
@@ -3843,6 +3922,11 @@ def main() -> int:
             "--marked-sections requires --followup-site-id. Preview "
             "markings only make sense against an existing version."
         )
+    if args.tool_intent and not args.followup_site_id:
+        raise SystemExit(
+            "--tool-intent requires --followup-site-id. Structured tool "
+            "intents only make sense against an existing version."
+        )
 
     marked_sections_payload: list[dict[str, str]] | None = None
     if args.marked_sections:
@@ -3850,6 +3934,25 @@ def main() -> int:
             marked_sections_payload = parse_marked_sections(args.marked_sections)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
+
+    tool_intent_payload: dict[str, Any] | None = None
+    if args.tool_intent:
+        try:
+            tool_intent_payload = parse_tool_intent(args.tool_intent)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        if tool_intent_payload["tool"] != "asset_set":
+            # Forward-compat: theme_change/variant_change/section_add/
+            # content_import konsumeras i sina egna sömmar (TS-sidan idag).
+            # En okänd tool här är ingen byggblockerare — prompten bär
+            # fortfarande operatörens avsikt som fallback.
+            print(
+                "tool-intent: "
+                f"{tool_intent_payload['tool']!r} konsumeras inte av "
+                "Python-helpern; ignoreras (prompten gäller).",
+                file=sys.stderr,
+            )
+            tool_intent_payload = None
 
     discovery_payload: dict[str, Any] | None = None
     if args.discovery:
@@ -3882,6 +3985,7 @@ def main() -> int:
             # default (off) so they stay deterministic and offline.
             enable_copy_directive_llm=True,
             marked_sections=marked_sections_payload,
+            tool_intent=tool_intent_payload,
         )
     else:
         project_input, meta, project_input_path, meta_path = generate(

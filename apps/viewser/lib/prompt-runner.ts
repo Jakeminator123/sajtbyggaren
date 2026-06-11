@@ -83,12 +83,67 @@ export type PromptHelperOptions = {
    * aldrig ensam en build.
    */
   markedSections?: { routeId: string; sectionId: string; note?: string }[];
+  /**
+   * Specialist-dispatch steg 2 (task A): strukturerat verktygs-intent
+   * från builder-dialogerna. Bara ``asset_set`` forwardas som
+   * ``--tool-intent <json>`` (övriga tools konsumeras i sina egna
+   * sömmar). Params saneras fält för fält före spawn — Python-helpern
+   * re-validerar dessutom allt mot AssetRef-schemat innan refen landar
+   * i Project Input. Endast giltig i follow-up-läge.
+   */
+  toolIntent?: { tool: string; params: Record<string, unknown> };
 };
 
 // Samma slug-grammatik som /api/prompt-schemats SECTION_REF_PATTERN och
 // Python-sidans parse_marked_sections — defense-in-depth eftersom spawn()
 // inte quotar argument.
 const SECTION_REF_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+
+// asset_set-sanering: speglar _ASSET_ID_PATTERN/_FILENAME_PATTERN i
+// packages/generation/followup/asset_intent.py. Inga path-tecken i
+// filename (refereras som /uploads/<filename> + läses från disk i
+// manifest-fallbacken på Python-sidan).
+const ASSET_ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
+const ASSET_FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,199}$/;
+const ASSET_ROLES = new Set(["logo", "hero", "gallery"]);
+
+/**
+ * Bygg den sanerade ``--tool-intent``-payloaden eller null när intentet
+ * inte ska forwardas (annat tool än asset_set, eller ogiltiga
+ * obligatoriska fält). Optionella fält släpps bara igenom när de har
+ * rätt typ — Python-helpern är auktoritativ validering, det här är
+ * defense-in-depth före spawn.
+ */
+function sanitizedAssetSetIntent(
+  toolIntent: NonNullable<PromptHelperOptions["toolIntent"]>,
+): { tool: "asset_set"; params: Record<string, unknown> } | null {
+  if (toolIntent.tool !== "asset_set") return null;
+  const params = toolIntent.params ?? {};
+  const role = typeof params.role === "string" ? params.role : "";
+  const assetId = typeof params.assetId === "string" ? params.assetId : "";
+  const filename = typeof params.filename === "string" ? params.filename : "";
+  if (
+    !ASSET_ROLES.has(role) ||
+    !ASSET_ID_PATTERN.test(assetId) ||
+    !ASSET_FILENAME_PATTERN.test(filename)
+  ) {
+    return null;
+  }
+  const safeParams: Record<string, unknown> = { role, assetId, filename };
+  for (const key of ["mimeType", "alt", "hint", "placement", "sourceUrl"] as const) {
+    const value = params[key];
+    if (typeof value === "string" && value.trim()) {
+      safeParams[key] = value.trim().slice(0, 500);
+    }
+  }
+  for (const key of ["sizeBytes", "width", "height"] as const) {
+    const value = params[key];
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      safeParams[key] = value;
+    }
+  }
+  return { tool: "asset_set", params: safeParams };
+}
 
 /**
  * Spawn `scripts/prompt_to_project_input.py` and parse its stdout.
@@ -151,6 +206,12 @@ export async function runPromptToProjectInput(
         }));
       if (safeMarkings.length) {
         args.push("--marked-sections", JSON.stringify(safeMarkings));
+      }
+    }
+    if (options.toolIntent) {
+      const safeIntent = sanitizedAssetSetIntent(options.toolIntent);
+      if (safeIntent) {
+        args.push("--tool-intent", JSON.stringify(safeIntent));
       }
     }
   } else if (options.baseRunId) {
