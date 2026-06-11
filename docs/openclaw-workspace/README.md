@@ -44,6 +44,28 @@ den kör enbart de sanktionerade in-repo-actions som `TOOLS.md` och
 `action-registry.json` definierar. Samma regel som ovan: extern OpenClaw är
 referens, inte arkitektur.
 
+## OpenAI docs-MCP för agenter (samma uppslagsverk-roll)
+
+OpenAI hostar en **officiell publik docs-MCP** på
+`https://developers.openai.com/mcp` (verifierad med riktigt MCP-handshake:
+`serverInfo: openai-docs-mcp 1.0.0`, ingen auth). Konfigurerad i
+`.cursor/mcp.json` (gitignorerad — konfig per maskin) som server-id
+`openai-docs`. Använd den för **färsk** info när du jobbar mot OpenAI-API:t i
+detta repo — t.ex. modellnamn/priser för `llm-models.v1.json`, Responses
+API-parametrar/limits, eller OpenAPI-scheman:
+
+- `search_openai_docs` — sök i `platform.openai.com` + `developers.openai.com`.
+- `list_openai_docs` — bläddra/lista sidor när rätt sökfråga är okänd.
+- `fetch_openai_doc` — hämta exakt markdown för en sida (scheman, exempel,
+  limits) så svar går att citera till källan.
+- `list_api_endpoints` — lista alla API-endpoints ur OpenAPI-specen.
+- `get_openapi_spec` — OpenAPI-spec för en endpoint, valfritt filtrerad på
+  kodexempel per språk.
+
+Samma avgränsning som `openclaw-docs`: detta är ett **uppslagsverk för agenter**,
+inte en produkt-runtime-yta. Motorns Model Roles (`llm-models.v1.json`) anropar
+OpenAI via egna resolvers — aldrig via denna MCP-server.
+
 ## Vad som INTE ska byggas
 - Ingen extern OpenClaw-daemon eller gateway-process.
 - Inga plugins, ingen multi-channel.
