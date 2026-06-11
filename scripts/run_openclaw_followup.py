@@ -131,15 +131,55 @@ _CONVERSATION_DECISION_ANSWERS = {
 # boolean envs); default ON because the chain (run_followup_chain) already
 # escalates - the bridge gate staying regex-only just made the two halves
 # disagree on exactly the ambiguous messages the fallback exists for.
+#
+# Resolution order mirrors apps/viewser's openaiEnv + backoffice env_panel:
+# process env wins, then the repo-root ``.env`` (single-key parse, never
+# mutating os.environ), then the default (on). The .env fallback is what makes
+# the backoffice toggle (Dirigentpult flik B) take effect on the NEXT
+# follow-up: every follow-up spawns a fresh bridge process, so a .env edit is
+# picked up per spawn - UNLESS the variable was already in the spawning
+# server's process env (then a dev-server restart is needed; the UI says so).
 _ROUTER_FALLBACK_ENV = "OPENCLAW_ROUTER_LLM_FALLBACK"
 _ENV_OFF_VALUES = frozenset({"0", "false", "no", "off"})
+_REPO_DOTENV_PATH = REPO_ROOT / ".env"
+
+
+def _read_repo_dotenv_value(name: str, dotenv_path: Path | None = None) -> str | None:
+    """Minimal repo-root ``.env`` parse for ONE key (never mutates os.environ).
+
+    Mirrors ``backoffice/env_panel.py:_read_repo_dotenv_value`` (kept local on
+    purpose: scripts/ must not import backoffice). Simple KEY=VALUE lines,
+    ``#`` comments ignored, surrounding quotes stripped, last assignment wins.
+    Never throws: a missing/unreadable file yields None.
+    """
+    import re
+
+    path = dotenv_path or _REPO_DOTENV_PATH
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    value: str | None = None
+    pattern = re.compile(r"^\s*(?:export\s+)?([A-Z0-9_]+)\s*=\s*(.*)\s*$")
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        match = pattern.match(line)
+        if match and match.group(1) == name:
+            raw = match.group(2).strip()
+            if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in {'"', "'"}:
+                raw = raw[1:-1]
+            value = raw or None
+    return value
 
 
 def _router_fallback_enabled() -> bool:
     import os
 
-    value = os.environ.get(_ROUTER_FALLBACK_ENV, "")
-    return value.strip().lower() not in _ENV_OFF_VALUES
+    value = os.environ.get(_ROUTER_FALLBACK_ENV)
+    if value is None:
+        value = _read_repo_dotenv_value(_ROUTER_FALLBACK_ENV)
+    return (value or "").strip().lower() not in _ENV_OFF_VALUES
 
 
 def _classify_router(message: str, *, site_id: str | None):
