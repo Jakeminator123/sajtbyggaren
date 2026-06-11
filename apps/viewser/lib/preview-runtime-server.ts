@@ -105,7 +105,7 @@ export function installViewserPreviewRuntimeHandlers(): void {
         }
         const result = await createSandboxPreview({ siteId, runId: config.runId });
         if (result.status === "ready" && result.url) {
-          recordSandboxSession(siteId, result.sandboxId ?? siteId, result.url);
+          await recordSandboxSession(siteId, result.sandboxId ?? siteId, result.url);
         }
         return {
           status: result.status === "ready" ? "ready" : "failed",

@@ -17,6 +17,12 @@ följdprompt och run-historik körs fortfarande lokalt i den här versionen
 
 ## Vad som fungerar hostat
 
+- Hostat BYGGE av användarsajter (P2, ADR 0048) bakom `VIEWSER_ENABLE_HOSTED_BUILD=1`:
+  `/api/prompt` kör Python-pipen i en Vercel Sandbox, publicerar builden till blob
+  och sätter pekaren i kv-store; status pollas via `GET /api/hosted-build/<runId>`.
+  Kräver blob-token, kv-store-env (ADR 0049) och en uppladdad build-kontext
+  (`apps/viewser/scripts/upload-build-context-to-blob.mjs`, körs lokalt av operatören).
+  Publik åtkomst skyddas av per-ip-rate-limit (ADR 0050), inte auth.
 - UI:t laddar (marknadssida och studio-skal).
 - `/api/discovery-options` — policy- och variantfilerna bundlas in via
   `outputFileTracingIncludes` i `next.config.ts`, så wizardens alternativ finns
@@ -30,7 +36,8 @@ följdprompt och run-historik körs fortfarande lokalt i den här versionen
 
 | Yta | Hostat beteende | Varför |
 | --- | --- | --- |
-| `/api/prompt`, `/api/build`, `/api/scrape-site` | 501 med svensk text | Ingen Python eller `.venv` hostat — bygg-orkestreringen är lokal |
+| `/api/prompt` | Hostat bygge i sandbox när `VIEWSER_ENABLE_HOSTED_BUILD=1`; annars 501 | P2/ADR 0048 — utan flaggan (eller utan blob/kv-env) degraderar routen ärligt |
+| `/api/build`, `/api/scrape-site` | 501 med svensk text | Ingen Python eller `.venv` hostat — dessa är fortsatt lokala |
 | `/api/preview/[siteId]` POST | 501 om inte opt-in | En publik, oautentiserad endpoint som kan starta sandboxar är just den öppna relä-risken som parkerade PR #156 |
 | `/api/runs` plus run-detaljer | tom lista / 404 plus notis | Ingen beständig repo-disk hostat (`data/runs/` finns inte) |
 | App-auth och tenant-isolering | byggs inte | Auth/billing är parkerat (ADR 0035) — gatas hostat i stället |
@@ -43,13 +50,16 @@ och får aldrig committas (utom `apps/viewser/.env.example`, som bara är en mal
 | Variabel | Syfte |
 | --- | --- |
 | `VERCEL=1` | Sätts automatiskt hostat — detekteras av `isHostedVercelRuntime()` |
-| `VERCEL_OIDC_TOKEN` | Injiceras nativt i Vercel-funktioner; sandbox-runnern autentiserar med den (ingen lokal `vercel env pull`-dans hostat) |
+| `VERCEL_OIDC_TOKEN` | Sätts ALDRIG som statisk env-var hostat (en statisk token dör efter ~12 h och skuggar den färska). Plattformen levererar tokenen per request via request-kontexten; `resolveCredentials` adopterar den automatiskt |
 | `VIEWSER_PREVIEW_MODE` | Sätt till sandbox-läget för hostad förhandsvisning (exakt token finns dokumenterad i `apps/viewser/.env.example`) |
 | `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE` | Klient-spegel av samma läge (samma värde) |
 | `VIEWSER_ALLOWED_HOSTS` | Den hostade domänen, så `assertLocalhost` släpper in operatören på rätt host |
 | `VIEWSER_ENABLE_HOSTED_SANDBOX` | Sätt `1` för att aktivera den gatade hostade sandbox-previewen (default av) |
 | `OPENAI_API_KEY` | Server-side OpenAI-anrop |
-| `BLOB_READ_WRITE_TOKEN` / `BLOB_STORE_ID` | Artefaktkälla för hostad sandbox-preview (snapshot av generated-files) |
+| `BLOB_READ_WRITE_TOKEN` / `BLOB_STORE_ID` | Artefaktkälla för hostad sandbox-preview och hostad bygg-output |
+| `VIEWSER_ENABLE_HOSTED_BUILD` | Sätt `1` för hostat bygge i sandbox (P2, ADR 0048); default av |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Injiceras av Upstash-marketplace-integrationen; kv-store-adaptern (ADR 0049) auto-detekterar |
+| `VIEWSER_RATE_LIMIT_<SCOPE>` | Override av per-ip-kvoterna (ADR 0050); 0 stänger av ett scope |
 
 ## Hård förutsättning innan sandbox-endpointen aktiveras
 
