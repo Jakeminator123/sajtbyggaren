@@ -1,11 +1,57 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-11 ~13:30 UTC+2, checkpoint efter dagens eftermiddagspass:
-#288 (review-sweep) + #289 (guard-snabbning) + #290 (analysrapporten) mergade
-till jakob-be och main-sync nr 2 (`main` ff till `jakob-be`). Verifierad
-`origin/jakob-be = origin/main = a314fe5a`.
+**Datum:** 2026-06-11 ~22:55 UTC+2, checkpoint efter kvällspasset:
+OpenClaw-smartness-sviten + B198 del a + Dirigentpult-fallback + #269 +
+`/kort`-regeln. `origin/jakob-be = 6d740fcc` (rent träd, local == origin).
+Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-11 ~13:30 — PUBLIK HOSTAD DRIFT LIVE + #288/#289/#290 (AUKTORITATIVT BLOCK)
+## PASS 2026-06-11 ~22:55 — OPENCLAW-SMARTNESS + /KORT + STÄDNING (AUKTORITATIVT BLOCK)
+
+> **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
+> verifiera alltid mot git/koden.**
+>
+> **Git:** `origin/jakob-be = 6d740fcc` (rent träd, local == origin). Lokal
+> `main`-pekare fast-forwardad till `origin/main = cb0f6a5d` (ren bokmärkesflytt).
+> Lokala branches kvar: `christopher`, `jakob-be`, `main` — de tre mergade
+> `backup_*`/`backup-160-BRA` raderade lokalt (finns kvar på origin). Inga extra
+> worktrees. Prod deployas från `main`.
+>
+> **Main-sync-status (VIKTIGT för nästa agent):** `main` på GitHub ligger
+> fortfarande på `cb0f6a5d` och saknar hela kvällspasset (#296–#303 + #269 +
+> `/kort`), dvs. ~14 commits efter `jakob-be`. Main-sync körs i ett parallellt
+> operatörsspår (separat agent). Pusha INTE `jakob-be → main` på eget bevåg —
+> bekräfta med operatören / kontrollera parallellspåret först.
+>
+> **Kvällens merges (till jakob-be):** **#297** KÖR-6b i bryggan (routerModel-
+> fallback för tvetydiga följdprompter, kill-switch `OPENCLAW_ROUTER_LLM_FALLBACK`,
+> EN klassificering per anrop). **#298** dirigent-bekräftelse i chatten efter
+> synligt applicerad ändring (grundad i fakta, tidsboxad). **#301** B198 del a
+> (namngiven dossier "resend" monterar `resend-contact-form` i stället för
+> mailto-default). **#302** fallback-toggle i Dirigentpulten. **#303** hardening
+> efter extern riskmatris. **#299/#300** (parallellspår) env-dok + ignoreCommand,
+> kompletterad med `docs/openclaw-workspace` i `2ef8f116`. **#269** Christophers
+> Verktyg-omgörning fas 1–3 mergad efter godkänd review. Plus `/kort`-regeln
+> (`6d740fcc`): operatören skriver `/kort` → ultrakort svar/matris.
+>
+> **Vercel-env verifierad:** 22 variabler, identiska i Production/Preview/
+> Development (14 app-ägda + 8 integrationsägda Upstash/Blob). Ingen statisk
+> `VERCEL_OIDC_TOKEN` hostat. `vercel link` körs FRÅN REPO-ROTEN (monorepo-länk
+> `.vercel/repo.json` → `apps/viewser`); `vercel env pull` likaså från roten.
+>
+> **Nästa prioriteringar (se current-focus för full lista):** (1) review-kedjan
+> #292 → #304 (B194-stängning, Christophers lane). (2) main-sync-uppföljning.
+> (3) B198 del b — synlig contact-form-render på ecommerce-lite. (4) ADR 0052-
+> städ (död `gpt-5.4`-default + design-tooling-trådning). ADR-liggare: nästa
+> lediga **0055** (0054 reserverad för MCP-intagsgrinden).
+>
+> **Notisen om `fix/kvallsbatch-hardening`:** utredd och ofarlig — den branchen
+> bytte tillfälligt din huvud-checkout under parallellspåret men rördes inte;
+> innehållet ligger nu i #303 och branchen är borta. `git fetch --prune` rensar
+> bara remote-tracking-pekare för redan-mergade brancher, aldrig lokalt arbete.
+
+---
+
+## PASS 2026-06-11 ~13:30 — PUBLIK HOSTAD DRIFT LIVE + #288/#289/#290 (HISTORIK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**

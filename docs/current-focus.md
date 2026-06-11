@@ -6,11 +6,14 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-11 ~21:05 — kvällspasset: OpenClaw-smartness-sviten mergad, #296–#298 + #301)
+## Status nu (2026-06-11 ~22:55 — kvällspasset: OpenClaw-smartness mergad + /kort-regel + lokal städning)
 
-**Git:** `jakob-be = 05e62911` (rent träd, local == origin). Main-sync hanteras
-i parallellt operatörsspår (separat agent); kvällens fyra merges adderar till
-main-eftersläpet tills nästa sync. Prod (`sajtbyggaren-viewser.vercel.app`)
+**Git:** `jakob-be = 6d740fcc` (rent träd, local == origin). Lokal `main`-pekare
+fast-forwardad till `origin/main` (`cb0f6a5d`) — bara en bokmärkesflytt, inget
+arbete rört. Lokala branches städade: `christopher`, `jakob-be`, `main` kvar;
+de tre mergade `backup_*`/`backup-160-BRA` raderade lokalt (finns kvar på
+origin). Inga extra worktrees. Main-sync (kvällens senare merges → `main`)
+hanteras i parallellt operatörsspår. Prod (`sajtbyggaren-viewser.vercel.app`)
 deployas från `main`.
 
 **Kvällens facit (2026-06-11 kväll, fyra PR:ar mergade till jakob-be):**
@@ -32,6 +35,13 @@ deployas från `main`.
 - Operatörs-env: prune-taken höjda 6→12 (`SAJTBYGGAREN_MAX_RUNS/GENERATED/
   PROMPT_INPUTS` i lokala `.env`); operatörens manuella radering av
   `data/runs` bekräftad ofarlig (PI-snapshotkedjan intakt).
+- **/kort-regel** (`6d740fcc`, direktcommit): ny `governance/rules/13-kort-svar.md`
+  (+ `.cursor`-spegel) — operatören skriver `/kort` → ultrakort svar, matris vid
+  strukturerat innehåll. `alwaysApply: true`.
+- Verifiering: #299/#300 + Vercel-env (22 vars, identiska i Prod/Preview/Dev)
+  bekräftade inne på `jakob-be`; `ignoreCommand` utökad med
+  `docs/openclaw-workspace` (`2ef8f116`). Notisen om `fix/kvallsbatch-hardening`
+  utredd: den branchen är borta, innehållet ligger i #303 — inget kvar att fixa.
 
 **Stora bilden:** oförändrad sedan förmiddagen — P2 skeppad, hostad publik
 drift PÅ med rate-limit/TTL/B195/B196 (fullt block i arkivet:
@@ -97,13 +107,14 @@ direktcommits):**
 - `christopher`-lanen äger: `use-followup-build.ts`, dialogerna,
   viewser-frontend/inspector — rör ej.
 
-Last verified state: `dd30fb6b` (2026-06-11 ~22:40 UTC+2; `origin/jakob-be =
-dd30fb6b`, rent träd. Kvällen: #296/#297/#298/#301 (OpenClaw-smartness +
-B198 del a), #302 (fallback-toggle i Dirigentpulten), #303 (hardening efter
-extern riskmatris), #299/#300 (parallellspåret: env-dok + ignoreCommand,
-kompletterad med docs/openclaw-workspace i `2ef8f116`) samt **#269 mergad
-efter godkänd review**. ADR-liggare: nästa lediga **0055**; 0054 är
-reserverad för MCP-intagsgrinden.)
+Last verified state: `6d740fcc` (2026-06-11 ~22:55 UTC+2; `origin/jakob-be =
+6d740fcc`, rent träd, local == origin. Kvällen: #296/#297/#298/#301
+(OpenClaw-smartness + B198 del a), #302 (fallback-toggle i Dirigentpulten),
+#303 (hardening efter extern riskmatris), #299/#300 (parallellspåret: env-dok +
+ignoreCommand, kompletterad med docs/openclaw-workspace i `2ef8f116`), **#269
+mergad efter godkänd review**, samt `/kort`-regeln (`6d740fcc`). Lokal `main`
+fast-forwardad till `cb0f6a5d`; lokala backup-branches städade. ADR-liggare:
+nästa lediga **0055**; 0054 är reserverad för MCP-intagsgrinden.)
 
 ## Öppna PR att känna till
 
