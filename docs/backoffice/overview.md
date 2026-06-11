@@ -27,6 +27,7 @@ modell), eller **legacy/obsolet** (kandidat för att gömmas/arkiveras).
 
 | Sektion / vy | Källa | Status | Kommentar |
 | --- | --- | --- | --- |
+| Dirigentpult / Dirigentpult | `llm-models.v1.json`, `docs/openclaw-workspace/`, `data/model-pricing.json`, källkods-parsade env-defaults | aktiv | Överordnad styrsida (först i menyn): cockpit med flikar A-G. Modellroller redigeras via samma delade save-väg som LLM Engine-vyn (governance-validate + rollback); SOUL-editorn återanvänds path-låst från Identitet; action-status redigeras med ärlighetsbanner (status speglar kodstöd - togglar ingen förmåga); skills är text, inte behörighet; konduktör-rollerna visas read-only; tokenpriser läses read-only ur snapshotten med refresh-knapp mot `scripts/fetch_model_prices.py`. |
 | Status / Idag | `data/runs`, `data/evals/summaries/golden-path`, `governance/policies` | aktiv | Read-only landningsvy (default): senaste golden-path-eval, senaste körning, Quality Gate-sammandrag, kända brister och en färskhetsbricka per vy driven av registret. Inga subprocesser. |
 | Status / Översikt | `governance/policies`, `page-quality-traits.v1.json` | aktiv | Policy-/schema-/regel-/ADR-räknare + kvalitetsmål + snabbåtgärder + read-only golden-status. |
 | Status / Golden Path | `data/evals/summaries/golden-path` | aktiv | Read-only status för senaste golden-path-eval (ADR 0039), per-case-tabell + trösklar. |

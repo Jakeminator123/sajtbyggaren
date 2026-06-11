@@ -1,10 +1,11 @@
 {
   "$schema": "../schemas/backoffice-views.schema.json",
   "policyId": "backoffice-views.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
   "purpose": "Maskinverifierat register over varje backoffice-vy. For varje vy: vilken sektion den ligger i, vilken modul som ager den (ownerSource), dess status (active = speglar dagens motor och laser en riktig datayta; diagnostic = kor live-checks i stallet for att lasa en lagrad yta; stale/legacy = drift/pensioneringskandidat), vilka datakallor den laser (readsFrom) och nar entryn senast verifierades. tests/test_backoffice_registry.py laser bade detta register och backoffice.view_registry dubbelriktat: en ny vy i koden utan entry har = rott, och ett entry utan motsvarande vy i koden = rott. Vy-status speglar docs/backoffice/overview.md. Detta ar operatorens redigeringsyta (ADR 0002), inte anvandarens runtime.",
   "sections": [
+    "Dirigentpult",
     "Status",
     "Governance",
     "Identitet",
@@ -16,6 +17,15 @@
     "Underhåll"
   ],
   "views": [
+    {
+      "view": "Dirigentpult",
+      "section": "Dirigentpult",
+      "ownerSource": "backoffice.views.control_room",
+      "status": "active",
+      "readsFrom": ["governance/policies", "docs/openclaw-workspace", "data/model-pricing.json", "packages/generation/orchestration", "scripts"],
+      "lastVerified": "2026-06-11",
+      "note": "Överordnad styrsida (cockpit, flikar A-G): modellroller (delad save-väg med governance-validate + rollback), ENV-styrda chatt-/sidomodeller (read-only, defaults parsas ur källkod), SOUL-editor (återanvänd, path-låst), action-status (speglar kodstöd - togglar ingen förmåga), skills (text, inte behörighet), konduktör-roller (read-only) och tokenpris-snapshot + refresh via scripts/fetch_model_prices.py."
+    },
     {
       "view": "Idag",
       "section": "Status",

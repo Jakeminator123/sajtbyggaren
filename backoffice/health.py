@@ -81,6 +81,16 @@ def run_platform_baseline_check() -> CheckResult:
     return _run("check_platform_baseline.py", "--check")
 
 
+def run_fetch_model_prices() -> CheckResult:
+    """Refresh data/model-pricing.json via scripts/fetch_model_prices.py.
+
+    The script never crashes without network/MCP - it keeps the existing
+    snapshot and flags ``needsRefresh: true`` (Dirigentpult group G renders
+    that flag honestly). Same subprocess pattern as the governance checks.
+    """
+    return _run("fetch_model_prices.py")
+
+
 def run_pytest_governance() -> CheckResult:
     """Run pytest with the governance marker for fast feedback."""
     result = subprocess.run(
