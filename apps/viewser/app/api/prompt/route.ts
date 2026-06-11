@@ -98,6 +98,27 @@ const DiscoveryPayloadSchema = z
 // path-traversal och whitespace-injektion redan vid 400-validering.
 const RUN_ID_PATTERN = /^[a-zA-Z0-9._-]+$/;
 
+// ADR 0046: route-/sektions-id:n följer samma slug-grammatik som
+// data-section-id-markörerna i codegen (gemener/siffror/bindestreck).
+const SECTION_REF_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+
+/**
+ * En preview-markering från "Markera modul"-läget (ADR 0046).
+ * `routeId`/`sectionId` valideras hårt här (slug-grammatik) och igen på
+ * Python-sidan mot base-runens emittedSections-facit. `note` är fri
+ * kontext (sektionens rubriktext) — aldrig en instruktion.
+ */
+const MarkedSectionSchema = z
+  .object({
+    routeId: z.string().trim().regex(SECTION_REF_PATTERN, "Ogiltigt routeId."),
+    sectionId: z
+      .string()
+      .trim()
+      .regex(SECTION_REF_PATTERN, "Ogiltigt sectionId."),
+    note: z.string().trim().max(200).optional(),
+  })
+  .strict();
+
 const PromptPayloadSchema = z.object({
   // Master-prompten från discovery-wizarden kan bli flera kilobyte
   // (operatörens originaltext + 8 sektioner med kategori, kontakt,
@@ -126,6 +147,11 @@ const PromptPayloadSchema = z.object({
     .regex(RUN_ID_PATTERN, "Ogiltigt baseRunId.")
     .optional(),
   discovery: DiscoveryPayloadSchema.optional(),
+  // ADR 0046: operatörens preview-markeringar ("Markera modul"). Mjuk
+  // prioriteringssignal — valideras mot base-runens facit på Python-sidan
+  // och triggar aldrig ensam en build. Max 5 (speglar MAX_MARKED_SECTIONS
+  // i preview-inspector-context.tsx).
+  markedSections: z.array(MarkedSectionSchema).max(5).optional(),
 }).superRefine((payload, context) => {
   if (payload.mode === "followup" && !payload.siteId) {
     context.addIssue({
@@ -148,6 +174,13 @@ const PromptPayloadSchema = z.object({
       message: "baseRunId kan bara anges i follow-up-läge.",
     });
   }
+  if (payload.markedSections?.length && payload.mode !== "followup") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["markedSections"],
+      message: "markedSections kan bara anges i follow-up-läge.",
+    });
+  }
 });
 
 // B169: per-siteId mutex för prompt-flödet. Tidigare en enda global
@@ -168,6 +201,22 @@ const PromptPayloadSchema = z.object({
 // siteId) inte oavsiktligt nukas. Samma försiktiga identity-guard som
 // build-runner.ts.
 const promptInFlight = new Map<string, Promise<unknown>>();
+
+// ADR 0046: gruppera markeringarna till RouterContext.routeSections-formen
+// ({routeId: [sectionId, ...]}) för den deterministiska klassificeringen.
+// Tom/undefined input → undefined så classifyMessage-payloaden är oförändrad
+// när inga markeringar finns.
+function markedSectionsAsRouteSections(
+  markedSections: { routeId: string; sectionId: string }[] | undefined,
+): Record<string, string[]> | undefined {
+  if (!markedSections?.length) return undefined;
+  const grouped: Record<string, string[]> = {};
+  for (const { routeId, sectionId } of markedSections) {
+    const sections = (grouped[routeId] ??= []);
+    if (!sections.includes(sectionId)) sections.push(sectionId);
+  }
+  return grouped;
+}
 
 // Read the raw `status` field from build-result.json without trusting
 // its type. build_site.py writes "ok" / "degraded" / "failed" / "skipped";
@@ -778,6 +827,9 @@ async function runPromptBuildOnce(
   // spawn; on init or bridge failure it is simply null.)
   const routerDecisionPromise = classifyMessage(payload.prompt, {
     siteId: payload.siteId,
+    // ADR 0046: preview-markeringarna som read-only RouterContext-
+    // prioriteringssignal ({routeId: [sectionId]}). Aldrig build-styrande.
+    routeSections: markedSectionsAsRouteSections(payload.markedSections),
   }).catch(() => null);
 
   // Phase 1: prompt -> Project Input on disk (data/prompt-inputs/<siteId>.*).
@@ -786,6 +838,7 @@ async function runPromptBuildOnce(
     siteId: payload.siteId,
     baseRunId: payload.baseRunId,
     discovery: payload.discovery,
+    markedSections: payload.markedSections,
   });
   options?.onPhase1Done?.();
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   useFollowupBuild,
+  type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,16 @@ export function VariantPickerDialog({
     const chosen = options.find((o) => o.id === selectedId);
     if (!chosen) return;
     const prompt = `Byt sajtens design-grund till kategorin "${chosen.label}" (id: ${chosen.id}, scaffold: ${chosen.targetScaffoldLabel}, defaultVariantId: ${chosen.defaultVariantId}). Behåll allt innehåll, men anpassa layout, typografi och färgschema till den nya kategorins estetik.`;
-    const result = await runFollowup(prompt);
+    // Strukturerad intent (specialist-dispatch steg 2): operatören valde
+    // ett exakt taxonomi-id — backend ska inte behöva parsa tillbaka det
+    // ur prompttexten. Bara kategori-id:t skickas; scaffold/variant-
+    // resolven ägs av backend-taxonomin (att skicka härledda värden
+    // bjuder in drift).
+    const toolIntent: FollowupToolIntent = {
+      tool: "variant_change",
+      params: { categoryId: chosen.id },
+    };
+    const result = await runFollowup(prompt, { toolIntent });
     if (result.ok) {
       onOpenChange(false);
       setSelectedId(null);

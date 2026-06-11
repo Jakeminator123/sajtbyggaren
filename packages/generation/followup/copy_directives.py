@@ -1492,8 +1492,18 @@ def _is_content_rewrite_request(follow_up_prompt: str) -> bool:
     return _content_rewrite_target(follow_up_prompt) is not None
 
 
-def _build_site_state_for_copy_planning(merged: dict[str, Any]) -> dict[str, Any]:
-    """Read-only snapshot of the editable copy fields for the planner context."""
+def _build_site_state_for_copy_planning(
+    merged: dict[str, Any],
+    focus_sections: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    """Read-only snapshot of the editable copy fields for the planner context.
+
+    ``focus_sections`` (ADR 0046) carries the operator's validated preview
+    markings as a soft prioritisation signal — included in the snapshot so
+    the planner can bind an ambiguous "skriv om texten här" to the right
+    field. Never an instruction: the scope/target guards downstream are
+    unchanged.
+    """
     company = merged.get("company") if isinstance(merged.get("company"), dict) else {}
     services: list[dict[str, Any]] = []
     for service in merged.get("services") or []:
@@ -1505,7 +1515,7 @@ def _build_site_state_for_copy_planning(merged: dict[str, Any]) -> dict[str, Any
                     "summary": service.get("summary"),
                 }
             )
-    return {
+    state: dict[str, Any] = {
         "language": merged.get("language", "sv"),
         "company": {
             "name": company.get("name"),
@@ -1514,6 +1524,9 @@ def _build_site_state_for_copy_planning(merged: dict[str, Any]) -> dict[str, Any
         },
         "services": services,
     }
+    if focus_sections:
+        state["focusSections"] = [dict(entry) for entry in focus_sections]
+    return state
 
 
 def _site_state_grounding_text(
@@ -1557,6 +1570,7 @@ def _plan_copy_directives_via_llm(
     *,
     language: str,
     target: str,
+    focus_sections: list[dict[str, str]] | None = None,
 ) -> list[dict[str, Any]]:
     """Generate an edit plan (validated copyDirectives) for a rewrite request.
 
@@ -1568,15 +1582,26 @@ def _plan_copy_directives_via_llm(
     an about rewrite can never apply a services directive (or vice versa) and
     company-name/tagline are never generated - the scope-leak guard is locked
     in code, not just the system prompt (reviewer P1 2026-06-02).
+
+    ``focus_sections`` (ADR 0046): the operator's validated preview markings
+    are appended to the planner's prompt context as a Swedish focus note (a
+    soft prioritisation signal). The note is also part of the grounding text
+    for the ungrounded-number guard, since its content (section heading text)
+    comes from the rendered site itself.
     """
     try:
         from packages.generation.brief.extract import plan_copy_directives_llm
+        from packages.generation.followup.marked_sections import focus_note_for_llm
 
-        site_state = _build_site_state_for_copy_planning(merged)
+        site_state = _build_site_state_for_copy_planning(merged, focus_sections)
         company_state = site_state["company"]
+        focus_note = focus_note_for_llm(focus_sections or [])
+        planner_prompt = (
+            f"{follow_up_prompt}\n\n{focus_note}" if focus_note else follow_up_prompt
+        )
         model = resolve_copy_directive_model()
         raw_directives = plan_copy_directives_llm(
-            follow_up_prompt,
+            planner_prompt,
             company_name=str(company_state.get("name") or ""),
             tagline=str(company_state.get("tagline") or ""),
             story=str(company_state.get("story") or ""),
@@ -1586,7 +1611,7 @@ def _plan_copy_directives_via_llm(
         )
     except Exception:  # noqa: BLE001
         return []
-    grounding_text = _site_state_grounding_text(site_state, follow_up_prompt)
+    grounding_text = _site_state_grounding_text(site_state, planner_prompt)
     # For a services rewrite, resolve the service the operator actually named so
     # the planner can only edit THAT service - a model return pointing at a
     # different (even existing) service is dropped (reviewer P1 2026-06-02).

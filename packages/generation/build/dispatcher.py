@@ -36,6 +36,7 @@ from __future__ import annotations
 import functools
 import inspect
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -130,6 +131,33 @@ def _call_section_renderer(
     accepted = _section_renderer_kwargs(renderer)
     filtered = {name: kwargs[name] for name in accepted if name in kwargs}
     return renderer(dossier, **filtered)
+
+
+_SECTION_OPEN_TAG_RE = re.compile(r"<section(?=[\s>])")
+_SECTION_MARKER_ATTR = "data-section-id"
+
+
+def annotate_section_marker(fragment: str, section_id: str) -> str:
+    """Stamp every ``<section>`` opening tag in ``fragment`` with its id.
+
+    Preview-markeringskontraktet: varje emitterad sektion bär
+    ``data-section-id="<sectionId>"`` så viewser-overlayn kan mappa ett
+    klick till det kanoniska sektions-id:t från scaffoldens
+    sections.json i stället för att gissa via DOM-heuristik. Renderers
+    som emitterar flera ``<section>``-element för ett id (t.ex. hero
+    med bildbanner + textblock) får samma id på alla — de är samma
+    logiska modul. Fragment utan ``<section>`` (rena div-block som
+    sidshims själva wrappar) lämnas orörda; deras shim sätter
+    attributet på sin egen wrapper. Tomma fragment passerar orörda så
+    runtime-suppression aldrig producerar tomma markörer.
+    """
+    if not fragment or "<section" not in fragment:
+        return fragment
+    if _SECTION_MARKER_ATTR in fragment:
+        return fragment
+    return _SECTION_OPEN_TAG_RE.sub(
+        f'<section {_SECTION_MARKER_ATTR}="{section_id}"', fragment
+    )
 
 
 # Section design-treatments — variant-driven visual variation inside a
@@ -401,5 +429,6 @@ def render_route_generic(
                 "and register it, or remove the section from the "
                 "scaffold's sections.json."
             )
-        body_fragments.append(_call_section_renderer(renderer, dossier, kwargs))
+        fragment = _call_section_renderer(renderer, dossier, kwargs)
+        body_fragments.append(annotate_section_marker(fragment, section_id))
     return "".join(body_fragments)

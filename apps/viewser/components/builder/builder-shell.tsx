@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   BuilderActions,
@@ -24,6 +24,7 @@ import type {
   PendingBuildState,
 } from "@/components/builder/use-pending-build";
 import type { PromptStage } from "@/components/prompt-builder";
+import { usePreviewInspector } from "@/components/preview-inspector-context";
 
 /**
  * BuilderShell är compositionen som tar över hela kant-ytan när
@@ -123,6 +124,20 @@ export function BuilderShell({
   onOpenConsole,
   onOpenHistory,
 }: BuilderShellProps) {
+  // Preview-inspector-state — destruktureras före handleBuildEnd som
+  // refererar setPlacementBuildActive i sin deps-array.
+  const {
+    placementPickResolvedSignal,
+    placementRequester,
+    lastPlacementPick,
+    previewUrl: inspectorPreviewUrl,
+    inspectModeActive,
+    setInspectModeActive,
+    markModeActive,
+    setMarkModeActive,
+    setPlacementBuildActive,
+  } = usePreviewInspector();
+
   // Wrappar onBuildStart så den även registrerar pending-build-state
   // åt Versions-tab. Föräldern (page.tsx) får en utvidgad signatur som
   // innehåller siteId + ev. prompt-snippet. Befintliga dialoger som
@@ -146,7 +161,9 @@ export function BuilderShell({
   // Wrappar onBuildEnd så vi alltid rensar pending-state samtidigt
   // som föräldern markeras klar. Om bygget misslyckas hamnar vi
   // också här eftersom useFollowupBuild/FloatingChat alltid anropar
-  // onBuildEnd i finally.
+  // onBuildEnd i finally. OBS: placerings-banner-flaggan nollas INTE
+  // här — ViewerPanel äger den (bannern ska leva genom finalize-fasen
+  // tills previewn tagit över, annars studsar UI:t via stegkortet).
   const handleBuildEnd = useCallback(() => {
     onPendingBuildClear();
     onBuildEnd();
@@ -171,6 +188,42 @@ export function BuilderShell({
   );
   const [openDialog, setOpenDialog] = useState<DialogId | null>(null);
 
+  // Peka-i-previewn (platsval): dialogen stänger sig själv när draget
+  // startar. När picken avslutas bumpar contexten
+  // placementPickResolvedSignal — två utfall (operatörskrav 2026-06-10:
+  // bekräftad placering ska INTE studsa tillbaka till dialogen):
+  //
+  //   - Bekräftad ("Placera här", lastPlacementPick satt): dialogen
+  //     förblir stängd — den är fortfarande monterad och konsumerar
+  //     picken + startar bygget i bakgrunden. Vi visar i stället den
+  //     nordiska 0–100-bannern över previewn tills bygget är klart.
+  //   - Avbruten (Esc/X, lastPlacementPick null): öppna dialogen igen
+  //     så operatören landar där den var.
+  //
+  // setState:n deferras via setTimeout för React 19:s
+  // react-hooks/set-state-in-effect-regel (samma mönster som
+  // DevicePresetProvider-hydreringen).
+  const lastPlacementSignalRef = useRef(placementPickResolvedSignal);
+  useEffect(() => {
+    if (placementPickResolvedSignal === lastPlacementSignalRef.current) return;
+    lastPlacementSignalRef.current = placementPickResolvedSignal;
+    if (lastPlacementPick) {
+      const timerId = window.setTimeout(
+        () => setPlacementBuildActive(true),
+        0,
+      );
+      return () => window.clearTimeout(timerId);
+    }
+    const dialogId: DialogId = placementRequester === "asset" ? "asset" : "module";
+    const timerId = window.setTimeout(() => setOpenDialog(dialogId), 0);
+    return () => window.clearTimeout(timerId);
+  }, [
+    placementPickResolvedSignal,
+    placementRequester,
+    lastPlacementPick,
+    setPlacementBuildActive,
+  ]);
+
   const openDialogFactory = useCallback(
     (id: DialogId) => () => setOpenDialog(id),
     [],
@@ -192,6 +245,38 @@ export function BuilderShell({
         icon: "inspect",
         group: "Inspektera",
         onSelect: openDialogFactory("inspect"),
+      },
+      // Peka i previewn (preview-inspector): togglar hover-inspektionen
+      // ovanpå preview-iframen. Medvetet INGEN permanent knapp på
+      // canvasen (operatörskrav 2026-06-10: ren preview-yta) — läget
+      // startas härifrån och stängs med Esc/X i overlayns statusrad.
+      // disabled när ingen server-nåbar preview-URL finns (StackBlitz-
+      // läget publicerar ingen) eller medan ett bygge pågår.
+      {
+        id: "preview-inspect",
+        label: inspectModeActive ? "Stäng granskningen" : "Granska previewn",
+        description: inspectModeActive
+          ? "Stänger hover-inspektionen"
+          : "Hovra och identifiera element",
+        icon: "preview-inspect",
+        group: "Inspektera",
+        onSelect: () => setInspectModeActive(!inspectModeActive),
+        disabled: !inspectorPreviewUrl || isBuilding,
+      },
+      // Markera modul (sektionsmarkering i preview): klick på en sektion
+      // skapar en strukturerad markering {routeId, sectionId} som visas
+      // som chip i chatten och följer med nästa följdprompt som
+      // markedSections[]. Samma rena-canvas-princip som granskningen.
+      {
+        id: "preview-mark",
+        label: markModeActive ? "Avsluta markeringen" : "Markera modul",
+        description: markModeActive
+          ? "Stänger modulmarkeringen"
+          : "Klicka en sektion → chip i chatten",
+        icon: "preview-inspect",
+        group: "Inspektera",
+        onSelect: () => setMarkModeActive(!markModeActive),
+        disabled: !inspectorPreviewUrl || isBuilding,
       },
       // Design
       {
@@ -288,6 +373,11 @@ export function BuilderShell({
       openDialogFactory,
       onOpenConsole,
       onNewSite,
+      inspectModeActive,
+      setInspectModeActive,
+      markModeActive,
+      setMarkModeActive,
+      inspectorPreviewUrl,
     ],
   );
 

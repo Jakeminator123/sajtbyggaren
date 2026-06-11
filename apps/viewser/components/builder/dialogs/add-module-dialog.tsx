@@ -8,6 +8,7 @@ import {
   Loader2,
   Mail,
   MapPin,
+  MousePointerClick,
   ShieldCheck,
   Star,
   Tag,
@@ -15,12 +16,14 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   useFollowupBuild,
+  type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
+import { usePreviewInspector } from "@/components/preview-inspector-context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,10 +36,13 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Lägg till modul — drag-and-drop-yta för att be backend lägga in en
- * ny sektion på en specifik sida. Operatören drar (eller klickar) ett
- * modulkort till en sid-zon och väljer position; vi komponerar en
- * strukturerad svensk följdprompt och skickar den via samma
+ * Lägg till modul — drag-and-drop mot förhandsvisningen. Operatören
+ * klickar ett modulkort → dialogen stängs och en ghost-bricka följer
+ * pekaren över previewn (PreviewInspectorOverlay) → klick släpper och
+ * "Placera här" bekräftar → bygget startar direkt med placeringen.
+ * Utan server-nåbar preview-URL (StackBlitz) faller flödet ärligt
+ * tillbaka till listan + positions-dropdownen i dialogen. Vi komponerar
+ * en strukturerad svensk följdprompt och skickar den via samma
  * `useFollowupBuild`-seam som färg/variant/bild-dialogerna.
  *
  * MEDVETET INGEN frontend-magi: vi muterar inte previewen direkt
@@ -87,26 +93,92 @@ type ModuleDef = {
 // section_add-mål (hero/services är sidsektioner, cta-banner saknar dossier),
 // så de gav en falsk affordance (Vercel-agent-fynd 2026-06-08) och är borttagna.
 const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
-  { id: "gallery", label: "Galleri", description: "Bildrutnät", Icon: Images, effect: "registered", promptNoun: "en galleri-sektion" },
-  { id: "contact-form", label: "Kontaktformulär", description: "Namn, e-post, meddelande", Icon: Mail, effect: "registered", promptNoun: "en kontaktformulär-sektion" },
-  { id: "faq", label: "Vanliga frågor", description: "Hopfällbara frågor och svar", Icon: HelpCircle, effect: "route", promptNoun: "en FAQ-sektion" },
-  { id: "testimonials", label: "Omdömen", description: "Kundcitat", Icon: Star, effect: "registered", promptNoun: "en sektion med omdömen" },
-  { id: "pricing", label: "Priser", description: "Pris-/paketlista", Icon: Tag, effect: "registered", promptNoun: "en sektion med priser" },
-  { id: "map", label: "Karta", description: "Plats med adress", Icon: MapPin, effect: "registered", promptNoun: "en sektion med en karta" },
-  { id: "opening-hours", label: "Öppettider", description: "Veckoschema", Icon: Clock, effect: "inline", promptNoun: "en öppettider-sektion" },
-  { id: "team", label: "Team", description: "Personalkort", Icon: Users, effect: "route", promptNoun: "en team-sektion" },
-  { id: "trust-badges", label: "Förtroende", description: "Certifikat och logotyper", Icon: ShieldCheck, effect: "registered", promptNoun: "en sektion om garantier" },
+  {
+    // ADR 0040 (2026-06-10): gallery renderas inline på startsidan (företags-/
+    // tjänstemallen + e-handelsmallen) och en explicit position FLYTTAR den
+    // befintliga gallerisektionen. Gated på uppladdade galleri-bilder.
+    id: "gallery",
+    label: "Galleri",
+    description: "Bildrutnät",
+    Icon: Images,
+    effect: "inline",
+    promptNoun: "en galleri-sektion",
+  },
+  {
+    id: "contact-form",
+    label: "Kontaktformulär",
+    description: "Namn, e-post, meddelande",
+    Icon: Mail,
+    effect: "registered",
+    promptNoun: "en kontaktformulär-sektion",
+  },
+  {
+    id: "faq",
+    label: "Vanliga frågor",
+    description: "Hopfällbara frågor och svar",
+    Icon: HelpCircle,
+    effect: "route",
+    promptNoun: "en FAQ-sektion",
+  },
+  {
+    id: "testimonials",
+    label: "Omdömen",
+    description: "Kundcitat",
+    Icon: Star,
+    effect: "registered",
+    promptNoun: "en sektion med omdömen",
+  },
+  {
+    id: "pricing",
+    label: "Priser",
+    description: "Pris-/paketlista",
+    Icon: Tag,
+    effect: "registered",
+    promptNoun: "en sektion med priser",
+  },
+  {
+    id: "map",
+    label: "Karta",
+    description: "Plats med adress",
+    Icon: MapPin,
+    effect: "registered",
+    promptNoun: "en sektion med en karta",
+  },
+  {
+    id: "opening-hours",
+    label: "Öppettider",
+    description: "Veckoschema",
+    Icon: Clock,
+    effect: "inline",
+    promptNoun: "en öppettider-sektion",
+  },
+  {
+    id: "team",
+    label: "Team",
+    description: "Personalkort",
+    Icon: Users,
+    effect: "route",
+    promptNoun: "en team-sektion",
+  },
+  {
+    id: "trust-badges",
+    label: "Förtroende",
+    description: "Certifikat och logotyper",
+    Icon: ShieldCheck,
+    effect: "registered",
+    promptNoun: "en sektion om garantier",
+  },
 ];
 
 /** Operatörsvänlig, ärlig etikett per synlighets-utfall ("kan" — gated). */
 const EFFECT_BADGES: Record<ModuleEffect, { label: string; title: string }> = {
   inline: {
     label: "kan synas på startsidan",
-    // Scaffold-nyansen per msg-0057: inline-rendern gäller i skiva 1 bara
-    // local-service-business-sajter; på andra sajttyper blir den ärligt
-    // mount-only (toasten säger då "registrerad men syns inte").
+    // Scaffold-nyansen per msg-0057 + ADR 0040: inline-rendern gäller
+    // företags-/tjänstemallen och e-handelsmallen; på andra sajttyper blir
+    // den ärligt mount-only (toasten säger då "registrerad men syns inte").
     title:
-      "Kan renderas som ett block på startsidan — förutsatt att sajten har riktigt innehåll för sektionen (inga påhittade uppgifter). Gäller i nuläget sajter byggda på företags-/tjänstemallen; på andra sajttyper registreras den utan att synas än.",
+      "Kan renderas som ett block på startsidan — förutsatt att sajten har riktigt innehåll för sektionen (inga påhittade uppgifter). Gäller sajter byggda på företags-/tjänstemallen eller e-handelsmallen; på andra sajttyper registreras den utan att synas än.",
   },
   route: {
     label: "kan bli egen sida",
@@ -124,7 +196,11 @@ const EFFECT_BADGES: Record<ModuleEffect, { label: string; title: string }> = {
 // home-only och routern sid-targetar inte) — övriga sidor visas som
 // medvetet inaktiva zoner ("stöds inte än") i stället för att lova en
 // placering bygget inte kan hålla (granskningsfynd 2026-06-09).
-const PAGE_TARGETS: ReadonlyArray<{ id: string; label: string; enabled: boolean }> = [
+const PAGE_TARGETS: ReadonlyArray<{
+  id: string;
+  label: string;
+  enabled: boolean;
+}> = [
   { id: "home", label: "Startsida", enabled: true },
   { id: "about", label: "Om oss", enabled: false },
   { id: "services", label: "Tjänster", enabled: false },
@@ -137,10 +213,11 @@ const PAGE_TARGETS: ReadonlyArray<{ id: string; label: string; enabled: boolean 
 // "längst ner" → bottom (= före kontakt-CTA:n). Minimala fraser med flit —
 // EMPIRISKT verifierat att längre fraser med "på sidan" tippar vissa
 // sektionstyper till route_add i klassificeringen.
-const POSITIONS: ReadonlyArray<{ id: string; label: string; clause: string }> = [
-  { id: "top", label: "Överst (efter hero)", clause: "överst" },
-  { id: "bottom", label: "Längst ner", clause: "längst ner" },
-];
+const POSITIONS: ReadonlyArray<{ id: string; label: string; clause: string }> =
+  [
+    { id: "top", label: "Överst (efter hero)", clause: "överst" },
+    { id: "bottom", label: "Längst ner", clause: "längst ner" },
+  ];
 
 type Placement = {
   // Lokalt unikt id så samma modul kan placeras flera gånger.
@@ -148,6 +225,12 @@ type Placement = {
   moduleId: string;
   pageId: string;
   positionId: string;
+  /**
+   * Vald bredd i % av sidbredden från drag-flödets storleksjusterbara
+   * mockup. Saknas i dialog-fallbacket (listan + dropdownen) — då
+   * skickas ingen storleksfras och backend behåller sin default.
+   */
+  sizePercent?: number;
 };
 
 const DRAG_MIME = "application/x-sajtbyggaren-module";
@@ -166,6 +249,23 @@ function pageLabel(pageId: string): string {
 
 function positionClause(positionId: string): string {
   return POSITIONS.find((p) => p.id === positionId)?.clause ?? positionId;
+}
+
+/**
+ * Storleksfras för följdprompten, byggd från drag-mockupens valda bredd.
+ * EMPIRISKT router-verifierad (classify.py, 54/54 kombinationer 2026-06-10):
+ * alla tre fraserna klassas fortsatt som section_add med rätt position för
+ * samtliga nio moduler — procenttalet är ett rent siffer-token som routern
+ * inte parsar. Trösklarna (40/70) speglar tre ärliga storleksklasser.
+ */
+function sizeClause(sizePercent: number): string {
+  if (sizePercent <= 40) {
+    return `Gör sektionen liten (cirka ${sizePercent} % av sidbredden).`;
+  }
+  if (sizePercent <= 70) {
+    return `Gör sektionen medelstor (cirka ${sizePercent} % av sidbredden).`;
+  }
+  return "Gör sektionen stor (nästan full sidbredd).";
 }
 
 type AddModuleDialogProps = {
@@ -191,6 +291,9 @@ export function AddModuleDialog({
 }: AddModuleDialogProps) {
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [dragOverPageId, setDragOverPageId] = useState<string | null>(null);
+  // Etikett från senaste peka-i-previewn-valet ("Efter Omdömen → längst
+  // ner") — visas vid placeringsraden som kvitto på var klicket landade.
+  const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   const { runFollowup, isBusy, error } = useFollowupBuild({
     siteId,
     onBuildStart,
@@ -199,6 +302,116 @@ export function AddModuleDialog({
     isBuilding,
     baseRunId,
   });
+
+  // Peka-i-previewn: knappen visas bara när en server-nåbar preview-URL
+  // finns (local-next/vercel-sandbox — StackBlitz publicerar ingen).
+  // Flödet: requestPlacementPick() + stäng dialogen → ViewerPanel ritar
+  // overlayn → klick/Esc → BuilderShell öppnar dialogen igen → effekten
+  // nedan läser ut lastPlacementPick och sätter positionen.
+  const {
+    previewUrl,
+    requestPlacementPick,
+    lastPlacementPick,
+    clearPlacementPick,
+    placementRequester,
+  } = usePreviewInspector();
+
+  // Spegel av placements för konsumtions-effekten nedan (den får inte
+  // ha placements som dep — då skulle den re-trigga på sin egen update).
+  const placementsRef = useRef<Placement[]>(placements);
+  useEffect(() => {
+    placementsRef.current = placements;
+  }, [placements]);
+
+  // Skicka EN placering som följdbygge. Delas av "Lägg till"-knappen
+  // och drag-flödets "Placera här"-bekräftelse.
+  const submitPlacement = useCallback(
+    async (placement: Placement) => {
+      // EMPIRISKT verifierat promptformat (alla 9 moduler x båda
+      // positionerna x tre storleksfraser klassas som section_add med
+      // rätt componentIntent + position): EN självständig klausul med
+      // verb + sektionstyps-substantiv + minimal positionsfras, följt
+      // av en valfri storleksmening från drag-mockupen. Nämn INTE sidan
+      // ("på startsidan"/"på sidan") — det tippar pris/team/garantier
+      // till route_add. Backend defaultar till home-routen, vilket är
+      // exakt vad sid-zonen (Startsida) lovar.
+      const sizeSentence =
+        typeof placement.sizePercent === "number"
+          ? `${sizeClause(placement.sizePercent)} `
+          : "";
+      const prompt =
+        `Lägg till ${modulePromptNoun(placement.moduleId)} ` +
+        `${positionClause(placement.positionId)}. ` +
+        sizeSentence +
+        "Behåll övrig design, copy och struktur intakt.";
+      // Strukturerad intent (specialist-dispatch steg 2): modul-id +
+      // position + vald storlek är redan exakta — promptformatet ovan
+      // är empiriskt router-säkert men med toolIntent slipper backend
+      // klassificera alls och kan gå rakt till section_add-pipelinen.
+      const toolIntent: FollowupToolIntent = {
+        tool: "section_add",
+        params: {
+          sectionType: placement.moduleId,
+          position: placement.positionId === "top" ? "top" : "bottom",
+          ...(typeof placement.sizePercent === "number"
+            ? { sizePercent: placement.sizePercent }
+            : {}),
+        },
+      };
+      const result = await runFollowup(prompt, { toolIntent });
+      if (result.ok) {
+        setPlacements([]);
+        setPickedLabel(null);
+        onOpenChange(false);
+      }
+    },
+    [runFollowup, onOpenChange],
+  );
+
+  // Konsumera platsvalet ÄVEN när dialogen är stängd: efter "Placera
+  // här" återöppnas dialogen inte längre (operatörskrav 2026-06-10 —
+  // BuilderShell visar 0–100-bannern i stället), men komponenten är
+  // fortfarande monterad och startar bygget härifrån. Requester-gaten
+  // hindrar oss från att äta asset-dialogens pick (båda dialogerna är
+  // monterade samtidigt utan open-gate). Avbruten pick (Esc) sätter
+  // aldrig lastPlacementPick och landar inte här.
+  useEffect(() => {
+    if (!lastPlacementPick || placementRequester !== "module") return;
+    const timerId = window.setTimeout(() => {
+      const { point, coarsePosition, sizePercent } = lastPlacementPick;
+      clearPlacementPick();
+      const current = placementsRef.current[0];
+      if (!current) return;
+      const updated: Placement = {
+        ...current,
+        positionId: coarsePosition,
+        sizePercent,
+      };
+      setPlacements([updated]);
+      setPickedLabel(
+        `${point.label} → ${coarsePosition === "top" ? "överst" : "längst ner"}`,
+      );
+      // "Placera här" i previewn ÄR operatörens bekräftelse — starta
+      // bygget direkt utan extra "Lägg till"-klick.
+      void submitPlacement(updated);
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [lastPlacementPick, placementRequester, clearPlacementPick, submitPlacement]);
+
+  const handlePlacementPick = useCallback(() => {
+    const placement = placementsRef.current[0];
+    requestPlacementPick({
+      payload: placement
+        ? {
+            kind: "module",
+            label: moduleLabel(placement.moduleId),
+            moduleId: placement.moduleId,
+          }
+        : undefined,
+      requester: "module",
+    });
+    onOpenChange(false);
+  }, [requestPlacementPick, onOpenChange]);
 
   const addPlacement = useCallback((moduleId: string, pageId: string) => {
     // En modul per bygge (skiva 1): routern klassar EN section_add-klausul
@@ -215,17 +428,25 @@ export function AddModuleDialog({
         positionId: "bottom",
       },
     ]);
+    setPickedLabel(null);
   }, []);
 
   const removePlacement = useCallback((key: string) => {
     setPlacements((current) => current.filter((p) => p.key !== key));
+    setPickedLabel(null);
   }, []);
 
-  const setPlacementPosition = useCallback((key: string, positionId: string) => {
-    setPlacements((current) =>
-      current.map((p) => (p.key === key ? { ...p, positionId } : p)),
-    );
-  }, []);
+  const setPlacementPosition = useCallback(
+    (key: string, positionId: string) => {
+      setPlacements((current) =>
+        current.map((p) => (p.key === key ? { ...p, positionId } : p)),
+      );
+      // Manuellt positionsval ersätter peka-kvittot (annars skulle kvittot
+      // kunna motsäga dropdownen).
+      setPickedLabel(null);
+    },
+    [],
+  );
 
   const handleDrop = useCallback(
     (pageId: string) => (event: React.DragEvent<HTMLDivElement>) => {
@@ -240,25 +461,29 @@ export function AddModuleDialog({
     [addPlacement],
   );
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     const placement = placements[0];
     if (!placement) return;
-    // EMPIRISKT verifierat promptformat (alla 9 moduler x båda positionerna
-    // klassas som section_add med rätt componentIntent + position): EN
-    // självständig klausul med verb + sektionstyps-substantiv + minimal
-    // positionsfras. Nämn INTE sidan ("på startsidan"/"på sidan") — det
-    // tippar pris/team/garantier till route_add. Backend defaultar till
-    // home-routen, vilket är exakt vad sid-zonen (Startsida) lovar.
-    const prompt =
-      `Lägg till ${modulePromptNoun(placement.moduleId)} ` +
-      `${positionClause(placement.positionId)}. ` +
-      "Behåll övrig design, copy och struktur intakt.";
-    const result = await runFollowup(prompt);
-    if (result.ok) {
-      setPlacements([]);
-      onOpenChange(false);
-    }
-  }, [placements, runFollowup, onOpenChange]);
+    void submitPlacement(placement);
+  }, [placements, submitPlacement]);
+
+  // Modulkorts-klick: med en server-nåbar preview går vi DIREKT in i
+  // drag-läget (ghost-brickan följer pekaren över previewn, "Placera
+  // här" bekräftar och bygger). Utan preview-URL (StackBlitz) faller vi
+  // ärligt tillbaka till listan + positions-dropdownen.
+  const handleModuleSelect = useCallback(
+    (mod: ModuleDef) => {
+      addPlacement(mod.id, "home");
+      if (previewUrl && !isBusy) {
+        requestPlacementPick({
+          payload: { kind: "module", label: mod.label, moduleId: mod.id },
+          requester: "module",
+        });
+        onOpenChange(false);
+      }
+    },
+    [addPlacement, previewUrl, isBusy, requestPlacementPick, onOpenChange],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -266,11 +491,12 @@ export function AddModuleDialog({
         <DialogHeader>
           <DialogTitle>Lägg till modul</DialogTitle>
           <DialogDescription>
-            Dra (eller klicka) en modul till startsidan — en modul per bygge.
-            Vi skickar en strukturerad instruktion och bygger om sajten.
-            Märkningen på varje kort visar ärligt vad som kan synas efter
-            bygget. Exakt position är något vi bara styr på startsidan (överst /
-            längst ner) — finare placering och fler sidor kommer senare.
+            Klicka på en modul så följer den pekaren över förhandsvisningen —
+            dra den dit du vill och bekräfta med ”Placera här”, så bygger vi om
+            sajten direkt. En modul per bygge. Märkningen på varje kort visar
+            ärligt vad som kan synas efter bygget. Exakt position är något vi
+            bara styr på startsidan (överst / längst ner) — finare placering
+            och fler sidor kommer senare.
           </DialogDescription>
         </DialogHeader>
 
@@ -293,14 +519,17 @@ export function AddModuleDialog({
                       event.dataTransfer.setData(DRAG_MIME, mod.id);
                       event.dataTransfer.effectAllowed = "copy";
                     }}
-                    onClick={() => addPlacement(mod.id, "home")}
+                    onClick={() => handleModuleSelect(mod)}
                     title={`${mod.label} — ${mod.description}. ${badge.title}`}
-                    aria-label={`Lägg till ${mod.label} (dra till en sida eller klicka för startsidan) — ${badge.label}`}
+                    aria-label={`Lägg till ${mod.label} (klicka och dra till plats i förhandsvisningen) — ${badge.label}`}
                     className={cn(
                       "border-border/60 hover:border-border bg-card/60 flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition active:scale-[0.98] active:cursor-grabbing",
                     )}
                   >
-                    <Icon className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
+                    <Icon
+                      className="text-muted-foreground h-4 w-4 shrink-0"
+                      aria-hidden
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="text-foreground block truncate text-[12px] font-medium">
                         {mod.label}
@@ -341,7 +570,9 @@ export function AddModuleDialog({
                     event.dataTransfer.dropEffect = "copy";
                     setDragOverPageId(page.id);
                   }}
-                  onDragLeave={() => setDragOverPageId((cur) => (cur === page.id ? null : cur))}
+                  onDragLeave={() =>
+                    setDragOverPageId((cur) => (cur === page.id ? null : cur))
+                  }
                   onDrop={handleDrop(page.id)}
                   className={cn(
                     "flex min-h-[52px] flex-col items-center justify-center rounded-lg border border-dashed px-2 py-3 text-center text-[12px] transition",
@@ -374,12 +605,19 @@ export function AddModuleDialog({
                     className="border-border/60 bg-card/60 flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-[12px]"
                   >
                     <span className="text-foreground min-w-0 flex-1 truncate">
-                      <span className="font-medium">{moduleLabel(p.moduleId)}</span>
-                      <span className="text-muted-foreground"> → {pageLabel(p.pageId)}</span>
+                      <span className="font-medium">
+                        {moduleLabel(p.moduleId)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        → {pageLabel(p.pageId)}
+                      </span>
                     </span>
                     <select
                       value={p.positionId}
-                      onChange={(event) => setPlacementPosition(p.key, event.target.value)}
+                      onChange={(event) =>
+                        setPlacementPosition(p.key, event.target.value)
+                      }
                       aria-label={`Position för ${moduleLabel(p.moduleId)} på ${pageLabel(p.pageId)}`}
                       className="border-border/60 bg-background text-muted-foreground rounded border px-1.5 py-1 text-[11px]"
                     >
@@ -400,6 +638,35 @@ export function AddModuleDialog({
                   </li>
                 ))}
               </ul>
+              {/* Peka-i-previewn: välj position genom att klicka i den
+                  rendrade förhandsvisningen i stället för dropdownen.
+                  Dialogen stängs under valet och öppnas igen efteråt.
+                  Visas bara när en server-nåbar preview-URL finns. */}
+              {previewUrl ? (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePlacementPick}
+                    disabled={isBusy}
+                    className="border-border/60 hover:border-border text-foreground inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] transition disabled:opacity-50"
+                  >
+                    <MousePointerClick className="h-3.5 w-3.5" aria-hidden />
+                    Peka i förhandsvisningen
+                  </button>
+                  {pickedLabel ? (
+                    <span className="text-muted-foreground text-[11px]">
+                      Vald plats:{" "}
+                      <span className="text-foreground">{pickedLabel}</span>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/70 text-[10.5px]">
+                      Dialogen stängs medan du drar — släpp med klick och
+                      bekräfta med ”Placera här” (snäpper till överst/längst
+                      ner).
+                    </span>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : (
             <p className="text-muted-foreground border-border/60 rounded-md border border-dashed px-3 py-2 text-[11px] leading-snug">
@@ -445,7 +712,8 @@ export function AddModuleDialog({
             ) : (
               <>
                 <Blocks className="h-4 w-4" />
-                Lägg till {placements.length > 0 ? `(${placements.length})` : ""}
+                Lägg till{" "}
+                {placements.length > 0 ? `(${placements.length})` : ""}
               </>
             )}
           </Button>
