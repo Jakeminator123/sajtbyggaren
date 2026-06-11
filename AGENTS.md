@@ -48,6 +48,17 @@ Do not edit `.cursor/rules/` directly. Those files are generated mirrors; the
 source lives under `governance/rules/`. If a rule needs to change, update the
 governance source and run the rule sync check.
 
+### Underagenter — sparsamhet (operatörspreferens 2026-06-11)
+
+Spawna underagenter sparsamt, inte som standard. Gör små och medelstora
+uppgifter själv i förgrunden. Delegera bara när det ger verkligt värde: långa
+körningar, äkta oberoende parallella spår, eller arbete som annars skulle
+krocka i huvudcheckouten. När du ändå delegerar, föredra read-only rapport-
+eller scout-agenter som tar fram underlag du läser och agerar på, framför
+flera skrivande underagenter samtidigt. Detta är en mjuk standard, inte ett
+förbud — fler agenter är okej när det tydligt hjälper. Samma anda finns i
+`docs/orchestrator-playbook.md` (sektionerna om underagenter och parallelisering).
+
 ### READ-ONLY reference projects (NEVER modify)
 
 The following external folders are **strictly read-only reference material**.
