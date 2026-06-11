@@ -50,6 +50,11 @@ EXCLUDE_FILES = {
     "tests/test_naming_consistency.py",
     "packages/generation/orchestration/dossiers/README.md",
     "tests/test_no_legacy_terms.py",
+    # Analysis snapshot comparing sajtmaskin (the read-only predecessor repo)
+    # with this repo. Quoting sajtmaskin's legacy vocabulary (preview-host,
+    # verify-lane) verbatim is the point of the document - it catalogues the
+    # anti-lessons behind the forbidden list and must not be paraphrased.
+    "docs/reports/sajtmaskin-vs-sajtbyggaren-analys-2026-06-10.md",
 }
 
 # Fields whose values are *meant* to list forbidden terms.
