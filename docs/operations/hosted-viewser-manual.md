@@ -115,7 +115,10 @@ Sandbox-skapande (både preview och bygge) kräver Vercel-auth. Två lägen:
 
 - **lokalt**: dev-skriptet kör `vercel env pull` till
   `apps/viewser/.env.vercel.local` och håller tokenen färsk (refresh när
-  mindre än en timme återstår). Kräver `vercel login` + `vercel link` en gång.
+  mindre än en timme återstår). Kräver `vercel login` + `vercel link` en gång,
+  kört från repo-roten (monorepo-länk → `.vercel/repo.json`; projektet mappar
+  till `apps/viewser`). Auto-refreshen pullar med cwd = repo-roten, så en länk
+  gjord inifrån `apps/viewser` hittas inte.
 - **hostat**: plattformen levererar tokenen per request via
   request-kontexten (headern `x-vercel-oidc-token`) — INTE som env-var.
   `resolveCredentials` i `lib/vercel-sandbox-runner.ts` adopterar den

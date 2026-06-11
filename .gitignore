@@ -181,10 +181,12 @@ openclaw-mvp/
 docs/open_claw.txt
 
 # Lokal spegel av OpenClaw-dokumentationen (docs.openclaw.ai), hämtad av
-# scripts/fetch_openclaw_docs.py. Operatör-lokalt referensmaterial: Cursor
-# indexerar mappen (den ligger medvetet INTE i .cursorignore) men den ska
-# aldrig committas och ligger i check_term_coverage EXCLUDE_DIRS så de
-# externa OpenClaw-termerna inte felklassas som okända domänbegrepp.
+# scripts/fetch_openclaw_docs.py. Operatör-lokalt referensmaterial: gitignorad
+# (committas aldrig) och AV-indexerad i Cursor via .cursorindexingignore (~13 MB
+# spegel som annars bloatar sök-indexet), men fortfarande LÄSBAR för agenter
+# (Read/grep — den ligger INTE i .cursorignore). Ligger även i
+# check_term_coverage EXCLUDE_DIRS så de externa OpenClaw-termerna inte
+# felklassas som okända domänbegrepp.
 openclaw-docs/
 
 # Lokal canvas-spegel. Cursor renderar bara canvas-filer från
