@@ -379,3 +379,24 @@ def test_orchestrate_matches_manual_composition():
     got = orchestrate(message)
     assert got.action == expected.action
     assert got.router == router
+
+
+def test_orchestrate_uses_injected_router_without_reclassifying(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """KÖR-6b bridge wiring: an injected RouterDecision is used verbatim and
+    the message is never classified a second time (one router truth, at most
+    one model call per invocation upstream)."""
+    import packages.generation.orchestration.openclaw.core as core
+
+    injected = classify_message("byt rubriken till Bryggans Surdegsbageri")
+
+    def _explode(*args, **kwargs):  # pragma: no cover - reaching this IS the bug
+        raise AssertionError("orchestrate must not re-classify an injected router")
+
+    monkeypatch.setattr(core, "classify_message", _explode)
+    decision = core.orchestrate(
+        "byt rubriken till Bryggans Surdegsbageri", router=injected
+    )
+    assert decision.router == injected
+    assert decision.action == "patch_plan_request"

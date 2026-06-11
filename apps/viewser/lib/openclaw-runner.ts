@@ -10,13 +10,16 @@ import { killProcessTree } from "@/lib/local-preview-server";
 // never imports packages/ directly (repo-boundaries.v1.json) — the Python script
 // in scripts/ owns the import on viewser's behalf.
 //
-// Deterministic + read-only by contract: the script wraps OpenClaw Core V0
-// (classify_message -> assemble_context -> decide), uses NO LLM fallback,
-// touches no disk and starts no build/preview, so this adds no per-prompt
-// OPENAI_API_KEY cost. We cap it with a short timeout and ALWAYS degrade to
+// Deterministic-first + read-only by contract: the script wraps OpenClaw Core
+// V0 (classify -> assemble_context -> decide), touches no disk and starts no
+// build/preview. Since 2026-06-11 the router half MAY escalate an ambiguous
+// message (unclear/long/multi-intent) to routerModel (KÖR-6b) — at most ONE
+// small model call per invocation, never for confident heuristic decisions,
+// and OPENCLAW_ROUTER_LLM_FALLBACK=0 restores the pure-heuristic mode. The
+// timeout budget covers venv spawn + that single call. We ALWAYS degrade to
 // null on any failure so /api/prompt's existing build flow can never be broken
 // by this read-only decision step.
-const OPENCLAW_TIMEOUT_MS = 15_000;
+const OPENCLAW_TIMEOUT_MS = 45_000;
 
 function repoRoot(): string {
   // ``...up`` (spread av variabel-array) gör resultatet opakt för Turbopacks

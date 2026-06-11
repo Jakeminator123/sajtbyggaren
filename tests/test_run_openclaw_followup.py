@@ -27,6 +27,19 @@ from scripts.run_openclaw_followup import (
 pytestmark = pytest.mark.core
 
 
+@pytest.fixture(autouse=True)
+def _no_llm_fallback_by_default(monkeypatch):
+    """Keep this module deterministic on keyed dev machines.
+
+    The bridge's KÖR-6b escalation is default-ON in production, but a real
+    routerModel call from the suite (when a developer has OPENAI_API_KEY
+    exported) would be slow, costly and non-deterministic. Tests that exercise
+    the fallback wiring re-enable it explicitly AND monkeypatch the classifier
+    so no network is ever touched.
+    """
+    monkeypatch.setenv("OPENCLAW_ROUTER_LLM_FALLBACK", "0")
+
+
 @pytest.mark.tooling
 def test_followup_question_is_answer_only_no_build():
     payload = json.loads(decide_to_json("vad ar klockan?"))
@@ -530,6 +543,107 @@ def test_B182_no_runs_on_disk_keeps_honest_empty_context(monkeypatch, tmp_path):
     context = payload["context"]
     assert context["payload"] == {}
     assert any("run_id" in note for note in context["notes"])
+
+
+# ---------------------------------------------------------------------------
+# KÖR-6b in the bridge (2026-06-11): the router half may escalate ambiguous
+# messages to routerModel. One classification per invocation; kill-switch env.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_router_fallback_kill_switch_keeps_pure_heuristic(monkeypatch):
+    """With OPENCLAW_ROUTER_LLM_FALLBACK=0 (the autouse default here) the
+    bridge must never touch the KÖR-6b fallback classifier."""
+    import packages.generation.orchestration.router as router_pkg
+
+    def _explode(*args, **kwargs):  # pragma: no cover - reaching this IS the bug
+        raise AssertionError(
+            "classify_message_with_llm_fallback must NOT run with the "
+            "kill-switch off"
+        )
+
+    monkeypatch.setattr(
+        router_pkg, "classify_message_with_llm_fallback", _explode
+    )
+    payload = json.loads(decide_to_json("vad ar klockan?"))
+    assert payload["action"] == "answer_only"
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize("env_value", ["", "1", "true", "on"])
+def test_router_fallback_default_on_and_classifies_exactly_once(
+    monkeypatch, env_value: str
+):
+    """Default mode (unset/non-off values): BOTH layers (conversation + Core
+    V0) share ONE router classification, so an escalated message can never
+    cost two model calls. The classifier is monkeypatched - no network."""
+    import packages.generation.orchestration.router as router_pkg
+
+    if env_value:
+        monkeypatch.setenv("OPENCLAW_ROUTER_LLM_FALLBACK", env_value)
+    else:
+        monkeypatch.delenv("OPENCLAW_ROUTER_LLM_FALLBACK", raising=False)
+
+    calls = {"count": 0}
+    real_classify = router_pkg.classify_message
+
+    def _counting_fallback(message, *, context=None, **kwargs):
+        calls["count"] += 1
+        return real_classify(message, context=context)
+
+    monkeypatch.setattr(
+        router_pkg, "classify_message_with_llm_fallback", _counting_fallback
+    )
+    payload = json.loads(
+        decide_to_json(
+            "byt rubriken till Bryggans Surdegsbageri", site_id="painter-palma"
+        )
+    )
+    assert payload["action"] == "patch_plan_request"
+    assert calls["count"] == 1, (
+        "the bridge must classify the message exactly ONCE per invocation "
+        f"(got {calls['count']})"
+    )
+
+
+@pytest.mark.tooling
+def test_router_fallback_apply_path_classifies_exactly_once(monkeypatch):
+    """--apply shares the same single classification: conversation gate +
+    Core V0 decision + chain dispatch all compose one RouterDecision."""
+    import packages.generation.orchestration.router as router_pkg
+
+    monkeypatch.setenv("OPENCLAW_ROUTER_LLM_FALLBACK", "1")
+    calls = {"count": 0}
+    real_classify = router_pkg.classify_message
+
+    def _counting_fallback(message, *, context=None, **kwargs):
+        calls["count"] += 1
+        return real_classify(message, context=context)
+
+    monkeypatch.setattr(
+        router_pkg, "classify_message_with_llm_fallback", _counting_fallback
+    )
+
+    def _fake_chain(site_id, follow_up_prompt, **kwargs):
+        return {
+            "siteId": site_id,
+            "stage": "built",
+            "applied": True,
+            "appliedVisibleEffect": True,
+            "previewShouldRefresh": True,
+            "version": 2,
+            "runId": "run-2",
+        }
+
+    monkeypatch.setattr("scripts.build_site.run_followup_chain", _fake_chain)
+    payload = json.loads(
+        apply_followup_to_json(
+            "byt rubriken till Bryggans Surdegsbageri", site_id="painter-palma"
+        )
+    )
+    assert payload["bridge"]["applied"] is True
+    assert calls["count"] == 1
 
 
 @pytest.mark.tooling
