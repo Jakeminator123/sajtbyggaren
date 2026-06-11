@@ -310,10 +310,22 @@ def apply_patch_plan(
                 _prev_pi_cache, _ = read_base_run_snapshot(
                     site_id, base_run_id, output_dir=output_dir, runs_dir=runs_dir
                 )
+                # Sökvägen är redan validerad av read_base_run_snapshot ovan.
+                pin_run_dir = (runs_dir / base_run_id).resolve()
             else:
                 _prev_pi_cache = read_existing_project_input(
                     site_id, output_dir=output_dir
                 )
+                pin_run_dir = latest_run_dir_for_site(runs_dir, site_id)
+            # B173-paritet (review-fynd #283): basen för en hero-headline-
+            # rewrite måste vara samma H1 som föregående bygge FAKTISKT
+            # renderade — samma pin-källa (run-direns blueprint-headline) som
+            # steg 4b nedan använder för merge-basen. Utan pinnen läste den
+            # här lazy-läsningen company.name som rewrite-bas när operatören
+            # aldrig satt en explicit heroHeadline, så modellen skrev om fel
+            # text. No-op när en explicit heroHeadline redan finns eller när
+            # sajten saknar en komplett run (samma regler som pinnen själv).
+            pin_previous_hero_headline(_prev_pi_cache, run_dir=pin_run_dir)
         return current_section_text(_prev_pi_cache, route_id, section_id, field)
 
     for patch in plan.patches:

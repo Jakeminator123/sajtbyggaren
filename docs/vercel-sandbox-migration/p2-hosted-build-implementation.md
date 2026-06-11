@@ -27,7 +27,8 @@ bygg-sandbox (node24, TTL 15 min, kör hosted-build.sh detached)
   └─ KV: viewser:hosted-run:<runId> uppdateras efter varje fas
 
 UI/klient
-  └─ GET /api/hosted-build/<runId>  (läser status via kv-store-adaptern)
+  └─ GET /api/hosted-build/<runId>?siteId=<siteId>  (läser status via
+       kv-store-adaptern; siteId-bindningen är B196-härdningen)
 ```
 
 Ingen tarball för sajt-outputen: läsaren (`lib/generated-blob-source.ts`)
@@ -70,7 +71,7 @@ I den hostade Viewser-processen (eller lokalt vid test av runnern):
 | --- | --- | --- |
 | `VERCEL_OIDC_TOKEN` eller `VERCEL_TOKEN`+`VERCEL_TEAM_ID`+`VERCEL_PROJECT_ID` | ja | `Sandbox.create` (samma auth-trio som preview-runnern) |
 | `BLOB_READ_WRITE_TOKEN` | ja | skickas in i sandboxen för output-uploaden |
-| `KV_REST_API_URL`/`KV_REST_API_TOKEN` (eller `VIEWSER_KV_REST_*`/`UPSTASH_REDIS_REST_*`) | rekommenderas | run-status + pekare; utan dem blir status memory-driver lokalt och sandboxens status-POST:ar hoppas över |
+| `KV_REST_API_URL`/`KV_REST_API_TOKEN` (eller `VIEWSER_KV_REST_*`/`UPSTASH_REDIS_REST_*`) | ja hostat (`VERCEL=1`) | run-status + pekare. Preflight i `startHostedBuild` failar hårt FÖRE `Sandbox.create` utan dem hostat (annars hänger status-pollningen till timeout). Lokalt utan `VERCEL=1`: memory-driver, sandboxens status-POST:ar hoppas över ärligt |
 | `VIEWSER_BUILD_CONTEXT_URL` | fallback | används om KV-nyckeln `viewser:build-context:url` saknas |
 | `OPENAI_API_KEY` (+ valfri `OPENAI_MODEL`) | nej | utan nyckel kör pipen ärlig mock-fallback (`briefSource=mock-no-key`) |
 
@@ -90,8 +91,11 @@ In i sandboxen skickas (via `runCommand env`): `RUN_ID`, `SITE_ID`,
 - `viewser:build-context:url` (ingen TTL): rå URL-sträng till senaste
   build-kontext-tarballen (skrivs av operatörs-CLI:t).
 
-Pollning: `GET /api/hosted-build/<runId>` returnerar status-JSON:en, 404 med
-svensk notis när nyckeln saknas/förfallit.
+Pollning: `GET /api/hosted-build/<runId>?siteId=<siteId>` returnerar
+status-JSON:en när siteId matchar statusens. 404 med samma svenska notis vid
+saknad/förfallen nyckel OCH vid siteId-mismatch (B196: identiskt svar i båda
+fallen så routen aldrig bekräftar att ett gissat runId existerar). Utan
+`?siteId=` svarar routen 400.
 
 ## Ingår INTE i P2 (hanteras separat)
 
@@ -102,6 +106,11 @@ svensk notis när nyckeln saknas/förfallit.
 - Persistens av run-historik (`data/runs/`, `data/prompt-inputs/`) hostat —
   följdprompter (`followup: true`) kräver den och failar ärligt i sandboxen
   tills den biten landar.
-- Städning av föråldrade blobbar under `generated/<siteId>/` — samma
-  semantik som snapshot-CLI:t (overwrite, ingen delete), så en borttagen
-  route kan lämna en kvarliggande fil i blob tills en städrutin landar.
+- ~~Städning av föråldrade blobbar under `generated/<siteId>/`~~ — löst via
+  manifest-baserad servering (B195, PR #287): bygget publicerar sist
+  `generated/<siteId>/.manifest.json` med byggets exakta fil-set och
+  `lib/generated-blob-source.ts` serverar bara manifest-listade filer, så
+  stale blobbar ignoreras utan radering.
+- Strukturerad discovery-payload hostat (B197): den hostade vägen skickar
+  bara `PROMPT_TEXT` in i sandboxen — wizardens `discovery`-block når aldrig
+  `prompt_to_project_input.py` där (lokalt gör det det). P3-spår.

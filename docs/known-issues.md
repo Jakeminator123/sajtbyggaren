@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 165 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 166 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -720,10 +720,12 @@ jakob-be-blockerare** — hostat läge är default AV på jakob-be (lokalt/local
 grindat). **Driftspärr HÄVD av operatör 2026-06-11:** publik hostad deploy är
 PÅ (`VIEWSER_ENABLE_HOSTED_BUILD=1` + `VIEWSER_ALLOW_NON_LOCALHOST=true` i alla
 Vercel-miljöer, konsoliderat via env-städningen + PR #286). Operatörsbeslut:
-användare ska kunna skapa sajter publikt nu; B195 är fixad (#287) och B196
-accepteras som känd, prioriterad härdning som fixas separat — den ska INTE
-stänga av publik drift. Skyddet i drift är rate-limit per IP (ADR 0050) +
-sandbox-TTL.
+användare ska kunna skapa sajter publikt nu; B195 är fixad (#287) och B196 är
+fixad i review-sweepen 2026-06-11 (site-bunden status-route, se Stängda) —
+utan att stänga av publik drift. Skyddet i drift är rate-limit per IP
+(ADR 0050) + sandbox-TTL. Samma sweep fixade KV-preflighten (hård fail före
+sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
+(icke-streamande klienter tolkade 202-accepted som färdigt bygge).
 
 - **`B194` Låg** (P3-spår) - hostade följdpromptar (`startHostedBuild(...
   followup: true)`) kan inte härleda föregående version utan persisterad
@@ -744,12 +746,15 @@ sandbox-TTL.
   `fix/b195-stale-blob-cleanup` (PR mot jakob-be, inväntar merge). Test:
   `apps/viewser/lib/generated-blob-source.test.ts` (`selectServedRelPaths`) +
   `tests/test_viewser_hosted_blob_cleanup.py`.
-- **`B196` Medel** (publik-deploy-härdning) - `GET /api/hosted-build/<runId>`
-  exponerar bygg-status för valfritt `runId` utan site-binding/auth. På
-  jakob-be ofarligt (localhost-grindat + UUID-skyddat), men i publikt läge en
-  enumererings-/informationsläckage-yta. Bind runId till siteId eller kräv
-  auth innan publik aktivering. Källa: extern granskning #284 (fynd C).
-  Fix: open. Test: open.
+- **`B197` Låg-Medel** (P3-spår) - discovery-paritet hostat: den hostade
+  byggvägen (`runHostedPromptFlow` -> `startHostedBuild`) skickar bara
+  `PROMPT_TEXT` in i bygg-sandboxen — wizardens strukturerade
+  `discovery`-payload (validerad av `/api/prompt`) når aldrig
+  `prompt_to_project_input.py` hostat, så hostade wizard-byggen tappar de
+  strukturerade directives lokala byggen får. Kräver att payloaden
+  serialiseras in i sandboxen (env/fil) när P3-persistensen läggs.
+  Källa: extern granskning #284 (fynd 4), kod-verifierad i review-sweepen
+  2026-06-11. Fix: open. Test: open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
@@ -763,6 +768,21 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B196` Medel** (stängd 2026-06-11, review-sweep samma vecka som fyndet) -
+  `GET /api/hosted-build/<runId>` exponerade bygg-status för valfritt `runId`
+  utan site-binding/auth — i publikt läge en enumererings-/informations-
+  läckage-yta (på jakob-be ofarligt: localhost-grindat + UUID-skyddat).
+  Fixad genom site-bindning: routen kräver query-param `?siteId=` (validerad
+  med samma mönster som runnern) och jämför mot statusens `siteId` före svar;
+  saknad nyckel och siteId-mismatch ger EXAKT samma svenska 404-text så
+  svaret aldrig bekräftar att ett gissat runId existerar (ingen orakel-läcka).
+  Klientpåverkan: ingen klient anropade status-routen vid fixtillfället
+  (prompt-routens NDJSON-stream pollar KV server-side); budget-slut-
+  hänvisningarna i `/api/prompt` pekar nu på den siteId-bundna URL:en.
+  Publik drift stängdes ALDRIG av (operatörens spärr-hävning respekterad).
+  Källa: extern granskning #284 (fynd C). Fix: `cc5e6e5`. Test:
+  `tests/test_viewser_hosted_build_status.py`.
 
 - **`B193` Medel** (stängd 2026-06-10, samma dag som operatörsfyndet) -
   rollerna delade inget minne i chatten: dirigenten svarade "jag ändrade
