@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 167 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (av 23 öppna), 6 unknown, 168 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -715,12 +715,6 @@ utan att stänga av publik drift. Skyddet i drift är rate-limit per IP
 sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
 (icke-streamande klienter tolkade 202-accepted som färdigt bygge).
 
-- **`B194` Låg** (P3-spår) - hostade följdpromptar (`startHostedBuild(...
-  followup: true)`) kan inte härleda föregående version utan persisterad
-  run-historik; failar i dag ärligt men funkar inte förrän run-state
-  persisteras (KV/blob). Kräver state-persistens-slice innan hosted followups
-  aktiveras. Källa: extern granskning #284 (fynd A), bekräftad ej-blockerare
-  för jakob-be (hostat default AV). Fix: open. Test: open.
 - **`B195` Medel** (publik-deploy-defekt, fix i PR) - blob-upload skriver över
   `generated/<siteId>/...` men raderade aldrig gamla filer → en borttagen
   route/asset blev kvar i preview vid ombygge mot samma `siteId` (stale fil).
@@ -786,6 +780,24 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B194` Låg** (stängd 2026-06-11, P3-spårets första slice) - hostade
+  följdpromptar (`startHostedBuild(... followup: true)`) kunde inte härleda
+  föregående version: `prompt_to_project_input.py --followup-site-id` läser
+  `data/prompt-inputs/<siteId>.{project-input,meta}.json` som aldrig fanns i
+  en färsk sandbox → ärlig fail. Fixad med run-state-persistens: varje lyckat
+  hostat bygge publicerar det färska PI/meta-paret versions-scopat till blob
+  (`run-state/<siteId>/v<N>/`, immutabelt — pekaren flyttas först när BÅDA
+  filerna är uppe) och sätter durabla KV-pekaren
+  `viewser:site:<siteId>:run-state`; vid followup preflight-läser
+  `startHostedBuild` pekaren (saknad → ärlig fail FÖRE Sandbox.create med
+  byggråd) och sandboxen curlar ner paret till `data/prompt-inputs/` innan
+  followup-kommandot körs. Run-state-upload-fel efter lyckat bygge faller
+  aldrig bygget (sajten är publicerad) men lämnar pekaren orörd så nästa
+  followup utgår från senast konsistenta paret. `--base-run-id` hostat ingår
+  inte (v<N>-layouten är förberedd för det). Källa: extern granskning #284
+  (fynd A). Fix: `feat/b194-hosted-run-state`. Test:
+  `tests/test_viewser_hosted_run_state.py`.
 
 - **`B192` Låg-Medel** (stängd 2026-06-11, dagen efter #269-rebasen som
   deferrade den) - answer-only-svar via DIALOG-vägen (färgväljare,
