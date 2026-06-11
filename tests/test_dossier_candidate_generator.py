@@ -260,7 +260,11 @@ def test_generate_hard_candidate_from_intake_writes_only_candidate_contract_file
         "manifest.json",
         "instructions.md",
     ]
-    assert contract["dossierDirectoryLayout"]["additionalRequiredFilesByClass"]["hard"] == []
+    assert contract["dossierDirectoryLayout"]["additionalRequiredFilesByClass"]["hard"] == [
+        "env-contract.json",
+        "code-contract.json",
+        "integration-contract.json",
+    ]
 
 
 def test_hard_candidate_id_avoids_existing_soft_candidate_dir(
