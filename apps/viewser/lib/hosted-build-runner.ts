@@ -261,26 +261,48 @@ fi
 # generated/<siteId>/<relPath> — EXAKT layoutet lib/generated-blob-source.ts
 # listar/laser (darfor ingen tarball har). Samma skip-kataloger och
 # .env-skydd som scripts/snapshot-site-to-blob.mjs.
+#
+# Robusthet (lardom fran forsta publika felet "Blob-upload misslyckades."):
+#   - Varje path-segment URL-kodas via python3 — genererade sajter kan ha
+#     filnamn med mellanslag/akzenter som annars ger trasiga PUT-requests.
+#   - 3 forsok per fil med backoff — enstaka 429/5xx fran blob-api:t far
+#     inte falla hela bygget.
+#   - Vid slutgiltigt fel skrivs HTTP-kod + fil + svarskropp till
+#     /tmp/blob-upload-error.txt och tas med i KV-statusen sa nasta fel
+#     ar diagnosbart i stallet for generiskt.
 post_status "uploading" "" "$ACTIVE_BUILD_ID"
 BUILD_DIR="$GENERATED_DIR/$SITE_ID/builds/$ACTIVE_BUILD_ID"
 cd "$BUILD_DIR" || fail "Build-katalogen saknas: $BUILD_DIR"
 
-find . \\( -name node_modules -o -name .next -o -name .git -o -name .turbo -o -name .vercel -o -name .cache -o -name out \\) -prune -o -type f -print | sed 's|^\\./||' | {
-  upload_ok=1
-  while IFS= read -r rel; do
-    base=$(basename "$rel")
-    case "$base" in
-      .env.example) ;;
-      .env*) continue ;;
-    esac
-    curl -sf -X PUT "$BLOB_API/generated/$SITE_ID/$rel" \\
+upload_file() {
+  rel="$1"
+  encoded=$(REL="$rel" python3 -c 'import os, urllib.parse; print("/".join(urllib.parse.quote(seg, safe="") for seg in os.environ["REL"].split("/")))')
+  attempt=1
+  while [ "$attempt" -le 3 ]; do
+    http_code=$(curl -s -o /tmp/blob-upload-body -w "%{http_code}" -X PUT "$BLOB_API/generated/$SITE_ID/$encoded" \\
       -H "Authorization: Bearer $BLOB_READ_WRITE_TOKEN" \\
       -H "x-api-version: 7" \\
       -H "x-add-random-suffix: 0" \\
-      --data-binary "@$rel" >/dev/null || { upload_ok=0; break; }
+      --data-binary "@$rel" || echo "000")
+    case "$http_code" in
+      2*) return 0 ;;
+    esac
+    sleep "$attempt"
+    attempt=$((attempt + 1))
   done
-  [ "$upload_ok" = "1" ]
-} || fail "Blob-upload misslyckades."
+  printf 'HTTP %s for "%s": %s' "$http_code" "$rel" "$(tail -c 300 /tmp/blob-upload-body 2>/dev/null)" > /tmp/blob-upload-error.txt
+  return 1
+}
+
+rm -f /tmp/blob-upload-error.txt
+while IFS= read -r rel; do
+  base=$(basename "$rel")
+  case "$base" in
+    .env.example) ;;
+    .env*) continue ;;
+  esac
+  upload_file "$rel" || fail "Blob-upload misslyckades: $(cat /tmp/blob-upload-error.txt 2>/dev/null)"
+done < <(find . \\( -name node_modules -o -name .next -o -name .git -o -name .turbo -o -name .vercel -o -name .cache -o -name out \\) -prune -o -type f -print | sed 's|^\\./||')
 
 # Hostad current.json-motsvarighet: viewser:site:<siteId>:current (ingen TTL —
 # pekaren ar durabel tills nasta lyckade bygge skriver over den).
