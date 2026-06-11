@@ -120,18 +120,25 @@ export function ensureFreshVercelOidcToken(options = {}) {
   }
   log("hämtar färsk VERCEL_OIDC_TOKEN (vercel env pull)…");
   try {
-    // DEP0190 / säkerhet: spawna `vercel` SHELL-FRITT (shell: false) med args
-    // som array, så ingen shell-sträng byggs (ingen injektionsyta, ingen
-    // args+shell:true-deprecation). På Windows är CLI:n en `.cmd`-shim som
-    // kräver explicit extension när shell saknas; övriga plattformar använder
-    // `vercel`. Saknas binären returnerar spawnSync ett fel (status != 0 /
-    // kast) som fångas nedan → ärlig degrade (best-effort token-pull).
-    const vercelBin = process.platform === "win32" ? "vercel.cmd" : "vercel";
-    const result = spawnSync(
-      vercelBin,
-      ["env", "pull", envFile, "--environment=development", "--yes"],
-      { cwd: REPO_ROOT, stdio: "ignore", shell: false, timeout: 60_000 },
-    );
+    // DEP0190 / säkerhet: spawna SHELL-FRITT (shell: false) med args som array,
+    // så ingen shell-sträng byggs (ingen injektionsyta, ingen
+    // args+shell:true-deprecation). På Windows vägrar Node 24 spawna en `.cmd`
+    // direkt med shell:false (EINVAL, CVE-2024-27980-härdningen) — kör därför
+    // `cmd.exe /c vercel …`: cmd.exe är en riktig .exe (ingen EINVAL) och
+    // shell:false behålls (ingen DEP0190). Övriga plattformar kör `vercel`
+    // direkt. Saknas binären returnerar spawnSync ett fel (status != 0 / kast)
+    // som fångas nedan → ärlig degrade (best-effort token-pull).
+    const isWindows = process.platform === "win32";
+    const command = isWindows ? "cmd.exe" : "vercel";
+    const args = isWindows
+      ? ["/c", "vercel", "env", "pull", envFile, "--environment=development", "--yes"]
+      : ["env", "pull", envFile, "--environment=development", "--yes"];
+    const result = spawnSync(command, args, {
+      cwd: REPO_ROOT,
+      stdio: "ignore",
+      shell: false,
+      timeout: 60_000,
+    });
     if (result.status === 0) {
       log("OIDC-token uppdaterad.");
       const freshExp = vercelOidcExpirySeconds(envFile);
