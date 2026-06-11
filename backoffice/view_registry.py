@@ -18,6 +18,7 @@ from collections.abc import Callable
 
 from backoffice.views import (
     building_blocks,
+    control_room,
     engine_runs,
     evals,
     governance,
@@ -30,8 +31,11 @@ from backoffice.views import (
 
 # Section label -> owning view module. This is the source the sidebar and the
 # governance lock both derive from; ``ownerSource`` in the policy must match
-# each module's dotted ``__name__``.
+# each module's dotted ``__name__``. Dict order = sidebar order; Dirigentpult
+# is deliberately FIRST (the overarching control surface sits above the
+# per-area sections).
 SECTION_MODULES = {
+    "Dirigentpult": control_room,
     "Status": status,
     "Governance": governance,
     "Identitet": identity,

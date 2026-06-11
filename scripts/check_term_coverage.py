@@ -241,6 +241,11 @@ COMMON_WORDS = {
     # pytest stdlib type used as type annotation in tests. Same treatment
     # as MonkeyPatch above.
     "CaptureFixture",
+    # Streamlits inbyggda headless-testklass (streamlit.testing.v1.AppTest)
+    # som tests/test_backoffice_control_room.py anvander for render-smoke
+    # av Dirigentpulten. Externt biblioteks-symbol, samma kategori som
+    # MonkeyPatch / CaptureFixture ovan - inte ett domanbegrepp.
+    "AppTest",
     # scripts/prune_generated_previews.py implementation symbols (Python
     # dataclasses + report container). Same treatment as PlanResult /
     # PlanningChoice above - implementation detail, not domain terms.

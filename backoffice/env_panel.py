@@ -29,6 +29,72 @@ class EnvKeyState:
     is_set: bool
 
 
+# Hård whitelist för env-nycklar vars VÄRDEN får visas i backoffice (modell-
+# namn och token-budgetar - aldrig nycklar/secrets). Allt utanför listan
+# behandlas som hemligt och får aldrig läsas ut via read_non_secret_env.
+NON_SECRET_ENV_KEYS = (
+    "OPENAI_MODEL",
+    "OPENAI_VISION_MODEL",
+    "SAJTBYGGAREN_DISCOVERY_MODEL",
+    "VIEWSER_MAX_CHAT_TOKENS",
+)
+
+_ENV_LINE_RE = None  # lazy-compiled in _read_repo_dotenv_value
+
+
+def _read_repo_dotenv_value(name: str) -> str | None:
+    """Minimal parse av repo-rotens .env för EN whitelistad nyckel.
+
+    Speglar resolutionsordningen i apps/viewser (process.env vinner, annars
+    repo-rotens .env). Ingen dotenv-dependency: enkel KEY=VALUE-rad, '#'
+    kommentarer ignoreras, omgivande citattecken strippas.
+    """
+    global _ENV_LINE_RE
+    import re
+
+    from .paths import REPO_ROOT
+
+    if _ENV_LINE_RE is None:
+        _ENV_LINE_RE = re.compile(r"^\s*(?:export\s+)?([A-Z0-9_]+)\s*=\s*(.*)\s*$")
+
+    dotenv = REPO_ROOT / ".env"
+    try:
+        text = dotenv.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    value: str | None = None
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        match = _ENV_LINE_RE.match(line)
+        if match and match.group(1) == name:
+            raw = match.group(2).strip()
+            if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in {'"', "'"}:
+                raw = raw[1:-1]
+            value = raw or None  # last assignment wins, like dotenv
+    return value
+
+
+def read_non_secret_env(name: str, environ: dict[str, str] | None = None) -> str | None:
+    """Läs VÄRDET för en whitelistad icke-hemlig env-nyckel.
+
+    Resolutionsordning som apps/viewser/lib/openai.ts:openaiEnv: process-env
+    först, sedan repo-rotens .env. För nycklar utanför NON_SECRET_ENV_KEYS
+    kastas ValueError - ett anrop med fel nyckel är en bugg, inte ett
+    tillåtet sätt att läcka ett värde.
+    """
+    if name not in NON_SECRET_ENV_KEYS:
+        raise ValueError(
+            f"'{name}' står inte i NON_SECRET_ENV_KEYS - värden utanför "
+            "whitelisten får aldrig läsas ut."
+        )
+    env = os.environ if environ is None else environ
+    from_process = (env.get(name) or "").strip()
+    if from_process:
+        return from_process
+    return _read_repo_dotenv_value(name)
+
+
 def scan_env_keys(environ: dict[str, str] | None = None) -> list[EnvKeyState]:
     """Return set/missing state for each tracked key. Never returns values."""
     env = os.environ if environ is None else environ

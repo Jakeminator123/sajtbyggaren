@@ -62,13 +62,19 @@ def _save_soul(new_text: str) -> None:
     )
 
 
-def view_identity() -> None:
-    st.title("Identitet (SOUL)")
-    st.caption(
-        "Dirigentens konstitution: mål, får/får-inte, ärlighet och "
-        "kontextnivåer. Speglar en OpenClaw-workspace men för vår "
-        "in-process-dirigent. Läses server-side av chatt-personan (ADR 0044)."
-    )
+# Runtime-trunkeringen i apps/viewser/lib/soul.ts: allt över denna gräns når
+# aldrig chatt-personan. Speglas här så editorerna kan varna ärligt.
+SOUL_RUNTIME_MAX_CHARS = 3500
+
+
+def render_soul_editor(*, key_prefix: str = "identity") -> None:
+    """Delad SOUL-editor (redigera/förhandsvisa/TOOLS read-only).
+
+    All skrivlogik (path-lås, caps, varningar) bor i den här modulen — andra
+    vyer (Dirigentpulten) återanvänder renderaren med eget ``key_prefix`` i
+    stället för att duplicera den. Skrivmålet är alltid den path-låsta
+    ``SOUL_PATH``-konstanten via ``_save_soul``.
+    """
     st.warning(
         "Den här texten är persona-bas för chatten i ALLA sajter. En ändring "
         "påverkar varje sajts dirigent-svar (ton + persona) — inte "
@@ -91,15 +97,25 @@ def view_identity() -> None:
             "SOUL.md",
             value=current,
             height=560,
-            key="identity-soul-edit",
+            key=f"{key_prefix}-soul-edit",
         )
-        st.caption(f"{len(new_text)} / {SOUL_MAX_CHARS} tecken.")
-        if st.button("Spara SOUL.md", key="identity-soul-save"):
+        st.caption(
+            f"{len(new_text)} / {SOUL_MAX_CHARS} tecken (editor-cap). "
+            f"Runtime trunkerar till {SOUL_RUNTIME_MAX_CHARS} tecken "
+            "(apps/viewser/lib/soul.ts) — text därefter når aldrig chatten."
+        )
+        if len(new_text) > SOUL_RUNTIME_MAX_CHARS:
+            st.warning(
+                f"Texten är {len(new_text)} tecken — allt efter tecken "
+                f"{SOUL_RUNTIME_MAX_CHARS} klipps bort av runtime innan "
+                "chatt-personan ser den."
+            )
+        if st.button("Spara SOUL.md", key=f"{key_prefix}-soul-save"):
             _save_soul(new_text)
-        st.session_state["identity-soul-preview"] = new_text
+        st.session_state[f"{key_prefix}-soul-preview"] = new_text
 
     with tab_preview:
-        preview_text = st.session_state.get("identity-soul-preview", current)
+        preview_text = st.session_state.get(f"{key_prefix}-soul-preview", current)
         st.markdown(preview_text)
 
     with tab_tools:
@@ -111,6 +127,16 @@ def view_identity() -> None:
             st.markdown(TOOLS_PATH.read_text(encoding="utf-8"))
         else:
             st.info(f"TOOLS.md saknas på {TOOLS_PATH}.")
+
+
+def view_identity() -> None:
+    st.title("Identitet (SOUL)")
+    st.caption(
+        "Dirigentens konstitution: mål, får/får-inte, ärlighet och "
+        "kontextnivåer. Speglar en OpenClaw-workspace men för vår "
+        "in-process-dirigent. Läses server-side av chatt-personan (ADR 0044)."
+    )
+    render_soul_editor(key_prefix="identity")
 
 
 VIEWS = {
