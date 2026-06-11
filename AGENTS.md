@@ -2,9 +2,32 @@
 
 ### Notis om shell-kommandon på Windows (Jakob/jakob-be)
 > ⚠️ **OBS! (Gäller endast för "jakob" och "jakob-be"):**  
-> De agenter som körs av användaren "jakob" eller "jakob-be" är nästan alltid i PowerShell-miljö på Windows. Detta kan påverka tillförlitligheten kring EOL (radslut), heredoc-block, och kommandon såsom `cat` eller bash-liknande script (exempel: multiline-kommando med pipe eller heredoc).  
-> **Särskilt viktigt:** Bash-skript eller kommandon som körs eller kopieras mot t.ex. GitHub Actions, unix-miljö eller moln-VM (Linux) kan få oväntade radslut/avslut eller funktionsfel när de genereras/körs i PowerShell (Windows) – exempelvis kan heredoc/kat, EOF-hantering och fil-pipelines brytas!  
-> Om ett kommando är kritiskt för pipeline/bygg, se till att explicit ange Unix-EOL och gärna testa separat i bash-miljö om det är ämnat för icke-Windows-miljö.  
+> De agenter som körs av användaren "jakob" eller "jakob-be" (inklusive ALLA
+> underagenter/subagenter de spawnar) kör nästan alltid i **PowerShell på
+> Windows** — inte bash. Skriv kommandon i PowerShell-syntax från början.
+>
+> **Gör (PowerShell-säkert):**
+> - Kedja sekventiellt med `;` — eller hellre flera separata shell-anrop.
+>   (`&&`/`||` funkar först i PowerShell 7+; anta inte att de finns.)
+> - Miljövariabler: `$env:NAMN` (sätt per-process), aldrig `export`/`VAR=x cmd`.
+> - Sökvägar med mellanslag: dubbla citattecken; backslash är INTE escape-tecken.
+> - Flerradigt innehåll till fil: skriv en tempfil med `Out-File`/`Set-Content`
+>   (välj `-Encoding` medvetet) och peka på den (t.ex. `curl.exe --data-binary "@fil"`).
+> - Native binärer: skriv `curl.exe` — blotta `curl` är i PowerShell ett alias
+>   till en inbyggd webb-cmdlet, inte riktiga curl.
+> - Tysta fel: `2>$null` eller `-ErrorAction SilentlyContinue`, inte `2>/dev/null`.
+>
+> **Gör INTE (bash-ismer som tyst går sönder):**
+> - Heredocs (`<<EOF`), `$(...)`-subshells i bash-stil, `export`, `which`
+>   (använd `Get-Command`), `head`/`tail`/`grep`/`sed`/`awk` som kommandon
+>   (använd specialverktygen eller `Select-Object`/`Select-String`),
+>   enkelfnuttar runt strängar som ska interpoleras.
+> - Newline-separerade kommandon i ETT shell-anrop.
+>
+> **Särskilt viktigt:** Bash-skript/kommandon som genereras HÄR men ska köras
+> i unix-miljö (GitHub Actions, moln-VM, Vercel sandbox) kan få fel radslut
+> (CRLF) eller trasiga heredocs. Ange explicit Unix-EOL (LF) för sådana filer
+> och testa i bash-miljö när de är pipeline-kritiska.  
 > Detta gäller dock *enbart* sessioner/agentkörningar för "jakob" och "jakob-be".
 
 ### Codex-IDE agent parity
