@@ -458,6 +458,11 @@ COMMON_WORDS = {
     "MapPin", "ShieldCheck", "PartyPopper", "ShoppingBag", "LayoutTemplate",
     # Konsumentvarumärken som dyker upp i exempel-content (inte domänbegrepp)
     "PlayStation", "LinkedIn",
+    # Domänregistrar-varumärke refererat i sajtmaskin-analysrapporten
+    # (docs/reports/sajtmaskin-vs-sajtbyggaren-analys-2026-06-10.md,
+    # domänköps-flödet i klass C). Samma tredjeparts-SaaS-kategori som
+    # Bokadirekt / Calendly / SendGrid — inte ett domänbegrepp.
+    "GoDaddy",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "TokenMeter", "ViewerPanel",
