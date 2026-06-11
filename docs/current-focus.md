@@ -26,10 +26,14 @@ Backup av för-sync-main: `backup-main-2026-06-11-pre-evening-sync-cb0f6a5`.
   på senaste app-ändringen, inte nödvändigtvis main-HEAD. Det är väntat
   monorepo-beteende, ingen bugg.
 - **`main` låst med GitHub-ruleset (2026-06-12, operatörsbeslut):** bara
-  admin (Jakobs konto, dvs. vår lane) och steward-workflowen (github-actions)
-  kan uppdatera `main`; force-push och branch-radering blockerade för alla.
-  Christopher-lanen når produktion enbart via PR → `jakob-be` → ff-push av
-  vår lane. Rulesetet heter "protect-main-production-lane" (repo-settings).
+  admin (Jakobs konto, dvs. vår lane) kan uppdatera `main`; force-push och
+  branch-radering blockerade för alla. Christopher-lanen når produktion
+  enbart via PR → `jakob-be` → ff-push av vår lane. Rulesetet heter
+  "protect-main-production-lane" (id 17578855, repo-settings). OBS: GitHub
+  tillåter inte Actions-appen som bypass på user-ägda repon, så steward-
+  auto-bump kan inte pusha till `main` — den triggas bara av PR mergad
+  direkt till `main`, vilket lane-modellen ändå förbjuder (retargeta alltid
+  till `jakob-be`, som med #305).
 - **Blob-token verifierad (operatörsfråga 2026-06-12):** lokala
   `apps/viewser/.env.local` och Vercel-prod har IDENTISK `BLOB_READ_WRITE_TOKEN`
   (store `vxfg…`). "Added 15h ago" i Vercel-dashboarden är skapelsetid, inget
