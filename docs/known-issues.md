@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 166 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (av 25 öppna), 6 unknown, 166 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -755,6 +755,31 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   serialiseras in i sandboxen (env/fil) när P3-persistensen läggs.
   Källa: extern granskning #284 (fynd 4), kod-verifierad i review-sweepen
   2026-06-11. Fix: open. Test: open.
+
+## Operatörsfynd 2026-06-11 (kvällspasset, kottbulle v5→v6)
+
+- **`B198` Medel** - följdprompt kan inte aktivera en NAMNGIVEN dossier:
+  kedjan följdprompt → hard-dossier-montering är inte trådad. Konkret
+  operatörsfall (kottbulle-ab-efadae v5→v6): "Skapa en badge eller sektion
+  för min resend-funktion för mejl" gick tekniskt igenom (bygge ok) men
+  landade som ett generiskt tjänstekort i `services`-listan;
+  `selectedDossiers.required` förblev tom och `resend-contact-form`-dossiern
+  (ADR 0053, #295) monterades aldrig ("copied 0 dossier components"). Tre
+  staplade gap: (1) section_add resolvar typ → capability → DEFAULT-dossier,
+  och `resend-contact-form` har `defaultForCapability: false` (mailto är
+  soft default) så den kan aldrig väljas via chatt; (2) contact-form är
+  mount-only på ALLA scaffolds (bara faq/team renderas synligt, och bara på
+  local-service-business — kottbulle kör ecommerce-lite); (3) ordval utan
+  sanktionerad typ-slug ("badge", "resend", "mejl") matchar ingen sektionstyp
+  i routern, så prompten faller igenom till legacy-brief-vägen som syr in
+  ett tjänstekort. Dossiern kan i dag bara aktiveras via Project Input-filen
+  före ett bygge. Fix-skiss: (a) låt section_add bära en dossier-preferens
+  (t.ex. "resend"/"riktigt formulär" → `resend-contact-form` i stället för
+  default), (b) synlig render för contact-form på ecommerce-lite (samma
+  dedikerad-route-mönster som faq/team). Passar efter B194 i prioritets-
+  listan. Källa: operatörsfynd 2026-06-11 (orkestratorpass) + kodverifiering
+  (`section_directives`, action-registry, kottbulle-PI-snapshots v5/v6).
+  Fix: open. Test: open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
