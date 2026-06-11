@@ -951,6 +951,10 @@ COMMON_WORDS = {
     "B147",  # Vercel preview wizard 403 via assertLocalhost (öppen 2026-05-26, operator a/b/c)
     "B156",  # browser-hydration-smoke follow-up (öppen 2026-05-27, PR #131 reviewer-feedback)
     "B157",  # WinError 5 rmtree on live node_modules (öppen 2026-05-27, extern reviewer-analys)
+    # Hostat bygge publik-deploy-uppföljningar (#284, ADR 0048-0050, 2026-06-11):
+    # bug-IDs som backtick/bold-prosa i handoff.md + current-focus.md (kanonisk
+    # text i known-issues.md som är undantagen). Samma behandling som B155/B156/B157.
+    "B194", "B195", "B196",
     "WinError",  # Windows native error-namn (samma kategori som PermissionError ovan); refererad i B157 + gap-spec
     "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
     "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)

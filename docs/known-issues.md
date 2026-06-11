@@ -710,6 +710,37 @@ extern granskning 2026-06-10); B192 nedan (dialog-vägens answer-only-UI) är
   trippel-kollision i samma fil. Källa: extern GPT-granskning 2026-06-10
   (fynd 1), kod-verifierad mot hooken + callers. Fix: open. Test: open.
 
+### Hostat bygge — publik-deploy-uppföljningar (#284, ADR 0048/0049/0050)
+
+PR #284 (mergad 2026-06-11, `9cd8624`) införde hostat bygge i Vercel-sandbox +
+KV-store-adapter + publik rate-limit. Den blockerande säkerhetsbuggen
+(spoofbar klient-IP) fixades före merge (`e44dcbb`). Tre fynd från extern
+granskning är bekräftade som **publik-deploy-uppföljningar, inte
+jakob-be-blockerare** — hostat läge är default AV på jakob-be (lokalt/localhost-
+grindat). **Driftspärr:** publik hostad deploy ska vara AV tills B195+B196 är
+fixade (`VIEWSER_ENABLE_HOSTED_BUILD` ej satt; `VIEWSER_ALLOW_NON_LOCALHOST` ej
+`true` i prod).
+
+- **`B194` Låg (P3-spår)** - hostade följdpromptar (`startHostedBuild(...
+  followup: true)`) kan inte härleda föregående version utan persisterad
+  run-historik; failar i dag ärligt men funkar inte förrän run-state
+  persisteras (KV/blob). Kräver state-persistens-slice innan hosted followups
+  aktiveras. Källa: extern granskning #284 (fynd A), bekräftad ej-blockerare
+  för jakob-be (hostat default AV). Fix: open. Test: open.
+- **`B195` Medel (publik-deploy-defekt)** - blob-upload skriver över
+  `generated/<siteId>/...` men raderar aldrig gamla filer → en borttagen
+  route/asset blir kvar i preview vid ombygge mot samma `siteId` (stale fil).
+  Måste fixas innan man litar på hostade ombyggen publikt. OBS: en påbörjad
+  upload-loop-härdning (manifest-fil + verifierat antal) landade redan via
+  `fa268c5` i #284, men stale-radering kvarstår. Källa: extern granskning #284
+  (fynd B). Fix: open. Test: open.
+- **`B196` Medel (publik-deploy-härdning)** - `GET /api/hosted-build/<runId>`
+  exponerar bygg-status för valfritt `runId` utan site-binding/auth. På
+  jakob-be ofarligt (localhost-grindat + UUID-skyddat), men i publikt läge en
+  enumererings-/informationsläckage-yta. Bind runId till siteId eller kräv
+  auth innan publik aktivering. Källa: extern granskning #284 (fynd C).
+  Fix: open. Test: open.
+
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
 Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna

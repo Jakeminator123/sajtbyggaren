@@ -154,8 +154,20 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `df25e34` (2026-06-10 ~19:20 UTC+2; jakob-be HEAD efter
-PR #282+#283-mergen, `main = jakob-be` tom diff verifierad). **#282**
+Last verified state: `9cd8624` (2026-06-11 ~10:00 UTC+2; jakob-be HEAD efter
+PR #284-mergen, `main = jakob-be` tom diff verifierad). **#284** hostat bygge i
+Vercel-sandbox + KV-store-adapter + publik rate-limit MERGAD (ADR
+0048/0049/0050). Blockerande säkerhetsbugg fixad FÖRE merge (`e44dcbb`):
+rate-limitens klient-IP litade på första `x-forwarded-for` (klient-spoofbar på
+Vercel → kostnadsskyddet kringgicks); nu `x-real-ip` först, annars sista
+XFF-entryt + självläkande KV-TTL. Hostat läge default AV. **⚠️ DRIFTSPÄRR:
+publik hostad deploy AV tills B195+B196 fixade** — `VIEWSER_ENABLE_HOSTED_BUILD`
+ej satt + `VIEWSER_ALLOW_NON_LOCALHOST` ej `true` i prod. Spårade uppföljningar:
+**B194** (hostad followup kräver run-state-persistens, P3), **B195** (blob-upload
+raderar ej stale filer — publik-deploy-defekt; partiell härdning `fa268c5`),
+**B196** (`/api/hosted-build/<runId>` saknar site-binding/auth publikt).
+Pre-ship-backup: `backup-160-BRA` (= `70e5e36`). Tidigare samma kväll —
+Last verified `df25e34` (2026-06-10 ~19:20): **#282**
 compound-prompt-ärlighet MERGAD (B155-uppföljning, ingen ny ADR): en
 sammansatt följdprompt där bara EN del kan utföras (t.ex. stylisten tar
 färgen) tappar inte längre resten TYST — ägarlösa/omaterialiserade
@@ -257,6 +269,17 @@ misplaced-poster som väntar Steward-flytt (B176–B179-rundan, B183–B185).
 
 ## Öppna PR att känna till
 
+- **#285** (`chgenberg → main`): ADR 0046 — markera modul i preview
+  (strukturerade `markedSections` hela vägen + preview-inspector-grunden).
+  Granskad (GO-med-fixar). **SKA rebasas av Christopher mot jakob-be — INTE
+  mergas av oss.** Siktar i dag på `main` (skapar divergens) och har HÖG
+  konfliktrisk mot jakob-be på `apps/viewser/app/api/prompt/route.ts` (hostad
+  bygge/KV/rate-limit från #284) + `naming-dictionary.v1.json` (jakob-be redan
+  v34, PR:en bumpar 32→33 → omnumrera). ~18 av 42 filer är inspector-grund som
+  ÖVERLAPPAR #269 — koordinera så inspector-lanen landar EN gång. ADR 0046 är
+  fritt nummer på jakob-be. Kärnan (markedSections) är ren/additiv med ärliga
+  no-op-grindar och bra säkerhetsposture (server-side Playwright, ingen
+  iframe-DOM/postMessage).
 - **#269** (`christopher → jakob-be`): toolIntent v1-pilot (UI-halva). **Väntar
   Christophers rebase — hans action, inte vår.** Pilotens kärna är redan
   mergad som **#277** (utbrytningen); #269 bär nu enbart preview-inspector-lanen

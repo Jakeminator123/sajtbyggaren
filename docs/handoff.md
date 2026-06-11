@@ -1,11 +1,57 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-10 ~19:20 UTC+2, kvällscheckpoint efter 13 mergade
-PR:ar (#270–#283 utom parkerade) + main-syncar. Verifierad
-`origin/jakob-be = origin/main` (identiska, se Last verified i
-`docs/current-focus.md`).
+**Datum:** 2026-06-11 ~10:00 UTC+2, morgoncheckpoint efter #284 (hostat bygge)
+mergad + main-sync. Verifierad `origin/jakob-be = origin/main` (identiska, se
+Last verified i `docs/current-focus.md`).
 
-## DAGPASSET 2026-06-10 ~17:00 — ÖVERLÄMNING (AUKTORITATIVT BLOCK)
+## MORGONPASSET 2026-06-11 ~10:00 — #284 HOSTAT BYGGE (AUKTORITATIVT BLOCK)
+
+> **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
+> verifiera alltid mot git/koden.**
+>
+> **Git:** `main = jakob-be = 9cd8624` (tom diff). Pre-ship-backup:
+> `backup-160-BRA` (= `70e5e36`, jakob-be före #284). Rent träd.
+>
+> **#284 MERGAD (`9cd8624`) — hostat bygge i Vercel-sandbox + KV-store-adapter
+> + publik rate-limit (ADR 0048/0049/0050).** Granskad av subagent (GO-med-
+> fixar). Blockerande säkerhetsbugg fixad FÖRE merge (`e44dcbb`): rate-limitens
+> klient-IP litade på första `x-forwarded-for` (klient-spoofbar på Vercel) →
+> hela kostnadsskyddet kringgicks; nu `x-real-ip` först, annars sista
+> XFF-entryt. + självläkande KV-TTL (TTL sätts om på varje incr så en tappad
+> expiry inte permanent-blockar en IP). Hostat läge default AV
+> (`VIEWSER_ENABLE_HOSTED_BUILD` + Redis-driver krävs).
+>
+> **⚠️ DRIFTSPÄRR — publik hostad deploy ska vara AV** tills B195+B196 fixade:
+> `VIEWSER_ENABLE_HOSTED_BUILD` får INTE sättas och `VIEWSER_ALLOW_NON_LOCALHOST`
+> får INTE vara `true` i prod. (Vercel-agent/operatör: aktivera inte hostat
+> bygge publikt än.)
+>
+> **Spårade #284-uppföljningar (registrerade i known-issues, ej jakob-be-
+> blockerare — hostat är default AV/localhost-grindat):**
+> **B194** (P3) hostad followup failar ärligt utan persisterad run-historik —
+> kräver state-persistens innan hosted followups funkar. **B195** (publik-
+> deploy-defekt) blob-upload raderar aldrig stale filer (borttagen route/asset
+> kvar i preview vid ombygge mot samma siteId); en påbörjad upload-loop-
+> härdning landade via `fa268c5`, men stale-radering kvarstår. **B196**
+> (publik-deploy-härdning) `GET /api/hosted-build/<runId>` saknar site-binding/
+> auth i publikt läge.
+>
+> **ADR-nummerliggare:** 0044 SOUL (mergad), 0045 SNI (mergad #280), **0046
+> TAGEN av öppna #285** (Christophers section-marking — VÄNTAR REBASE mot
+> jakob-be, INTE mergad av oss), 0047 generativ omskrivning (mergad #283),
+> **0048/0049/0050 mergade via #284** (hostat bygge / KV-store / publik rate-
+> limit). Nästa lediga ADR-nummer: **0051**.
+>
+> **Öppet/pågående:** #285 (ADR 0046 section-marking, Christophers — siktar på
+> `main`, HÖG konfliktrisk mot jakob-be på `route.ts` + naming-dictionary;
+> SKA rebasas av Christopher mot jakob-be, inte mergas av oss), #269 (enbart
+> inspector-lanen, väntar Christophers rebase — överlappar #285:s inspector-
+> grund, koordinera så lanen landar EN gång), #156 (parkerad, säkerhet).
+> B192 öppen (answer-only rött i dialog-vägen, deferrad bakom #269).
+>
+> Kön + detaljer: `docs/current-focus.md` (alltid först).
+
+## DAGPASSET 2026-06-10 ~17:00 — ÖVERLÄMNING (HISTORIK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre (inkl. nattens
 > closing-round nedan) är historik — verifiera alltid mot git/koden.**
