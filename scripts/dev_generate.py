@@ -12,8 +12,11 @@ LLM status (as of Sprint 2B):
       planSource=mock-no-key when the key is missing or
       planSource=mock-llm-error if the call raises. Same helper is
       used by scripts/build_site.py - that is what closes B19.
-    - Phase 3 Build: deterministic placeholder files; codegenModel,
-      Repair Pipeline and Quality Gate land in Sprint 3.
+    - Phase 3 Build: deliberately mock for this dev driver - it writes
+      placeholder generated files but emits the REAL artefact contracts
+      (codegen manifest + QualityResult/RepairResult via
+      packages.generation.{codegen,quality_gate,repair}). Real codegen
+      and the npm build live in scripts/build_site.py (Builder MVP).
 
 All artefakter (site-brief.json, site-plan.json, generation-package.json)
 are validated against governance/schemas/ before they are written.

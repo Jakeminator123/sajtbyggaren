@@ -222,12 +222,16 @@ def view_playground() -> None:
     if api_key_set:
         st.success(
             "OPENAI_API_KEY är satt - **fas 1 (briefModel) och fas 2 (planningModel)** "
-            "anropar riktig LLM. Fas 3 är fortfarande mock placeholder tills Sprint 3."
+            "anropar riktig LLM. Fas 3 är i dev-drivern medvetet mock "
+            "(placeholder-filer men riktiga QualityResult-/RepairResult-kontrakt). "
+            "Riktig codegen + npm-build körs i Builder MVP, scripts/build_site.py."
         )
     else:
         st.info(
             "Ingen OPENAI_API_KEY satt - fas 1 och fas 2 kör mock fallback "
-            "(`mock-no-key`), fas 3 är mock placeholder."
+            "(`mock-no-key`). Fas 3 är i dev-drivern medvetet mock "
+            "(placeholder-filer men riktiga QualityResult-/RepairResult-kontrakt); "
+            "riktig codegen körs i scripts/build_site.py."
         )
 
     prompt = st.text_area(
@@ -244,14 +248,20 @@ def view_playground() -> None:
         ["init", "followup"],
         horizontal=True,
         key="playground_mode",
-        help="Init skapar Project DNA. Follow-up läser DNA - inte implementerat än.",
+        help=(
+            "Init startar ett nytt run. Follow-up kör samma 3-faskedja med "
+            "mode=followup och kräver ett Project ID."
+        ),
     )
     project_id: str | None = None
     if mode == "followup":
         project_id = cols[1].text_input("Project ID", key="playground_project_id").strip() or None
-        st.warning(
-            "Follow-up-runtime är inte implementerad än. dev_generate.py kommer kräva "
-            "--project-id och Project DNA-läsning. Avaktiverat för nu."
+        st.info(
+            "Follow-up i dev-drivern kör hela 3-faskedjan med mode=followup och "
+            "stämplar projectId i input.json + generation-package.json — men läser "
+            "ingen befintlig Project DNA. Den riktiga follow-up-kedjan "
+            "(router -> apply -> targeted render) körs via Viewser eller "
+            "scripts/run_openclaw_followup.py."
         )
 
     can_run = (mode == "init") or (mode == "followup" and project_id)

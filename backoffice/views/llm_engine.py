@@ -87,10 +87,13 @@ def view_followup_flow() -> None:
     st.title("Follow-up Flow")
     st.caption(
         "followup-mode läser befintlig Project DNA och klassificerar FollowUp Intent. "
-        "Delvis implementerat: deterministisk intent + semantisk merge, samt "
-        "copyDirectiveModel (ADR 0034 väg A, nivå 1-3a, llm-models v6) för "
-        "name/tagline/about-text/services. Patch-planerare / targeted rebuild "
-        "(väg C) är ännu inte implementerad; diagrammet visar den planerade designen."
+        "Implementerat idag: deterministisk intent + semantisk merge, "
+        "copyDirectiveModel (ADR 0034 väg A, nivå 1-3a; ADR 0047 sektionsfält), "
+        "styleDirectiveModel för tema, samt artifact-patch-kedjan "
+        "router -> context -> patch -> apply -> targeted render "
+        "(packages/generation/orchestration + build/targeted_render.py). "
+        "Fri fil-patch i genererad kod (väg C) är fortfarande inte implementerad; "
+        "diagrammet visar helheten."
     )
     dna, err = loaders.safe_load_policy("project-dna.v1.json")
     if err or dna is None:
