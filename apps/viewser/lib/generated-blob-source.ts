@@ -23,6 +23,15 @@
 
 const BLOB_PREFIX_ROOT = "generated";
 
+/**
+ * Filnamn (relativt sajtroten) för det publicerings-manifest som det hostade
+ * bygget laddar upp SIST under ``generated/<siteId>/``. Manifestet listar
+ * exakt det senaste byggets fil-set; serveringen använder det för att ignorera
+ * stale blobbar (B195). En dotfil så den aldrig kolliderar med en genererad
+ * sajt-fil och aldrig serveras som sajt-innehåll.
+ */
+export const MANIFEST_RELPATH = ".manifest.json";
+
 /** Skydd så vi aldrig drar ner ett orimligt stort blob-träd (spegel av runnern). */
 const MAX_FILES = 4_000;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
@@ -61,11 +70,74 @@ async function loadBlobSdk(): Promise<typeof import("@vercel/blob") | null> {
 }
 
 /**
- * Läs alla snapshot-filer för ``siteId`` från blob och returnera dem i samma
+ * Avgör vilka relPaths som ska SERVERAS givet (a) alla blobbar som faktiskt
+ * ligger under prefixet och (b) en valfri manifest-lista (det senaste byggets
+ * exakta fil-set). Manifestet vinner: blobbar som inte står i manifestet är
+ * stale — kvarlämnade från ett tidigare bygge mot samma ``siteId`` — och
+ * utelämnas (B195: en borttagen route/asset får inte längre synas i preview).
+ * Manifest-filen själv serveras aldrig. Utan manifest (byggen före B195-fixet)
+ * faller vi tillbaka till "servera allt listat" så äldre snapshots fungerar.
+ *
+ * Ren funktion utan I/O — kärnan i B195-fixet, enhetstestad i
+ * ``generated-blob-source.test.ts``.
+ */
+export function selectServedRelPaths(
+  listedRelPaths: readonly string[],
+  manifestRelPaths: readonly string[] | null,
+): string[] {
+  const listed = new Set(
+    listedRelPaths.filter((rel) => rel && rel !== MANIFEST_RELPATH),
+  );
+  if (!manifestRelPaths) {
+    return [...listed];
+  }
+  const served: string[] = [];
+  const seen = new Set<string>();
+  for (const rel of manifestRelPaths) {
+    if (!rel || rel === MANIFEST_RELPATH) continue;
+    if (seen.has(rel)) continue;
+    // Defensivt: servera bara en manifest-post vars blob faktiskt finns kvar
+    // (om en enskild PUT försvann ska vi inte 404:a hela previewen).
+    if (!listed.has(rel)) continue;
+    seen.add(rel);
+    served.push(rel);
+  }
+  return served;
+}
+
+/**
+ * Hämta och tolka publicerings-manifestet (``.manifest.json``). Accepterar
+ * antingen en ren array av relPaths eller ``{ files: string[] }``. Vid nät-
+ * eller parse-fel returneras ``null`` så serveringen ärligt faller tillbaka
+ * till hela listningen i stället för att tappa hela sajten.
+ */
+async function fetchManifestRelPaths(url: string): Promise<string[] | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data: unknown = await res.json();
+    const files = Array.isArray(data)
+      ? data
+      : (data as { files?: unknown } | null)?.files;
+    if (!Array.isArray(files)) return null;
+    return files.filter((entry): entry is string => typeof entry === "string");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Läs snapshot-filerna för ``siteId`` från blob och returnera dem i samma
  * deskriptor-form som ``collectSource`` på disk. Returnerar ``null`` när ingen
  * snapshot finns (eller token/SDK saknas) så callern kan degradera ärligt.
  * Kastar bara på den hårda säkerhetsgränsen (orimligt stort träd) — samma
  * kontrakt som disk-vägens ``collectSource``.
+ *
+ * B195: när ett ``.manifest.json`` finns under prefixet serveras ENBART de
+ * filer manifestet listar. Stale blobbar som ligger kvar från ett tidigare
+ * bygge mot samma ``siteId`` (overwrite-upload raderar dem aldrig) ignoreras,
+ * så en borttagen route/asset inte längre syns i previewen. Se
+ * ``selectServedRelPaths`` för urvalslogiken.
  */
 export async function collectSourceFromBlob(
   siteId: string,
@@ -92,20 +164,40 @@ export async function collectSourceFromBlob(
 
   if (items.length === 0) return null;
 
+  // Indexera blobbarna per relPath (``generated/<siteId>/<relPath>`` → relPath).
+  const byRel = new Map<string, BlobSdkListItem>();
+  for (const item of items) {
+    if (!item.pathname.startsWith(prefix)) continue;
+    const relPath = item.pathname.slice(prefix.length);
+    if (!relPath || relPath.endsWith("/")) continue;
+    byRel.set(relPath, item);
+  }
+  if (byRel.size === 0) return null;
+
+  // B195: om det senaste bygget publicerade ett manifest serverar vi ENBART de
+  // filer manifestet listar. Stale blobbar (kvar från ett tidigare bygge mot
+  // samma siteId — t.ex. en borttagen route eller bild) ligger kvar i blob men
+  // ignoreras, så previewen speglar exakt det senaste bygget. Saknas manifestet
+  // (snapshots tagna före B195-fixet) faller vi tillbaka till hela listningen.
+  const manifestItem = byRel.get(MANIFEST_RELPATH);
+  const manifestRelPaths = manifestItem
+    ? await fetchManifestRelPaths(manifestItem.url)
+    : null;
+  const servedRelPaths = selectServedRelPaths([...byRel.keys()], manifestRelPaths);
+
   const files: { relPath: string; content: Buffer }[] = [];
   const dirSet = new Set<string>();
   let totalBytes = 0;
 
-  for (const item of items) {
-    // ``pathname`` är ``generated/<siteId>/<relPath>`` → ta bort prefixet.
-    if (!item.pathname.startsWith(prefix)) continue;
-    const relPath = item.pathname.slice(prefix.length);
-    if (!relPath || relPath.endsWith("/")) continue;
+  for (const relPath of servedRelPaths) {
     // Säkerhet: ladda aldrig upp ``.env*`` (utom ``.env.example``) till den
     // publika sandboxen — spegel av disk-vägens B54/B58-skydd.
     const baseName = relPath.split("/").pop() ?? "";
     const lowerName = baseName.toLowerCase();
     if (lowerName.startsWith(".env") && lowerName !== ".env.example") continue;
+
+    const item = byRel.get(relPath);
+    if (!item) continue;
 
     if (files.length >= MAX_FILES || totalBytes > MAX_TOTAL_BYTES) {
       throw new Error(

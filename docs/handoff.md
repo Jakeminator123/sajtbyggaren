@@ -9,8 +9,10 @@ Last verified i `docs/current-focus.md`).
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
 >
-> **Git:** `main = jakob-be = 9cd8624` (tom diff). Pre-ship-backup:
-> `backup-160-BRA` (= `70e5e36`, jakob-be före #284). Rent träd.
+> **Git:** `origin/main = 2e13aa3` (#284-mergen `9cd8624` + docs-bump skeppade
+> till main). `origin/jakob-be` bär docs-only inbox-svar (msg-0069/0070) ovanpå
+> — main-sync till nästa leveransfönster. Pre-ship-backup: `backup-160-BRA`
+> (= `70e5e36`, jakob-be före #284). Rent träd.
 >
 > **#284 MERGAD (`9cd8624`) — hostat bygge i Vercel-sandbox + KV-store-adapter
 > + publik rate-limit (ADR 0048/0049/0050).** Granskad av subagent (GO-med-
