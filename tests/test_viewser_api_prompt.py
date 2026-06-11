@@ -634,6 +634,37 @@ def test_build_runner_latest_run_fallback_tolerates_missing_runs_dir() -> None:
 
 
 @pytest.mark.tooling
+def test_applied_confirmation_is_time_boxed_and_visibility_gated() -> None:
+    """Extern granskning 2026-06-11 (fynd 2+4): dirigent-bekräftelsen efter en
+    applicerad ändring får ALDRIG hålla byggsvaret som gisslan (OpenAI-
+    klientens default-timeout är minuter) och får aldrig eka operatörens
+    önskan som sanning. Lås: (a) Promise.race med eget tidstak + .catch på
+    kedjan (ingen unhandled rejection när timeouten vinner), (b) generering
+    grindad på previewShouldRefresh (mount-only får aldrig pratsam success),
+    (c) systemprompten markerar önskan som icke-facit."""
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "APPLIED_CONFIRMATION_TIMEOUT_MS" in text, (
+        "route.ts saknar tidstaket för dirigent-bekräftelsen"
+    )
+    assert "Promise.race" in text, (
+        "bekräftelse-anropet måste vara Promise.race-grindat mot timeouten"
+    )
+    assert ".catch(() => null)" in text, (
+        "completion-kedjan måste fånga sena fel så timeouten inte lämnar en "
+        "unhandled rejection"
+    )
+    assert (
+        "applyResult.bridge.previewShouldRefresh === true" in text
+    ), "bekräftelsen får bara genereras för en SYNLIGT applicerad ändring"
+    assert "kan innehålla delar som INTE genomfördes" in text, (
+        "systemprompten måste markera operatörens önskan som icke-facit "
+        "(bekräfta bara kedjans fakta)"
+    )
+
+
+@pytest.mark.tooling
 def test_prompt_route_surfaces_build_status() -> None:
     """B44: /api/prompt must propagate build-result.json:status to the
     client so PromptBuilder can render success / degraded / failed

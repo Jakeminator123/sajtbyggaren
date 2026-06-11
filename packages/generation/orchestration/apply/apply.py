@@ -104,9 +104,17 @@ def _implementing_dossiers(
     is listed for that capability in the map AND enabled - otherwise the
     capability falls back to the default resolver, so apply still never mounts
     an unregistered or disabled Dossier.
+
+    Returns ``(mounted, displaced)``: ``mounted`` is the Dossier ids to secure
+    in ``selectedDossiers.required``; ``displaced`` is the sibling Dossier ids
+    an HONOURED preference replaces for the same capability (extern granskning
+    2026-06-11, fynd 3: a named switch is EXCLUSIVE per capability - a site
+    that mounted the mailto default in v2 and asks for resend in v3 must not
+    keep BOTH contact forms). Displacement only ever happens on an explicit
+    named preference; default mounting never removes anything.
     """
     if not capabilities:
-        return []
+        return [], []
     from packages.generation.planning import (
         dossier_is_enabled,
         filter_capabilities,
@@ -121,6 +129,7 @@ def _implementing_dossiers(
     )
     prefs = preferences or {}
     resolved: list[str] = []
+    displaced: list[str] = []
     seen: set[str] = set()
     for capability in capabilities:
         if capability in seen:
@@ -137,13 +146,23 @@ def _implementing_dossiers(
             ):
                 if preferred not in resolved:
                     resolved.append(preferred)
+                for sibling in listed:
+                    if (
+                        isinstance(sibling, str)
+                        and sibling != preferred
+                        and sibling not in displaced
+                    ):
+                        displaced.append(sibling)
                 continue
             # Invalid/disabled preference -> honest fallback to the default.
         selected, _rejected = filter_capabilities([capability], capability_map)
         for dossier_id in selected:
             if dossier_id not in resolved:
                 resolved.append(dossier_id)
-    return resolved
+    # A Dossier both mounted (for another capability) and displaced keeps its
+    # mount - displacement is per-capability, never a global ban.
+    displaced = [d for d in displaced if d not in resolved]
+    return resolved, displaced
 
 
 def _ensure_required_dossiers(
@@ -178,6 +197,31 @@ def _ensure_required_dossiers(
         if dossier_id not in required:
             required.append(dossier_id)
     selected["required"] = required
+
+
+def _remove_displaced_dossiers(
+    project_input: dict, displaced: list[str]
+) -> None:
+    """Remove ``displaced`` Dossier ids from ``selectedDossiers.required``.
+
+    The exclusivity half of a named-Dossier switch (B198, extern granskning
+    2026-06-11 fynd 3): when a follow-up explicitly picks e.g.
+    resend-contact-form, a previously mounted sibling (mailto-contact-form,
+    carried forward from an earlier version's required list) is dropped so the
+    site never builds a hybrid with two contact forms. Only ever called with
+    the siblings of an HONOURED preference; a no-preference apply removes
+    nothing. Defensive on shape (object form only - the legacy list form was
+    already normalised by ``_ensure_required_dossiers``).
+    """
+    if not displaced:
+        return
+    selected = project_input.get("selectedDossiers")
+    if not isinstance(selected, dict):
+        return
+    required = selected.get("required")
+    if not isinstance(required, list):
+        return
+    selected["required"] = [d for d in required if d not in displaced]
 
 
 def apply_patch_plan(
@@ -530,11 +574,15 @@ def apply_patch_plan(
     # B198: a follow-up that NAMED a specific implementing Dossier ("resend")
     # prefers it over the capability default; an invalid/disabled preference
     # falls back to the default inside the resolver (never an invented mount).
-    mounted_dossiers = _implementing_dossiers(
+    # The named switch is EXCLUSIVE per capability: siblings the preference
+    # displaces are removed from required (a v2-mounted mailto must not live
+    # on next to a v3-chosen resend - no hybrid contact forms).
+    mounted_dossiers, displaced_dossiers = _implementing_dossiers(
         [entry.capability for entry in capabilities],
         preferences=dossier_preferences,
     )
     _ensure_required_dossiers(merged, mounted_dossiers)
+    _remove_displaced_dossiers(merged, displaced_dossiers)
 
     # 5b2. section_add INLINE render (ADR 0038): a mounted section capability that
     #      maps to an inline section on a supported scaffold is recorded as a

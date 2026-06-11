@@ -453,10 +453,18 @@ async function generateConversationAnswer(
  *     den deterministiska "registrerad men syns inte än"-raden oförändrad.
  *   - Modellen får ENBART kedjans rapporterade fakta (editKind/version/
  *     routes) + operatörens prompt — aldrig något att "fylla i".
- *   - No-key / helper-fel → null, och FloatingChat faller tillbaka på den
- *     deterministiska success-raden. Fältet kan aldrig fejka en ändring:
- *     det skickas bara på svar som redan bär ett riktigt runId + bridge.
+ *   - No-key / helper-fel / TIMEOUT → null, och FloatingChat faller tillbaka
+ *     på den deterministiska success-raden. Fältet kan aldrig fejka en
+ *     ändring: det skickas bara på svar som redan bär ett riktigt runId +
+ *     bridge.
+ *   - Tidsbudget (extern granskning 2026-06-11, fynd 2): OpenAI-klientens
+ *     default-timeout är lång (minuter) — utan eget tak skulle ett hängande
+ *     bekräftelse-anrop blockera HELA byggsvaret efter ett redan färdigt
+ *     bygge. Promise.race med ett kort tak; vid timeout vinner den
+ *     deterministiska raden (bekräftelsen är grädde, aldrig kritisk väg).
  */
+const APPLIED_CONFIRMATION_TIMEOUT_MS = 8_000;
+
 async function generateAppliedConfirmation(
   prompt: string,
   chain: Record<string, unknown>,
@@ -479,21 +487,40 @@ async function generateAppliedConfirmation(
   if (role) facts.push(`Utförande roll: ${role}`);
   const systemContent = [
     "Du är OpenClaw, dirigenten i Sajtbyggaren — operatörens chattassistent.",
-    "Byggrollerna har precis genomfört operatörens ändring och previewen " +
-      "visar den nya versionen.",
+    "Byggrollerna har precis genomfört en ändring och previewen visar den " +
+      "nya versionen.",
     "Bekräfta ändringen kort på svenska: 1–2 meningar, vänligt och konkret.",
     "Grunda dig ENBART i fakta nedan. Hitta aldrig på detaljer som inte " +
       "står där, lova inget mer än det som gjordes, och ställ ingen fråga.",
+    // Extern granskning 2026-06-11 (fynd 4): operatörens prompt är en ÖNSKAN,
+    // inte ett facit — en sammansatt önskan kan ha delar som inte landade.
+    "Operatörens önskan nedan kan innehålla delar som INTE genomfördes — " +
+      "bekräfta endast det som står i Fakta, aldrig önskan i sig.",
     "Nämn versionsnumret när det finns.",
     `Fakta:\n${facts.join("\n") || "(inga ytterligare fakta)"}`,
   ].join("\n");
   try {
-    const { message } = await chatWithOpenAi([
+    // Promise.race-tak: vid timeout faller vi till null (deterministisk rad)
+    // i stället för att hålla det redan färdiga byggsvaret som gisslan.
+    const timeout = new Promise<null>((resolve) => {
+      const timer = setTimeout(
+        () => resolve(null),
+        APPLIED_CONFIRMATION_TIMEOUT_MS,
+      );
+      if (typeof timer.unref === "function") timer.unref();
+    });
+    // .catch på kedjan (inte bara try/catch): om timeouten vinner racet och
+    // anropet FALLERAR senare får processen ingen unhandled rejection.
+    const completion = chatWithOpenAi([
       { role: "system", content: systemContent },
-      { role: "user", content: `Min ändringsönskan var: ${prompt.slice(0, 500)}` },
-    ]);
-    const text = message.content.trim();
-    return text ? text : null;
+      {
+        role: "user",
+        content: `Min ändringsönskan var: ${prompt.slice(0, 500)}`,
+      },
+    ])
+      .then(({ message }) => message.content.trim() || null)
+      .catch(() => null);
+    return await Promise.race([completion, timeout]);
   } catch {
     return null;
   }
