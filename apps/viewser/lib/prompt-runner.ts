@@ -113,8 +113,12 @@ const ASSET_ROLES = new Set(["logo", "hero", "gallery"]);
  * obligatoriska fält). Optionella fält släpps bara igenom när de har
  * rätt typ — Python-helpern är auktoritativ validering, det här är
  * defense-in-depth före spawn.
+ *
+ * Exporterad så den hostade byggvägen (hosted-build-runner.ts) kör
+ * EXAKT samma sanering före env-injektionen i sandboxen — en
+ * saneringskälla, två spawn-sömmar.
  */
-function sanitizedAssetSetIntent(
+export function sanitizedAssetSetIntent(
   toolIntent: NonNullable<PromptHelperOptions["toolIntent"]>,
 ): { tool: "asset_set"; params: Record<string, unknown> } | null {
   if (toolIntent.tool !== "asset_set") return null;

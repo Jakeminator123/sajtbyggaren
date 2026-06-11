@@ -1193,6 +1193,10 @@ async function runHostedPromptFlow(
       siteId,
       prompt: payload.prompt,
       followup: payload.mode === "followup",
+      // asset_set-forwarding hostat (task A:s hostade halva): samma
+      // Zod-validerade payload som den lokala vägen; runnern sanerar
+      // med samma sanitizedAssetSetIntent före env-injektionen.
+      ...(payload.toolIntent ? { toolIntent: payload.toolIntent } : {}),
     }));
   } catch (error) {
     const message =
