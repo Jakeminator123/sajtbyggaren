@@ -647,6 +647,60 @@ def test_router_fallback_apply_path_classifies_exactly_once(monkeypatch):
 
 
 @pytest.mark.tooling
+def test_router_fallback_dotenv_zero_disables_when_env_unset(
+    monkeypatch, tmp_path
+):
+    """Backoffice-toggeln skriver .env-raden: med variabeln OSATT i process-
+    env och =0 i repo-rotens .env ska bryggan köra ren heuristik (fil-
+    fallbacken läses per spawn)."""
+    import packages.generation.orchestration.router as router_pkg
+    import scripts.run_openclaw_followup as bridge
+
+    monkeypatch.delenv("OPENCLAW_ROUTER_LLM_FALLBACK", raising=False)
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("OPENCLAW_ROUTER_LLM_FALLBACK=0\n", encoding="utf-8")
+    monkeypatch.setattr(bridge, "_REPO_DOTENV_PATH", dotenv)
+
+    def _explode(*args, **kwargs):  # pragma: no cover - reaching this IS the bug
+        raise AssertionError(
+            "classify_message_with_llm_fallback must NOT run when .env says 0"
+        )
+
+    monkeypatch.setattr(
+        router_pkg, "classify_message_with_llm_fallback", _explode
+    )
+    payload = json.loads(decide_to_json("vad ar klockan?"))
+    assert payload["action"] == "answer_only"
+
+
+@pytest.mark.tooling
+def test_router_fallback_process_env_wins_over_dotenv(monkeypatch, tmp_path):
+    """Resolutionsordningen: process-env vinner alltid över .env-raden (samma
+    konvention som openaiEnv/read_non_secret_env)."""
+    import packages.generation.orchestration.router as router_pkg
+    import scripts.run_openclaw_followup as bridge
+
+    monkeypatch.setenv("OPENCLAW_ROUTER_LLM_FALLBACK", "1")
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("OPENCLAW_ROUTER_LLM_FALLBACK=0\n", encoding="utf-8")
+    monkeypatch.setattr(bridge, "_REPO_DOTENV_PATH", dotenv)
+
+    calls = {"count": 0}
+    real_classify = router_pkg.classify_message
+
+    def _counting_fallback(message, *, context=None, **kwargs):
+        calls["count"] += 1
+        return real_classify(message, context=context)
+
+    monkeypatch.setattr(
+        router_pkg, "classify_message_with_llm_fallback", _counting_fallback
+    )
+    payload = json.loads(decide_to_json("vad ar klockan?"))
+    assert payload["action"] == "answer_only"
+    assert calls["count"] == 1, "env=1 ska vinna över .env=0"
+
+
+@pytest.mark.tooling
 def test_conversation_gate_no_key_parity(monkeypatch):
     """Without OPENAI_API_KEY the gate still answers honestly (exit 0 path):
     deterministic answer-only decision, source mock-no-key, never a build."""

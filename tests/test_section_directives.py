@@ -406,6 +406,33 @@ def test_preference_only_applies_to_mounted_capabilities() -> None:
     assert preferences == {}
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "lägg till ett kontaktformulär men inte resend",
+        "kontaktformulär utan resend tack",
+        "lägg till kontaktformulär, ej resend",
+        "ingen resend för formuläret",
+        "kontaktformulär utan någon resend-koppling",
+    ],
+)
+def test_negated_cue_keeps_default(prompt: str) -> None:
+    """Extern granskning 2026-06-11 (fynd 5): en negerad cue ("inte/utan/ej
+    resend") får ALDRIG välja resend-dossiern - defaulten behålls."""
+    preferences = resolve_dossier_preferences(prompt, ["contact-form"])
+    assert preferences == {}, prompt
+
+
+def test_affirmative_cue_still_wins_despite_unrelated_negation() -> None:
+    """En negation någon annanstans i prompten blockerar inte en tydlig
+    jakande cue ("använd resend men inte på undersidorna")."""
+    preferences = resolve_dossier_preferences(
+        "använd resend för formuläret men inte på undersidorna",
+        ["contact-form"],
+    )
+    assert preferences == {"contact-form": "resend-contact-form"}
+
+
 def test_every_cue_dossier_is_registered_for_its_capability() -> None:
     """Governance guard: every Dossier named in DOSSIER_PREFERENCE_CUES must be
     listed for its capability in capability-map.v1.json - the lexicon can never

@@ -223,6 +223,8 @@ def _render_tab_env_models() -> None:
         )
     st.dataframe(rows, width="stretch", hide_index=True)
 
+    _render_router_fallback_toggle()
+
     st.markdown("**Chattens gränser** (`apps/viewser/lib/openai.ts`)")
     limits = runtime_models.chat_limits()
     chat_tokens_env = read_non_secret_env(runtime_models.CHAT_TOKENS_ENV)
@@ -250,6 +252,48 @@ def _render_tab_env_models() -> None:
         st.caption(
             f"{runtime_models.CHAT_TOKENS_ENV} är satt i env och overridar defaulten."
         )
+
+
+def _render_router_fallback_toggle() -> None:
+    """Manövrera KÖR-6b-switchen (routerns LLM-fallback i OpenClaw-bryggan).
+
+    Skrivmålet är path-låst till repo-rotens .env via env_panel.write_router_
+    fallback (atomisk; rör aldrig andra rader/nycklar). Ärlighet: effekten
+    gäller NÄSTA följdprompt-spawn, och en process-env-satt variabel (t.ex.
+    satt i shellet före `npm run dev`) vinner alltid tills servern startas om.
+    """
+    from ..env_panel import router_fallback_state, write_router_fallback
+
+    with st.container(border=True):
+        st.markdown("**Router-LLM-fallback (KÖR-6b)** — OpenClaw-bryggans grind")
+        enabled, source = router_fallback_state()
+        st.caption(
+            "Deterministisk KÖR-6a-heuristik först; tvetydiga/långa "
+            "följdprompter eskaleras till routerModel när detta är PÅ "
+            "(default). AV = ren regex-routing, inga LLM-anrop i grinden. "
+            f"Effektivt läge just nu: **{'PÅ' if enabled else 'AV'}** "
+            f"(källa: {source}). Ändringen skrivs till repo-rotens `.env` och "
+            "gäller från NÄSTA följdprompt. OBS: är variabeln satt i process-"
+            "env (shell/dev-serverstart) vinner den tills dev-servern startas "
+            "om — källan ovan visar vilket."
+        )
+        desired = st.toggle(
+            "LLM-fallback på (rekommenderad)",
+            value=enabled,
+            key="cr-router-fallback-toggle",
+        )
+        if st.button("Spara till .env", key="cr-router-fallback-save"):
+            try:
+                write_router_fallback(desired)
+            except OSError as exc:
+                st.error(f"Kunde inte skriva .env: {exc}. Inget har ändrats.")
+            else:
+                st.success(
+                    f"Sparade OPENCLAW_ROUTER_LLM_FALLBACK={'1' if desired else '0'} "
+                    "till repo-rotens .env. Gäller nästa följdprompt (process-env "
+                    "vinner tills omstart om den är satt där). Ingen git-commit — "
+                    ".env är gitignorad."
+                )
 
 
 # ----- flik C: persona (SOUL) -------------------------------------------------

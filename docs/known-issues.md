@@ -755,19 +755,24 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   (ADR 0053, #295) monterades aldrig ("copied 0 dossier components"). Tre
   staplade gap: (1) section_add resolvar typ → capability → DEFAULT-dossier,
   och `resend-contact-form` har `defaultForCapability: false` (mailto är
-  soft default) så den kan aldrig väljas via chatt; (2) contact-form är
-  mount-only på ALLA scaffolds (bara faq/team renderas synligt, och bara på
-  local-service-business — kottbulle kör ecommerce-lite); (3) ordval utan
-  sanktionerad typ-slug ("badge", "resend", "mejl") matchar ingen sektionstyp
-  i routern, så prompten faller igenom till legacy-brief-vägen som syr in
-  ett tjänstekort. Dossiern kan i dag bara aktiveras via Project Input-filen
-  före ett bygge. Fix-skiss: (a) låt section_add bära en dossier-preferens
-  (t.ex. "resend"/"riktigt formulär" → `resend-contact-form` i stället för
-  default), (b) synlig render för contact-form på ecommerce-lite (samma
-  dedikerad-route-mönster som faq/team). Passar efter B194 i prioritets-
-  listan. Källa: operatörsfynd 2026-06-11 (orkestratorpass) + kodverifiering
-  (`section_directives`, action-registry, kottbulle-PI-snapshots v5/v6).
-  Fix: open. Test: open.
+  soft default) så den kunde inte väljas via chatt; (2) contact-form saknar
+  synlig render-väg på alla scaffolds — faq/team har dedikerad route och
+  hours har inline-väg, men bara på local-service-business (kottbulle kör
+  ecommerce-lite); (3) ordval utan sanktionerad typ-slug ("badge", "resend",
+  "mejl") matchade ingen sektionstyp i routern, så prompten föll igenom till
+  legacy-brief-vägen som sydde in ett tjänstekort. **Del a LEVERERAD
+  (#301 + hardening):** router-cues (resend/mejlformulär → contact-form-typ)
+  + validerad dossier-preferens i section_add→apply — OBS att bara ordet
+  "resend" väljer resend-dossiern ("mejlformulär" namnger typen, inte
+  dossiern); preferensen är exklusiv per capability (ersätter monterad
+  mailto) och negeras av "inte/utan/ej resend". **Kvar (del b):** synlig
+  render för contact-form på ecommerce-lite (samma dedikerad-route-mönster
+  som faq/team) — tills dess är monteringen ärligt mount-only. Passar efter
+  B194 i prioritetslistan. Källa: operatörsfynd 2026-06-11 (orkestratorpass)
+  + kodverifiering (`section_directives`, action-registry, kottbulle-PI-
+  snapshots v5/v6). Fix: open (del a `05e62911`+; del b kvar). Test:
+  `tests/test_section_directives.py`, `tests/test_patch_apply.py`,
+  `tests/test_router_classify.py` (del a); del b open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 

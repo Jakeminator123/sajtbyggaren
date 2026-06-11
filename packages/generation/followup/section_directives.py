@@ -353,6 +353,12 @@ DOSSIER_PREFERENCE_CUES: dict[str, dict[str, tuple[str, ...]]] = {
 }
 
 
+# Negationsord som inom två ord före en cue betyder "INTE den dossiern"
+# (extern granskning 2026-06-11, fynd 5: "kontaktformulär men inte resend"
+# får aldrig välja resend-dossiern).
+_NEGATION_WORDS = ("inte", "utan", "ej", "ingen", "inget", "aldrig", "slopa")
+
+
 def _word_in_prompt(text: str, phrase: str) -> bool:
     import re
 
@@ -360,6 +366,25 @@ def _word_in_prompt(text: str, phrase: str) -> bool:
         re.search(r"(?<![\wåäö])" + re.escape(phrase) + r"(?![\wåäö])", text)
         is not None
     )
+
+
+def _cue_is_negated(text: str, phrase: str) -> bool:
+    """True när cue-ordet föregås av en negation inom två ord.
+
+    Täcker "inte resend", "utan resend(-funktionen)", "ej resend" och
+    "ingen/inget resend" med upp till ett mellanliggande ord ("inte någon
+    resend"). Medvetet snäv: en negation långt ifrån cue-ordet ska inte
+    blockera en i övrigt tydlig preferens.
+    """
+    import re
+
+    negation = "|".join(_NEGATION_WORDS)
+    pattern = (
+        rf"(?<![\wåäö])(?:{negation})\s+(?:[\wåäö-]+\s+)?"
+        + re.escape(phrase)
+        + r"(?![\wåäö])"
+    )
+    return re.search(pattern, text) is not None
 
 
 def resolve_dossier_preferences(
@@ -392,7 +417,16 @@ def resolve_dossier_preferences(
         listed = entry.get("dossiers") if isinstance(entry, dict) else None
         listed_ids = listed if isinstance(listed, list) else []
         for dossier_id, words in cues.items():
-            if not any(_word_in_prompt(text, word) for word in words):
+            matched = [
+                word
+                for word in words
+                if _word_in_prompt(text, word)
+            ]
+            if not matched:
+                continue
+            # Negationsguard (fynd 5): "kontaktformulär men inte resend" ska
+            # behålla defaulten - en negerad cue räknas inte som preferens.
+            if all(_cue_is_negated(text, word) for word in matched):
                 continue
             if dossier_id not in listed_ids:
                 continue

@@ -37,7 +37,17 @@ NON_SECRET_ENV_KEYS = (
     "OPENAI_VISION_MODEL",
     "SAJTBYGGAREN_DISCOVERY_MODEL",
     "VIEWSER_MAX_CHAT_TOKENS",
+    "OPENCLAW_ROUTER_LLM_FALLBACK",
 )
+
+# KÖR-6b-switchen: routerns LLM-fallback i OpenClaw-bryggan
+# (scripts/run_openclaw_followup.py). Default PÅ; off-tokens speglar
+# bryggans _ENV_OFF_VALUES. Bryggan läser process-env först och faller
+# sedan tillbaka på repo-rotens .env - exakt samma ordning som
+# read_non_secret_env - så Dirigentpultens toggle (som skriver .env-raden)
+# tar effekt på nästa följdprompt-spawn.
+ROUTER_FALLBACK_ENV = "OPENCLAW_ROUTER_LLM_FALLBACK"
+_ROUTER_FALLBACK_OFF_VALUES = frozenset({"0", "false", "no", "off"})
 
 _ENV_LINE_RE = None  # lazy-compiled in _read_repo_dotenv_value
 
@@ -93,6 +103,64 @@ def read_non_secret_env(name: str, environ: dict[str, str] | None = None) -> str
     if from_process:
         return from_process
     return _read_repo_dotenv_value(name)
+
+
+def router_fallback_state(
+    environ: dict[str, str] | None = None,
+) -> tuple[bool, str]:
+    """Effektivt läge för routerns LLM-fallback: (enabled, källa).
+
+    Källa är "process-env", ".env" eller "default (på)" - samma resolutions-
+    ordning som bryggan (scripts/run_openclaw_followup.py:_router_fallback_
+    enabled): process-env vinner, sedan repo-rotens .env, annars default på.
+    """
+    env = os.environ if environ is None else environ
+    value = env.get(ROUTER_FALLBACK_ENV)
+    if value is not None:
+        source = "process-env"
+    else:
+        value = _read_repo_dotenv_value(ROUTER_FALLBACK_ENV)
+        source = ".env" if value is not None else "default (på)"
+    enabled = (value or "").strip().lower() not in _ROUTER_FALLBACK_OFF_VALUES
+    return enabled, source
+
+
+def write_router_fallback(enabled: bool, dotenv_path=None) -> None:  # noqa: FBT001
+    """Skriv ``OPENCLAW_ROUTER_LLM_FALLBACK=<1|0>`` till repo-rotens .env.
+
+    Path-låst till repo-rotens .env (eller ett explicit test-path). Bevarar
+    filens övriga innehåll byte-för-byte: den befintliga raden för nyckeln
+    ersätts (kommentarsrader rörs aldrig), annars appendas raden sist med en
+    kort förklarande kommentar. Atomisk skrivning via backoffice.io så en
+    krasch aldrig korrumperar operatörens .env. Värden för andra nycklar
+    läses eller loggas aldrig.
+    """
+    import re
+
+    from .io import atomic_write_text
+    from .paths import REPO_ROOT
+
+    path = dotenv_path if dotenv_path is not None else REPO_ROOT / ".env"
+    new_line = f"{ROUTER_FALLBACK_ENV}={'1' if enabled else '0'}"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    pattern = re.compile(
+        rf"^\s*(?:export\s+)?{ROUTER_FALLBACK_ENV}\s*=.*$", re.MULTILINE
+    )
+    if pattern.search(text):
+        # Ersätt ALLA förekomster (dotenv: sista raden vinner vid parse, så en
+        # kvarlämnad dubblett skulle kunna trumfa den nya raden).
+        updated = pattern.sub(new_line, text)
+    else:
+        comment = (
+            "# KÖR-6b: routerns LLM-fallback i OpenClaw-bryggan "
+            "(1 = på/default, 0 = av; styrs från Dirigentpulten)."
+        )
+        suffix = "" if (not text or text.endswith("\n")) else "\n"
+        updated = f"{text}{suffix}\n{comment}\n{new_line}\n"
+    atomic_write_text(path, updated)
 
 
 def scan_env_keys(environ: dict[str, str] | None = None) -> list[EnvKeyState]:

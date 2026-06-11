@@ -249,57 +249,9 @@ def test_section_add_surfacing_survives_duplicate_capability_from_patch(
     assert "FAQ" in (v2_meta.get("wizardMustHave") or [])
 
 
-def test_section_add_dossier_preference_mounts_named_dossier(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """B198: a follow-up that NAMED a specific implementing dossier ("resend")
-    mounts it in ``selectedDossiers.required`` instead of the mailto default."""
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    _init_site(tmp_path)
-
-    result = apply_patch_plan(
-        PatchPlan(patches=[], valid=True),
-        site_id=SITE_ID,
-        output_dir=tmp_path,
-        added_capabilities=["contact-form"],
-        dossier_preferences={"contact-form": "resend-contact-form"},
-    )
-    assert result.applied is True
-
-    v2_pi = json.loads(
-        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
-    )
-    required = v2_pi["selectedDossiers"]["required"]
-    assert "resend-contact-form" in required
-    assert "mailto-contact-form" not in required, (
-        "the named preference must REPLACE the capability default, not mount "
-        f"both contact forms; got {required!r}"
-    )
-
-
-def test_section_add_invalid_dossier_preference_falls_back_to_default(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """B198 honesty: an unregistered preference is dropped and the capability
-    default is mounted - chat can never mount an unknown dossier."""
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    _init_site(tmp_path)
-
-    result = apply_patch_plan(
-        PatchPlan(patches=[], valid=True),
-        site_id=SITE_ID,
-        output_dir=tmp_path,
-        added_capabilities=["contact-form"],
-        dossier_preferences={"contact-form": "not-a-registered-dossier"},
-    )
-    assert result.applied is True
-
-    v2_pi = json.loads(
-        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
-    )
-    required = v2_pi["selectedDossiers"]["required"]
-    assert "mailto-contact-form" in required
-    assert "not-a-registered-dossier" not in required
+# B198: named-dossier-preferens-testerna bor i den ämnesfokuserade
+# tests/test_patch_apply_dossier_preference.py (1200-radstaket,
+# tests/test_test_hygiene.py); den importerar _init_site/SITE_ID härifrån.
 
 
 def test_component_add_of_inline_capable_capability_does_not_create_inline_section(
