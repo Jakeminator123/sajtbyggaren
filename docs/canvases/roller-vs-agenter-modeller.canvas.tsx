@@ -26,6 +26,8 @@ import {
 //   apps/viewser/lib/openai.ts, apps/viewser/lib/asset-store/vision.ts,
 //   scripts/scrape_site.py, docs/openclaw-workspace/SOUL.md.
 // Live-modellfakta: OpenAI docs-MCP (developers.openai.com/mcp), hämtat 2026-06-11.
+// Uppdaterad 2026-06-11 efter gpt-5.5-lyftet (6015af17): sidoanropens
+// fallback är numera gpt-5.5 (vision: 600 tokens + reasoning_effort low).
 // ---------------------------------------------------------------------------
 
 type LayerId = "modelRoles" | "conductor" | "persona" | "sideCalls" | "agents";
@@ -83,7 +85,7 @@ const LAYERS: Layer[] = [
       "Viewser-chattens server-side helper, bild/vision-tolkning och webb-scrape vid discovery. Dessa går inte via Model Roles utan via egna env-variabler.",
     source: "apps/viewser/lib/openai.ts · lib/asset-store/vision.ts · scripts/scrape_site.py",
     count: "3 anropspunkter",
-    model: "gpt-4o (fallback)",
+    model: "gpt-5.5 (fallback sedan 2026-06-11)",
     tone: "warning",
   },
   {
@@ -115,7 +117,7 @@ const MODEL_ROLES: Array<[string, string, string]> = [
   ["embeddingModel", "Semantisk sökning (index)", "text-embedding-3-small"],
 ];
 
-// Var gpt-4o faktiskt körs idag (svaret på "vilka kör jag 4o på?").
+// Sidoanropen utanför Model Roles (env-styrda; fallback gpt-5.5 sedan 2026-06-11).
 const GPT4O_USAGE: Array<[string, string, string, string]> = [
   [
     "Viewser chatt-helper",
@@ -127,7 +129,7 @@ const GPT4O_USAGE: Array<[string, string, string, string]> = [
     "Bild/vision-tolkning",
     "apps/viewser/lib/asset-store/vision.ts",
     "OPENAI_VISION_MODEL",
-    "Tolkar uppladdade bilder/assets",
+    "Tolkar uppladdade bilder/assets (600 tokens, reasoning_effort low)",
   ],
   [
     "Discovery-scrape",
@@ -143,7 +145,7 @@ const OPENAI_LINEUP: Array<[string, string, string]> = [
   ["gpt-5.5-pro", "Tyngsta reasoning", "För de svåraste agentiska uppgifterna"],
   ["gpt-5.4", "Föregående generation", "Det motorns Model Roles kör idag"],
   ["gpt-5.2", "Äldre GPT-5", "Nämns som tidigare generation"],
-  ["gpt-4o", "Äldre (icke-reasoning)", "Det chatt-/sidoanropen faller tillbaka på"],
+  ["gpt-4o", "Äldre (icke-reasoning)", "Pensionerad som fallback 2026-06-11"],
 ];
 
 function toneSwatch(tone: Layer["tone"]): "blue" | "green" | "yellow" | "gray" {
@@ -209,7 +211,7 @@ export default function RollerVsAgenterModeller() {
       <Grid columns={4} gap={16}>
         <Stat value="12" label="Model Roles (motorn)" tone="info" />
         <Stat value="4" label="Konduktör-roller" tone="success" />
-        <Stat value="3" label="Sidoanrop på gpt-4o" tone="warning" />
+        <Stat value="3" label="Sidoanrop (env-styrda)" />
         <Stat value="0" label="Fristående agenter/daemon" />
       </Grid>
 
@@ -225,11 +227,11 @@ export default function RollerVsAgenterModeller() {
       </Stack>
 
       <Stack gap={12}>
-        <H2>Vilka modeller kör du gpt-4o på?</H2>
+        <H2>Sidoanropen — fallback numera gpt-5.5</H2>
         <Text tone="secondary">
-          Motorns Model Roles ligger på <Text weight="semibold">gpt-5.4</Text>. Det är bara tre
-          sidoanrop som faller tillbaka på <Text weight="semibold">gpt-4o</Text> — och bara när
-          respektive env-variabel inte är satt.
+          Motorns Model Roles ligger på <Text weight="semibold">gpt-5.4</Text>. De tre sidoanropen
+          faller sedan 2026-06-11 tillbaka på <Text weight="semibold">gpt-5.5</Text> (lyft från
+          gpt-4o) — fallbacken gäller bara när respektive env-variabel inte är satt.
         </Text>
         <Table
           headers={["Anropspunkt", "Fil", "Env-override", "Vad den gör"]}
@@ -238,10 +240,10 @@ export default function RollerVsAgenterModeller() {
           rows={GPT4O_USAGE}
         />
         <Callout tone="info" title="Viktig nyans om env">
-          På Vercel-deploy sätts <Text weight="semibold">OPENAI_MODEL=gpt-5.5</Text> i miljön — då
-          kör chatt-helpern 5.5, inte 4o. <Text weight="semibold">gpt-4o</Text> är bara
-          kod-fallbacken i `lib/openai.ts` / `vision.ts` när variabeln saknas. Viewser läser inte
-          repo-rotens `.env`, så `OPENAI_MODEL` måste finnas i Viewsers egen miljö för att vinna.
+          Env vinner alltid: på Vercel-deploy sätts <Text weight="semibold">OPENAI_MODEL=gpt-5.5</Text>{" "}
+          i miljön. Sedan 2026-06-11 är även kod-fallbacken i `lib/openai.ts` / `vision.ts`{" "}
+          <Text weight="semibold">gpt-5.5</Text>, så env och fallback pekar på samma generation.
+          Viewser läser process.env först och faller annars tillbaka på repo-rotens `.env`.
         </Callout>
       </Stack>
 
@@ -311,7 +313,7 @@ export default function RollerVsAgenterModeller() {
           </Row>
           <Row gap={6} align="center">
             <Swatch color="yellow" />
-            <Text size="small" tone="secondary">Äldre — sidoanropens fallback</Text>
+            <Text size="small" tone="secondary">Äldre — pensionerad som fallback</Text>
           </Row>
           <Text size="small" tone="tertiary">
             Den nya "thinking"-ratten heter `reasoning.effort` (none/low/medium/high/xhigh) plus
@@ -322,10 +324,10 @@ export default function RollerVsAgenterModeller() {
 
       <Stack gap={12}>
         <H2>Mitt förslag</H2>
-        <Callout tone="warning" title="gpt-4o ligger två generationer efter">
-          Sidoanropen (chatt-helper, vision, discovery) faller tillbaka på gpt-4o, medan motorn kör
-          gpt-5.4 och OpenAI:s flagship nu är gpt-5.5. Sätt `OPENAI_MODEL` och `OPENAI_VISION_MODEL`
-          explicit i Viewsers miljö så chatt och vision inte tyst hamnar på en äldre modell.
+        <Callout tone="neutral" title="Åtgärdat 2026-06-11: fallbackarna lyfta till gpt-5.5">
+          Sidoanropen (chatt-helper, vision, discovery) föll tidigare tillbaka på gpt-4o — två
+          generationer efter motorn. Lyft till gpt-5.5 i 6015af17, reasoning-medvetet (vision:
+          höjd svarsbudget + lågt effort eftersom reasoning-tokens räknas in i budgeten).
         </Callout>
         <Callout tone="info" title="Bestäm modell på ETT ställe per lager">
           Motorns roller byts i `llm-models.v1.json` (policy-bump, ej kod). Chatt/vision/discovery
