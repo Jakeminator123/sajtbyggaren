@@ -38,14 +38,27 @@
  * KV_REST_URL saknas). Hostat injicerar Marketplace-integrationen KV_REST_API_*
  * och allt fungerar utan kodändring.
  *
+ * Run-state för följdprompter (B194): lokalt härleder
+ * prompt_to_project_input.py föregående version ur
+ * ``data/prompt-inputs/<siteId>.{project-input,meta}.json`` — filer som aldrig
+ * fanns i en färsk sandbox, så hostade följdprompter failade ärligt. Nu
+ * persisterar varje lyckat hostat bygge det färska PI/meta-paret till blob
+ * under ``run-state/<siteId>/v<N>/`` (versions-scopat så ett halvlyckat
+ * upload-par aldrig kan refereras — pekaren flyttas först när BÅDA filerna
+ * är uppe) och sätter den durabla KV-pekaren
+ * ``viewser:site:<siteId>:run-state``. Vid followup läser ``startHostedBuild``
+ * pekaren pre-flight (saknas den failar den ärligt med byggråd) och sandboxen
+ * curlar ner paret till data/prompt-inputs/ innan followup-kommandot körs.
+ *
  * Ingår INTE här (hanteras separat): auth/tenant (G4), kvoter/kostnadsstyrning
- * (G7), persistens av run-historik för följdprompter hostat.
+ * (G7), --base-run-id-följdprompter hostat (kräver versionerade snapshots,
+ * run-state-lagret ovan är förberett för det via v<N>-layouten).
  */
 
 import { randomUUID } from "node:crypto";
 
 import { isHostedVercelRuntime } from "./hosted-python-runtime";
-import { getKvStore, kvSetJson } from "./kv-store";
+import { getKvStore, kvGetJson, kvSetJson } from "./kv-store";
 import { upstashRestToken, upstashRestUrl } from "./kv-store/upstash-redis";
 import { sanitizedAssetSetIntent } from "./prompt-runner";
 import {
@@ -99,6 +112,29 @@ export interface HostedBuildRunStatus {
 const HOSTED_RUN_KEY_PREFIX = "viewser:hosted-run:";
 const BUILD_CONTEXT_URL_KEY = "viewser:build-context:url";
 const BUILD_CONTEXT_URL_ENV = "VIEWSER_BUILD_CONTEXT_URL";
+
+/**
+ * Durabel KV-pekare till senast persisterade run-state-paret för en sajt
+ * (B194). Skrivs av orkestrerings-skriptet EFTER att både PI- och meta-blobben
+ * laddats upp; läses pre-flight av ``startHostedBuild`` vid followup. Ingen
+ * TTL — som ``viewser:site:<siteId>:current`` lever den tills nästa lyckade
+ * bygge skriver över den.
+ */
+export function hostedRunStateKey(siteId: string): string {
+  return `viewser:site:${siteId}:run-state`;
+}
+
+/** JSON-formen under ``viewser:site:<siteId>:run-state``. */
+export interface HostedRunStatePointer {
+  /** PI-versionen paret representerar (meta.version efter bygget). */
+  version: number;
+  /** Publik blob-URL till run-state/<siteId>/v<N>/project-input.json. */
+  projectInputUrl: string;
+  /** Publik blob-URL till run-state/<siteId>/v<N>/meta.json. */
+  metaUrl: string;
+  updatedAt: string;
+  buildId?: string;
+}
 
 const SANDBOX_RUNTIME = "node24";
 /** Bygg-TTL: pip + npm install + next build ryms gott inom 15 min varma dagar;
@@ -162,6 +198,7 @@ set -o pipefail
 
 GENERATED_DIR="/vercel/sandbox/.generated-output"
 BLOB_API="https://blob.vercel-storage.com"
+REPO_DIR="$(pwd)"
 export STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # post_status <phase> <error> <buildId> — bygger status-JSON sakert via python3
@@ -236,11 +273,37 @@ echo "hosted-build: anvander $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))."
   || "$PYTHON_BIN" -m pip install --quiet --user -r requirements.txt \\
   || fail "pip install -r requirements.txt misslyckades i sandboxen."
 
-# Fas 2: prompt -> Project Input. Foljdlage kraver tidigare run-state
-# (data/prompt-inputs + data/runs) som annu inte persisteras hostat — det
-# failar arligt har tills den persistensen landar (separat spar).
+# Fas 2: prompt -> Project Input. Foljdlage hamtar forst run-state-paret
+# (B194): prompt_to_project_input.py harleder foregaende version ur
+# data/prompt-inputs/<siteId>.{project-input,meta}.json — lokalt finns de pa
+# disk, hostat curlas de fran blob-URL:erna som TS-sidan laste ur KV-pekaren
+# viewser:site:<siteId>:run-state och skickade som env. Saknas pekaren har
+# startHostedBuild redan failat arligt fore sandbox-start.
+fetch_run_state() {
+  url="$1"
+  dest="$2"
+  attempt=1
+  while [ "$attempt" -le 3 ]; do
+    http_code=$(curl -s -o "$dest" -w "%{http_code}" "$url" || echo "000")
+    case "$http_code" in
+      2*) return 0 ;;
+    esac
+    sleep "$attempt"
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+
 post_status "project-input" "" ""
 if [ "$FOLLOWUP_MODE" = "1" ]; then
+  if [ -z "\${RUN_STATE_PI_URL:-}" ] || [ -z "\${RUN_STATE_META_URL:-}" ]; then
+    fail "Foljdprompt utan run-state-URL:er — kor forst ett initialt hostat bygge for siteId $SITE_ID."
+  fi
+  mkdir -p "$REPO_DIR/data/prompt-inputs"
+  fetch_run_state "$RUN_STATE_PI_URL" "$REPO_DIR/data/prompt-inputs/$SITE_ID.project-input.json" \\
+    || fail "Kunde inte hamta persisterad project-input fran blob (run-state, B194)."
+  fetch_run_state "$RUN_STATE_META_URL" "$REPO_DIR/data/prompt-inputs/$SITE_ID.meta.json" \\
+    || fail "Kunde inte hamta persisterad meta fran blob (run-state, B194)."
   # asset_set-forwarding: TOOL_INTENT_JSON ar redan sanerad TS-side
   # (sanitizedAssetSetIntent) och nar bash enbart som quotad env-expansion
   # — aldrig interpolerad i skriptkoden. Tom strang = ingen flagga.
@@ -379,6 +442,76 @@ if [ -n "$KV_REST_URL" ] && [ -n "$KV_REST_TOKEN" ]; then
     -d "$CURRENT_PAYLOAD" >/dev/null || true
 fi
 
+# B194 — persistera run-state for nasta foljdprompt: det farska PI/meta-paret
+# laddas upp versions-scopat under run-state/<siteId>/v<N>/ (immutabelt: ett
+# halvlyckat par kan aldrig refereras eftersom KV-pekaren flyttas forst nar
+# BADA filerna ar uppe; den gamla pekaren pekar pa ett intakt aldre par).
+# Fel har faller INTE bygget — sajten ar redan publicerad — men pekaren
+# lamnas ororda sa nasta foljdprompt utgar fran senast KONSISTENTA paret.
+RUN_STATE_VERSION=$(printf '%s\\n' "$PI_OUT" | sed -n 's/^version: //p' | head -n 1)
+PI_SNAPSHOT="$REPO_DIR/data/prompt-inputs/$SITE_ID.project-input.json"
+META_SNAPSHOT="$REPO_DIR/data/prompt-inputs/$SITE_ID.meta.json"
+
+upload_run_state() {
+  src="$1"
+  name="$2"
+  attempt=1
+  while [ "$attempt" -le 3 ]; do
+    http_code=$(curl -s -o /tmp/run-state-resp -w "%{http_code}" -X PUT "$BLOB_API/run-state/$SITE_ID/v$RUN_STATE_VERSION/$name" \\
+      -H "Authorization: Bearer $BLOB_READ_WRITE_TOKEN" \\
+      -H "x-api-version: 7" \\
+      -H "x-add-random-suffix: 0" \\
+      --data-binary "@$src" || echo "000")
+    case "$http_code" in
+      2*)
+        RUN_STATE_LAST_URL=$(python3 -c 'import json; print(json.load(open("/tmp/run-state-resp")).get("url", ""))' 2>/dev/null)
+        [ -n "$RUN_STATE_LAST_URL" ] && return 0
+        ;;
+    esac
+    sleep "$attempt"
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+
+if [ -n "$RUN_STATE_VERSION" ] && [ -f "$PI_SNAPSHOT" ] && [ -f "$META_SNAPSHOT" ]; then
+  RUN_STATE_PI_PUBLISHED=""
+  RUN_STATE_META_PUBLISHED=""
+  if upload_run_state "$PI_SNAPSHOT" "project-input.json"; then
+    RUN_STATE_PI_PUBLISHED="$RUN_STATE_LAST_URL"
+    if upload_run_state "$META_SNAPSHOT" "meta.json"; then
+      RUN_STATE_META_PUBLISHED="$RUN_STATE_LAST_URL"
+    fi
+  fi
+  if [ -n "$RUN_STATE_PI_PUBLISHED" ] && [ -n "$RUN_STATE_META_PUBLISHED" ]; then
+    RUN_STATE_PAYLOAD=$(PI_URL="$RUN_STATE_PI_PUBLISHED" META_URL="$RUN_STATE_META_PUBLISHED" RS_VERSION="$RUN_STATE_VERSION" BUILD_ID="$ACTIVE_BUILD_ID" python3 - <<'PY'
+import json, os
+from datetime import datetime, timezone
+doc = {
+    "version": int(os.environ["RS_VERSION"]),
+    "projectInputUrl": os.environ["PI_URL"],
+    "metaUrl": os.environ["META_URL"],
+    "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    "buildId": os.environ["BUILD_ID"],
+}
+key = "viewser:site:" + os.environ["SITE_ID"] + ":run-state"
+print(json.dumps(["SET", key, json.dumps(doc, ensure_ascii=False)]))
+PY
+)
+    if [ -n "$KV_REST_URL" ] && [ -n "$KV_REST_TOKEN" ]; then
+      curl -s -X POST "$KV_REST_URL" \\
+        -H "Authorization: Bearer $KV_REST_TOKEN" \\
+        -H "Content-Type: application/json" \\
+        -d "$RUN_STATE_PAYLOAD" >/dev/null || true
+    fi
+    echo "hosted-build: run-state v$RUN_STATE_VERSION persisterad (B194)."
+  else
+    echo "hosted-build: VARNING — run-state-paret kunde inte publiceras; foljdprompter utgar fran foregaende version." >&2
+  fi
+else
+  echo "hosted-build: VARNING — run-state-snapshot saknas pa disk; foljdprompter forblir oforandrade." >&2
+fi
+
 post_status "done" "" "$ACTIVE_BUILD_ID"
 echo "hosted-build: klar (buildId $ACTIVE_BUILD_ID)."
 `;
@@ -488,6 +621,31 @@ export async function startHostedBuild(
     );
   }
 
+  // Run-state-preflight (B194): en hostad följdprompt kan bara härleda
+  // föregående version ur det persisterade PI/meta-paret. Saknas pekaren har
+  // sajten aldrig byggts hostat (eller byggdes före B194) — faila ärligt HÄR
+  // i stället för att låta sandboxen starta och dö på samma sak dyrare.
+  let runState: HostedRunStatePointer | null = null;
+  if (req.followup) {
+    runState = await kvGetJson<HostedRunStatePointer>(
+      store,
+      hostedRunStateKey(req.siteId),
+    );
+    const validRunState =
+      runState &&
+      typeof runState.projectInputUrl === "string" &&
+      runState.projectInputUrl.startsWith("https://") &&
+      typeof runState.metaUrl === "string" &&
+      runState.metaUrl.startsWith("https://");
+    if (!validRunState) {
+      return failRun(
+        `Hostad följdprompt kräver persisterad run-state för siteId "${req.siteId}" ` +
+          "men KV-pekaren saknas eller är ogiltig. Kör först ett initialt hostat " +
+          "bygge (run-state persisteras automatiskt efter varje lyckat bygge, B194).",
+      );
+    }
+  }
+
   // B1a-guarden från preview-runnern återanvänds: håll OIDC-token färsk före
   // Sandbox.create (no-op hostat där plattformen roterar token automatiskt).
   if (credentials.mode === "oidc") {
@@ -512,6 +670,10 @@ export async function startHostedBuild(
     PROMPT_TEXT: req.prompt,
     FOLLOWUP_MODE: req.followup ? "1" : "0",
     TOOL_INTENT_JSON: safeToolIntent ? JSON.stringify(safeToolIntent) : "",
+    // B194: run-state-paret för followup-härledning. Tomt vid initialbygge;
+    // i followup-läge är pekaren redan preflight-validerad ovan.
+    RUN_STATE_PI_URL: runState?.projectInputUrl ?? "",
+    RUN_STATE_META_URL: runState?.metaUrl ?? "",
     BLOB_READ_WRITE_TOKEN: blobToken,
     // Samma env-upplösning som kv-store/upstash-redis.ts; tomma strängar når
     // skriptet, som då hoppar över status-POST:arna ärligt (set -u-säkert).
