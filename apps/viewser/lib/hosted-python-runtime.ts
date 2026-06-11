@@ -38,10 +38,10 @@ export function isHostedSandboxPreviewEnabled(): boolean {
 
 /** Shared Swedish notice surfaced to the UI for hosted-only-degraded views. */
 export const HOSTED_LOCAL_ONLY_NOTICE =
-  "Den här vyn är hostad. Bygge, följdprompt och run-historik körs lokalt i " +
-  "denna version — den hostade Vercel-vyn visar UI och kan förhandsvisa redan " +
-  "byggda sajter, men skapar inte nya sajter förrän bygg-kedjan flyttas till en " +
-  "riktig backend-runtime.";
+  "Den här hostade vyn visar gränssnittet och kan förhandsvisa redan byggda " +
+  "sajter. Att skapa nya sajter — bygge, följdprompt och run-historik — sker i " +
+  "operatörens lokala miljö i den här versionen, inte i den hostade vyn, tills " +
+  "bygg-kedjan flyttas till en riktig backend-runtime.";
 
 export function hostedPythonRuntimeUnavailable(feature: string): NextResponse {
   return NextResponse.json(
