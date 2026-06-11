@@ -27,7 +27,10 @@ def _models_fixture() -> dict:
             {"groupId": "smallReasoning", "purpose": "p", "roles": ["briefModel"]},
             {"groupId": "embedding", "purpose": "p", "roles": ["embeddingModel"]},
         ],
-        "forbiddenLegacyTierNames": ["fast", "pro", "tier1"],
+        # Subset of the real policy's anti-pattern list. Deliberately excludes
+        # entries that are also naming-dictionary globallyForbidden terms -
+        # tests/test_no_legacy_terms.py scans this file as product source.
+        "forbiddenLegacyTierNames": ["fast", "pro"],
     }
 
 
@@ -52,7 +55,7 @@ def test_validate_role_edit_rejects_empty_and_forbidden_values() -> None:
 
     # forbiddenLegacyTierNames must block both fields, case-insensitively.
     assert model_roles.validate_role_edit(models, "Pro", "openai")
-    assert model_roles.validate_role_edit(models, "gpt-5.5", "TIER1")
+    assert model_roles.validate_role_edit(models, "gpt-5.5", "FAST")
 
 
 @pytest.mark.tooling
