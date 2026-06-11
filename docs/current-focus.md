@@ -154,8 +154,11 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `9cd8624` (2026-06-11 ~10:00 UTC+2; jakob-be HEAD efter
-PR #284-mergen, `main = jakob-be` tom diff verifierad). **#284** hostat bygge i
+Last verified state: `2e13aa3` (2026-06-11 ~10:15 UTC+2; `origin/main =
+origin/jakob-be = 2e13aa3` verifierad — #284-mergen (`9cd8624`) + docs-bump
+skeppade till main. jakob-be bär nu docs-only inbox-svar (msg-0069/0070 →
+Christopher: SNI-kvittens + #285-rebase/route-konflikt-heads-up) ovanpå;
+main-sync till nästa leveransfönster). **#284** hostat bygge i
 Vercel-sandbox + KV-store-adapter + publik rate-limit MERGAD (ADR
 0048/0049/0050). Blockerande säkerhetsbugg fixad FÖRE merge (`e44dcbb`):
 rate-limitens klient-IP litade på första `x-forwarded-for` (klient-spoofbar på
