@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier-env-contract.schema.json",
+  "requires": [
+    {
+      "name": "RESEND_API_KEY",
+      "purpose": "Authenticate server-side email delivery requests to Resend.",
+      "scope": "runtime",
+      "valueFormat": "re_[A-Za-z0-9]+"
+    }
+  ],
+  "designModeBehavior": "Render the full form UI, but submit stays in honest design mode: the local server route logs a no-op and returns a clear design-mode response. No provider request is sent and no fake success is shown.",
+  "integrationModeBehavior": "Submit posts JSON to the generated local server route, which validates payload server-side and forwards the email delivery request to Resend using RESEND_API_KEY."
+}

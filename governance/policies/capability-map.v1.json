@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/capability-map.schema.json",
   "policyId": "capability-map.v1",
-  "version": 3,
+  "version": 4,
   "status": "draft-but-authoritative",
-  "purpose": "Map abstract capability slugs (the strings briefModel emits in siteBrief.requestedCapabilities) to the Dossiers that can satisfy them. planningModel reads this in Sprint 2B to know which Dossiers are even candidates before running embedding + rerank. v2 (2026-06-08): mount-only honesty for section_add capabilities — mounting does not promise visible preview render. v3 (ADR 0040): additive optional 'components' field per capability — shadcn component names render/codegen may use, cross-checked against the Starter component-manifest.json files (Component Catalog lager 2). faq-section -> accordion is the pilot.",
+  "purpose": "Map abstract capability slugs (the strings briefModel emits in siteBrief.requestedCapabilities) to the Dossiers that can satisfy them. planningModel reads this in Sprint 2B to know which Dossiers are even candidates before running embedding + rerank. v4 (ADR 0053 implementation): contact-form now includes both soft mailto and hard resend dossiers, while mailto remains default. v3 (ADR 0040): additive optional 'components' field per capability — shadcn component names render/codegen may use, cross-checked against the Starter component-manifest.json files (Component Catalog lager 2). faq-section -> accordion is the pilot. v2 (2026-06-08): mount-only honesty for section_add capabilities — mounting does not promise visible preview render.",
   "principles": [
     "A capability slug is the contract; the Dossier is the implementation. New capabilities require either a Dossier under packages/generation/orchestration/dossiers/{soft,hard}/ or an explicit empty-list comment so codegen knows to surface the gap.",
     "Empty dossiers list is allowed - it means the capability is recognised but no implementation exists yet. The comment field documents the plan.",
@@ -20,9 +20,9 @@
       "comment": "Pacman-style soft Dossier; verified mounted by tests/test_dossier_mounting.py."
     },
     "contact-form": {
-      "dossiers": ["mailto-contact-form"],
+      "dossiers": ["mailto-contact-form", "resend-contact-form"],
       "default": "mailto-contact-form",
-      "comment": "mailto-contact-form is the safe default (soft, zero env). Mount-only via section_add today; render_section_contact_cta exists but visible preview surfacing is not guaranteed until the dedicated render-path lands. resend-contact-form (hard) planned for server-side delivery."
+      "comment": "mailto-contact-form remains the safe default (soft, zero env). resend-contact-form is the hard server-side alternative with honest design mode when RESEND_API_KEY is missing."
     },
     "menu": {
       "dossiers": ["menu-display"],

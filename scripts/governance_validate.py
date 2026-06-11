@@ -27,6 +27,13 @@ POLICIES_DIR = REPO_ROOT / "governance" / "policies"
 SCHEMAS_DIR = REPO_ROOT / "governance" / "schemas"
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
 COMPONENT_MANIFEST_FILENAME = "component-manifest.json"
+DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+
+_HARD_CONTRACT_SCHEMA_BY_FILE = {
+    "env-contract.json": "dossier-env-contract.schema.json",
+    "code-contract.json": "dossier-code-contract.schema.json",
+    "integration-contract.json": "dossier-integration-contract.schema.json",
+}
 
 
 def load_json(path: Path) -> dict:
@@ -182,6 +189,174 @@ def cross_check_capability_components(policies: dict[str, dict]) -> list[str]:
     return errors
 
 
+def _schema_errors(
+    *,
+    payload: dict,
+    schema: dict,
+    context: str,
+) -> list[str]:
+    errors: list[str] = []
+    validator = Draft202012Validator(schema)
+    for err in sorted(validator.iter_errors(payload), key=lambda e: list(e.path)):
+        location = "/".join(str(p) for p in err.absolute_path) or "<rot>"
+        errors.append(f"{context} -> {location}: {err.message}")
+    return errors
+
+
+def cross_check_hard_dossier_contracts(policies: dict[str, dict]) -> list[str]:
+    """Validate hard dossier contract files against ADR 0053 policy + schemas."""
+    dossier_contract = policies.get("dossier-contract.v1.json")
+    if not dossier_contract:
+        # Missing/invalid policy is already reported by schema validation.
+        return []
+
+    layout = dossier_contract.get("dossierDirectoryLayout", {})
+    extra_by_class = (
+        layout.get("additionalRequiredFilesByClass", {})
+        if isinstance(layout, dict)
+        else {}
+    )
+    required_hard_files = (
+        extra_by_class.get("hard", []) if isinstance(extra_by_class, dict) else []
+    )
+    if not isinstance(required_hard_files, list):
+        required_hard_files = []
+
+    env_required_fields = dossier_contract.get("envContractRequiredFields", [])
+    code_required_fields = dossier_contract.get("codeContractRequiredFields", [])
+    integration_required_fields = dossier_contract.get(
+        "integrationContractRequiredFields", []
+    )
+
+    errors: list[str] = []
+    schemas: dict[str, dict] = {}
+    for file_name, schema_name in _HARD_CONTRACT_SCHEMA_BY_FILE.items():
+        schema_path = SCHEMAS_DIR / schema_name
+        if not schema_path.exists():
+            errors.append(f"{schema_name} saknas på {schema_path}")
+            continue
+        try:
+            schemas[file_name] = load_json(schema_path)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{schema_name}: ogiltig JSON: {exc}")
+
+    hard_dir = DOSSIERS_DIR / "hard"
+    if not hard_dir.exists():
+        return errors
+
+    for dossier_dir in sorted(hard_dir.iterdir()):
+        if not dossier_dir.is_dir():
+            continue
+        manifest_path = dossier_dir / "manifest.json"
+        if not manifest_path.exists():
+            # Another guard catches missing manifest; skip noisy duplicates.
+            continue
+        try:
+            manifest = load_json(manifest_path)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{manifest_path}: ogiltig JSON: {exc}")
+            continue
+
+        dossier_id = (
+            manifest.get("id")
+            if isinstance(manifest.get("id"), str) and manifest.get("id")
+            else dossier_dir.name
+        )
+
+        for required_name in required_hard_files:
+            if not isinstance(required_name, str) or not required_name:
+                continue
+            if not (dossier_dir / required_name).exists():
+                errors.append(
+                    f"hard dossier '{dossier_id}' saknar obligatorisk fil: {required_name}"
+                )
+
+        contract_payloads: dict[str, dict] = {}
+        for file_name, schema_name in _HARD_CONTRACT_SCHEMA_BY_FILE.items():
+            contract_path = dossier_dir / file_name
+            if not contract_path.exists():
+                continue
+            try:
+                payload = load_json(contract_path)
+            except json.JSONDecodeError as exc:
+                errors.append(f"{contract_path}: ogiltig JSON: {exc}")
+                continue
+            contract_payloads[file_name] = payload
+            schema = schemas.get(file_name)
+            if schema is None:
+                continue
+            errors.extend(
+                _schema_errors(
+                    payload=payload,
+                    schema=schema,
+                    context=f"{contract_path.relative_to(REPO_ROOT).as_posix()} ({schema_name})",
+                )
+            )
+
+        env_contract = contract_payloads.get("env-contract.json", {})
+        code_contract = contract_payloads.get("code-contract.json", {})
+        integration_contract = contract_payloads.get("integration-contract.json", {})
+
+        for field in env_required_fields if isinstance(env_required_fields, list) else []:
+            if isinstance(field, str) and field and field not in env_contract:
+                errors.append(
+                    f"hard dossier '{dossier_id}': env-contract.json saknar '{field}'"
+                )
+        for field in code_required_fields if isinstance(code_required_fields, list) else []:
+            if isinstance(field, str) and field and field not in code_contract:
+                errors.append(
+                    f"hard dossier '{dossier_id}': code-contract.json saknar '{field}'"
+                )
+        for field in (
+            integration_required_fields
+            if isinstance(integration_required_fields, list)
+            else []
+        ):
+            if isinstance(field, str) and field and field not in integration_contract:
+                errors.append(
+                    f"hard dossier '{dossier_id}': integration-contract.json saknar '{field}'"
+                )
+
+        requires = env_contract.get("requires")
+        required_env_names: list[str] = []
+        if isinstance(requires, list):
+            for item in requires:
+                if isinstance(item, dict) and isinstance(item.get("name"), str):
+                    required_env_names.append(item["name"])
+        manifest_env = manifest.get("envVars")
+        if isinstance(manifest_env, list):
+            manifest_env_names = [name for name in manifest_env if isinstance(name, str)]
+            if sorted(set(manifest_env_names)) != sorted(set(required_env_names)):
+                errors.append(
+                    f"hard dossier '{dossier_id}': manifest.envVars måste matcha "
+                    "env-contract.requires[].name exakt"
+                )
+
+        integration_missing_env = (
+            integration_contract.get("mockMode", {})
+            if isinstance(integration_contract.get("mockMode"), dict)
+            else {}
+        )
+        trigger = (
+            integration_missing_env.get("trigger")
+            if isinstance(integration_missing_env, dict)
+            else {}
+        )
+        trigger_env = (
+            trigger.get("whenMissingEnv")
+            if isinstance(trigger, dict)
+            else []
+        )
+        trigger_names = [name for name in trigger_env if isinstance(name, str)]
+        if trigger_names and sorted(set(trigger_names)) != sorted(set(required_env_names)):
+            errors.append(
+                f"hard dossier '{dossier_id}': integration-contract mockMode.trigger.whenMissingEnv "
+                "måste matcha env-contract.requires[].name"
+            )
+
+    return errors
+
+
 def main() -> int:
     if not POLICIES_DIR.exists():
         print(f"Hittar inte {POLICIES_DIR}", file=sys.stderr)
@@ -202,6 +377,9 @@ def main() -> int:
 
     component_errs = cross_check_capability_components(policies)
     all_errors.extend(component_errs)
+
+    contract_errs = cross_check_hard_dossier_contracts(policies)
+    all_errors.extend(contract_errs)
 
     if all_errors:
         print("Governance-validering misslyckades:\n")

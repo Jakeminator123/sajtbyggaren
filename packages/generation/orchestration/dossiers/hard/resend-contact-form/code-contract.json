@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier-code-contract.schema.json",
+  "must": [
+    "Contact form submissions must send JSON to /api/contact/resend in the generated site.",
+    "The server route must validate name, email, and message before any provider request.",
+    "Missing RESEND_API_KEY must return an honest design-mode no-op response without calling the provider.",
+    "Client code must never contain provider secrets and may only call the local server route."
+  ],
+  "avoid": [
+    "Direct browser requests to api.resend.com.",
+    "Hardcoded API keys, placeholder secrets, or env value leaks in client code.",
+    "Design-mode responses that claim the message was sent.",
+    "Skipping server-side payload validation."
+  ]
+}

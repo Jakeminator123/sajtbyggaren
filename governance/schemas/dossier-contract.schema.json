@@ -17,6 +17,7 @@
     "promptContractRequiredFields",
     "codeContractRequiredFields",
     "envContractRequiredFields",
+    "integrationContractRequiredFields",
     "forbiddenInDossierFiles"
   ],
   "properties": {
@@ -72,6 +73,7 @@
     "promptContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "codeContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "envContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "integrationContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "forbiddenInDossierFiles": { "type": "array", "items": { "type": "string" } }
   }
 }

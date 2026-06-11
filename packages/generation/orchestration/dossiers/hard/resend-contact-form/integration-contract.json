@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier-integration-contract.schema.json",
+  "provider": "resend",
+  "activation": {
+    "selectionMode": "explicit-or-strong-semantic",
+    "requiresUserMention": true
+  },
+  "mockMode": {
+    "trigger": {
+      "whenMissingEnv": ["RESEND_API_KEY"]
+    },
+    "behavior": {
+      "useEnvContractField": "designModeBehavior",
+      "honestyRule": "no-fake-success"
+    }
+  },
+  "verification": {
+    "steps": [
+      "Select resend-contact-form explicitly in selectedDossiers.required for the project input.",
+      "Without RESEND_API_KEY set, submit the form and confirm the route returns design mode and performs no provider request.",
+      "With RESEND_API_KEY set, submit the form and confirm the provider request is performed by the server route."
+    ],
+    "requiresOperatorFlag": true
+  }
+}

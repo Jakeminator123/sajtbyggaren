@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from jsonschema import Draft202012Validator
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -311,6 +312,15 @@ def __getattr__(name: str) -> Any:
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+DOSSIER_ENV_CONTRACT_SCHEMA = (
+    REPO_ROOT / "governance" / "schemas" / "dossier-env-contract.schema.json"
+)
+DOSSIER_CODE_CONTRACT_SCHEMA = (
+    REPO_ROOT / "governance" / "schemas" / "dossier-code-contract.schema.json"
+)
+DOSSIER_INTEGRATION_CONTRACT_SCHEMA = (
+    REPO_ROOT / "governance" / "schemas" / "dossier-integration-contract.schema.json"
+)
 DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"
@@ -319,6 +329,7 @@ PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"
 # `.env.example` is allowed (canonical placeholder).
 _FORBIDDEN_ENV_PATTERN = re.compile(r"^\.env(\..+)?$", flags=re.IGNORECASE)
 _ALLOWED_ENV_NAMES = {".env.example"}
+_API_ROUTE_RE = re.compile(r"(/api/[A-Za-z0-9/_-]+)")
 
 
 # ---------------------------------------------------------------------------
@@ -1194,6 +1205,158 @@ def resolve_dossier_dir(dossier_id: str) -> tuple[str, Path]:
     )
 
 
+def _load_schema(schema_path: Path) -> dict[str, Any]:
+    if not schema_path.exists():
+        raise SystemExit(f"Schema missing: {schema_path}")
+    return load_json(schema_path)
+
+
+def _validate_contract_payload(
+    *,
+    payload: dict[str, Any],
+    schema_path: Path,
+    contract_path: Path,
+) -> None:
+    validator = Draft202012Validator(_load_schema(schema_path))
+    errors = sorted(validator.iter_errors(payload), key=lambda e: list(e.path))
+    if not errors:
+        return
+    first = errors[0]
+    location = "/".join(str(part) for part in first.absolute_path) or "<rot>"
+    raise SystemExit(
+        f"Hard dossier contract invalid ({contract_path} -> {location}): {first.message}"
+    )
+
+
+def _extract_submit_target_from_code_contract(
+    code_contract: dict[str, Any], dossier_id: str
+) -> str:
+    must_rules = code_contract.get("must")
+    if not isinstance(must_rules, list):
+        raise SystemExit(
+            f"Hard dossier '{dossier_id}' has invalid code-contract.must; expected list."
+        )
+    for rule in must_rules:
+        if not isinstance(rule, str):
+            continue
+        if "submit" not in rule.lower():
+            continue
+        match = _API_ROUTE_RE.search(rule)
+        if match:
+            return _validated_site_route_path(match.group(1))
+    for rule in must_rules:
+        if not isinstance(rule, str):
+            continue
+        match = _API_ROUTE_RE.search(rule)
+        if match:
+            return _validated_site_route_path(match.group(1))
+    raise SystemExit(
+        f"Hard dossier '{dossier_id}' code-contract.must must declare an /api submit target."
+    )
+
+
+def _load_hard_dossier_runtime(
+    dossier_id: str,
+    dossier_dir: Path,
+    manifest: dict[str, Any],
+) -> dict[str, Any]:
+    env_path = dossier_dir / "env-contract.json"
+    code_path = dossier_dir / "code-contract.json"
+    integration_path = dossier_dir / "integration-contract.json"
+    for contract_path in (env_path, code_path, integration_path):
+        if not contract_path.exists():
+            raise SystemExit(
+                f"Hard dossier '{dossier_id}' is missing required contract file: {contract_path.name}"
+            )
+
+    env_contract = load_json(env_path)
+    code_contract = load_json(code_path)
+    integration_contract = load_json(integration_path)
+    if not isinstance(env_contract, dict):
+        raise SystemExit(f"{env_path} must contain a JSON object.")
+    if not isinstance(code_contract, dict):
+        raise SystemExit(f"{code_path} must contain a JSON object.")
+    if not isinstance(integration_contract, dict):
+        raise SystemExit(f"{integration_path} must contain a JSON object.")
+
+    _validate_contract_payload(
+        payload=env_contract,
+        schema_path=DOSSIER_ENV_CONTRACT_SCHEMA,
+        contract_path=env_path,
+    )
+    _validate_contract_payload(
+        payload=code_contract,
+        schema_path=DOSSIER_CODE_CONTRACT_SCHEMA,
+        contract_path=code_path,
+    )
+    _validate_contract_payload(
+        payload=integration_contract,
+        schema_path=DOSSIER_INTEGRATION_CONTRACT_SCHEMA,
+        contract_path=integration_path,
+    )
+
+    requires_raw = env_contract.get("requires", [])
+    required_env_specs = [item for item in requires_raw if isinstance(item, dict)]
+    required_env_names = [
+        str(item.get("name"))
+        for item in required_env_specs
+        if isinstance(item.get("name"), str)
+    ]
+    manifest_env = [
+        item for item in manifest.get("envVars", []) if isinstance(item, str)
+    ]
+    if sorted(set(manifest_env)) != sorted(set(required_env_names)):
+        raise SystemExit(
+            f"Hard dossier '{dossier_id}' manifest.envVars must match env-contract.requires[].name exactly."
+        )
+
+    mock_mode = integration_contract.get("mockMode", {})
+    trigger = mock_mode.get("trigger", {}) if isinstance(mock_mode, dict) else {}
+    trigger_env = (
+        trigger.get("whenMissingEnv", [])
+        if isinstance(trigger, dict)
+        else []
+    )
+    trigger_env_names = [item for item in trigger_env if isinstance(item, str)]
+    if sorted(set(trigger_env_names)) != sorted(set(required_env_names)):
+        raise SystemExit(
+            f"Hard dossier '{dossier_id}' integration-contract mockMode.trigger.whenMissingEnv "
+            "must match env-contract.requires[].name."
+        )
+
+    activation = integration_contract.get("activation", {})
+    requires_user_mention = bool(
+        isinstance(activation, dict) and activation.get("requiresUserMention")
+    )
+    if not requires_user_mention:
+        raise SystemExit(
+            f"Hard dossier '{dossier_id}' must set activation.requiresUserMention=true."
+        )
+
+    missing_env: list[str] = []
+    for spec in required_env_specs:
+        name = spec.get("name")
+        if not isinstance(name, str):
+            continue
+        raw = os.environ.get(name)
+        if raw is None or not raw.strip():
+            missing_env.append(name)
+
+    return {
+        "provider": integration_contract.get("provider"),
+        "submitTarget": _extract_submit_target_from_code_contract(code_contract, dossier_id),
+        "mode": "design" if missing_env else "integration",
+        "missingEnv": missing_env,
+        "designModeBehavior": env_contract.get("designModeBehavior", ""),
+        "integrationModeBehavior": env_contract.get("integrationModeBehavior", ""),
+        "contracts": {
+            "env": env_contract,
+            "code": code_contract,
+            "integration": integration_contract,
+        },
+    }
+
+
 def load_selected_dossier_manifests(project_input: dict) -> list[dict]:
     manifests: list[dict] = []
     for dossier_id in selected_required_dossiers(project_input):
@@ -1214,15 +1377,38 @@ def load_selected_dossier_manifests(project_input: dict) -> list[dict]:
             raise SystemExit(
                 f"Selected dossier '{dossier_id}' is disabled in {manifest_path}."
             )
+        hard_runtime: dict[str, Any] | None = None
+        if dossier_class == "hard":
+            hard_runtime = _load_hard_dossier_runtime(dossier_id, dossier_dir, manifest)
         manifests.append(
             {
                 "id": dossier_id,
                 "class": dossier_class,
                 "dir": dossier_dir,
                 "manifest": manifest,
+                "hardRuntime": hard_runtime,
             }
         )
     return manifests
+
+
+def dossier_runtime_overlay(selected_dossiers: list[dict]) -> dict[str, Any]:
+    hard: dict[str, Any] = {}
+    for info in selected_dossiers:
+        runtime = info.get("hardRuntime")
+        if not isinstance(runtime, dict):
+            continue
+        hard[info["id"]] = {
+            "provider": runtime.get("provider"),
+            "submitTarget": runtime.get("submitTarget"),
+            "mode": runtime.get("mode"),
+            "missingEnv": list(runtime.get("missingEnv", [])),
+            "designModeBehavior": runtime.get("designModeBehavior", ""),
+            "integrationModeBehavior": runtime.get("integrationModeBehavior", ""),
+        }
+    if not hard:
+        return {}
+    return {"hardDossiers": hard}
 
 
 def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> list[str]:
@@ -1269,7 +1455,171 @@ def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> lis
     return copied
 
 
-def write_dossier_routes(target: Path, selected_dossiers: list[dict]) -> list[str]:
+def _route_to_app_api_path(target: Path, submit_target: str) -> Path:
+    normalized = _validated_site_route_path(submit_target)
+    segments = [part for part in normalized.lstrip("/").split("/") if part]
+    if not segments or segments[0] != "api":
+        raise SystemExit(
+            f"Hard dossier submit target must be under /api, got: {submit_target!r}"
+        )
+    return target.joinpath("app", *segments, "route.ts")
+
+
+def _emit_resend_contact_route(
+    target: Path,
+    *,
+    submit_target: str,
+    design_mode_behavior: str,
+    integration_mode_behavior: str,
+    recipient_email: str,
+) -> None:
+    route_path = _route_to_app_api_path(target, submit_target)
+    route_source = (
+        'import { NextRequest, NextResponse } from "next/server";\n\n'
+        "type contact_payload = {\n"
+        "  name: string;\n"
+        "  email: string;\n"
+        "  phone: string;\n"
+        "  message: string;\n"
+        "};\n\n"
+        f"const REQUIRED_ENV = {_js_string_literal('RESEND_API_KEY')};\n"
+        f"const DESIGN_MODE_MESSAGE = {_js_string_literal(design_mode_behavior)};\n"
+        f"const INTEGRATION_MODE_MESSAGE = {_js_string_literal(integration_mode_behavior)};\n"
+        f"const CONTACT_RECIPIENT = {_js_string_literal(recipient_email)};\n"
+        "const RESEND_ENDPOINT = \"https://api.resend.com/emails\";\n\n"
+        "function _as_non_empty_string(value: unknown): string {\n"
+        "  return typeof value === \"string\" ? value.trim() : \"\";\n"
+        "}\n\n"
+        "function _is_valid_email(email: string): boolean {\n"
+        "  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n"
+        "}\n\n"
+        "function _parse_payload(input: unknown): contact_payload | null {\n"
+        "  if (typeof input !== \"object\" || input === null) {\n"
+        "    return null;\n"
+        "  }\n"
+        "  const data = input as Record<string, unknown>;\n"
+        "  const name = _as_non_empty_string(data.name);\n"
+        "  const email = _as_non_empty_string(data.email);\n"
+        "  const phone = _as_non_empty_string(data.phone);\n"
+        "  const message = _as_non_empty_string(data.message);\n"
+        "  if (!name || !email || !message || !_is_valid_email(email)) {\n"
+        "    return null;\n"
+        "  }\n"
+        "  return { name, email, phone, message };\n"
+        "}\n\n"
+        "export async function POST(request: NextRequest) {\n"
+        "  let body: unknown;\n"
+        "  try {\n"
+        "    body = await request.json();\n"
+        "  } catch {\n"
+        "    return NextResponse.json(\n"
+        "      { ok: false, mode: \"error\", message: \"Invalid JSON payload.\" },\n"
+        "      { status: 400 }\n"
+        "    );\n"
+        "  }\n\n"
+        "  const payload = _parse_payload(body);\n"
+        "  if (payload === null) {\n"
+        "    return NextResponse.json(\n"
+        "      {\n"
+        "        ok: false,\n"
+        "        mode: \"error\",\n"
+        "        message: \"Name, email and message are required.\",\n"
+        "      },\n"
+        "      { status: 400 }\n"
+        "    );\n"
+        "  }\n\n"
+        "  const resendKey = process.env[REQUIRED_ENV];\n"
+        "  if (!resendKey || !resendKey.trim()) {\n"
+        "    console.info(\n"
+        "      \"[resend-contact-form] design-mode no-op: missing RESEND_API_KEY\"\n"
+        "    );\n"
+        "    return NextResponse.json(\n"
+        "      {\n"
+        "        ok: false,\n"
+        "        mode: \"design\",\n"
+        "        message: DESIGN_MODE_MESSAGE,\n"
+        "        detail: INTEGRATION_MODE_MESSAGE,\n"
+        "      },\n"
+        "      { status: 503 }\n"
+        "    );\n"
+        "  }\n\n"
+        "  const to = CONTACT_RECIPIENT;\n"
+        "  if (!to) {\n"
+        "    return NextResponse.json(\n"
+        "      {\n"
+        "        ok: false,\n"
+        "        mode: \"error\",\n"
+        "        message: \"Missing contact recipient for resend route.\",\n"
+        "      },\n"
+        "      { status: 500 }\n"
+        "    );\n"
+        "  }\n\n"
+        "  const from = process.env.RESEND_FROM_EMAIL || \"onboarding@resend.dev\";\n"
+        "  const subject = `Kontaktförfrågan från webbplatsen - ${payload.name}`;\n"
+        "  const bodyText = [\n"
+        "    `Namn: ${payload.name}`,\n"
+        "    `E-post: ${payload.email}`,\n"
+        "    payload.phone ? `Telefon: ${payload.phone}` : \"\",\n"
+        "    \"\",\n"
+        "    payload.message,\n"
+        "  ]\n"
+        "    .filter(Boolean)\n"
+        "    .join(\"\\n\");\n\n"
+        "  try {\n"
+        "    const response = await fetch(RESEND_ENDPOINT, {\n"
+        "      method: \"POST\",\n"
+        "      headers: {\n"
+        "        Authorization: `Bearer ${resendKey}`,\n"
+        "        \"Content-Type\": \"application/json\",\n"
+        "      },\n"
+        "      body: JSON.stringify({\n"
+        "        from,\n"
+        "        to: [to],\n"
+        "        reply_to: payload.email,\n"
+        "        subject,\n"
+        "        text: bodyText,\n"
+        "      }),\n"
+        "    });\n\n"
+        "    if (!response.ok) {\n"
+        "      const providerError = await response.text();\n"
+        "      console.warn(\n"
+        "        `[resend-contact-form] provider error status=${response.status} body=${providerError}`\n"
+        "      );\n"
+        "      return NextResponse.json(\n"
+        "        {\n"
+        "          ok: false,\n"
+        "          mode: \"integration\",\n"
+        "          message: INTEGRATION_MODE_MESSAGE,\n"
+        "        },\n"
+        "        { status: 502 }\n"
+        "      );\n"
+        "    }\n"
+        "  } catch (error) {\n"
+        "    console.error(\"[resend-contact-form] provider request failed\", error);\n"
+        "    return NextResponse.json(\n"
+        "      {\n"
+        "        ok: false,\n"
+        "        mode: \"integration\",\n"
+        "        message: INTEGRATION_MODE_MESSAGE,\n"
+        "      },\n"
+        "      { status: 502 }\n"
+        "    );\n"
+        "  }\n\n"
+        "  return NextResponse.json({\n"
+        "    ok: true,\n"
+        "    mode: \"integration\",\n"
+        "    message: \"Tack! Ditt meddelande har skickats.\",\n"
+        "  });\n"
+        "}\n"
+    )
+    write(route_path, route_source)
+
+
+def write_dossier_routes(
+    target: Path,
+    selected_dossiers: list[dict],
+    project_input: dict | None = None,
+) -> list[str]:
     routes: list[str] = []
     selected_ids = {info["id"] for info in selected_dossiers}
 
@@ -1290,6 +1640,30 @@ def write_dossier_routes(target: Path, selected_dossiers: list[dict]) -> list[st
             ),
         )
         routes.append("/spel")
+
+    resend_info = next(
+        (info for info in selected_dossiers if info.get("id") == "resend-contact-form"),
+        None,
+    )
+    if resend_info is not None:
+        hard_runtime = resend_info.get("hardRuntime")
+        if not isinstance(hard_runtime, dict):
+            raise SystemExit(
+                "resend-contact-form selected but hard runtime contracts were not loaded."
+            )
+        contact = project_input.get("contact", {}) if isinstance(project_input, dict) else {}
+        recipient_email = (
+            str(contact.get("email")).strip()
+            if isinstance(contact, dict) and contact.get("email") is not None
+            else ""
+        )
+        _emit_resend_contact_route(
+            target,
+            submit_target=str(hard_runtime.get("submitTarget", "/api/contact/resend")),
+            design_mode_behavior=str(hard_runtime.get("designModeBehavior", "")),
+            integration_mode_behavior=str(hard_runtime.get("integrationModeBehavior", "")),
+            recipient_email=recipient_email,
+        )
 
     return routes
 
@@ -2499,8 +2873,35 @@ def build(
         trace.event("build", "variant_tokens.warning", "warning", warning)
 
     selected_dossiers = load_selected_dossier_manifests(dossier)
+    for info in selected_dossiers:
+        hard_runtime = info.get("hardRuntime")
+        if not isinstance(hard_runtime, dict):
+            continue
+        if hard_runtime.get("mode") != "design":
+            continue
+        missing_env = ", ".join(
+            value
+            for value in hard_runtime.get("missingEnv", [])
+            if isinstance(value, str)
+        ) or "unknown"
+        trace.event(
+            "build",
+            "dossier.design_mode",
+            "warning",
+            f"Hard dossier {info['id']} mounted in design mode",
+            reason=f"missing env: {missing_env}",
+        )
+        print(
+            f"[dossier:{info['id']}] design mode active (missing env: {missing_env})"
+        )
+
+    render_dossier = dossier
+    runtime_overlay = dossier_runtime_overlay(selected_dossiers)
+    if runtime_overlay:
+        render_dossier = {**dossier, "dossierRuntime": runtime_overlay}
+
     copied_components = mount_dossier_components(target, selected_dossiers)
-    dossier_routes = write_dossier_routes(target, selected_dossiers)
+    dossier_routes = write_dossier_routes(target, selected_dossiers, dossier)
 
     # Announce BEFORE the write so the operator can see which step
     # is in flight if write_pages raises (e.g. SystemExit for an
@@ -2543,7 +2944,7 @@ def build(
     print("Writing pages: " + ", ".join(routes_to_write) + " and layout")
     paths_written = write_pages(
         target,
-        dossier,
+        render_dossier,
         scaffold_routes,
         dossier_routes,
         extra_routes=wizard_extra_routes or None,
@@ -2682,7 +3083,7 @@ def build(
         )
         write_pages(
             target,
-            dossier,
+            render_dossier,
             scaffold_routes,
             dossier_routes,
             extra_routes=wizard_extra_routes or None,

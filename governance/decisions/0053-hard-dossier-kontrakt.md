@@ -1,14 +1,17 @@
 # ADR 0053 — Hard-dossier-kontrakt: env-, code- och integration-kontrakt + mockMode-regler
 
-**Status:** Proposed
+**Status:** Accepted
 **Datum:** 2026-06-11
 **Beroenden:** ADR 0012 (dossier-klasserna soft/hard, hybrid borttagen),
 ADR 0048 (hostad byggväg: env-injektion i sandbox), policyn
-[`dossier-contract.v1.json`](../policies/dossier-contract.v1.json) (v3) och
+[`dossier-contract.v1.json`](../policies/dossier-contract.v1.json) (v4) och
 agentguiden
 [`packages/generation/orchestration/dossiers/AGENT-GUIDE.md`](../../packages/generation/orchestration/dossiers/AGENT-GUIDE.md).
 Utlöst av audit 2026-06-11: hard-dossier-kontrakten är den uttalade
 blockeraren för `resend-contact-form` som första hard-dossier.
+**Implementering:** 2026-06-11 — policy bump v3→v4, tre kontraktsscheman,
+governance-validering, montering i `scripts/build_site.py`, och första hard
+dossier `resend-contact-form`.
 
 ## Kontext
 

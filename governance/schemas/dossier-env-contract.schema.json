@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dossier-env-contract.schema.json",
+  "title": "Dossier Env Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["requires", "designModeBehavior", "integrationModeBehavior"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "requires": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "purpose", "scope"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "purpose": { "type": "string", "minLength": 1 },
+          "scope": { "type": "string", "enum": ["build", "runtime"] },
+          "valueFormat": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "designModeBehavior": { "type": "string", "minLength": 1 },
+    "integrationModeBehavior": { "type": "string", "minLength": 1 }
+  }
+}
