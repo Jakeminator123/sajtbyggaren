@@ -47,6 +47,7 @@ import { randomUUID } from "node:crypto";
 import { isHostedVercelRuntime } from "./hosted-python-runtime";
 import { getKvStore, kvSetJson } from "./kv-store";
 import { upstashRestToken, upstashRestUrl } from "./kv-store/upstash-redis";
+import { sanitizedAssetSetIntent } from "./prompt-runner";
 import {
   ensureFreshOidcTokenBeforeCreate,
   resolveCredentials,
@@ -59,6 +60,17 @@ export interface HostedBuildRequest {
   prompt: string;
   /** True för följdprompt mot en befintlig sajt (se begränsning i JSDoc ovan). */
   followup?: boolean;
+  /**
+   * Strukturerat verktygs-intent (task A) — samma kontrakt som
+   * ``PromptHelperOptions.toolIntent`` lokalt. Bara ``asset_set``
+   * forwardas, sanerat genom SAMMA ``sanitizedAssetSetIntent`` som den
+   * lokala spawn-vägen, och bara i följdläge. Når sandboxen som env
+   * ``TOOL_INTENT_JSON`` (aldrig interpolerad i bash-kod) och blir
+   * ``--tool-intent`` till prompt_to_project_input.py. Hostat finns
+   * ingen lokal manifest-fallback, men UI:t skickar hela AssetRef-
+   * metadatan i params så Python-sidan inte behöver disken.
+   */
+  toolIntent?: { tool: string; params: Record<string, unknown> };
 }
 
 /** Faserna som status-nyckeln i KV rör sig genom. "queued" sätts av runnern;
@@ -229,7 +241,14 @@ echo "hosted-build: anvander $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))."
 # failar arligt har tills den persistensen landar (separat spar).
 post_status "project-input" "" ""
 if [ "$FOLLOWUP_MODE" = "1" ]; then
-  PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" 2>&1) \\
+  # asset_set-forwarding: TOOL_INTENT_JSON ar redan sanerad TS-side
+  # (sanitizedAssetSetIntent) och nar bash enbart som quotad env-expansion
+  # — aldrig interpolerad i skriptkoden. Tom strang = ingen flagga.
+  TOOL_INTENT_ARGS=()
+  if [ -n "\${TOOL_INTENT_JSON:-}" ]; then
+    TOOL_INTENT_ARGS=(--tool-intent "$TOOL_INTENT_JSON")
+  fi
+  PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" \${TOOL_INTENT_ARGS[@]+"\${TOOL_INTENT_ARGS[@]}"} 2>&1) \\
     || fail "prompt_to_project_input (followup) misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
 else
   PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --site-id "$SITE_ID" 2>&1) \\
@@ -479,11 +498,20 @@ export async function startHostedBuild(
     }
   }
 
+  // asset_set-forwarding (hostad halva av task A): samma sanering som den
+  // lokala spawn-vägen. Ogiltigt/icke-asset_set-intent blir tom sträng —
+  // skriptet skickar då ingen --tool-intent-flagga (ärlig prompt-only).
+  const safeToolIntent =
+    req.followup && req.toolIntent
+      ? sanitizedAssetSetIntent(req.toolIntent)
+      : null;
+
   const sandboxEnv: Record<string, string> = {
     RUN_ID: runId,
     SITE_ID: req.siteId,
     PROMPT_TEXT: req.prompt,
     FOLLOWUP_MODE: req.followup ? "1" : "0",
+    TOOL_INTENT_JSON: safeToolIntent ? JSON.stringify(safeToolIntent) : "",
     BLOB_READ_WRITE_TOKEN: blobToken,
     // Samma env-upplösning som kv-store/upstash-redis.ts; tomma strängar når
     // skriptet, som då hoppar över status-POST:arna ärligt (set -u-säkert).
