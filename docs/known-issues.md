@@ -717,9 +717,13 @@ KV-store-adapter + publik rate-limit. Den blockerande säkerhetsbuggen
 (spoofbar klient-IP) fixades före merge (`e44dcbb`). Tre fynd från extern
 granskning är bekräftade som **publik-deploy-uppföljningar, inte
 jakob-be-blockerare** — hostat läge är default AV på jakob-be (lokalt/localhost-
-grindat). **Driftspärr:** publik hostad deploy ska vara AV tills B195+B196 är
-fixade (`VIEWSER_ENABLE_HOSTED_BUILD` ej satt; `VIEWSER_ALLOW_NON_LOCALHOST` ej
-`true` i prod).
+grindat). **Driftspärr HÄVD av operatör 2026-06-11:** publik hostad deploy är
+PÅ (`VIEWSER_ENABLE_HOSTED_BUILD=1` + `VIEWSER_ALLOW_NON_LOCALHOST=true` i alla
+Vercel-miljöer, konsoliderat via env-städningen + PR #286). Operatörsbeslut:
+användare ska kunna skapa sajter publikt nu; B195 är fixad (#287) och B196
+accepteras som känd, prioriterad härdning som fixas separat — den ska INTE
+stänga av publik drift. Skyddet i drift är rate-limit per IP (ADR 0050) +
+sandbox-TTL.
 
 - **`B194` Låg** (P3-spår) - hostade följdpromptar (`startHostedBuild(...
   followup: true)`) kan inte härleda föregående version utan persisterad
