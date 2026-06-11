@@ -19,6 +19,22 @@ Backup av för-sync-main: `backup-main-2026-06-11-pre-evening-sync-cb0f6a5`.
 - **Main-sync KLAR** (operatörsbekräftad): hela kvällspasset + nattens merges
   ligger på `main`. `ignoreCommand`-fällan dokumenterad (docs-only-toppcommit
   cancelar prod-bygget → tvåstegspush eller manuell promote).
+- **`ignoreCommand`-fällan FIXAD (2026-06-12 ~01:10):** `apps/viewser/vercel.json`
+  jämför nu mot senast deployade SHA (`VERCEL_GIT_PREVIOUS_SHA`, fallback
+  `HEAD^`), så en docs-toppcommit kan inte längre gömma kodcommits i samma
+  push. Rena docs-pushar skippas fortfarande med flit — produktion pekar då
+  på senaste app-ändringen, inte nödvändigtvis main-HEAD. Det är väntat
+  monorepo-beteende, ingen bugg.
+- **`main` låst med GitHub-ruleset (2026-06-12, operatörsbeslut):** bara
+  admin (Jakobs konto, dvs. vår lane) och steward-workflowen (github-actions)
+  kan uppdatera `main`; force-push och branch-radering blockerade för alla.
+  Christopher-lanen når produktion enbart via PR → `jakob-be` → ff-push av
+  vår lane. Rulesetet heter "protect-main-production-lane" (repo-settings).
+- **Blob-token verifierad (operatörsfråga 2026-06-12):** lokala
+  `apps/viewser/.env.local` och Vercel-prod har IDENTISK `BLOB_READ_WRITE_TOKEN`
+  (store `vxfg…`). "Added 15h ago" i Vercel-dashboarden är skapelsetid, inget
+  har ändrats sedan dess. Kvarstående är bara Christophers lokala store-avvikelse
+  (`3xqg…`, punkt 4b nedan).
 - **#305** Vercel Web Analytics (Vercel-agentens PR, retargetad main→jakob-be,
   `<Analytics />` i layout.tsx + `@vercel/analytics`).
 - **#292** hostad asset_set-forwarding (Christophers; ren 1-commit-rebase,
