@@ -1,18 +1,28 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-11 ~10:00 UTC+2, morgoncheckpoint efter #284 (hostat bygge)
-mergad + main-sync. Verifierad `origin/jakob-be = origin/main` (identiska, se
-Last verified i `docs/current-focus.md`).
+**Datum:** 2026-06-11 ~11:20 UTC+2, checkpoint efter #287 (B195-fix /
+manifest-servering) + #286 (Vercel-env-konsolidering) mergade till jakob-be och
+main-sync (`main` ff till `jakob-be`). Verifierad `origin/jakob-be =
+origin/main` (identiska, se Last verified i `docs/current-focus.md`).
 
-## MORGONPASSET 2026-06-11 ~10:00 — #284 HOSTAT BYGGE (AUKTORITATIVT BLOCK)
+## PASS 2026-06-11 ~11:20 — #287 + #286 MERGADE + MAIN-SYNC (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
 >
-> **Git:** `origin/main = 2e13aa3` (#284-mergen `9cd8624` + docs-bump skeppade
-> till main). `origin/jakob-be` bär docs-only inbox-svar (msg-0069/0070) ovanpå
-> — main-sync till nästa leveransfönster. Pre-ship-backup: `backup-160-BRA`
+> **Git:** `origin/jakob-be = origin/main = 758d8dd` (efter denna sync). #287
+> (`8377868`, B195-fix / manifest-servering + known-issues-format) och #286
+> (`758d8dd`, Vercel-env-konsolidering, docs/example-only) mergade till jakob-be;
+> `main` fast-forwardad till `jakob-be` → tom diff. Pre-sync-backup av föregående
+> main (`2e13aa3`): `backup-170-BRA`. Tidigare pre-ship-backup: `backup-160-BRA`
 > (= `70e5e36`, jakob-be före #284). Rent träd.
+>
+> **#287 + #286 (2026-06-11):** #287 stänger B195:s stale-blob-gap via
+> manifest-baserad servering (`08575a0`) + korrigerar B194/B196-format i
+> known-issues (`60cdfa3`); #286 speglar den konsoliderade Vercel-env-målbilden
+> i `.env.example`-mallarna + hosted-viewser-manualen (`ANTHROPIC_API_KEY`
+> borttagen — ingen provider-rad i `llm-models`). Ingen ny ADR (liggaren
+> oförändrad, nästa lediga `0051`).
 >
 > **#284 MERGAD (`9cd8624`) — hostat bygge i Vercel-sandbox + KV-store-adapter
 > + publik rate-limit (ADR 0048/0049/0050).** Granskad av subagent (GO-med-
@@ -23,8 +33,8 @@ Last verified i `docs/current-focus.md`).
 > expiry inte permanent-blockar en IP). Hostat läge default AV
 > (`VIEWSER_ENABLE_HOSTED_BUILD` + Redis-driver krävs).
 >
-> **⚠️ DRIFTSPÄRR — publik hostad deploy ska vara AV** tills B195+B196 fixade:
-> `VIEWSER_ENABLE_HOSTED_BUILD` får INTE sättas och `VIEWSER_ALLOW_NON_LOCALHOST`
+> **⚠️ DRIFTSPÄRR — publik hostad deploy ska vara AV** tills B196 fixad (B195
+> åtgärdad via #287): `VIEWSER_ENABLE_HOSTED_BUILD` får INTE sättas och `VIEWSER_ALLOW_NON_LOCALHOST`
 > får INTE vara `true` i prod. (Vercel-agent/operatör: aktivera inte hostat
 > bygge publikt än.)
 >
@@ -32,9 +42,10 @@ Last verified i `docs/current-focus.md`).
 > blockerare — hostat är default AV/localhost-grindat):**
 > **B194** (P3) hostad followup failar ärligt utan persisterad run-historik —
 > kräver state-persistens innan hosted followups funkar. **B195** (publik-
-> deploy-defekt) blob-upload raderar aldrig stale filer (borttagen route/asset
+> deploy-defekt) blob-upload raderade aldrig stale filer (borttagen route/asset
 > kvar i preview vid ombygge mot samma siteId); en påbörjad upload-loop-
-> härdning landade via `fa268c5`, men stale-radering kvarstår. **B196**
+> härdning landade via `fa268c5`, och stale-radering är nu ÅTGÄRDAD via #287
+> (manifest-baserad servering, `08575a0`) — known-issues-raden ej flippad än. **B196**
 > (publik-deploy-härdning) `GET /api/hosted-build/<runId>` saknar site-binding/
 > auth i publikt läge.
 >

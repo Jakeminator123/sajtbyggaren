@@ -154,11 +154,20 @@ lokalt; eval-först-strategin genomförd; prod-env väntar på main-sync.
   `python scripts/sync_canvases.py` en gång så att begreppskartan och
   openclaw-flödet dyker upp i Cursor (rutin i `docs/canvases/README.md`).
 
-Last verified state: `2e13aa3` (2026-06-11 ~10:15 UTC+2; `origin/main =
-origin/jakob-be = 2e13aa3` verifierad — #284-mergen (`9cd8624`) + docs-bump
-skeppade till main. jakob-be bär nu docs-only inbox-svar (msg-0069/0070 →
-Christopher: SNI-kvittens + #285-rebase/route-konflikt-heads-up) ovanpå;
-main-sync till nästa leveransfönster). **#284** hostat bygge i
+Last verified state: `758d8dd` (2026-06-11 ~11:20 UTC+2; `origin/jakob-be =
+758d8dd` med #287 + #286 mergade. `origin/main` fast-forwardad till `jakob-be`
+i denna sync → tom diff `main↔jakob-be`; pre-sync-backup av föregående main
+(`2e13aa3`) sparad som `backup-170-BRA`). **#287** MERGAD (`8377868`): B195
+(stale-blob) åtgärdad via manifest-baserad servering (`08575a0` stänger
+stale-blob-gapet) + B194/B196-format i known-issues korrigerat (`60cdfa3`) —
+ingen ny ADR. **#286** MERGAD: Vercel-env-konsolidering speglad i
+`.env.example`-mallarna + `docs/operations/hosted-viewser-manual.md` (env-matris
+till en post per miljö, `ANTHROPIC_API_KEY` borttagen ur målbilden — ingen
+provider-rad i `llm-models`) — docs/example-only, ingen ny ADR. ADR-liggaren
+oförändrad (nästa lediga `0051`; `0046` hålls av öppna #285). Föregående
+main-sync: `2e13aa3` — #284-mergen (`9cd8624`) + docs-bump skeppades till main;
+jakob-be bar därefter docs-only inbox-svar (msg-0069/0070 → Christopher:
+SNI-kvittens + #285-rebase/route-konflikt-heads-up). **#284** hostat bygge i
 Vercel-sandbox + KV-store-adapter + publik rate-limit MERGAD (ADR
 0048/0049/0050). Blockerande säkerhetsbugg fixad FÖRE merge (`e44dcbb`):
 rate-limitens klient-IP litade på första `x-forwarded-for` (klient-spoofbar på
