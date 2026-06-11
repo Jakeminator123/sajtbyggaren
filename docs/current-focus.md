@@ -66,6 +66,10 @@ apps/web, deploy-paket (alla bakom framtida operatörsbeslut).
    → enabled.
 3. **Eval-baseline-grind i CI** (skördelista A3): committad baseline +
    regressionsregler ovanpå `run_golden_path_eval.py`/`run_eval_suite.py`.
+   Draft-PR mot `jakob-be` öppnad från `feat/eval-baseline-grind`: committad
+   baseline i `tests/evals/golden-path-baseline.json` (spårad, ej gitignorad),
+   `scripts/eval_gate.py` + `tests/test_eval_gate.py`, eget Node-fritt
+   CI-jobb `eval-baseline` (kör även `mini_eval.py`). Väntar operatörens merge.
 4. **P3 — hostad followup + snabb uppstart:** persistera run-state (B194),
    discovery-paritet (B197), sandbox-snapshots/idle-stop (ADR 0041-spåret).
 5. **Token Meter-priser (operatören, valfritt):** USD-priserna i Vercel-env
