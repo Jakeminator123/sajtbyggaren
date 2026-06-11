@@ -21,7 +21,14 @@ dist
 build
 .next
 out
-.vercel
+# .vercel: blockera secrets (pulled .env* fran `vercel pull`) men slapp in de
+# tva ofarliga lank-metadata-filerna sa en agent kan se vilket Vercel-projekt
+# repot ar lankat till. `.vercel/*` blockerar alla direkta barn (inkl.
+# .env.*.local); !-raderna ater-tillater bara repo.json/project.json
+# (team-/projekt-id, inga secrets).
+.vercel/*
+!.vercel/repo.json
+!.vercel/project.json
 
 # Reserve the destination for the B13a -move (see
 # docs/known-issues.md). The bare `build` rule above matches at any
