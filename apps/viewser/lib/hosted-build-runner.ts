@@ -135,6 +135,9 @@ function slug(value: string): string {
  *   - Blob-upload sker fil-för-fil under ``generated/<siteId>/<relPath>``
  *     (ingen tarball: lib/generated-blob-source.ts listar per-fil-blobbar),
  *     med samma skip-kataloger och .env-skydd som snapshot-site-to-blob.mjs.
+ *   - Sist publiceras ``generated/<siteId>/.manifest.json`` med byggets exakta
+ *     fil-set (B195): serveringen visar bara manifest-listade filer, så stale
+ *     blobbar från ett tidigare bygge mot samma siteId aldrig syns i previewen.
  *   - Vid fel: phase "failed" med feltext, exit != 0.
  */
 function buildOrchestrationScript(): string {
@@ -305,7 +308,8 @@ find . \\( -name node_modules -o -name .next -o -name .git -o -name .turbo -o -n
 [ -s /tmp/upload-manifest.txt ] || fail "Fil-listan for blob-upload ar tom — build-katalogen ser tom ut."
 
 uploaded=0
-rm -f /tmp/blob-upload-error.txt
+rm -f /tmp/blob-upload-error.txt /tmp/served-manifest.txt
+: > /tmp/served-manifest.txt
 while IFS= read -r rel; do
   base=$(basename "$rel")
   case "$base" in
@@ -313,10 +317,26 @@ while IFS= read -r rel; do
     .env*) continue ;;
   esac
   upload_file "$rel" || fail "Blob-upload misslyckades: $(cat /tmp/blob-upload-error.txt 2>/dev/null)"
+  printf '%s\\n' "$rel" >> /tmp/served-manifest.txt
   uploaded=$((uploaded + 1))
 done < /tmp/upload-manifest.txt
 [ "$uploaded" -gt 0 ] || fail "0 filer laddades upp till blob — inget att publicera."
 echo "hosted-build: $uploaded filer uppladdade till blob."
+
+# B195 — stale-blob-cleanup: publicera SIST ett manifest (.manifest.json) med
+# EXAKT det fil-set bygget laddade upp. lib/generated-blob-source.ts serverar
+# bara filer som star i manifestet, sa blobbar som ligger kvar fran ett tidigare
+# bygge mot samma siteId (overwrite-upload raderar dem aldrig — en borttagen
+# route/asset blir annars en stale fil i previewen) ignoreras. Skrivs sist, EFTER
+# att alla filer lyckats, sa manifestet aldrig pekar pa en saknad blob.
+SERVED_LIST=/tmp/served-manifest.txt BUILD_ID="$ACTIVE_BUILD_ID" python3 - > "$BUILD_DIR/.manifest.json" <<'PY'
+import json, os
+with open(os.environ["SERVED_LIST"], encoding="utf-8") as fh:
+    files = [line for line in fh.read().splitlines() if line]
+print(json.dumps({"buildId": os.environ.get("BUILD_ID", ""), "files": files}, ensure_ascii=False))
+PY
+upload_file ".manifest.json" || fail "Manifest-upload misslyckades: $(cat /tmp/blob-upload-error.txt 2>/dev/null)"
+echo "hosted-build: manifest publicerat ($uploaded filer)."
 
 # Hostad current.json-motsvarighet: viewser:site:<siteId>:current (ingen TTL —
 # pekaren ar durabel tills nasta lyckade bygge skriver over den).
