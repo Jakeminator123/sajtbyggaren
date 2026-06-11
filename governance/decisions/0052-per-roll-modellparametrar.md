@@ -1,7 +1,12 @@
 # ADR 0052 — Per-roll modellparametrar i llm-models-policyn (reasoningEffort + maxOutputTokens)
 
-**Status:** Proposed
+**Status:** Accepted (2026-06-11)
 **Datum:** 2026-06-11
+**Implementation:** levererad på `jakob-be` 2026-06-11 — schema + policy v11,
+delad läsare `packages/policies/llm_model_params.py`, trådning av de åtta
+call-sites och TS-plumbing i `apps/viewser/lib/openai.ts` (verifierad mot
+openai-SDK 2.36.0 i venv: `reasoning`/`max_output_tokens` stöds och
+effort-enum:en matchar `none|low|medium|high|xhigh`).
 **Beroenden:** ADR 0009 (llm-models-policyns ursprung), ADR 0044 (SOUL-slicen
 äger chatt-personan i `apps/viewser/app/api/prompt/route.ts` — rörs inte).
 Ersätter en extern agent-plan som var skriven mot ett äldre repo-läge; denna

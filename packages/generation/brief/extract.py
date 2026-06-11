@@ -18,6 +18,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from packages.policies.llm_model_params import resolve_role_params, responses_kwargs
+
 from .models import has_openai_api_key
 
 logger = logging.getLogger("sajtbyggaren.brief")
@@ -664,6 +666,7 @@ def _real_brief(prompt: str, model: str, language_hint: str | None) -> SiteBrief
             {"role": "user", "content": user_message},
         ],
         text_format=SiteBrief,
+        **responses_kwargs(resolve_role_params("briefModel")),
     )
     parsed = response.output_parsed
     if parsed is None:
@@ -982,6 +985,7 @@ def _run_copy_directive_model(
                 {"role": "user", "content": context},
             ],
             text_format=CopyDirectiveExtraction,
+            **responses_kwargs(resolve_role_params("copyDirectiveModel")),
         )
         parsed = response.output_parsed
     except Exception as exc:  # noqa: BLE001
@@ -1161,6 +1165,7 @@ def plan_section_copy_rewrite_llm(
                 {"role": "user", "content": context},
             ],
             text_format=SectionCopyRewrite,
+            **responses_kwargs(resolve_role_params("copyDirectiveModel")),
         )
         parsed = response.output_parsed
     except Exception as exc:  # noqa: BLE001
@@ -1269,6 +1274,7 @@ def extract_style_directive_llm(
                 {"role": "user", "content": context},
             ],
             text_format=StyleDirectiveCandidate,
+            **responses_kwargs(resolve_role_params("styleDirectiveModel")),
         )
         parsed = response.output_parsed
     except Exception as exc:  # noqa: BLE001

@@ -44,6 +44,8 @@ import os
 import sys
 from pathlib import Path
 
+from packages.policies.llm_model_params import resolve_role_params, responses_kwargs
+
 from .classify import _should_start_preview, classify_message
 from .models import RouterContext, RouterDecision
 
@@ -260,6 +262,7 @@ def _real_router_decision(
             {"role": "user", "content": _build_user_message(message, context)},
         ],
         text_format=RouterDecision,
+        **responses_kwargs(resolve_role_params("routerModel")),
     )
     return response.output_parsed
 

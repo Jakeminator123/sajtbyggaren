@@ -50,6 +50,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from packages.policies.llm_model_params import resolve_role_params, responses_kwargs
+
 from .critic import (
     CriticIssue,
     CriticResult,
@@ -304,6 +306,7 @@ def _run_verifier_model(*, system: str, context: str, model: str) -> list[Critic
             {"role": "user", "content": context},
         ],
         text_format=VerifierFindings,
+        **responses_kwargs(resolve_role_params("verifierModel")),
     )
     parsed = response.output_parsed
     if parsed is None:

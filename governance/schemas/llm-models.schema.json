@@ -44,7 +44,9 @@
           "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*Model$" },
           "purpose": { "type": "string" },
           "model": { "type": "string" },
-          "provider": { "type": "string" }
+          "provider": { "type": "string" },
+          "reasoningEffort": { "enum": ["none", "low", "medium", "high", "xhigh"] },
+          "maxOutputTokens": { "type": "integer", "minimum": 1 }
         }
       }
     },

@@ -612,6 +612,14 @@
       "aliasesForbidden": []
     },
     {
+      "id": "roleModelParams",
+      "canonical": "RoleModelParams",
+      "definition": "Fryst per-roll-parameterobjekt (ADR 0052) ur llm-models.v1.json v11: role_id, model, reasoning_effort, max_output_tokens. Läses ENBART via den delade defensiva läsaren packages/policies/llm_model_params.py (Python) respektive readRoleModelParams i apps/viewser/lib/openai.ts (TS-plumbing); None/frånvarande fält = modellens defaults, exakt tidigare beteende.",
+      "ownerPackage": "packages/policies",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
       "id": "repairCandidate",
       "canonical": "Repair Candidate",
       "definition": "Versionsstatus när Quality Gate failat och LLM Repair har producerat en ny version som väntar på re-evaluering eller accept.",

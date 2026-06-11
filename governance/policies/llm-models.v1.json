@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/llm-models.schema.json",
   "policyId": "llm-models.v1",
-  "version": 10,
+  "version": 11,
   "status": "draft-but-authoritative",
-  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering. Version 5 lägger till copyDirectiveModel: tolkar en följdprompt till validerade copyDirectives (ADR 0034 väg A) så fri följdprompt-text kan bli en synlig, spårbar sajt-ändring utan att rå prompt renderas som kundcopy. Egen roll (inte återanvänd briefModel) så syftet hålls separat. Version 6 (ADR 0034 väg A nivå 3a) breddar copyDirectiveModel: utöver att tolka explicit copy kan rollen i ett editPlan-läge läsa sajtens aktuella redigerbara fält (site-state) och GENERERA ny copy för about-text (company.story) och services (services[].summary) vid en rewrite-instruktion utan angivet värde. Output går alltid genom samma copy-validator + grundnings-guard; name/tagline genereras aldrig och modellen skriver aldrig direkt i renderad kod (ej väg C). Version 7 (KÖR-6b router LLM-fallback) lägger till routerModel: en LLM-fallback ovanpå den deterministiska OpenClaw Router (KÖR-6a) som bara anropas när heuristiken klassar ett meddelande unclear eller det är långt/multi-intent. Den returnerar SAMMA schema-validerade RouterDecision-kontrakt som KÖR-6a (generateObject-stil via structured output). Egen roll (inte återanvänd briefModel/planningModel/copyDirectiveModel) så routningssyftet hålls separat och spårbart; utan OPENAI_API_KEY faller routern tillbaka till KÖR-6a-heuristiken (ingen regression) och shouldStartPreview omräknas alltid deterministiskt från buildRequirement + builder-coexistence (LLM:en kan aldrig starta build/preview på answer_only/plan_only). Version 8 (kor-4b) aktiverar verifierModel: rollen anropas read-only ovanpå den deterministiska Quality Critic:n (kor-4a) och producerar smak-findings (fake_or_ungrounded_trust, weak_hero, too_template_like, förfinad generic_copy) som mergas + dedupas med de deterministiska. Icke-blockerande; utan OPENAI_API_KEY faller den tillbaka till bara de deterministiska fynden. Version 9 (stylist-roll, prompt B) lägger till styleDirectiveModel: tolkar en fri eller sammansatt stil/färg-följdprompt till en strukturerad, validerad tema-mutation (brand.primaryColorHex + valfri accentColorHex + valfri toneVibe). Kör bara när den deterministiska färg-lexikon-extraktorn missar; varje fält re-valideras (hex måste vara giltig hex, toneVibe måste vara en känd vibe-nyckel) precis som copyDirective-guarderna. Egen roll (inte återanvänd copyDirectiveModel) så stil-syftet hålls separat; modellen skriver aldrig ett fält direkt (apply_theme_directive är enda deterministiska sömmen), gör aldrig per-element-styling och utan OPENAI_API_KEY faller den tillbaka till deterministisk no-op. Version 10 (ADR 0047) breddar copyDirectiveModels editPlan-läge till de vitlistade sektionsfälten (headline/subheadline/body per <route>.<section> i sectionContentOverrides): vid en omskrivnings-instruktion utan angivet värde läser rollen sektionens aktuella copy (befintlig override eller blueprint-copy) + instruktionen och genererar ny text, applicerad ENBART via ADR 0043:s sectionContentOverrides-väg i apply, genom samma copy-validator + grundnings-guard; name/tagline genereras aldrig, ingen ny skrivyta införs och utan OPENAI_API_KEY är vägen en ärlig no-op (mock-paritet).",
+  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering. Version 5 lägger till copyDirectiveModel: tolkar en följdprompt till validerade copyDirectives (ADR 0034 väg A) så fri följdprompt-text kan bli en synlig, spårbar sajt-ändring utan att rå prompt renderas som kundcopy. Egen roll (inte återanvänd briefModel) så syftet hålls separat. Version 6 (ADR 0034 väg A nivå 3a) breddar copyDirectiveModel: utöver att tolka explicit copy kan rollen i ett editPlan-läge läsa sajtens aktuella redigerbara fält (site-state) och GENERERA ny copy för about-text (company.story) och services (services[].summary) vid en rewrite-instruktion utan angivet värde. Output går alltid genom samma copy-validator + grundnings-guard; name/tagline genereras aldrig och modellen skriver aldrig direkt i renderad kod (ej väg C). Version 7 (KÖR-6b router LLM-fallback) lägger till routerModel: en LLM-fallback ovanpå den deterministiska OpenClaw Router (KÖR-6a) som bara anropas när heuristiken klassar ett meddelande unclear eller det är långt/multi-intent. Den returnerar SAMMA schema-validerade RouterDecision-kontrakt som KÖR-6a (generateObject-stil via structured output). Egen roll (inte återanvänd briefModel/planningModel/copyDirectiveModel) så routningssyftet hålls separat och spårbart; utan OPENAI_API_KEY faller routern tillbaka till KÖR-6a-heuristiken (ingen regression) och shouldStartPreview omräknas alltid deterministiskt från buildRequirement + builder-coexistence (LLM:en kan aldrig starta build/preview på answer_only/plan_only). Version 8 (kor-4b) aktiverar verifierModel: rollen anropas read-only ovanpå den deterministiska Quality Critic:n (kor-4a) och producerar smak-findings (fake_or_ungrounded_trust, weak_hero, too_template_like, förfinad generic_copy) som mergas + dedupas med de deterministiska. Icke-blockerande; utan OPENAI_API_KEY faller den tillbaka till bara de deterministiska fynden. Version 9 (stylist-roll, prompt B) lägger till styleDirectiveModel: tolkar en fri eller sammansatt stil/färg-följdprompt till en strukturerad, validerad tema-mutation (brand.primaryColorHex + valfri accentColorHex + valfri toneVibe). Kör bara när den deterministiska färg-lexikon-extraktorn missar; varje fält re-valideras (hex måste vara giltig hex, toneVibe måste vara en känd vibe-nyckel) precis som copyDirective-guarderna. Egen roll (inte återanvänd copyDirectiveModel) så stil-syftet hålls separat; modellen skriver aldrig ett fält direkt (apply_theme_directive är enda deterministiska sömmen), gör aldrig per-element-styling och utan OPENAI_API_KEY faller den tillbaka till deterministisk no-op. Version 10 (ADR 0047) breddar copyDirectiveModels editPlan-läge till de vitlistade sektionsfälten (headline/subheadline/body per <route>.<section> i sectionContentOverrides): vid en omskrivnings-instruktion utan angivet värde läser rollen sektionens aktuella copy (befintlig override eller blueprint-copy) + instruktionen och genererar ny text, applicerad ENBART via ADR 0043:s sectionContentOverrides-väg i apply, genom samma copy-validator + grundnings-guard; name/tagline genereras aldrig, ingen ny skrivyta införs och utan OPENAI_API_KEY är vägen en ärlig no-op (mock-paritet). Version 11 (ADR 0052) lägger till per-roll modellparametrar: valfria reasoningEffort (none|low|medium|high|xhigh) och maxOutputTokens per roll, lästa ENBART via den delade defensiva läsaren packages/policies/llm_model_params.py (inga env-overrides, inga lokala param-läsare). Effort-först-principen styr värdena: utdatataket inkluderar reasoning-tokens i Responses-API:t, så taket är en generös kostnadsförsäkring - aldrig ett tuningverktyg - och ett frånvarande fält betyder exakt tidigare beteende (modellens defaults). embeddingModel får aldrig chat-params. Omprövningsnotis för codegenModel: dagens codegen-kontrakt är medvetet smalt (rationale + max tre riskNotes, ADR 0017) - modellen genererar inte filinnehåll, så 4000 trunkerar inget; vid breddning till riktig fil-emission måste taket omprövas (>= 16000) i samma ändring som kontraktet.",
   "principles": [
     "Ingen kod får anropa en LLM utan att gå via en registrerad Model Role.",
     "Provider-agnostiskt: model-strängen är opaque för produktkoden. Provider-resolveren mappar mot OpenAI, Anthropic eller annan.",
@@ -20,67 +20,89 @@
       "id": "briefModel",
       "purpose": "Fas 1 Understand - extrahera Site Brief från raw prompt.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 6000
     },
     {
       "id": "planningModel",
       "purpose": "Fas 2 Plan - reasoning där det behövs (route-hints, dossier-rationale).",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "medium",
+      "maxOutputTokens": 6000
     },
     {
       "id": "routerModel",
       "purpose": "KÖR-6b - LLM-fallback ovanpå den deterministiska OpenClaw Router (KÖR-6a). Anropas BARA när heuristiken klassar meddelandet unclear eller det är långt/multi-intent; returnerar samma schema-validerade RouterDecision-kontrakt (messageKind/editKind/buildRequirement/contextLevel/target/...). Utan OPENAI_API_KEY faller routern tillbaka till KÖR-6a-heuristiken; shouldStartPreview omräknas alltid deterministiskt (aldrig build/preview på answer_only/plan_only).",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 4000
     },
     {
       "id": "copyDirectiveModel",
       "purpose": "Följdprompt-tolkning + editPlan-planering (ADR 0034 väg A, nivå 1-3a; ADR 0047) - läser en fri följdprompt + sajtens redigerbara fält (site-state) och föreslår validerade copyDirectives (target/operation/payload/targetRef). I extraktionsläge tolkar den explicit copy; i planner-läge (nivå 3a) får den generera ny copy för about-text (company.story) och services (services[].summary) vid en rewrite-instruktion utan angivet värde. ADR 0047 breddar editPlan-läget till de vitlistade sektionsfälten (headline/subheadline/body per <route>.<section>): rollen läser sektionens aktuella copy + instruktionen och genererar ny text, applicerad ENBART via ADR 0043:s directives.sectionContentOverrides-väg i apply (ingen ny skrivyta). Output går alltid genom samma copy-validator + grundnings-guard som deterministiska direktiv; name/tagline genereras aldrig och modellen skriver aldrig direkt i renderad kod (ej väg C). Utan OPENAI_API_KEY: ärlig no-op (mock-paritet).",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 4000
     },
     {
       "id": "styleDirectiveModel",
       "purpose": "stylist-roll (prompt B) - tolkar en fri eller sammansatt stil/färg-följdprompt (t.ex. 'gör den i höstfärger', 'grönvit', 'samma känsla som en solnedgång') till en strukturerad tema-mutation: brand.primaryColorHex + valfri accentColorHex + valfri toneVibe (editorial|luxury|playful|modern|tech|calm|bold). Körs BARA när den deterministiska färg-lexikon-extraktorn (packages/generation/followup/theme_directives.py) missar. Varje fält re-valideras i koden (hex måste vara giltig hex, toneVibe en känd vibe-nyckel) så ett hallucinerat värde aldrig renderas; modellen skriver aldrig ett fält direkt (apply_theme_directive är enda sömmen), gör aldrig per-element-styling och faller tillbaka till deterministisk no-op utan OPENAI_API_KEY.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "none",
+      "maxOutputTokens": 2000
     },
     {
       "id": "rerankModel",
       "purpose": "Scaffold Selector och Dossier Selector rerank av top-K kandidater.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 2000
     },
     {
       "id": "codegenModel",
       "purpose": "Fas 3 Build - generera filerna utifrån Generation Package.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "medium",
+      "maxOutputTokens": 4000
     },
     {
       "id": "variantModel",
       "purpose": "Design tooling - generera kandidater för Scaffold Variant JSON utifrån scaffold-kontrakt och operatörens variant-brief.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "medium",
+      "maxOutputTokens": 8000
     },
     {
       "id": "dossierModel",
       "purpose": "Design tooling - generera kandidat-only Soft Dossier-manifest och instructions.md från operatörens capability-brief.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "medium",
+      "maxOutputTokens": 12000
     },
     {
       "id": "repairModel",
       "purpose": "Repair Pipeline - LLM-fix när mekaniska fixes inte räcker.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "medium",
+      "maxOutputTokens": 4000
     },
     {
       "id": "verifierModel",
       "purpose": "Read-only smak-critic ovanpå den deterministiska Quality Critic:n (kor-4b): läser blueprint (Generation Package contentBlocks + Site Brief positioning/ärlighetsfält) + utdrag av Generated Files och producerar findings (fake_or_ungrounded_trust, weak_hero, too_template_like, förfinad generic_copy) till Quality Gate. Findings mergas + dedupas per type+target med de deterministiska. Skriver aldrig copy och påverkar aldrig QualityResult.status (warning-lane). Faller tillbaka till bara de deterministiska fynden utan OPENAI_API_KEY.",
       "model": "gpt-5.4",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "low",
+      "maxOutputTokens": 4000
     },
     {
       "id": "embeddingModel",

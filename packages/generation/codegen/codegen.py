@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from packages.generation.brief import has_openai_api_key
+from packages.policies.llm_model_params import resolve_role_params, responses_kwargs
 
 from .models import (
     CodegenFile,
@@ -275,6 +276,7 @@ def _call_real_codegen_model(
             {"role": "user", "content": user_message},
         ],
         text_format=CodegenLLMResponse,
+        **responses_kwargs(resolve_role_params("codegenModel")),
     )
 
     parsed = response.output_parsed

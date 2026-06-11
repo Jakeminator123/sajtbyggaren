@@ -33,6 +33,7 @@ from packages.generation.brief.models import has_openai_api_key
 from packages.generation.orchestration.section_treatments import (
     load_section_treatments_catalogue,
 )
+from packages.policies.llm_model_params import resolve_role_params, responses_kwargs
 
 from .blueprint import (
     SectionPlanEntry,
@@ -737,6 +738,7 @@ def _real_plan_choice(
             {"role": "user", "content": user_message},
         ],
         text_format=PlanningChoice,
+        **responses_kwargs(resolve_role_params("planningModel")),
     )
     parsed = response.output_parsed
     if parsed is None:

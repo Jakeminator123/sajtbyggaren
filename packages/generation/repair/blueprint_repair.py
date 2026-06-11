@@ -50,6 +50,7 @@ from packages.generation.quality_gate.critic import (
     _OFFER_SECTION_IDS,
     _THIN_OFFER_MIN_ITEMS,
 )
+from packages.policies.llm_model_params import resolve_role_params, responses_kwargs
 
 from .model_resolver import has_openai_api_key, resolve_repair_model
 from .models import BlueprintRepair
@@ -247,6 +248,7 @@ def run_repair_model(
                 },
             ],
             text_format=text_format,
+            **responses_kwargs(resolve_role_params("repairModel")),
         )
         parsed = response.output_parsed
     except Exception as exc:  # noqa: BLE001 - never crash the pipeline on LLM error

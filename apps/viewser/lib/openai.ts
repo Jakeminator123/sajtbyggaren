@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import OpenAI from "openai";
 
-import { readRepoEnvVar } from "./generated-dir";
+import { readRepoEnvVar, repoRoot } from "./generated-dir";
 
 // Single source of truth: fall back to the repo-root `.env` for shared OpenAI
 // settings, so the API key only has to live in ONE file. process.env still
@@ -73,6 +76,62 @@ function maxOutputTokens(): number {
   return Math.floor(parsed);
 }
 
+// ADR 0052: per-roll modellparametrar ur llm-models.v1.json. TS-sidan är
+// enbart plumbing - chatten är medvetet INGEN registrerad Model Role, så
+// utan roleId är beteendet exakt som tidigare. Spegelbild av den delade
+// Python-läsaren packages/policies/llm_model_params.py (defensiv: misslyckad
+// läsning => inga params, aldrig ett kastat fel).
+const VALID_REASONING_EFFORTS = new Set([
+  "none",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+]);
+
+export type RoleModelParams = {
+  reasoningEffort?: "none" | "low" | "medium" | "high" | "xhigh";
+  maxOutputTokens?: number;
+};
+
+export function readRoleModelParams(roleId: string): RoleModelParams {
+  try {
+    const policyPath = path.join(
+      repoRoot(),
+      "governance",
+      "policies",
+      "llm-models.v1.json",
+    );
+    const data = JSON.parse(readFileSync(policyPath, "utf8")) as {
+      roles?: Array<Record<string, unknown>>;
+    };
+    const role = data.roles?.find(
+      (entry) => entry && entry.id === roleId,
+    );
+    if (!role) return {};
+    const params: RoleModelParams = {};
+    const rawEffort = role.reasoningEffort;
+    if (typeof rawEffort === "string") {
+      // Legacy-skalan: 'minimal' accepteras och mappas till 'low' (ADR 0052).
+      const effort = rawEffort === "minimal" ? "low" : rawEffort;
+      if (VALID_REASONING_EFFORTS.has(effort)) {
+        params.reasoningEffort = effort as RoleModelParams["reasoningEffort"];
+      }
+    }
+    const rawTokens = role.maxOutputTokens;
+    if (
+      typeof rawTokens === "number" &&
+      Number.isInteger(rawTokens) &&
+      rawTokens >= 1
+    ) {
+      params.maxOutputTokens = rawTokens;
+    }
+    return params;
+  } catch {
+    return {};
+  }
+}
+
 function toUsageSummary(
   model: string,
   usage?: {
@@ -113,13 +172,20 @@ function assertWithinChatLimits(messages: ChatMessage[]): void {
   }
 }
 
-export async function chatWithOpenAi(messages: ChatMessage[]): Promise<{
+export async function chatWithOpenAi(
+  messages: ChatMessage[],
+  options?: { roleId?: string },
+): Promise<{
   message: ChatMessage;
   usage: UsageSummary;
 }> {
   assertWithinChatLimits(messages);
   const client = getClient();
   const model = DEFAULT_MODEL;
+
+  // ADR 0052: ett valfritt roleId hämtar per-roll-params ur policyn; utan
+  // roleId (dagens chatt) är anropet EXAKT som tidigare.
+  const roleParams = options?.roleId ? readRoleModelParams(options.roleId) : {};
 
   // B176: nyare modeller (gpt-5.x) avvisar `max_tokens` med 400
   // "Unsupported parameter" — `max_completion_tokens` är ersättaren och
@@ -129,7 +195,10 @@ export async function chatWithOpenAi(messages: ChatMessage[]): Promise<{
     model,
     messages,
     temperature: 0.3,
-    max_completion_tokens: maxOutputTokens(),
+    max_completion_tokens: roleParams.maxOutputTokens ?? maxOutputTokens(),
+    ...(roleParams.reasoningEffort
+      ? { reasoning_effort: roleParams.reasoningEffort }
+      : {}),
   });
 
   const answer = completion.choices[0]?.message?.content?.trim();
