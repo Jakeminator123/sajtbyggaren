@@ -16,10 +16,12 @@ the structured ``markedSections`` signal (ADR 0046). This module owns:
 
 The render side lives in ``scripts/build_site.py`` (the
 ``sajtbyggaren-section-style`` region in globals.css): selector
-``[data-section-id="<sectionId>"]`` for the background and its
-heading/paragraph descendants for the text colour. v1 limitation: the
-selector is global, so the same sectionId on several routes gets the
-same colour — routeId is persisted for future route scoping.
+``[data-route-id="<routeId>"] [data-section-id="<sectionId>"]`` for the
+background and its heading/paragraph descendants for the text colour.
+Route-scoped since 2026-06-11: ``write_pages`` stamps ``data-route-id``
+on the ``<main>`` of exactly the routes named by an override, so the
+same sectionId on two routes can carry different colours (the v1
+global selector remains as fallback for invalid routeIds).
 
 Conventions: code identifiers in English, operator-facing strings in
 Swedish (governance/rules/code-in-english.md).

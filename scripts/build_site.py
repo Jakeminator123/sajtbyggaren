@@ -1045,15 +1045,20 @@ _SECTION_STYLE_TEXT_SELECTOR = ":is(h1, h2, h3, h4, h5, h6, p, li, blockquote)"
 def _section_style_overrides_css(project_input: dict[str, Any] | None) -> str:
     """CSS block for ``directives.sectionStyleOverrides`` ("Färglägg sektionen").
 
-    Selector ``[data-section-id="<id>"]`` matches the marker every emitted
-    section root carries (``annotate_section_marker`` in the dispatcher).
-    ``!important`` is required: the starter's Tailwind utility classes on
-    the section root (``bg-white`` etc.) share specificity with an
-    attribute selector and would otherwise win on source order. v1
-    limitation (documented in the schema): the selector is global, so the
-    same sectionId on several routes shares the colour. Invalid entries
-    are skipped silently — the schema validates upstream, this is only a
-    belt-and-braces guard against hand-edited Project Inputs.
+    Selector ``[data-route-id="<routeId>"] [data-section-id="<id>"]``:
+    the section marker comes from ``annotate_section_marker`` in the
+    dispatcher, the route marker from ``annotate_route_marker`` (stamped
+    on the page's ``<main>`` by ``write_pages`` for exactly the routes
+    these overrides name). Route-scoping (2026-06-11) hävde
+    v1-begränsningen: samma sectionId på två routes kan nu få OLIKA
+    färger. Entries med ogiltigt routeId faller tillbaka till den
+    globala selektorn (matchar v1-beteendet för handredigerade Project
+    Inputs). ``!important`` is required: the starter's Tailwind utility
+    classes on the section root (``bg-white`` etc.) share specificity
+    with an attribute selector and would otherwise win on source order.
+    Invalid entries are skipped silently — the schema validates
+    upstream, this is only a belt-and-braces guard against hand-edited
+    Project Inputs.
     """
     if not isinstance(project_input, dict):
         return ""
@@ -1075,11 +1080,20 @@ def _section_style_overrides_css(project_input: dict[str, Any] | None) -> str:
             r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$", section_id
         ):
             continue
+        # Route-scope when the entry carries a valid routeId (the schema
+        # requires one; the guard covers hand-edited inputs, which fall
+        # back to the v1 global selector instead of being dropped).
+        route_id = entry.get("routeId")
+        route_scope = ""
+        if isinstance(route_id, str) and re.match(
+            r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$", route_id
+        ):
+            route_scope = f'[data-route-id="{route_id}"] '
         background = entry.get("backgroundColorHex")
         text_color = entry.get("textColorHex")
         if isinstance(background, str) and _SECTION_STYLE_HEX_RE.match(background):
             rule = (
-                f'[data-section-id="{section_id}"] {{\n'
+                f'{route_scope}[data-section-id="{section_id}"] {{\n'
                 f"  background-color: {background} !important;\n"
                 f"}}"
             )
@@ -1088,7 +1102,7 @@ def _section_style_overrides_css(project_input: dict[str, Any] | None) -> str:
                 rules.append(rule)
         if isinstance(text_color, str) and _SECTION_STYLE_HEX_RE.match(text_color):
             rule = (
-                f'[data-section-id="{section_id}"] '
+                f'{route_scope}[data-section-id="{section_id}"] '
                 f"{_SECTION_STYLE_TEXT_SELECTOR} {{\n"
                 f"  color: {text_color} !important;\n"
                 f"}}"

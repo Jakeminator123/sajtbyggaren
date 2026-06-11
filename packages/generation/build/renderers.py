@@ -58,6 +58,7 @@ from packages.generation.build.dispatcher import (
     _load_scaffold_sections,
     _operator_pin_for_section,
     _treatment_for_section,
+    annotate_route_marker,
     annotate_section_marker,
     render_route_generic,
 )
@@ -5657,6 +5658,31 @@ def _url_quote(value: str) -> str:
 
 
 
+def _route_ids_with_style_overrides(dossier: dict) -> set[str]:
+    """Route ids named by ``directives.sectionStyleOverrides``.
+
+    Only these routes get the ``data-route-id`` marker stamped on their
+    ``<main>`` wrapper — builds without section recolours keep
+    byte-identical page markup. Defensive reads: the schema validates
+    upstream, this guards hand-edited Project Inputs.
+    """
+    directives = dossier.get("directives")
+    overrides = (
+        directives.get("sectionStyleOverrides")
+        if isinstance(directives, dict)
+        else None
+    )
+    if not isinstance(overrides, list):
+        return set()
+    return {
+        entry["routeId"]
+        for entry in overrides
+        if isinstance(entry, dict)
+        and isinstance(entry.get("routeId"), str)
+        and entry["routeId"]
+    }
+
+
 def write_pages(
     target: Path,
     dossier: dict,
@@ -5694,6 +5720,12 @@ def write_pages(
     # copy and the icon imports stay byte-consistent. With no blueprint this is
     # the original dossier object, so non-blueprint builds are unchanged.
     render_dossier = apply_blueprint_to_dossier(dossier, blueprint)[0]
+    # Route-scoping för "Färglägg sektionen": routes med en section-style-
+    # override får data-route-id på sin <main> så CSS-overriden kan
+    # selektera per route i stället för globalt. Läses från det
+    # oförändrade dossier-objektet (= Project Input) — blueprintet rör
+    # aldrig directives.
+    style_override_routes = _route_ids_with_style_overrides(dossier)
     written: list[str] = []
     for route in default_routes:
         route_id = route["id"]
@@ -5747,6 +5779,8 @@ def write_pages(
                 "write_pages, or remove the route from the "
                 "scaffold's routes.json."
             )
+        if route_id in style_override_routes:
+            content = annotate_route_marker(content, route_id)
         write(route_to_page_path(target, path), content)
         written.append(path)
     sanitized_extras: list[dict] = []
@@ -5780,6 +5814,8 @@ def write_pages(
                 )
             else:
                 content = renderer(render_dossier, contact_path=contact_route["path"])
+            if route_id in style_override_routes:
+                content = annotate_route_marker(content, route_id)
             write(route_to_page_path(target, path), content)
             written.append(path)
             seen_extra_paths.add(path)

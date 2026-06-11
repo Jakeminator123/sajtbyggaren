@@ -305,7 +305,9 @@ def test_css_emits_background_and_text_rules() -> None:
             }
         }
     )
-    assert '[data-section-id="hero"] {' in css
+    # Route-scoped selector (2026-06-11): the override only repaints the
+    # section on the route the operator marked, never route-globally.
+    assert '[data-route-id="home"] [data-section-id="hero"] {' in css
     assert "background-color: #aabbcc !important;" in css
     assert "color: #112233 !important;" in css
     # Text rule scopes to headings/copy, never links/buttons.
@@ -328,3 +330,136 @@ def test_css_skips_invalid_entries() -> None:
     assert css == ""
     assert _section_style_overrides_css(None) == ""
     assert _section_style_overrides_css({}) == ""
+
+
+@pytest.mark.tooling
+def test_css_same_section_id_on_two_routes_gets_distinct_rules() -> None:
+    """Route-scoping point: hero på home och hero på about kan ha OLIKA färg."""
+    css = _section_style_overrides_css(
+        {
+            "directives": {
+                "sectionStyleOverrides": [
+                    {
+                        "routeId": "home",
+                        "sectionId": "hero",
+                        "backgroundColorHex": "#aabbcc",
+                    },
+                    {
+                        "routeId": "about",
+                        "sectionId": "hero",
+                        "backgroundColorHex": "#112233",
+                    },
+                ]
+            }
+        }
+    )
+    assert '[data-route-id="home"] [data-section-id="hero"] {' in css
+    assert '[data-route-id="about"] [data-section-id="hero"] {' in css
+    assert "background-color: #aabbcc !important;" in css
+    assert "background-color: #112233 !important;" in css
+
+
+@pytest.mark.tooling
+def test_css_invalid_route_id_falls_back_to_global_selector() -> None:
+    """Handredigerad post med trasigt routeId droppas inte — den får v1:s
+    globala selektor (samma beteende som före route-scopingen)."""
+    css = _section_style_overrides_css(
+        {
+            "directives": {
+                "sectionStyleOverrides": [
+                    {
+                        "routeId": 'Home"!',
+                        "sectionId": "hero",
+                        "backgroundColorHex": "#aabbcc",
+                    }
+                ]
+            }
+        }
+    )
+    assert css.startswith('[data-section-id="hero"] {')
+    assert "data-route-id" not in css
+
+
+# --- route marker stamping (write_pages) -------------------------------------
+
+
+@pytest.mark.tooling
+def test_annotate_route_marker_stamps_first_main_only() -> None:
+    from packages.generation.build.dispatcher import annotate_route_marker
+
+    content = '<main className="flex">\n<section>x</section>\n</main>'
+    stamped = annotate_route_marker(content, "home")
+    assert stamped.startswith('<main data-route-id="home" className="flex">')
+    # Idempotent: an already-stamped page passes through unchanged.
+    assert annotate_route_marker(stamped, "home") == stamped
+    # No <main>, invalid route id: honest no-ops.
+    assert annotate_route_marker("<div>x</div>", "home") == "<div>x</div>"
+    assert annotate_route_marker(content, 'home"!') == content
+
+
+@pytest.mark.tooling
+def test_write_pages_stamps_route_marker_only_for_override_routes(
+    tmp_path,
+) -> None:
+    """write_pages stämplar data-route-id på exakt de routes som har en
+    section-style-override — övriga sidor behåller byte-identisk markup."""
+    from packages.generation.build.renderers import write_pages
+
+    scaffold_routes = {
+        "defaultRoutes": [
+            {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+            {
+                "id": "services",
+                "path": "/tjanster",
+                "required": True,
+                "purpose": "Services",
+            },
+            {
+                "id": "contact",
+                "path": "/kontakt",
+                "required": True,
+                "purpose": "Contact",
+            },
+        ]
+    }
+    dossier = {
+        "siteId": "test-site",
+        "company": {
+            "name": "Test AB",
+            "businessType": "test",
+            "tagline": "En kort tagline",
+            "story": "En kort story om Test AB.",
+        },
+        "location": {
+            "city": "Stockholm",
+            "country": "Sverige",
+            "serviceAreas": ["Norrmalm"],
+        },
+        "services": [
+            {"id": "a", "label": "Tjänst A", "summary": "Summering A."},
+            {"id": "b", "label": "Tjänst B", "summary": "Summering B."},
+        ],
+        "trustSignals": ["Tio år i branschen"],
+        "contact": {
+            "phone": "+46 70 123 45 67",
+            "email": "hej@test.se",
+            "addressLines": ["Storgatan 1", "111 11 Stockholm"],
+            "openingHours": "Mån-Fre 9-17",
+        },
+        "directives": {
+            "sectionStyleOverrides": [
+                {
+                    "routeId": "home",
+                    "sectionId": "hero",
+                    "backgroundColorHex": "#aabbcc",
+                }
+            ]
+        },
+    }
+    write_pages(tmp_path, dossier, scaffold_routes, dossier_routes=[])
+    home = (tmp_path / "app" / "page.tsx").read_text(encoding="utf-8")
+    services = (tmp_path / "app" / "tjanster" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert '<main data-route-id="home"' in home
+    assert "data-route-id" not in services
