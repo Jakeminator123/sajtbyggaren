@@ -171,6 +171,7 @@ export function ScrapeUrlDialog({
     runFollowup,
     isBusy,
     error: buildError,
+    answer: buildAnswer,
   } = useFollowupBuild({
     siteId,
     onBuildStart,
@@ -346,6 +347,15 @@ export function ScrapeUrlDialog({
           ) : null}
         </div>
 
+        {buildAnswer ? (
+          // B192: answer-only-svar (inget bygge kördes) är info, inte fel.
+          <p
+            role="status"
+            className="text-foreground bg-muted/60 border-border rounded-md border px-3 py-2 text-[12px]"
+          >
+            {buildAnswer}
+          </p>
+        ) : null}
         {buildError ? (
           <p
             role="alert"

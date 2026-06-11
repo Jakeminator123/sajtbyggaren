@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import type {
   PromptBuildOutcome,
   PromptStage,
@@ -121,13 +119,6 @@ export type FloatingChatProps = {
    */
   onShowVersions?: () => void;
   /**
-   * Slot för extra UI som rendras i samma centrerade toolbar-rad UNDER
-   * chat-panelen (till höger om device-preset-toggle). Typiskt
-   * `<BuilderActions variant="inline" ... />`. Renderas bara på desktop
-   * när panelen inte är minimerad.
-   */
-  tools?: ReactNode;
-  /**
    * UX-glue (msg-0050 b): en räknare som BuilderShell bumpar varje gång ETT
    * BYGGE FRÅN EN ANNAN YTA (en dialog eller inspector-snabbprompt) blir klart
    * (ok/degraded). När värdet ändras expanderar FloatingChat ur minimerat läge
@@ -137,6 +128,17 @@ export type FloatingChatProps = {
    * ingen effekt vid mount (vi jämför mot föregående värde via en ref).
    */
   focusComposerSignal?: number;
+  /**
+   * Sektionsmenyns "Ändra text"-åtgärd (klick på sektion i previewns
+   * markläge): förifyll composern med en promptstart ('Ändra texten i
+   * sektionen "…": ') och flytta focus dit. ``nonce`` bumpas per request
+   * så två likadana prefills i rad ändå triggar (jämförs mot föregående
+   * värde via en ref — mount har ingen effekt). Själva chippen läggs av
+   * overlayn via markedSections; prefill:en rör bara input-texten och
+   * skriver medvetet ÖVER ev. halvskriven text (operatören valde just
+   * en ny åtgärd).
+   */
+  composerPrefill?: { text: string; nonce: number } | null;
 };
 
 /**

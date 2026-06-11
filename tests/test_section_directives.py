@@ -279,9 +279,23 @@ def test_inline_placement_for_hours_on_lsb() -> None:
     ]
 
 
+def test_inline_placement_for_gallery_on_lsb_and_ecommerce() -> None:
+    """ADR 0042 slice 4: ``gallery`` maps to the home gallery section on BOTH
+    inline scaffolds (they share the render_home injection seam)."""
+    expected = [{"capability": "gallery", "sectionId": "gallery", "routeId": "home"}]
+    assert resolve_inline_section_placements(["gallery"], _LSB_PI) == expected
+    assert (
+        resolve_inline_section_placements(
+            ["gallery"], {"scaffoldId": "ecommerce-lite"}
+        )
+        == expected
+    )
+
+
 def test_inline_placement_empty_on_non_inline_scaffold() -> None:
     """A non-allowlisted scaffold gets no inline placements (honest mount-only)."""
     assert resolve_inline_section_placements(["hours"], {"scaffoldId": "agency-studio"}) == []
+    assert resolve_inline_section_placements(["gallery"], {"scaffoldId": "agency-studio"}) == []
     assert resolve_inline_section_placements(["hours"], {}) == []
 
 

@@ -101,6 +101,7 @@ export function SiteInspectorSheet({
   const {
     runFollowup,
     error: buildError,
+    answer: buildAnswer,
     clearError,
   } = useFollowupBuild({
     siteId,
@@ -295,6 +296,17 @@ export function SiteInspectorSheet({
           )}
         </div>
 
+        {buildAnswer ? (
+          // B192: answer-only-svar (inget bygge kördes) är info, inte fel.
+          <div className="border-border/60 border-t p-3">
+            <p
+              role="status"
+              className="text-foreground bg-muted/60 border-border rounded-md border px-3 py-2 text-[12px]"
+            >
+              {buildAnswer}
+            </p>
+          </div>
+        ) : null}
         {buildError ? (
           <div className="border-border/60 border-t p-3">
             <p

@@ -20,7 +20,9 @@ import {
  * sig själva när bygget startar och rapporterar via toast/inline-
  * error vid fel.
  *
- * Returnerar `{ runFollowup, isBusy, error, clearError }`.
+ * Returnerar `{ runFollowup, isBusy, error, answer, clearError }`.
+ * ``answer`` (B192) bär answer-only-svar från conversation gate:n —
+ * neutral info, aldrig ett fel. ``error`` bär enbart riktiga fel.
  *
  * `runFollowup(prompt)` triggar onBuildStart innan fetchen, anropar
  * onBuildDone(runId, outcome) när bygget är klart, och garanterar
@@ -77,8 +79,13 @@ export type FollowupToolIntent =
   | {
       tool: "theme_change";
       params: {
-        /** Giltig #RRGGBB-hex — dialogen validerar mot sitt HEX_PATTERN innan skick. */
-        primaryColorHex: string;
+        /**
+         * Giltig #RRGGBB-hex — dialogen validerar mot sitt HEX_PATTERN
+         * innan skick. Minst ett av fälten sätts (färgdialogen kan byta
+         * primär, accent eller båda i ett bygge, fas 2 2026-06-11).
+         */
+        primaryColorHex?: string;
+        accentColorHex?: string;
       };
     }
   | {
@@ -121,6 +128,20 @@ export type FollowupToolIntent =
         role: string;
         assetId: string;
         filename: string;
+        /**
+         * Resten av AssetRef:en från /api/upload-asset (task A,
+         * 2026-06-11): Python-konsumenten bygger en schema-komplett
+         * AssetRef av params och skriver den till brand/gallery. Med
+         * lokal asset-store kan mimeType/sizeBytes kompletteras från
+         * manifest.json på disk, men blob-drivern saknar lokal disk —
+         * skicka därför alltid med hela refen (inkl. sourceUrl).
+         */
+        mimeType?: string;
+        sizeBytes?: number;
+        width?: number;
+        height?: number;
+        placement?: string;
+        sourceUrl?: string;
         alt?: string;
         /** Operatörens fria önskemål — kan kräva copy-specialisten. */
         hint?: string;
@@ -260,13 +281,32 @@ export function useFollowupBuild({
 }: FollowupBuildOptions) {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // B192: answer-only-svar (conversation gate — backend svarade utan att
+  // bygga) hölls tidigare i samma ``error``-state, så dialogerna stylade
+  // ett ärligt svar som RÖTT fel. Separat state låter callers rendera
+  // svaret som neutral info — ``error`` bär nu enbart riktiga fel.
+  const [answer, setAnswer] = useState<string | null>(null);
 
-  const clearError = useCallback(() => setError(null), []);
+  // Rensar BÅDA tillstånden — callers använder denna som "rensa feedback"
+  // vid stängning/återöppning och ska inte behöva känna till uppdelningen.
+  const clearError = useCallback(() => {
+    setError(null);
+    setAnswer(null);
+  }, []);
 
   const runFollowup = useCallback(
     async (
       prompt: string,
-      options?: { toolIntent?: FollowupToolIntent },
+      options?: {
+        toolIntent?: FollowupToolIntent;
+        /**
+         * ADR 0046-markeringar för dialog-utlösta byggen (fas 3:s
+         * "Färglägg sektionen"). Samma kontrakt som chipsen i
+         * FloatingChat: valideras mot base-runens facit på Python-sidan
+         * och triggar aldrig ensam ett bygge. Max 5 (API-schemat).
+         */
+        markedSections?: Array<{ routeId: string; sectionId: string }>;
+      },
     ): Promise<RunFollowupResult> => {
       const trimmed = prompt.trim();
       if (!trimmed) {
@@ -289,6 +329,7 @@ export function useFollowupBuild({
 
       setIsBusy(true);
       setError(null);
+      setAnswer(null);
       onBuildStart();
       try {
         const response = await fetch("/api/prompt", {
@@ -308,6 +349,11 @@ export function useFollowupBuild({
             // redan strukturerade parametrar sätter den. Backend utan stöd
             // strippar fältet tyst (icke-strict Zod) och kör prompt-vägen.
             ...(options?.toolIntent ? { toolIntent: options.toolIntent } : {}),
+            // Strukturerade preview-markeringar (ADR 0046) — utelämnas
+            // helt när dialogen inte har någon sektionskontext.
+            ...(options?.markedSections?.length
+              ? { markedSections: options.markedSections }
+              : {}),
           }),
         });
         const payload = (await response.json()) as PromptApiResponse;
@@ -323,12 +369,16 @@ export function useFollowupBuild({
             (typeof payload.answerText === "string" &&
               payload.answerText.trim()))
         ) {
-          const answer =
+          const answerReply =
             (typeof payload.answerText === "string" &&
               payload.answerText.trim()) ||
             "Jag svarade i chatten utan att bygga om något.";
-          setError(answer);
-          return { ok: false, error: answer, isAnswer: true };
+          // B192: svaret landar i ``answer``-state (info), inte ``error``
+          // (rött). Result-kontraktet är oförändrat: ``isAnswer: true``
+          // så befintliga callers som bara läser resultatet (toasten i
+          // builder-shell) fortsätter fungera identiskt.
+          setAnswer(answerReply);
+          return { ok: false, error: answerReply, isAnswer: true };
         }
         if (!response.ok || !payload.runId) {
           const msg =
@@ -359,5 +409,5 @@ export function useFollowupBuild({
     [isBusy, isBuilding, baseRunId, siteId, onBuildStart, onBuildEnd, onBuildDone],
   );
 
-  return { runFollowup, isBusy, error, clearError };
+  return { runFollowup, isBusy, error, answer, clearError };
 }

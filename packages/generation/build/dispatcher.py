@@ -136,6 +136,36 @@ def _call_section_renderer(
 _SECTION_OPEN_TAG_RE = re.compile(r"<section(?=[\s>])")
 _SECTION_MARKER_ATTR = "data-section-id"
 
+_MAIN_OPEN_TAG_RE = re.compile(r"<main(?=[\s>])")
+_ROUTE_MARKER_ATTR = "data-route-id"
+# Same shape as scaffold route ids (and the sectionId guard in
+# build_site.py) — belt-and-braces against attribute injection from a
+# hand-edited Project Input.
+_ROUTE_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+
+
+def annotate_route_marker(content: str, route_id: str) -> str:
+    """Stamp the page's first ``<main>`` wrapper with its scaffold route id.
+
+    Route-scoping för "Färglägg sektionen" (häver v1-begränsningen i
+    ``sectionStyleOverrides``): globals.css-overriden kan selektera
+    ``[data-route-id="<routeId>"] [data-section-id="<sectionId>"]`` så
+    samma sectionId på två routes kan få OLIKA färger. Stämplas bara på
+    routes som faktiskt har en override (write_pages avgör) så sajter
+    utan funktionen får byte-identisk markup. Sidor utan ``<main>``
+    eller med en redan satt markör passerar orörda; ogiltiga route-ids
+    likaså (CSS-emissionen hoppar över samma poster).
+    """
+    if not content or "<main" not in content:
+        return content
+    if _ROUTE_MARKER_ATTR in content:
+        return content
+    if not _ROUTE_ID_RE.match(route_id):
+        return content
+    return _MAIN_OPEN_TAG_RE.sub(
+        f'<main {_ROUTE_MARKER_ATTR}="{route_id}"', content, count=1
+    )
+
 
 def annotate_section_marker(fragment: str, section_id: str) -> str:
     """Stamp every ``<section>`` opening tag in ``fragment`` with its id.

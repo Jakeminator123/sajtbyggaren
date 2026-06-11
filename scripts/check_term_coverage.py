@@ -398,6 +398,16 @@ COMMON_WORDS = {
     # helpers around read-only file scanning, not canonical domain terms.
     "DossierIntakeError", "DossierIntakeModelResolutionError",
     "DossierIntakeReviewModel", "IntakeScanCaps",
+    # Industry scaffold candidate generator implementation symbols
+    # (scripts/generate_scaffold_candidate.py). Scaffold and Industry Profile
+    # are already registered domain terms; these are local Python containers
+    # around scaffoldModel structured-output IO, spec normalisation and
+    # candidate folder writing - same treatment as the Variant*/Dossier*
+    # generator families above.
+    "IndustryScaffoldContext", "ScaffoldCandidateError",
+    "ScaffoldGenerationResult", "ScaffoldModelResolutionError",
+    "ScaffoldSpecCandidateModel", "SpecOptionalRouteModel",
+    "SpecRouteModel", "SpecRouteSectionsModel",
     # PowerShell parameter names + Cursor IDE tool names that appear in
     # operator docs and agent prompts under docs/agent-prompts/. Not
     # domain terms — PS standard verb/noun parameters + IDE tool labels.
@@ -635,6 +645,26 @@ COMMON_WORDS = {
     # som canonical domänterm i naming-dictionary; dessa är lokala
     # implementationssymboler runt overlay-läget och zod-valideringen.
     "MarkedSectionSchema", "MarkableSection",
+    # Sektionsmenyn i preview (uppföljning till ADR 0046): lokala
+    # implementationssymboler för åtgärdsmenyn (context-request +
+    # overlay-meny-state) samt lucide-ikonimporter.
+    "SectionAction", "SectionActionRequest", "SectionActionMenuState",
+    "ArrowUpToLine", "ArrowDownToLine", "MessageSquareText",
+    # Skrollbar preview i peka-lägena (operatörsbugg 2026-06-10): lokal
+    # retur-shape för dokument-relativ elementkarta + sidhöjd.
+    "CollectedElementMap",
+    # Topp-centrerad verktygspanel med flikar (operatörsbeslut 2026-06-11):
+    # ersätter BuilderActions-pillen i FloatingChat-toolbaren. Lokala
+    # React-symboler, inte domänbegrepp.
+    "ToolsPopover", "ToolsPopoverProps",
+    # Färgdialogens målväljare (fas 2, 2026-06-11): lokalt union-alias
+    # ("primary" | "accent") i color-picker-dialog.tsx.
+    "ColorTarget",
+    # "Färglägg sektionen" (fas 3, 2026-06-11): sektionsmenyns färgdialog
+    # (React-komponent + props + lokalt målalias "background"|"text") och
+    # Python-extraktorns dataclass i followup/section_style.py.
+    "ColorizeSectionDialog", "ColorizeSectionDialogProps",
+    "SectionColorTarget", "SectionStyleDirective",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",
@@ -834,6 +864,10 @@ COMMON_WORDS = {
     "PreviewInspectorOverlay", "PreviewInspectorProvider",
     "ReactMouseEvent",
     "SectionKind", "SectionZone",
+    # BuilderActions/BuilderActionsProps togs ur koden 2026-06-11
+    # (builder-actions.tsx ersatt av ToolsPopover) men nämns kvar i
+    # arkiverade docs/workboard — behålls i allowlisten av det skälet.
+    # BuilderAction/BuilderActionIcon lever vidare i tools-popover.tsx.
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",

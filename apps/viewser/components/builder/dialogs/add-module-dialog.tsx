@@ -94,7 +94,7 @@ type ModuleDef = {
 // så de gav en falsk affordance (Vercel-agent-fynd 2026-06-08) och är borttagna.
 const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
   {
-    // ADR 0040 (2026-06-10): gallery renderas inline på startsidan (företags-/
+    // ADR 0042 (2026-06-10): gallery renderas inline på startsidan (företags-/
     // tjänstemallen + e-handelsmallen) och en explicit position FLYTTAR den
     // befintliga gallerisektionen. Gated på uppladdade galleri-bilder.
     id: "gallery",
@@ -174,7 +174,7 @@ const MODULE_CATALOG: ReadonlyArray<ModuleDef> = [
 const EFFECT_BADGES: Record<ModuleEffect, { label: string; title: string }> = {
   inline: {
     label: "kan synas på startsidan",
-    // Scaffold-nyansen per msg-0057 + ADR 0040: inline-rendern gäller
+    // Scaffold-nyansen per msg-0057 + ADR 0042: inline-rendern gäller
     // företags-/tjänstemallen och e-handelsmallen; på andra sajttyper blir
     // den ärligt mount-only (toasten säger då "registrerad men syns inte").
     title:
@@ -277,6 +277,13 @@ type AddModuleDialogProps = {
   onBuildDone: OnFollowupBuildDone;
   isBuilding?: boolean;
   baseRunId?: string | null;
+  /**
+   * Initial sektionskontext från sektionsmenyn i previewn ("Lägg till
+   * modul här"): förvald grovposition härledd ur den klickade
+   * sektionens läge. Null/utelämnad → backendens default (bottom).
+   * Drag-flödets platsval skriver som vanligt över valet.
+   */
+  initialPositionId?: "top" | "bottom" | null;
 };
 
 export function AddModuleDialog({
@@ -288,13 +295,14 @@ export function AddModuleDialog({
   onBuildDone,
   isBuilding = false,
   baseRunId = null,
+  initialPositionId = null,
 }: AddModuleDialogProps) {
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [dragOverPageId, setDragOverPageId] = useState<string | null>(null);
   // Etikett från senaste peka-i-previewn-valet ("Efter Omdömen → längst
   // ner") — visas vid placeringsraden som kvitto på var klicket landade.
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
-  const { runFollowup, isBusy, error } = useFollowupBuild({
+  const { runFollowup, isBusy, error, answer } = useFollowupBuild({
     siteId,
     onBuildStart,
     onBuildEnd,
@@ -413,23 +421,28 @@ export function AddModuleDialog({
     onOpenChange(false);
   }, [requestPlacementPick, onOpenChange]);
 
-  const addPlacement = useCallback((moduleId: string, pageId: string) => {
-    // En modul per bygge (skiva 1): routern klassar EN section_add-klausul
-    // tillförlitligt, men flera moduler i samma prompt kollapsar till fel
-    // editKind (empiriskt verifierat mot classify.py). Ett nytt val ersätter
-    // därför det föregående i stället för att köa.
-    setPlacements([
-      {
-        key: `${moduleId}-${pageId}-${Date.now()}`,
-        moduleId,
-        pageId,
-        // Default: längst ner (backendens default-slot, före kontakt-CTA:n)
-        // så vi inte överlovar topp-placering operatören inte bett om.
-        positionId: "bottom",
-      },
-    ]);
-    setPickedLabel(null);
-  }, []);
+  const addPlacement = useCallback(
+    (moduleId: string, pageId: string) => {
+      // En modul per bygge (skiva 1): routern klassar EN section_add-klausul
+      // tillförlitligt, men flera moduler i samma prompt kollapsar till fel
+      // editKind (empiriskt verifierat mot classify.py). Ett nytt val ersätter
+      // därför det föregående i stället för att köa.
+      setPlacements([
+        {
+          key: `${moduleId}-${pageId}-${Date.now()}`,
+          moduleId,
+          pageId,
+          // Default: sektionsmenyns förvalda grovposition om dialogen
+          // öppnades därifrån, annars längst ner (backendens default-slot,
+          // före kontakt-CTA:n) så vi inte överlovar topp-placering
+          // operatören inte bett om.
+          positionId: initialPositionId ?? "bottom",
+        },
+      ]);
+      setPickedLabel(null);
+    },
+    [initialPositionId],
+  );
 
   const removePlacement = useCallback((key: string) => {
     setPlacements((current) => current.filter((p) => p.key !== key));
@@ -681,6 +694,15 @@ export function AddModuleDialog({
           )}
         </div>
 
+        {answer ? (
+          // B192: answer-only-svar (inget bygge kördes) är info, inte fel.
+          <p
+            role="status"
+            className="text-foreground bg-muted/60 border-border rounded-md border px-3 py-2 text-[12px]"
+          >
+            {answer}
+          </p>
+        ) : null}
         {error ? (
           <p
             role="alert"

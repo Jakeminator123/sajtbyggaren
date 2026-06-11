@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
   );
 
   if (!isLoopbackTarget(target)) {
+    // OBS: extern worker svarar med VIEWPORT-relativa procent och utan
+    // documentHeightPx — overlayn faller då ärligt tillbaka på topp-vy-
+    // beteendet (ingen skroll). Den lokala vägen nedan räknar mot hela
+    // dokumenthöjden och skickar med documentHeightPx.
     const workerResult = await tryInspectorWorker("/element-map", {
       url: target.toString(),
       viewportWidth,
@@ -97,7 +101,7 @@ export async function POST(request: NextRequest) {
       async (page) => collectElementMap(page, maxElements),
     );
 
-    if (!Array.isArray(result) && "unavailable" in result) {
+    if ("unavailable" in result) {
       return NextResponse.json(
         { success: false, error: result.reason },
         { status: 503 },
@@ -106,9 +110,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      elements: result,
+      elements: result.elements,
+      documentHeightPx: result.documentHeightPx,
       viewport: { width: viewportWidth, height: viewportHeight },
-      elementCount: result.length,
+      elementCount: result.elements.length,
       collectedAt: new Date().toISOString(),
     });
   } catch (error) {

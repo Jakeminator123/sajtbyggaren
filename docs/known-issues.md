@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (av 25 öppna), 6 unknown, 166 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 167 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -695,20 +695,8 @@ Alla fyra fynd (B176–B179) är stängda och flyttade till Stängda-sektionen (
 ### Brief-reuse/latest-run-härdning 2026-06-10 (agent-triage, diff-verifierad)
 
 B183–B186 är stängda och flyttade till Stängda-sektionen (Steward-pass +
-extern granskning 2026-06-10); B192 nedan (dialog-vägens answer-only-UI) är
-öppen och medvetet deferrad bakom Christophers #269-rebase.
-
-- **`B192` Låg-Medel** - answer-only-svar via DIALOG-vägen (färgväljare,
-  modul-dialog, inspector m.fl. som konsumerar `use-followup-build`) renderas
-  som RÖTT fel trots `isAnswer`-diskriminatorn: hooken lägger svarstexten i
-  `error`-state och callers stylar den destructive. Inte ett motorfel
-  (FloatingChat renderar samma svar korrekt som info-bubbla), men upplevs som
-  falskt fel. Fix-skiss: separera `answer` från `error` i hooken (eller låt
-  callers läsa `isAnswer` och rendera neutral info). MEDVETET DEFERRAD:
-  `use-followup-build.ts` + dialogerna ägs just nu av Christophers
-  #269-rebase (toolIntent) — fixas efter den landat för att undvika
-  trippel-kollision i samma fil. Källa: extern GPT-granskning 2026-06-10
-  (fynd 1), kod-verifierad mot hooken + callers. Fix: open. Test: open.
+extern granskning 2026-06-10); B192 (dialog-vägens answer-only-UI) stängdes
+2026-06-11 efter att Christophers #269-rebase landat (se Stängda).
 
 ### Hostat bygge — publik-deploy-uppföljningar (#284, ADR 0048/0049/0050)
 
@@ -798,6 +786,20 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B192` Låg-Medel** (stängd 2026-06-11, dagen efter #269-rebasen som
+  deferrade den) - answer-only-svar via DIALOG-vägen (färgväljare,
+  modul-dialog, uploader, scrape, variant, colorize, inspector-sheet — alla
+  som konsumerar `use-followup-build`) renderades som RÖTT fel trots
+  `isAnswer`-diskriminatorn: hooken la svarstexten i `error`-state och
+  callers stylade den destructive. Fixad enligt fix-skissen: hooken
+  separerar `answer` från `error` (clearError rensar båda, nytt bygge
+  nollställer båda) och varje inline-yta renderar `answer` som neutral
+  info (`role="status"`). Resultatkontraktet
+  (`{ok: false, error, isAnswer: true}`) oförändrat så builder-shellens
+  toast-väg (variant info) fungerar identiskt. Källa: extern
+  GPT-granskning 2026-06-10 (fynd 1). Fix: `eed5efc`. Test:
+  `tests/test_viewser_dialog_answer_state.py`.
 
 - **`B196` Medel** (stängd 2026-06-11, review-sweep samma vecka som fyndet) -
   `GET /api/hosted-build/<runId>` exponerade bygg-status för valfritt `runId`

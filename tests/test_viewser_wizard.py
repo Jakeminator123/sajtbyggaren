@@ -499,24 +499,25 @@ def test_cmd_k_has_modal_guard() -> None:
 
 
 def test_builder_actions_arrow_keys_scope_to_current_target() -> None:
-    """Wave 2 (Steg 2): handleMenuKeyDown frågade containerRef, men i
-    inline-varianten renderas Verktyg-modalen i en portal UTANFÖR
-    containerRef → piltangenterna var döda i just den modal operatören
-    använder. Handlern måste fråga event.currentTarget och onKeyDown måste
-    sitta på grid-diven inuti dialogen (inte bara på container-diven).
+    """Wave 2 (Steg 2), porterad till ToolsPopover (Verktyg fas 1
+    2026-06-11): builder-actions.tsx är borttagen och Verktyg-panelen
+    lever i tools-popover.tsx. Samma invariant gäller — tangenthanteraren
+    måste scope:a sökningen till event.currentTarget (inte en yttre ref)
+    så knapparna hittas oavsett var panelen renderas, och både flik-raden
+    och verktygs-gridden måste ha varsin onKeyDown.
     """
-    content = (VIEWSER_DIR / "components" / "builder" / "builder-actions.tsx").read_text(
+    content = (VIEWSER_DIR / "components" / "builder" / "tools-popover.tsx").read_text(
         encoding="utf-8"
     )
     assert "const node = event.currentTarget;" in content, (
-        "handleMenuKeyDown måste scope:a sökningen till event.currentTarget "
-        "(inte containerRef) så inline-portalens knappar hittas"
+        "Tangenthanterarna måste scope:a sökningen till event.currentTarget "
+        "(inte en yttre container-ref) så panelens knappar hittas"
     )
-    # onKeyDown måste förekomma minst två gånger: container-diven (fixed) +
-    # grid-diven i dialogen (inline).
-    assert content.count("onKeyDown={handleMenuKeyDown}") >= 2, (
-        "onKeyDown={handleMenuKeyDown} måste sitta både på container-diven "
-        "och på inline-dialogens grid-div"
+    assert "onKeyDown={handleTabsKeyDown}" in content, (
+        "Flik-raden måste ha piltangentsnavigering (handleTabsKeyDown)"
+    )
+    assert "onKeyDown={handleGridKeyDown}" in content, (
+        "Verktygs-gridden måste ha piltangentsnavigering (handleGridKeyDown)"
     )
 
 

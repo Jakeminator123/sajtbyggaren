@@ -94,6 +94,14 @@ type AssetUploaderDialogProps = {
   /** C2 globalt bygg-lås + C1 "Iterera från denna"-pin (från BuilderShell). */
   isBuilding?: boolean;
   baseRunId?: string | null;
+  /**
+   * Initial sektionskontext från sektionsmenyn i previewn ("Byt bild
+   * här"): förifyller önskemåls-fältet med en placerings-hint
+   * ('Bilden gäller sektionen "…"'). Null/utelämnad → oförändrat
+   * beteende. Fylls bara i när fältet är tomt — operatörens egen text
+   * skrivs aldrig över.
+   */
+  initialHint?: string | null;
 };
 
 export function AssetUploaderDialog({
@@ -105,6 +113,7 @@ export function AssetUploaderDialog({
   onBuildDone,
   isBuilding = false,
   baseRunId = null,
+  initialHint = null,
 }: AssetUploaderDialogProps) {
   const [role, setRole] = useState<AssetRole>("hero");
   const [file, setFile] = useState<File | null>(null);
@@ -117,6 +126,7 @@ export function AssetUploaderDialog({
     runFollowup,
     isBusy,
     error: buildError,
+    answer: buildAnswer,
   } = useFollowupBuild({
     siteId,
     onBuildStart,
@@ -132,6 +142,18 @@ export function AssetUploaderDialog({
     setHint("");
     setUploadError(null);
   }, []);
+
+  // Förifyll önskemåls-fältet med sektionsmenyns hint när dialogen
+  // öppnas med en sektionskontext. setTimeout(0) deferar setState:n ur
+  // effektkroppen (react-hooks/set-state-in-effect); funktions-settern
+  // garanterar att en redan skriven operatörstext aldrig skrivs över.
+  useEffect(() => {
+    if (!open || !initialHint) return;
+    const timerId = window.setTimeout(() => {
+      setHint((current) => (current.trim() ? current : initialHint));
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [open, initialHint]);
 
   const handleClose = useCallback(
     (next: boolean) => {
@@ -220,12 +242,25 @@ export function AssetUploaderDialog({
       // är exakta — backend slipper regex:a fram referensraden ur prompten.
       // hint-fritexten följer med strukturerat; den kan kräva copy-
       // specialisten och är det enda LLM-värdiga i detta verktyg.
+      // Task A (2026-06-11): hela AssetRef:en följer med så Python-
+      // konsumenten kan bygga en schema-komplett ref utan disk-lookup
+      // (blob-drivern har ingen lokal manifest.json att falla tillbaka på).
       const toolIntent: FollowupToolIntent = {
         tool: "asset_set",
         params: {
           role: uploadedRef.role,
           assetId: uploadedRef.assetId,
           filename: uploadedRef.filename,
+          mimeType: uploadedRef.mimeType,
+          sizeBytes: uploadedRef.sizeBytes,
+          ...(uploadedRef.width ? { width: uploadedRef.width } : {}),
+          ...(uploadedRef.height ? { height: uploadedRef.height } : {}),
+          ...(uploadedRef.placement
+            ? { placement: uploadedRef.placement }
+            : {}),
+          ...(uploadedRef.sourceUrl
+            ? { sourceUrl: uploadedRef.sourceUrl }
+            : {}),
           ...(uploadedRef.alt ? { alt: uploadedRef.alt } : {}),
           ...(trimmedHint ? { hint: trimmedHint } : {}),
         },
@@ -474,6 +509,15 @@ export function AssetUploaderDialog({
           ) : null}
         </div>
 
+        {buildAnswer ? (
+          // B192: answer-only-svar (inget bygge kördes) är info, inte fel.
+          <p
+            role="status"
+            className="text-foreground bg-muted/60 border-border rounded-md border px-3 py-2 text-[12px]"
+          >
+            {buildAnswer}
+          </p>
+        ) : null}
         {buildError ? (
           <p
             role="alert"

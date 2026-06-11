@@ -208,6 +208,101 @@ _COPY_DIRECTIVE_REPLACE_KEYWORDS: tuple[str, ...] = (
     "rewrite",
     "reword",
 )
+# Media nouns that mark a follow-up as an ASSET change, not a copy edit
+# (bildbyte-guard, 2026-06-11). The operator prompt "Byt ut hero-bilden till
+# en unsplash bild" used to be classified as a text replace and spliced
+# "en unsplash bild" into public copy. Free-text image/video changes have no
+# deterministic consumer yet (asset_set-konsumenten is the structured path),
+# so a prompt that mentions one of these as a WORD outside quoted spans must
+# stay an honest no-op in the copyDirective subsystem - surfaced via
+# unappliedFollowupIntents instead of mangling copy. Matched with
+# ``_contains_any_word`` on ``_text_outside_quotes``: a quoted payload like
+# 'ändra taglinen till "En bild säger mer än tusen ord"' is untouched.
+# Swedish closed compounds ("bakgrundsbilden") do not hit the word boundary
+# of the bare stem, so the common -bild compounds are listed explicitly;
+# hyphenated forms ("hero-bilden") already match via the boundary at "-".
+_MEDIA_CHANGE_NOUNS: tuple[str, ...] = (
+    "bild",
+    "bilden",
+    "bilder",
+    "bilderna",
+    "bakgrundsbild",
+    "bakgrundsbilden",
+    "herobild",
+    "herobilden",
+    "omslagsbild",
+    "omslagsbilden",
+    "profilbild",
+    "profilbilden",
+    "produktbild",
+    "produktbilden",
+    "produktbilder",
+    "produktbilderna",
+    "galleribild",
+    "galleribilden",
+    "galleribilder",
+    "galleribilderna",
+    "foto",
+    "fotot",
+    "foton",
+    "fotona",
+    "fotografi",
+    "fotografiet",
+    "fotografier",
+    "fotografierna",
+    "logga",
+    "loggan",
+    "logotyp",
+    "logotypen",
+    "film",
+    "filmen",
+    "filmer",
+    "filmerna",
+    "video",
+    "videon",
+    "videor",
+    "videos",
+    "unsplash",
+    "image",
+    "images",
+    "photo",
+    "photos",
+    "picture",
+    "pictures",
+    "logo",
+)
+# Explicit TEXT nouns that exempt a prompt from the media guard: "byt
+# rubriken under bilden till 'X'" names a copy target and merely uses the
+# image as a LOCATION, so the copy rules must still run. Deliberately
+# narrow - "hero" is NOT here because it word-matches inside "hero-bilden"
+# (the original bug prompt) and would reopen the splice. Closed compounds
+# like "bildtexten" (caption) never trigger the media nouns in the first
+# place (no word boundary inside a compound), so captions are edit-safe
+# without an entry here.
+_MEDIA_GUARD_TEXT_NOUNS: tuple[str, ...] = (
+    "text",
+    "texten",
+    "texter",
+    "texterna",
+    "rubrik",
+    "rubriken",
+    "huvudrubrik",
+    "huvudrubriken",
+    "underrubrik",
+    "underrubriken",
+    "tagline",
+    "taglinen",
+    "slogan",
+    "sloganen",
+    "namnet",
+    "företagsnamn",
+    "foretagsnamn",
+    "företagsnamnet",
+    "foretagsnamnet",
+    "heading",
+    "headline",
+    "title",
+)
 # If the extracted payload still contains one of these as a WORD the
 # extraction grabbed instruction text, not a value - reject it (leak guard).
 # Matched with word/phrase boundaries (``_contains_any_word``), not substring:
@@ -418,6 +513,29 @@ def _safe_copy_payload(
     if _normalise_followup_text(safe) == _normalise_followup_text(follow_up_prompt):
         return None
     return safe[:max_length].strip() or None
+
+
+def is_media_change_request(follow_up_prompt: str) -> bool:
+    """True when the follow-up is about images/photos/video/logo, not copy.
+
+    The bildbyte-guard (2026-06-11): evaluated on the instruction skeleton
+    OUTSIDE quoted spans so media words inside a quoted NEW/OLD value never
+    trigger it. Used to (a) bail out of ``_extract_copy_directives`` before
+    the replace/include rules can splice an asset request into public copy,
+    (b) block the copyDirectiveModel fallback for the same prompts, and
+    (c) drive the unappliedFollowupIntents honesty report. Pure read - it
+    never classifies what the asset change IS (that is the structured
+    asset_set path's job).
+    """
+    skeleton = _text_outside_quotes(follow_up_prompt)
+    if not skeleton:
+        return False
+    if not _contains_any_word(skeleton, _MEDIA_CHANGE_NOUNS):
+        return False
+    # An explicit text noun outside quotes means the operator named a COPY
+    # target and the media word is location/context ("byt rubriken under
+    # bilden till 'Ny rubrik'") - let the copy rules run.
+    return not _contains_any_word(skeleton, _MEDIA_GUARD_TEXT_NOUNS)
 
 
 def _classify_copy_target(text_norm: str) -> str | None:
@@ -1211,6 +1329,12 @@ def _extract_copy_directives(
     _ = language  # reserved for the LLM-backed extractor (copyDirectiveModel)
     text = _normalise_followup_text(follow_up_prompt)
     if not text or len(text) < 4:
+        return []
+    # bildbyte-guard: an asset request ("byt ut hero-bilden till en unsplash
+    # bild") must never reach the replace/include rules - the trailing
+    # "till"-value would be spliced into public copy. Honest no-op here;
+    # compute_unapplied_followup_intents names the miss in build-result.json.
+    if is_media_change_request(follow_up_prompt):
         return []
     target = _classify_copy_target(text)
     if target is None:

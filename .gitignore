@@ -71,6 +71,12 @@ data/uploads/
 # via en separat promotion-flow och committas där. Om en specifik
 # kandidat ska delas i repo:t läggs den till med `git add -f`.
 data/dossier-candidates/
+# Script-genererade scaffold-kandidater (scripts/generate_scaffold_candidate.py,
+# ADR 0045). Samma kandidat-only-kategori som data/dossier-candidates/ ovan:
+# promotion till canonical scaffold sker via egen PR mot
+# packages/generation/orchestration/, aldrig genom att committa katalogen.
+# Dela en specifik kandidat med `git add -f`.
+data/scaffold-candidates/
 .generated/
 *.log
 

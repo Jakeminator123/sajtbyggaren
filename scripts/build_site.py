@@ -1036,6 +1036,83 @@ def copy_mood_assets(site_id: str, project_input: dict) -> int:
     return copied
 
 
+_SECTION_STYLE_HEX_RE = re.compile(r"^#[0-9a-f]{6}$")
+# Text colour override targets headings/copy only — links, buttons and
+# badges keep their own (contrast-checked) colours by design.
+_SECTION_STYLE_TEXT_SELECTOR = ":is(h1, h2, h3, h4, h5, h6, p, li, blockquote)"
+
+
+def _section_style_overrides_css(project_input: dict[str, Any] | None) -> str:
+    """CSS block for ``directives.sectionStyleOverrides`` ("Färglägg sektionen").
+
+    Selector ``[data-route-id="<routeId>"] [data-section-id="<id>"]``:
+    the section marker comes from ``annotate_section_marker`` in the
+    dispatcher, the route marker from ``annotate_route_marker`` (stamped
+    on the page's ``<main>`` by ``write_pages`` for exactly the routes
+    these overrides name). Route-scoping (2026-06-11) hävde
+    v1-begränsningen: samma sectionId på två routes kan nu få OLIKA
+    färger. Entries med ogiltigt routeId faller tillbaka till den
+    globala selektorn (matchar v1-beteendet för handredigerade Project
+    Inputs). ``!important`` is required: the starter's Tailwind utility
+    classes on the section root (``bg-white`` etc.) share specificity
+    with an attribute selector and would otherwise win on source order.
+    Invalid entries are skipped silently — the schema validates
+    upstream, this is only a belt-and-braces guard against hand-edited
+    Project Inputs.
+    """
+    if not isinstance(project_input, dict):
+        return ""
+    directives = project_input.get("directives")
+    overrides = (
+        directives.get("sectionStyleOverrides")
+        if isinstance(directives, dict)
+        else None
+    )
+    if not isinstance(overrides, list):
+        return ""
+    rules: list[str] = []
+    seen: set[str] = set()
+    for entry in overrides:
+        if not isinstance(entry, dict):
+            continue
+        section_id = entry.get("sectionId")
+        if not isinstance(section_id, str) or not re.match(
+            r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$", section_id
+        ):
+            continue
+        # Route-scope when the entry carries a valid routeId (the schema
+        # requires one; the guard covers hand-edited inputs, which fall
+        # back to the v1 global selector instead of being dropped).
+        route_id = entry.get("routeId")
+        route_scope = ""
+        if isinstance(route_id, str) and re.match(
+            r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$", route_id
+        ):
+            route_scope = f'[data-route-id="{route_id}"] '
+        background = entry.get("backgroundColorHex")
+        text_color = entry.get("textColorHex")
+        if isinstance(background, str) and _SECTION_STYLE_HEX_RE.match(background):
+            rule = (
+                f'{route_scope}[data-section-id="{section_id}"] {{\n'
+                f"  background-color: {background} !important;\n"
+                f"}}"
+            )
+            if rule not in seen:
+                seen.add(rule)
+                rules.append(rule)
+        if isinstance(text_color, str) and _SECTION_STYLE_HEX_RE.match(text_color):
+            rule = (
+                f'{route_scope}[data-section-id="{section_id}"] '
+                f"{_SECTION_STYLE_TEXT_SELECTOR} {{\n"
+                f"  color: {text_color} !important;\n"
+                f"}}"
+            )
+            if rule not in seen:
+                seen.add(rule)
+                rules.append(rule)
+    return "\n\n".join(rules)
+
+
 def patch_globals_css(
     target: Path,
     variant: dict,
@@ -1054,10 +1131,13 @@ def patch_globals_css(
     font_end = "/* sajtbyggaren-font-import:end */"
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
+    section_style_marker = "/* sajtbyggaren-section-style:start */"
+    section_style_end = "/* sajtbyggaren-section-style:end */"
 
     # Strip any previously emitted regions so re-patching (follow-up
     # rebuilds) stays idempotent: the hoisted font @import block at the
-    # top AND the variant-tokens block further down.
+    # top, the variant-tokens block further down AND the per-section
+    # style-override block at the bottom.
     base_contents = original
     if font_marker in base_contents:
         before, _, rest = base_contents.partition(font_marker)
@@ -1066,6 +1146,10 @@ def patch_globals_css(
     if marker in base_contents:
         before, _, rest = base_contents.partition(marker)
         _, _, after = rest.partition(end)
+        base_contents = f"{before}{after}"
+    if section_style_marker in base_contents:
+        before, _, rest = base_contents.partition(section_style_marker)
+        _, _, after = rest.partition(section_style_end)
         base_contents = f"{before}{after}"
     base_contents = base_contents.strip()
 
@@ -1091,9 +1175,20 @@ def patch_globals_css(
         font_region = f"{font_marker}\n" + "\n".join(import_lines) + f"\n{font_end}\n\n"
 
     # Variant tokens appended last so starter defaults earlier in
-    # globals.css cannot win the cascade.
+    # globals.css cannot win the cascade; the per-section style
+    # overrides ("Färglägg sektionen", Verktyg fas 3) come after even
+    # those so a section recolour beats the variant palette too.
+    section_style_block = _section_style_overrides_css(project_input)
+    section_style_region = ""
+    if section_style_block:
+        section_style_region = (
+            f"\n\n{section_style_marker}\n"
+            f"{section_style_block}\n"
+            f"{section_style_end}"
+        )
     new_contents = (
-        f"{font_region}{base_contents}\n\n{marker}\n{block_body}\n{end}\n"
+        f"{font_region}{base_contents}\n\n{marker}\n{block_body}\n{end}"
+        f"{section_style_region}\n"
     )
     write(css, new_contents)
     return warnings
