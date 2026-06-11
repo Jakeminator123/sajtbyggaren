@@ -6,104 +6,93 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-11 ~13:30 — hostad publik drift LIVE, dagens pass stängt)
+## Status nu (2026-06-11 ~19:05 — eftermiddagspasset stängt: ADR 0051–0053 inne, inspector-grund + eval-grind mergade)
 
-**Git:** `main = jakob-be = a314fe5a` (tom diff, rent träd). Pre-sync-backuper:
-`backup-main-2026-06-11-pre-sync` (= `26b2464`) + äldre `backup-170-BRA`.
-Produktionen (`sajtbyggaren-viewser.vercel.app`) deployas från `main` och kör
-HEAD — verifierad Ready efter dagens sync.
+**Git:** `jakob-be = ab8755a6` (rent träd, local == origin). **OBS: `main`
+släpar ~31 commits** — main-sync är ett VÄNTANDE operatörsbeslut. Prod
+(`sajtbyggaren-viewser.vercel.app`) deployas från `main` och kör därmed
+fortfarande förmiddagsläget (inkl. gamla gpt-4o-fallbackarna) tills syncen
+görs.
 
-**Stora bilden (P2 SKEPPAD + publik drift PÅ, operatörsbeslut 2026-06-11):**
-vem som helst kan skapa en användarsajt på prod-URL:en — prompt → Python-pipen
-körs i en Vercel-sandbox (build-kontext-tarball från blob) → bygget publiceras
-till blob (`generated/<siteId>/`, manifest-baserad servering) → KV (Upstash
-Redis) bär pekare/status/sessioner → sandbox-preview i iframen. Skydd i drift:
-rate-limit per IP (ADR 0050), sandbox-TTL, B196-fixad statusroute. Den gamla
-driftspärren är HÄVD (operatörsbeslut, se known-issues + inbox msg-0071).
+**Stora bilden:** oförändrad sedan förmiddagen — P2 skeppad, hostad publik
+drift PÅ med rate-limit/TTL/B195/B196 (fullt block i arkivet:
+[`current-focus-2026-06-11-em.md`](archive/current-focus-2026-06-11-em.md)).
 
-**Dagens facit (2026-06-11, sju PR:ar mergade + 2 main-syncar):**
+**Eftermiddagens facit (2026-06-11 em, sex PR:ar mergade till jakob-be +
+direktcommits):**
 
-- **#284** hostat bygge i Vercel-sandbox + kv-store-adapter + publik
-  rate-limit (ADR 0048/0049/0050); spoofsäker klient-IP fixad före merge.
-- **#286** Vercel-env-konsolidering: 22 rader "All Environments", noll
-  branch-avvikelser; lokala env-filer städade; matris i
-  `docs/operations/hosted-viewser-manual.md`.
-- **#287** B195: manifest-baserad servering stänger stale-blob-gapet.
-- **#288** review-sweep: B196 stängd (siteId-bunden statusroute), KV-preflight
-  före Sandbox.create, hostad icke-stream-väg väntar in done/failed
-  server-side (202-buggen i floating-chat/use-followup-build eliminerad),
-  #283-granskningens tre fynd fixade (sektionsmedveten bastext, tom-bas
-  no-op, hero-pin-paritet), deploy-dokumentet omskrivet för publik v1.
-  B197 trackad (discovery-paritet hostat, P3).
-- **#289** guard-snabbning (operatörsbeslut): riktade tester är lokal
-  default; full svit = CI:s jobb på PR; full svit lokalt med pytest-xdist
-  `-n auto` (~5 min i stället för ~13). Regel i
-  `governance/rules/04-branch-and-team.md` guard 5 + `docs/testing.md`.
-- **#290** analysrapporten `docs/reports/sajtmaskin-vs-sajtbyggaren-analys-2026-06-10.md`
-  landad med term-disciplin (form-only; innehållet orört). Term-coverage är
-  åter helt grön för alla agenter.
-- Operatörsmanual: `docs/operations/hosted-viewser-manual.md` (läs vid drift).
-- Blob-upload-buggen i produktion (tyst noll-varvs-loop) fixad + verifierad
-  med riktiga byggen (`fa268c5`, `0494e7f`).
-
-**Riktning (operatörens kritiska gallring av analysrapporten — rapporten är
-uppslagsbok, INTE backlog):** sajtmaskin är strikt read-only-referens.
-Antaget därifrån: contact-dossier först, eval-baseline-grind, autofix som
-ARBETSREGEL (egna haverier → fixer-regel + test; ingen blind portning).
-Avvisat/parkerat: hård radgräns-CI, truth_level-svep, scaffold-expansion,
-apps/web, deploy-paket (alla bakom framtida operatörsbeslut).
+- **#291** Dirigentpult (ADR 0051): överordnad styrsida i backoffice (flikar
+  A–G) + ärlighets-audit av alla 32 vyer + tokenpris-snapshot
+  (`scripts/fetch_model_prices.py`, `data/model-pricing.json`).
+- Per-roll modellparametrar, ADR 0052 (`e55fc0ca`): llm-models v11 med
+  reasoningEffort + maxOutputTokens per roll, delad defensiv läsare
+  `packages/policies/llm_model_params.py`, åtta call-sites trådade,
+  TS-plumbing i `apps/viewser/lib/openai.ts`.
+- **#285** (ADR 0046): inspector-/markedSections-grunden mergad — grunden
+  landade EN gång, Christophers v36-bump inne.
+- **#293** (skördelista A3): committad golden-path-baseline
+  (`tests/evals/golden-path-baseline.json`) + regressions-grind
+  (`scripts/eval_gate.py`) + nytt Node-fritt CI-jobb `eval-baseline`.
+- **#295** (ADR 0053): hard-dossier-kontrakten (env/code/integration +
+  mockMode) + första hard-dossiern `resend-contact-form`; dossier-contract
+  v4; mailto förblir soft default.
+- **#294**: smidig lane-synk + delade löpnummer-protokoll i
+  `governance/rules/04-branch-and-team.md` (lärdom av dagens v35/v36-
+  ping-pong: re-derivera alltid nummer från färskt origin/jakob-be).
+- Direktcommits: gpt-5.5-lyft i chatt/vision/discovery (`6015af17`),
+  Vercel-OIDC-pull lagad för Windows/Node 24 (`0be31b3f`), sparsamhetsregel
+  för underagenter i `AGENTS.md` (`372904b4`), PowerShell-regler
+  (`8ae21fd0`), dossier-AGENT-GUIDE (`e58dcd77`), canvas-facts anti-stale
+  (`e37b2a6c`). Inbox msg-0073–0077 till Christopher. **#156 stängd**
+  (ersatt av P2-leveransen).
+- Versionsläge: llm-models **v11**, naming-dictionary **v37**,
+  dossier-contract **v4**.
 
 **Nästa prioriteringar (i ordning):**
 
-1. **Christophers lane-rebase** (klartecken skickat, msg-0072): #269 +
-   Verktyg fas 1–3 + bildbyte-guarden + #285-konsolidering mot jakob-be
-   (HEAD `a314fe5a`). route.ts-threading läggs OVANPÅ hostade grenen;
-   naming-dictionary tar v35. Vår toolIntent-backend-halva läggs ovanpå
-   när rebasen landat.
-2. **Första hard-dossier: resend-contact-form** (skördelista A4) — stänger
-   `contact`-svagheten från Golden Path-evalen (8.2/10). Kräver schema
-   v2-ADR (nästa lediga: 0051). Pipeline: candidate → reviewed → verified
-   → enabled.
-3. **Eval-baseline-grind i CI** (skördelista A3): committad baseline +
-   regressionsregler ovanpå `run_golden_path_eval.py`/`run_eval_suite.py`.
-   Draft-PR mot `jakob-be` öppnad från `feat/eval-baseline-grind`: committad
-   baseline i `tests/evals/golden-path-baseline.json` (spårad, ej gitignorad),
-   `scripts/eval_gate.py` + `tests/test_eval_gate.py`, eget Node-fritt
-   CI-jobb `eval-baseline` (kör även `mini_eval.py`). Väntar operatörens merge.
-4. **P3 — hostad followup + snabb uppstart:** persistera run-state (B194),
-   discovery-paritet (B197), sandbox-snapshots/idle-stop (ADR 0041-spåret).
+1. **Main-sync (operatörsbeslut):** main släpar ~31 commits — prod kör utan
+   eftermiddagens leveranser. Lyft när operatören ger klartecken.
+2. **Christophers rebase:** #269 (rensa ~801 `data/scaffold-candidates`-filer
+   ur PR:en, full governance-CI grön på rebasad head) + #292 (hostad
+   asset_set, stacked — retargetas efter #269). Besked skickat (msg-0077).
+   Vår toolIntent-backend-halva läggs ovanpå när rebasen landat.
+3. **B194 — persistera hostad run-state:** utlösaren för hela OpenClaw-
+   följdpromptflödet hostat (hostade följdprompter failar ärligt tills dess).
+   Därefter B197 (discovery-paritet i sandbox).
+4. **ADR 0052-uppföljning (litet städ):** ta bort död
+   `model="gpt-5.4"`-default i `packages/generation/brief/extract.py` (~rad
+   690), byt hårdkodad fallback i `scripts/prompt_to_project_input.py`
+   (~rad 3343) mot policy-defaults, tråda design-tooling-skripten
+   (variantModel/dossierModel — v11-värdena ligger vilande).
 5. **Token Meter-priser (operatören, valfritt):** USD-priserna i Vercel-env
    sattes till 0 vid konsolideringen — sätt riktiga värden om kostnadsvisning
    önskas hostat.
 
 **Öppna blockers / att-göra:**
 
-- B192 (answer-only rött i dialog-vägen) — deferrad bakom Christophers
-  #269-rebase, samma fil.
-- B194/B197 — P3-spår (trackade, ej blockerare).
+- B194/B197 — P3-spår (B194 är nu nästa stora utlösare, se prio 3).
 - B155 hålls öppen (kvarvarande targets).
+- B192 STÄNGD av Christopher (msg-c-0076) — answer-only renderas nu neutralt.
 - `christopher`-lanen äger: `use-followup-build.ts`, dialogerna,
   viewser-frontend/inspector — rör ej.
 
-Last verified state: `a314fe5a` (2026-06-11 ~13:30 UTC+2; `origin/jakob-be =
-origin/main = a314fe5a` efter dagens andra main-sync — #288/#289/#290 mergade
-+ inbox msg-0072 till Christopher. Pre-sync-backup:
-`backup-main-2026-06-11-pre-sync`. Produktions-deploy från main verifierad
-Ready; hostad publik drift PÅ med rate-limit + B195/B196 stängda. ADR-liggare:
-nästa lediga **0051**; 0046 hålls av öppna #285.)
+Last verified state: `ab8755a6` (2026-06-11 ~19:05 UTC+2; `origin/jakob-be =
+ab8755a6`, rent träd. Eftermiddagen: #285/#291/#293/#294/#295 mergade till
+jakob-be, #156 stängd, inbox msg-0073–0077 skickade. Main-sync VÄNTAR
+operatörsbeslut — `origin/main` ligger ~31 commits efter. ADR-liggare: nästa
+lediga **0055**; 0054 är reserverad för MCP-intagsgrinden.)
 
 ## Öppna PR att känna till
 
-- **#285** (`chgenberg`, nu retargetad mot `jakob-be`): ADR 0046 — markera
-  modul i preview. Granskad (GO-med-fixar). Christopher konsoliderar den i
-  sin lane-rebase (route.ts ovanpå #284/#288:s hostade gren; dictionary →
-  v35; inspector-grunden ska landa EN gång med #269).
 - **#269** (`christopher → jakob-be`): bär Verktyg fas 1–3 + bildbyte-guard +
-  inspector-lanen. **Väntar Christophers rebase — hans action.** Klartecken
-  skickat (msg-0072). Rör inte denna PR-yta.
-- **#156** (`feat/live-preview → jakob-be`): parkerad arkitektur-referens
-  (publik POST utan skydd); ersatt i praktiken av P2-leveransen — kan stängas
-  vid tillfälle (operatörsbeslut).
+  inspector-lanen. **Väntar Christophers post-#285-rebase — hans action**
+  (msg-0077): inspector-dubbletterna faller bort via patch-identitet,
+  ~801 `data/scaffold-candidates`-filer ska rensas ur PR:en, full
+  governance-CI ska gå grön på rebasad head före review. Rör inte denna
+  PR-yta.
+- **#292** (`feat/hosted-asset-set-forwarding`): Christophers hostade
+  asset_set-forwarding, stacked på `christopher` — retargetas mot jakob-be
+  efter #269. GO givet (msg-0073).
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
@@ -140,6 +129,8 @@ dev-uttryck med korta parenteser första gången per konversation. Mönstret i
 
 Historiska statusblock + checkpoint-kedjan ligger i arkivet:
 
+- [`docs/archive/current-focus-2026-06-11-em.md`](archive/current-focus-2026-06-11-em.md)
+  (lunchblocket per `a314fe5a`: P2-skeppningen, #284–#290-kedjan, publik drift PÅ).
 - [`docs/archive/current-focus-2026-06-11-fm.md`](archive/current-focus-2026-06-11-fm.md)
   (förmiddagens fulla block: nattpasset 2026-06-10, #270–#287-kedjan, eval-facit).
 - [`docs/archive/current-focus-2026-06-08-pre-slim.md`](archive/current-focus-2026-06-08-pre-slim.md)
@@ -157,8 +148,8 @@ flyttade till arkivet ovan (per `governance/rules/07-docs-focus-handoff.md`).
 Auto-bump-verktyget lägger nya korta checkpoint-block här vid main-sync; håll
 högst ett kvar och flytta resten till arkivet.
 
-### 2026-06-11 UTC — current-focus.md före `a314fe5a`
+### 2026-06-11 UTC — current-focus.md före `ab8755a6`
 
-Last verified state: `758d8dd` (2026-06-11 ~11:20 UTC+2; #287 + #286 mergade,
-main ff till jakob-be, backup-170-BRA). Fulla blocket:
-[`docs/archive/current-focus-2026-06-11-fm.md`](archive/current-focus-2026-06-11-fm.md).
+Last verified state: `a314fe5a` (2026-06-11 ~13:30 UTC+2; #288/#289/#290
+mergade + andra main-syncen, publik drift PÅ). Fulla blocket:
+[`docs/archive/current-focus-2026-06-11-em.md`](archive/current-focus-2026-06-11-em.md).
