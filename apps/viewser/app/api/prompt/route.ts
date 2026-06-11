@@ -442,6 +442,64 @@ async function generateConversationAnswer(
 }
 
 /**
+ * Roll-bekräftelse efter en APPLICERAD ändring (operatörsfynd 2026-06-11):
+ * dirigenten var stum efter ett lyckat bygge — edits bär ``expectsAnswer=false``
+ * så ingen svarstext genererades och operatören fick bara den deterministiska
+ * statusraden. Den här helpern låter dirigenten bekräfta kort i chatten vad
+ * byggrollerna just gjorde, UTAN att rucka ärlighetskontraktet:
+ *
+ *   - Genereras BARA när kedjan rapporterade en SYNLIG ändring
+ *     (``bridge.previewShouldRefresh === true``). Mount-only-utfall behåller
+ *     den deterministiska "registrerad men syns inte än"-raden oförändrad.
+ *   - Modellen får ENBART kedjans rapporterade fakta (editKind/version/
+ *     routes) + operatörens prompt — aldrig något att "fylla i".
+ *   - No-key / helper-fel → null, och FloatingChat faller tillbaka på den
+ *     deterministiska success-raden. Fältet kan aldrig fejka en ändring:
+ *     det skickas bara på svar som redan bär ett riktigt runId + bridge.
+ */
+async function generateAppliedConfirmation(
+  prompt: string,
+  chain: Record<string, unknown>,
+  role: string | null,
+): Promise<string | null> {
+  if (!openaiEnv("OPENAI_API_KEY")) return null;
+  const facts: string[] = [];
+  if (typeof chain.editKind === "string") {
+    facts.push(`Ändringstyp: ${chain.editKind}`);
+  }
+  if (typeof chain.version === "number") {
+    facts.push(`Ny version: v${chain.version}`);
+  }
+  if (
+    Array.isArray(chain.changedRoutes) &&
+    chain.changedRoutes.every((r) => typeof r === "string")
+  ) {
+    facts.push(`Ändrade sidor: ${(chain.changedRoutes as string[]).join(", ")}`);
+  }
+  if (role) facts.push(`Utförande roll: ${role}`);
+  const systemContent = [
+    "Du är OpenClaw, dirigenten i Sajtbyggaren — operatörens chattassistent.",
+    "Byggrollerna har precis genomfört operatörens ändring och previewen " +
+      "visar den nya versionen.",
+    "Bekräfta ändringen kort på svenska: 1–2 meningar, vänligt och konkret.",
+    "Grunda dig ENBART i fakta nedan. Hitta aldrig på detaljer som inte " +
+      "står där, lova inget mer än det som gjordes, och ställ ingen fråga.",
+    "Nämn versionsnumret när det finns.",
+    `Fakta:\n${facts.join("\n") || "(inga ytterligare fakta)"}`,
+  ].join("\n");
+  try {
+    const { message } = await chatWithOpenAi([
+      { role: "system", content: systemContent },
+      { role: "user", content: `Min ändringsönskan var: ${prompt.slice(0, 500)}` },
+    ]);
+    const text = message.content.trim();
+    return text ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * B164 helper: the freshest COMPLETED run on disk for a siteId, or null.
  *
  * "Completed" = the run-dir has a ``build-result.json`` (so we only ever treat
@@ -621,6 +679,18 @@ async function runPromptBuildOnce(
         typeof chain.buildStatus === "string" ? chain.buildStatus : null;
       const chainVersion =
         typeof chain.version === "number" ? chain.version : null;
+      // Roll-bekräftelse (operatörsfynd 2026-06-11): på en SYNLIGT applicerad
+      // ändring genererar dirigenten en kort bekräftelse i chatten. Grindad på
+      // previewShouldRefresh så en mount-only-montering ALDRIG får en
+      // pratsam "klart!"-rad; null vid no-key/fel → deterministisk rad står.
+      const appliedAnswerText =
+        applyResult.bridge.previewShouldRefresh === true
+          ? await generateAppliedConfirmation(
+              payload.prompt,
+              chain,
+              conversationMeta?.role ?? null,
+            )
+          : null;
       return {
         runId: chainRunId,
         siteId: payload.siteId,
@@ -639,6 +709,10 @@ async function runPromptBuildOnce(
         // previewShouldRefresh + chain) so FloatingChat shows a restyle /
         // capability success line and refreshes the preview.
         bridge: applyResult.bridge,
+        // Roll-bekräftelsen (nullable). Skickas BARA tillsammans med ett
+        // riktigt runId + applied bridge, så use-followup-build:s answer-only-
+        // gren (som kräver !runId) aldrig kan misstolka den.
+        answerText: appliedAnswerText,
         // F1 slice 3: which role acted (e.g. section_builder) for the honest
         // role-row; threaded but never controls build/preview.
         conversation: conversationMeta,

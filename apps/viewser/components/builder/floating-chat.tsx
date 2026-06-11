@@ -782,10 +782,25 @@ function summarizeBuildResult(
   if (bridgeView && bridgeView.applied && outcome === "ok") {
     const bridgeLine = summarizeOpenClawBridge(bridgeView);
     if (bridgeLine) {
+      // Roll-bekräftelse (operatörsfynd 2026-06-11): backend kan skicka en
+      // dirigent-genererad bekräftelse i ``answerText`` för en SYNLIGT
+      // applicerad ändring (payload bär då ett riktigt runId + applied
+      // bridge, till skillnad från answer-only-fallet som kräver !runId).
+      // Den ersätter BARA success-radens text — varianten, changes-listan
+      // och alla ärlighetsgrindar står kvar, och mount-only-raden (variant
+      // "info", ingen synlig ändring) kan aldrig överskuggas av prat.
+      const confirmation =
+        bridgeLine.variant === "success" &&
+        typeof payload.answerText === "string"
+          ? payload.answerText.trim()
+          : "";
+      const line = confirmation
+        ? { ...bridgeLine, content: confirmation }
+        : bridgeLine;
       const exactChanges = summarizeChangeSet(payload.changeSet);
       return exactChanges.length > 0
-        ? { ...bridgeLine, changes: exactChanges, changesExact: true }
-        : bridgeLine;
+        ? { ...line, changes: exactChanges, changesExact: true }
+        : line;
     }
   }
   const openClawView = extractOpenClawDecision(payload);
