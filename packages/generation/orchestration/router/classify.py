@@ -226,8 +226,15 @@ _SECTION_TYPES = {
     "öppettider": "hours", "öppettiderna": "hours", "öppettid": "hours",
     # map / karta (capability location -> map-embed dossier)
     "karta": "map", "kartan": "map", "map": "map",
-    # contact form / kontaktformulär (capability contact-form -> mailto-contact-form)
+    # contact form / kontaktformulär (capability contact-form -> mailto-contact-form
+    # default; B198: "resend"/mejlformulär name the same section type so a prompt
+    # like "skapa en sektion för min resend-funktion för mejl" resolves to
+    # contact-form - the named-dossier preference itself is applied downstream by
+    # packages/generation/followup/section_directives.resolve_dossier_preferences).
     "kontaktformulär": "contact-form", "kontaktformuläret": "contact-form",
+    "resend": "contact-form", "resend-funktion": "contact-form",
+    "resend-funktionen": "contact-form", "mejlformulär": "contact-form",
+    "mejlformuläret": "contact-form", "mailformulär": "contact-form",
 }
 
 # Phrases checked longest-first so "vanliga frågor" wins over a bare "frågor"

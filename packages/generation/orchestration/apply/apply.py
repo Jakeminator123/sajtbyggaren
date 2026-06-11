@@ -82,7 +82,10 @@ if TYPE_CHECKING:
 __all__ = ["apply_patch_plan"]
 
 
-def _implementing_dossiers(capabilities: list[str]) -> list[str]:
+def _implementing_dossiers(
+    capabilities: list[str],
+    preferences: dict[str, str] | None = None,
+) -> list[str]:
     """Resolve the implementing Dossier id(s) for applied capability slugs.
 
     KÖR-7-STAB #175 P1: reuses the canonical planning capability -> Dossier
@@ -94,13 +97,53 @@ def _implementing_dossiers(capabilities: list[str]) -> list[str]:
     disabled Dossier. Lazy import keeps ``import ...apply`` free of the planning
     import chain, mirroring the ``scripts.prompt_to_project_input`` lazy import
     in ``apply_patch_plan``.
+
+    ``preferences`` (B198, optional): ``{capability: dossier_id}`` for follow-ups
+    that NAMED a specific implementing Dossier (e.g. resend-contact-form instead
+    of the mailto default). A preference is honoured only when the named Dossier
+    is listed for that capability in the map AND enabled - otherwise the
+    capability falls back to the default resolver, so apply still never mounts
+    an unregistered or disabled Dossier.
     """
     if not capabilities:
         return []
-    from packages.generation.planning import filter_capabilities, load_capability_map
+    from packages.generation.planning import (
+        dossier_is_enabled,
+        filter_capabilities,
+        load_capability_map,
+    )
 
-    selected, _rejected = filter_capabilities(capabilities, load_capability_map())
-    return selected
+    capability_map = load_capability_map()
+    capability_entries = (
+        capability_map.get("capabilities", {})
+        if isinstance(capability_map, dict)
+        else {}
+    )
+    prefs = preferences or {}
+    resolved: list[str] = []
+    seen: set[str] = set()
+    for capability in capabilities:
+        if capability in seen:
+            continue
+        seen.add(capability)
+        preferred = prefs.get(capability)
+        if preferred:
+            entry = capability_entries.get(capability)
+            listed = entry.get("dossiers") if isinstance(entry, dict) else None
+            if (
+                isinstance(listed, list)
+                and preferred in listed
+                and dossier_is_enabled(preferred)
+            ):
+                if preferred not in resolved:
+                    resolved.append(preferred)
+                continue
+            # Invalid/disabled preference -> honest fallback to the default.
+        selected, _rejected = filter_capabilities([capability], capability_map)
+        for dossier_id in selected:
+            if dossier_id not in resolved:
+                resolved.append(dossier_id)
+    return resolved
 
 
 def _ensure_required_dossiers(
@@ -149,6 +192,7 @@ def apply_patch_plan(
     theme_directive: ThemeDirective | None = None,
     added_capabilities: list[str] | None = None,
     section_positions: dict[str, str] | None = None,
+    dossier_preferences: dict[str, str] | None = None,
     unapplied_followup_intents: list[dict[str, str]] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
@@ -178,6 +222,13 @@ def apply_patch_plan(
     ``selectedDossiers.required`` - so the same targeted render applies, no new
     render path. Like a theme-only restyle, a section-only follow-up (no patch,
     no theme) with ``added_capabilities`` still writes the next version.
+
+    ``dossier_preferences`` (optional, B198) maps an applied capability to the
+    NAMED implementing Dossier the follow-up asked for (e.g. resend-contact-form
+    instead of the mailto default). Validated inside the resolver against
+    capability-map.v1.json + the manifest's enabled flag; an invalid/disabled
+    preference falls back to the capability default - chat can never mount an
+    unregistered Dossier.
 
     ``trace_run_dir`` (optional) is the directory of the **new** version's run,
     if one already exists, to append an append-only apply Engine Event to its
@@ -476,8 +527,12 @@ def apply_patch_plan(
     #     that is a documented gap (empty dossiers) or whose default Dossier is
     #     disabled yields no Dossier and is left honestly unmounted - apply never
     #     invents one.
+    # B198: a follow-up that NAMED a specific implementing Dossier ("resend")
+    # prefers it over the capability default; an invalid/disabled preference
+    # falls back to the default inside the resolver (never an invented mount).
     mounted_dossiers = _implementing_dossiers(
-        [entry.capability for entry in capabilities]
+        [entry.capability for entry in capabilities],
+        preferences=dossier_preferences,
     )
     _ensure_required_dossiers(merged, mounted_dossiers)
 

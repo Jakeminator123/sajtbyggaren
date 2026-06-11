@@ -624,6 +624,26 @@ def test_section_add_classifies_with_type_slug(prompt: str, slug: str):
     assert d.shouldStartPreview is True
 
 
+@pytest.mark.parametrize(
+    "prompt,slug",
+    [
+        # B198: "resend"/mejlformulär name the contact-form section type so the
+        # named-dossier preference downstream can mount resend-contact-form.
+        ("skapa en sektion för min resend-funktion för mejl", "contact-form"),
+        ("lägg till en resend-sektion", "contact-form"),
+        ("lägg till en mejlformulär-sektion", "contact-form"),
+    ],
+)
+def test_section_add_resend_cues_resolve_to_contact_form(prompt: str, slug: str):
+    """B198: a prompt naming the resend mail capability classifies as a
+    contact-form section_add instead of falling through to the legacy
+    brief-rebuild path (which used to invent a generic service card)."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.editKind == "section_add"
+    assert d.componentIntent == slug
+
+
 def test_section_add_unknown_type_still_section_add():
     """An unrecognised section type still classifies as section_add (the apply
     chain does the honest no-op); the router never invents a type slug."""

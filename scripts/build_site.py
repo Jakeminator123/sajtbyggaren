@@ -3946,9 +3946,11 @@ def run_followup_chain(
     # slot. Built parallel to ``section_types`` so a per-section/per-subtask
     # target maps to the capability that section_add resolves to.
     section_positions: dict[str, str] = {}
+    section_dossier_preferences: dict[str, str] = {}
     if is_section_add:
         from packages.generation.followup.section_directives import (
             SECTION_TYPE_CAPABILITY,
+            resolve_dossier_preferences,
             resolve_section_capabilities,
         )
 
@@ -3963,6 +3965,13 @@ def run_followup_chain(
                 typed_targets.append((subtask.componentIntent, subtask.target))
         added_capabilities, section_unsupported = resolve_section_capabilities(
             section_types
+        )
+        # B198: a prompt that NAMES a specific implementing dossier ("resend")
+        # prefers it over the capability default (mailto). Validated against
+        # capability-map + manifest-enabled inside the resolver; invalid ->
+        # empty dict -> the default mount, exactly as before.
+        section_dossier_preferences = resolve_dossier_preferences(
+            follow_up_prompt, added_capabilities
         )
         for section_type, target in typed_targets:
             capability = SECTION_TYPE_CAPABILITY.get(section_type or "")
@@ -4057,6 +4066,7 @@ def run_followup_chain(
             theme_directive=theme_directive,
             added_capabilities=added_capabilities,
             section_positions=section_positions,
+            dossier_preferences=section_dossier_preferences or None,
             unapplied_followup_intents=unapplied_followup_intents,
         )
     except PatchApplyError as exc:
