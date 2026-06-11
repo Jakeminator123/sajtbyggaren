@@ -69,20 +69,22 @@ direktcommits):**
 
 **Nästa prioriteringar (i ordning):**
 
-1. **Main-sync (operatörsbeslut):** main släpar ~31 commits — prod kör utan
-   eftermiddagens leveranser. Lyft när operatören ger klartecken.
-2. **Christophers rebase:** #269 (rensa ~801 `data/scaffold-candidates`-filer
-   ur PR:en, full governance-CI grön på rebasad head) + #292 (hostad
-   asset_set, stacked — retargetas efter #269). Besked skickat (msg-0077).
-   Vår toolIntent-backend-halva läggs ovanpå när rebasen landat.
-3. **B194 — persistera hostad run-state:** utlösaren för hela OpenClaw-
-   följdpromptflödet hostat (hostade följdprompter failar ärligt tills dess).
-   Därefter B197 (discovery-paritet i sandbox).
+1. **Review-kedjan #292 → #304:** #269 är MERGAD (kvällsreview 2026-06-11,
+   godkänd; konflikt mot färska basen löst via basmerge `9774b199`).
+   Christophers action: rebasa #292 mot färska jakob-be + retargeta, sedan
+   #304 (B194-stängningen — hostad run-state till blob + KV-pekare, dvs.
+   gamla prio 3 levereras där). Besked skickat (msg-0079). Därefter B197.
+2. **Main-sync-uppföljning:** main synkades i kväll i parallellt spår;
+   kvällens senare merges (#296–#303 + #269) väntar på nästa sync-fönster.
+3. **B198 del b — synlig contact-form-render:** dedikerad-route-mönstret
+   (faq/team) för contact-form på ecommerce-lite, så resend-formuläret
+   faktiskt syns (del a + hardening är inne).
 4. **ADR 0052-uppföljning (litet städ):** ta bort död
    `model="gpt-5.4"`-default i `packages/generation/brief/extract.py` (~rad
    690), byt hårdkodad fallback i `scripts/prompt_to_project_input.py`
    (~rad 3343) mot policy-defaults, tråda design-tooling-skripten
-   (variantModel/dossierModel — v11-värdena ligger vilande).
+   (variantModel/dossierModel/scaffoldModel — v12-värdena ligger vilande).
+   Plus eslint-fyndet i `industry-search.tsx:298` (msg-c-0080).
 5. **Token Meter-priser (operatören, valfritt):** USD-priserna i Vercel-env
    sattes till 0 vid konsolideringen — sätt riktiga värden om kostnadsvisning
    önskas hostat.
@@ -95,24 +97,23 @@ direktcommits):**
 - `christopher`-lanen äger: `use-followup-build.ts`, dialogerna,
   viewser-frontend/inspector — rör ej.
 
-Last verified state: `05e62911` (2026-06-11 ~21:05 UTC+2; `origin/jakob-be =
-05e62911`, rent träd. Kvällen: #296/#297/#298/#301 mergade till jakob-be
-(OpenClaw-smartness-sviten + B198 del a). Eftermiddagen dessförinnan:
-#285/#291/#293/#294/#295. Main-sync hanteras i parallellt spår; #299/#300
-(env-dok + deploy-ignoreCommand) är öppna i det spåret. ADR-liggare: nästa
-lediga **0055**; 0054 är reserverad för MCP-intagsgrinden.)
+Last verified state: `dd30fb6b` (2026-06-11 ~22:40 UTC+2; `origin/jakob-be =
+dd30fb6b`, rent träd. Kvällen: #296/#297/#298/#301 (OpenClaw-smartness +
+B198 del a), #302 (fallback-toggle i Dirigentpulten), #303 (hardening efter
+extern riskmatris), #299/#300 (parallellspåret: env-dok + ignoreCommand,
+kompletterad med docs/openclaw-workspace i `2ef8f116`) samt **#269 mergad
+efter godkänd review**. ADR-liggare: nästa lediga **0055**; 0054 är
+reserverad för MCP-intagsgrinden.)
 
 ## Öppna PR att känna till
 
-- **#269** (`christopher → jakob-be`): bär Verktyg fas 1–3 + bildbyte-guard +
-  inspector-lanen. **Väntar Christophers post-#285-rebase — hans action**
-  (msg-0077): inspector-dubbletterna faller bort via patch-identitet,
-  ~801 `data/scaffold-candidates`-filer ska rensas ur PR:en, full
-  governance-CI ska gå grön på rebasad head före review. Rör inte denna
-  PR-yta.
 - **#292** (`feat/hosted-asset-set-forwarding`): Christophers hostade
-  asset_set-forwarding, stacked på `christopher` — retargetas mot jakob-be
-  efter #269. GO givet (msg-0073).
+  asset_set-forwarding. **Hans action:** rebasa mot färska jakob-be +
+  retargeta (basen `christopher` är mergad via #269). GO givet (msg-0073).
+- **#304** (stackad på #292): **B194-stängningen** — hostad run-state
+  persisteras till blob + KV-pekare så följdprompter funkar hostat.
+  Reviewas efter #292 (kedjan i msg-c-0081).
+- **#305** (`→ main`): Vercel Web Analytics-install (parallellspåret).
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
