@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import streamlit as st
 
-from .. import loaders
-from ..io import atomic_write_json, atomic_write_text
+from .. import loaders, model_roles
 from ..mermaid import (
     build_engine_mindmap,
     build_followup_flow_diagram,
     build_init_flow_diagram,
     render_mermaid,
 )
-from ..paths import POLICIES_DIR
 from ._helpers import safe_render
 
 
@@ -112,6 +110,57 @@ def view_followup_flow() -> None:
         st.code(diagram, language="text")
 
 
+def render_model_roles_editor(models: dict, *, key_prefix: str = "llm-engine") -> None:
+    """Delad editor for modell/provider per roll (edit-toggle + spara).
+
+    Aterspeglas pixel-for-pixel fran den historiska view_model_roles-editorn,
+    men save-vagen gar via backoffice.model_roles (validate + atomic write +
+    governance_validate + rollback) sa Dirigentpulten och LLM Engine-vyn
+    aldrig kan driva isar. ``key_prefix`` haller widget-keys unika per vy.
+    """
+    edit_mode = st.toggle("Aktivera redigering", key=f"{key_prefix}-model-edit-toggle")
+    if not edit_mode:
+        return
+
+    role_ids = [r["id"] for r in models.get("roles", [])]
+    if not role_ids:
+        st.warning("Inga roller registrerade i llm-models.v1.json.")
+        return
+
+    selected_role = st.selectbox(
+        "Välj roll", role_ids, key=f"{key_prefix}-model-role-select"
+    )
+    role = next((r for r in models.get("roles", []) if r["id"] == selected_role), None)
+    if not role:
+        st.error(f"Rollen '{selected_role}' kunde inte hittas.")
+        return
+
+    new_model = st.text_input(
+        "Modell", value=role.get("model", ""), key=f"{key_prefix}-model-input"
+    ).strip()
+    new_provider = st.text_input(
+        "Provider", value=role.get("provider", "openai"), key=f"{key_prefix}-provider-input"
+    ).strip()
+
+    validation_errors = model_roles.validate_role_edit(models, new_model, new_provider)
+    for validation_error in validation_errors:
+        st.error(validation_error)
+
+    if st.button(
+        "Spara ändringen",
+        key=f"{key_prefix}-model-save",
+        disabled=bool(validation_errors),
+    ):
+        ok, message = model_roles.save_role_edit(
+            models, selected_role, new_model, new_provider
+        )
+        _hard_reset_caches()
+        if ok:
+            st.success(message)
+        else:
+            st.error(message)
+
+
 def view_model_roles() -> None:
     st.title("Model Roles")
     models, err = loaders.safe_load_policy("llm-models.v1.json")
@@ -121,10 +170,7 @@ def view_model_roles() -> None:
 
     st.caption(models.get("purpose", ""))
 
-    role_to_group = {}
-    for group in models.get("sharedModelGroups", []):
-        for role_id in group["roles"]:
-            role_to_group[role_id] = group["groupId"]
+    role_to_group = model_roles.role_group_map(models)
 
     rows = []
     for role in models.get("roles", []):
@@ -144,73 +190,7 @@ def view_model_roles() -> None:
     st.caption(
         "Edit-mode skriver till `llm-models.v1.json` direkt. JSON valideras före spara."
     )
-
-    edit_mode = st.toggle("Aktivera redigering", key="model_edit_toggle")
-    if not edit_mode:
-        return
-
-    role_ids = [r["id"] for r in models.get("roles", [])]
-    if not role_ids:
-        st.warning("Inga roller registrerade i llm-models.v1.json.")
-        return
-
-    selected_role = st.selectbox("Välj roll", role_ids, key="model_role_select")
-    role = next((r for r in models.get("roles", []) if r["id"] == selected_role), None)
-    if not role:
-        st.error(f"Rollen '{selected_role}' kunde inte hittas.")
-        return
-
-    new_model = st.text_input("Modell", value=role.get("model", ""), key="model_input").strip()
-    new_provider = (
-        st.text_input("Provider", value=role.get("provider", "openai"), key="provider_input").strip()
-    )
-
-    forbidden_tier = set(models.get("forbiddenLegacyTierNames", []))
-    validation_errors: list[str] = []
-    if not new_model:
-        validation_errors.append("Modellnamn får inte vara tomt.")
-    if not new_provider:
-        validation_errors.append("Provider får inte vara tom.")
-    if new_model.lower() in forbidden_tier or new_provider.lower() in forbidden_tier:
-        validation_errors.append(
-            f"Värde står i forbiddenLegacyTierNames: {sorted(forbidden_tier)}"
-        )
-
-    if validation_errors:
-        for err in validation_errors:
-            st.error(err)
-
-    if st.button(
-        "Spara ändringen", key="model_save", disabled=bool(validation_errors)
-    ):
-        for r in models["roles"]:
-            if r["id"] == selected_role:
-                r["model"] = new_model
-                r["provider"] = new_provider
-                break
-
-        path = POLICIES_DIR / "llm-models.v1.json"
-        backup = path.read_text(encoding="utf-8")
-        atomic_write_json(path, models)
-
-        # Run governance_validate to confirm the change is policy-safe; rollback if not.
-        from .. import health
-
-        validate_result = health.run_governance_validate()
-        if not validate_result.ok:
-            atomic_write_text(path, backup)
-            _hard_reset_caches()
-            st.error(
-                f"governance_validate failade efter spara - rollback genomfört. "
-                f"Output:\n{validate_result.output}"
-            )
-            return
-
-        _hard_reset_caches()
-        st.success(
-            f"Sparade {selected_role} -> {new_model} ({new_provider}). "
-            f"governance_validate OK."
-        )
+    render_model_roles_editor(models, key_prefix="llm-engine")
 
 
 def view_fix_types() -> None:
