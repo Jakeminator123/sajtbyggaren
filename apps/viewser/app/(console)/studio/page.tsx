@@ -111,6 +111,18 @@ export default function Home() {
   // listan så den färdiga runen finns där om operatören vill gå
   // tillbaka. B6 i scout-review 2026-05-24.
   const userNavigatedAwayRef = useRef(false);
+  // Hostad builder-paritet (B194-uppföljning): hostat returnerar /api/runs
+  // alltid tomma runs/projectInputs, så builderTarget kan aldrig aktiveras
+  // via listorna. Men byggen som klienten SJÄLV slutfört i denna session
+  // är betrodda — backend har redan persisterat run-state (B194) och tar
+  // emot följdprompter när VIEWSER_ENABLE_HOSTED_BUILD=1. Vi minns
+  // runId → siteId för lyckade byggen så builder-läget (FloatingChat) kan
+  // tändas hostat. Nollställs vid omladdning (känd B197-paritetslucka).
+  // State (inte ref) — läses i builderTarget-memon under render. Muteras
+  // aldrig på plats; varje uppdatering skapar en ny Map (se handleBuildDone).
+  const [sessionBuiltRuns, setSessionBuiltRuns] = useState<Map<string, string>>(
+    new Map(),
+  );
   // Speglar consoleOpen för ⌘K-handlern (som lever i en []-effekt och
   // annars stänger över initialt värde). Synkas i effekt — ref-mutation i
   // render flaggas av react-hooks/refs.
@@ -342,12 +354,24 @@ export default function Home() {
         ? selectedRun.siteId
         : selectedSiteId;
     if (!targetSiteId || targetSiteId === "unknown") return null;
+    // Hostad vy: listorna är tomma per design, men ett bygge som den här
+    // sessionen själv slutförde är ett giltigt followup-mål (B194).
+    if (hostedNotice && sessionBuiltRuns.get(selectedRunId) === targetSiteId) {
+      return { siteId: targetSiteId };
+    }
     const targetInput = projectInputs.find(
       (input) => input.siteId === targetSiteId,
     );
     if (targetInput?.source !== "prompt-inputs") return null;
     return { siteId: targetSiteId };
-  }, [selectedRunId, runs, selectedSiteId, projectInputs]);
+  }, [
+    selectedRunId,
+    runs,
+    selectedSiteId,
+    projectInputs,
+    hostedNotice,
+    sessionBuiltRuns,
+  ]);
 
   const builderActive = builderTarget !== null;
 
@@ -357,6 +381,15 @@ export default function Home() {
     siteId?: string,
     visibleEffect?: FollowupVisibleEffect,
   ) {
+    // Kom ihåg lyckade byggen i sessionen så hostad vy kan aktivera
+    // builder-läget trots tomma runs/projectInputs (se sessionBuiltRuns).
+    if (outcome !== "failed" && siteId && siteId !== "unknown") {
+      setSessionBuiltRuns((prev) => {
+        const next = new Map(prev);
+        next.set(runId, siteId);
+        return next;
+      });
+    }
     // Bygget landade — visa toast så operatören ser status även om
     // FloatingChat eller PromptBuilder inte är synlig (t.ex. på liten
     // skärm där hero scrollats ur sikte). FloatingChat visar fortfarande
