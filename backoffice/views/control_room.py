@@ -66,6 +66,16 @@ def _badge(status: str) -> str:
     return f"{_STATUS_BADGES.get(status, '❓')} {status}"
 
 
+def _price_cell(value: object) -> str:
+    """Enhetlig strängcell för priser: tal -> str, saknat -> em-dash.
+
+    Strängar hela vägen så st.dataframe-kolumnen får EN typ (annars klagar
+    Arrow-serialiseringen på blandade float/str-kolumner)."""
+    if value is None:
+        return "—"
+    return f"{value:g}" if isinstance(value, (int, float)) else str(value)
+
+
 def _load_json_file(path: Path) -> tuple[dict | None, str | None]:
     """Läs en JSON-fil defensivt: (data, fel). Aldrig exception till UI:t."""
     if not path.exists():
@@ -143,16 +153,14 @@ def _render_tab_models(models: dict, pricing: dict | None) -> None:
     rows = []
     for role in models.get("roles", []):
         price = price_by_model.get(role.get("model"), {})
-        input_price = price.get("inputPer1M")
-        output_price = price.get("outputPer1M")
         rows.append(
             {
                 "Roll": role.get("id"),
                 "Modell": role.get("model"),
                 "Provider": role.get("provider"),
                 "Grupp": role_to_group.get(role.get("id"), "?"),
-                "USD/1M in": input_price if input_price is not None else "—",
-                "USD/1M ut": output_price if output_price is not None else "—",
+                "USD/1M in": _price_cell(price.get("inputPer1M")),
+                "USD/1M ut": _price_cell(price.get("outputPer1M")),
                 "Syfte": role.get("purpose"),
             }
         )
@@ -555,12 +563,8 @@ def _render_tab_pricing(models: dict) -> None:
                 "Roll": role.get("id"),
                 "Modell": role.get("model"),
                 "Grupp": role_to_group.get(role.get("id"), "?"),
-                "USD/1M in": price.get("inputPer1M", None)
-                if price.get("inputPer1M") is not None
-                else "—",
-                "USD/1M ut": price.get("outputPer1M", None)
-                if price.get("outputPer1M") is not None
-                else "—",
+                "USD/1M in": _price_cell(price.get("inputPer1M")),
+                "USD/1M ut": _price_cell(price.get("outputPer1M")),
                 "Hämtad": _age_label(price.get("fetchedAt")),
             }
         )
@@ -577,8 +581,8 @@ def _render_tab_pricing(models: dict) -> None:
             [
                 {
                     "Modell": row.get("model"),
-                    "USD/1M in": row.get("inputPer1M") if row.get("inputPer1M") is not None else "—",
-                    "USD/1M ut": row.get("outputPer1M") if row.get("outputPer1M") is not None else "—",
+                    "USD/1M in": _price_cell(row.get("inputPer1M")),
+                    "USD/1M ut": _price_cell(row.get("outputPer1M")),
                     "Hämtad": _age_label(row.get("fetchedAt")),
                 }
                 for row in extra_models

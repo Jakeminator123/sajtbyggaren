@@ -191,6 +191,73 @@ def test_action_statuses_match_registry_enum() -> None:
 
 
 @pytest.mark.tooling
+def test_save_action_status_writes_only_status_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The action-status editor mutates exactly one status field, keeps every
+    other byte of the registry intact and refuses unknown statuses/actions."""
+    from backoffice.views import control_room
+
+    registry = {
+        "comment": "x",
+        "version": 1,
+        "actions": [
+            {"id": "restyle", "skill": "skills/restyle/SKILL.md", "status": "supported"},
+            {"id": "layout_change", "skill": "skills/layout-change/SKILL.md", "status": "planned"},
+        ],
+    }
+    registry_path = tmp_path / "action-registry.json"
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+    monkeypatch.setattr(control_room, "ACTION_REGISTRY_PATH", registry_path)
+
+    control_room._save_action_status(registry, "layout_change", "partial")
+    on_disk = json.loads(registry_path.read_text(encoding="utf-8"))
+    assert on_disk["actions"][1]["status"] == "partial"
+    assert on_disk["actions"][0]["status"] == "supported"  # untouched
+    assert on_disk["comment"] == "x"
+
+    # Invalid status / unknown action -> no write.
+    before = registry_path.read_text(encoding="utf-8")
+    control_room._save_action_status(registry, "layout_change", "magical")
+    control_room._save_action_status(registry, "nope", "supported")
+    assert registry_path.read_text(encoding="utf-8") == before
+
+
+@pytest.mark.tooling
+def test_cockpit_renders_all_groups_without_exception() -> None:
+    """Headless render-smoke via Streamlit AppTest: alla flikar A-G renderas
+    och sidan kastar inget. Fångar trasiga imports/policy-läsningar som de
+    rena käll-text-testerna ovan inte ser."""
+    from streamlit.testing.v1 import AppTest
+
+    at = AppTest.from_string(
+        "import sys\n"
+        f"sys.path.insert(0, {str(REPO_ROOT)!r})\n"
+        "from backoffice.views.control_room import view_control_room\n"
+        "view_control_room()\n",
+        default_timeout=60,
+    )
+    at.run()
+    assert not at.exception, f"control room render raised: {at.exception}"
+
+    tab_labels = [t.label for t in at.tabs]
+    for expected in (
+        "A · Modeller per roll",
+        "B · Chatt & sidor",
+        "C · Persona (SOUL)",
+        "D · Actions",
+        "E · Skills",
+        "F · Konduktör-roller 🔒",
+        "G · Priser & gränser",
+    ):
+        assert expected in tab_labels, f"tab '{expected}' missing in render"
+
+    assert [t.value for t in at.title] == ["Dirigentpult"]
+    metric_labels = {m.label for m in at.main.get("metric")}
+    assert {"Modellroller", "Actions (supported)", "SOUL-tecken", "Priser"} <= metric_labels
+
+
+@pytest.mark.tooling
 def test_chat_limits_shown_match_viewser_source() -> None:
     """The limits the cockpit displays are parsed live from openai.ts; today's
     contract values are pinned here (the parallel model-bump PR does not touch
