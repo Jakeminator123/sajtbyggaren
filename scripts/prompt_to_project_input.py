@@ -72,6 +72,10 @@ from packages.generation.followup.hero_headline_pin import (  # noqa: E402
 from packages.generation.followup.hero_headline_pin import (  # noqa: E402
     pin_previous_hero_headline as _pin_previous_hero_headline,
 )
+from packages.generation.followup.marked_sections import (  # noqa: E402
+    parse_marked_sections,
+    validate_marked_sections,
+)
 from packages.generation.followup.text import (  # noqa: E402
     _contains_any,
     _contains_any_word,
@@ -2747,6 +2751,7 @@ def merge_followup_project_input(
     *,
     follow_up_prompt: str,
     enable_llm_fallback: bool = False,
+    marked_sections: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Preserve prior site context while applying a follow-up prompt.
 
@@ -2756,6 +2761,12 @@ def merge_followup_project_input(
     Story, tagline and tone remain byte-stable for unclear/additive
     prompts, but Project DNA semantic patching may update exactly the
     field targeted by a known follow-up intent.
+
+    ``marked_sections`` (ADR 0046) is the VALIDATED list of preview
+    markings — a soft prioritisation signal threaded into the
+    copyDirective planner's site-state and the styleDirective
+    extractor's context. It never changes intent classification and
+    never triggers an edit on its own.
     """
     merged = copy.deepcopy(previous)
     merged["siteId"] = previous["siteId"]
@@ -2868,6 +2879,7 @@ def merge_followup_project_input(
                     follow_up_prompt,
                     language=language,
                     target=rewrite_target,
+                    focus_sections=marked_sections,
                 )
             elif _copy_directive_llm_eligible(follow_up_prompt, intent=intent):
                 copy_directives = _extract_copy_directives_via_llm(
@@ -2916,7 +2928,9 @@ def merge_followup_project_input(
         and _theme_directive_llm_eligible(follow_up_prompt)
     ):
         theme_directive = extract_theme_directive_via_llm(
-            follow_up_prompt, language=language
+            follow_up_prompt,
+            language=language,
+            focus_sections=marked_sections,
         )
     apply_theme_directive(merged, theme_directive)
     return merged
@@ -3327,6 +3341,7 @@ def generate(
     meta_overrides: dict[str, Any] | None = None,
     discovery: dict[str, Any] | None = None,
     enable_copy_directive_llm: bool = False,
+    marked_sections: list[dict[str, str]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """End-to-end: prompt -> Site Brief -> Project Input on disk.
 
@@ -3397,6 +3412,7 @@ def generate(
             candidate_project_input,
             follow_up_prompt=prompt,
             enable_llm_fallback=enable_copy_directive_llm,
+            marked_sections=marked_sections,
         )
     else:
         project_input = candidate_project_input
@@ -3565,6 +3581,7 @@ def generate_followup(
     base_run_id: str | None = None,
     runs_dir: Path = DEFAULT_RUNS_DIR,
     enable_copy_directive_llm: bool = False,
+    marked_sections: list[dict[str, str]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """Generate a new Project Input version from an existing meta sidecar.
 
@@ -3610,6 +3627,15 @@ def generate_followup(
     # big headline stays stable when briefModel regenerates positioning at the
     # rebuild. Explicit heading edits later in the merge still overwrite it.
     _pin_previous_hero_headline(previous_project_input, run_dir=base_run_dir)
+    # ADR 0046: validate preview markings against the base run's facit
+    # (emittedSections, with site-plan + scaffold sections.json fallback).
+    # Unknown markings are dropped with a structured warning — never guessed.
+    applied_focus_sections: list[dict[str, str]] = []
+    dropped_focus_sections: list[dict[str, str]] = []
+    if marked_sections:
+        applied_focus_sections, dropped_focus_sections = validate_marked_sections(
+            marked_sections, base_run_dir=base_run_dir
+        )
     now = datetime.now(UTC).isoformat(timespec="seconds")
     meta_overrides: dict[str, Any] = {
         "originalPrompt": existing_meta.get("originalPrompt", prompt),
@@ -3620,6 +3646,13 @@ def generate_followup(
     }
     if base_run_id is not None:
         meta_overrides["baseRunId"] = base_run_id
+    # ADR 0046 traceability: the validated markings (and the honestly
+    # dropped ones) ride the meta sidecar so build_site.py can mirror
+    # them into build-result.json for the viewser changeSet.
+    if applied_focus_sections:
+        meta_overrides["appliedFocusSections"] = applied_focus_sections
+    if dropped_focus_sections:
+        meta_overrides["droppedFocusSections"] = dropped_focus_sections
     # Ärv discoveryDecision från föregående version så Backoffice/Doctor
     # kan visa categoryIds + fieldSources + fallbackWarnings även för v2+.
     # R1 #5 på PR #34 (round 3): markera ärvda decisioner med
@@ -3654,6 +3687,7 @@ def generate_followup(
         meta_overrides=meta_overrides,
         discovery=discovery,
         enable_copy_directive_llm=enable_copy_directive_llm,
+        marked_sections=applied_focus_sections or None,
     )
 
 
@@ -3715,6 +3749,17 @@ def main() -> int:
             "LLM extraction so operator clicks always win over LLM guesses."
         ),
     )
+    parser.add_argument(
+        "--marked-sections",
+        default=None,
+        help=(
+            "JSON list of preview markings (ADR 0046): "
+            '[{"routeId": ..., "sectionId": ..., "note"?: ...}] (max 5). '
+            "Only valid with --followup-site-id. Validated against the "
+            "base run's emittedSections; unknown markings are dropped "
+            "with a warning."
+        ),
+    )
     args = parser.parse_args()
 
     if args.followup_site_id and args.discovery:
@@ -3729,6 +3774,18 @@ def main() -> int:
             "--base-run-id requires --followup-site-id. Iterating from a "
             "specific historical run only makes sense as a follow-up."
         )
+    if args.marked_sections and not args.followup_site_id:
+        raise SystemExit(
+            "--marked-sections requires --followup-site-id. Preview "
+            "markings only make sense against an existing version."
+        )
+
+    marked_sections_payload: list[dict[str, str]] | None = None
+    if args.marked_sections:
+        try:
+            marked_sections_payload = parse_marked_sections(args.marked_sections)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
 
     discovery_payload: dict[str, Any] | None = None
     if args.discovery:
@@ -3760,6 +3817,7 @@ def main() -> int:
             # validated copy edit. Programmatic callers + tests keep the
             # default (off) so they stay deterministic and offline.
             enable_copy_directive_llm=True,
+            marked_sections=marked_sections_payload,
         )
     else:
         project_input, meta, project_input_path, meta_path = generate(

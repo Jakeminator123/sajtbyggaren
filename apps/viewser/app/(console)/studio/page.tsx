@@ -8,6 +8,7 @@ import type { FollowupVisibleEffect } from "@/components/builder/use-followup-bu
 import { usePendingBuild } from "@/components/builder/use-pending-build";
 import { ConsoleDrawer } from "@/components/console-drawer";
 import { DevicePresetProvider } from "@/components/device-preset-context";
+import { PreviewInspectorProvider } from "@/components/preview-inspector-context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { ProjectInputOption } from "@/components/project-input-picker";
@@ -133,7 +134,11 @@ export default function Home() {
     (!activeRun.siteId || activeRun.siteId === "unknown");
 
   function applyRunsData(
-    { nextRuns, nextInputs, hostedNotice: nextHostedNotice }: FetchedRunsPayload,
+    {
+      nextRuns,
+      nextInputs,
+      hostedNotice: nextHostedNotice,
+    }: FetchedRunsPayload,
     ctx?: {
       selectedRunId: string | null;
       selectedSiteId: string;
@@ -455,21 +460,24 @@ export default function Home() {
 
   return (
     <DevicePresetProvider>
-    <main className="bg-background relative h-[100dvh] w-full overflow-hidden">
-      <SiteHeader
-        onOpenConsole={() => setConsoleOpen(true)}
-        // Dölj brand-bubblan i builder-läget — den ligger ovanpå
-        // preview-iframens vänsterkant och stör operatörens
-        // granskning av designen. Konsol-knappen i höger hörn
-        // behålls så snabb-access till run-historik fortfarande
-        // är ett enkelt klick.
-        hideBrand={builderActive}
-      />
+      {/* Preview-inspector: delar peka-i-previewn-state mellan ViewerPanel
+        (overlay + element-karta) och builder-dialogerna (platsval). */}
+      <PreviewInspectorProvider>
+        <main className="bg-background relative h-[100dvh] w-full overflow-hidden">
+          <SiteHeader
+            onOpenConsole={() => setConsoleOpen(true)}
+            // Dölj brand-bubblan i builder-läget — den ligger ovanpå
+            // preview-iframens vänsterkant och stör operatörens
+            // granskning av designen. Konsol-knappen i höger hörn
+            // behålls så snabb-access till run-historik fortfarande
+            // är ett enkelt klick.
+            hideBrand={builderActive}
+          />
 
-      {hostedNotice ? <HostedNoticeBanner message={hostedNotice} /> : null}
+          {hostedNotice ? <HostedNoticeBanner message={hostedNotice} /> : null}
 
-      <ErrorBoundary area="Förhandsvisningen" className="h-full w-full">
-        {/* C4: preview-POST:en går mot /api/preview/<siteId> medan runId
+          <ErrorBoundary area="Förhandsvisningen" className="h-full w-full">
+            {/* C4: preview-POST:en går mot /api/preview/<siteId> medan runId
             driver fil-/StackBlitz-fallbacken. Project Input-väljaren i
             ConsoleDrawer kan sätta selectedSiteId UTAN att rensa
             selectedRunId → siteId och runId pekade då på olika sajter och
@@ -478,30 +486,30 @@ export default function Home() {
             så vi låter den vinna när en run är aktiv och faller tillbaka på
             picker-sajten i hero/pre-build-läget. I normalfallet (run vald via
             selectRunAndSyncSiteId/handleBuildDone) är de redan identiska. */}
-        <ViewerPanel
-          runId={selectedRunId}
-          siteId={runSiteId ?? selectedSiteId}
-          isBuilding={building}
-          buildStage={buildStage}
-        />
-      </ErrorBoundary>
+            <ViewerPanel
+              runId={selectedRunId}
+              siteId={runSiteId ?? selectedSiteId}
+              isBuilding={building}
+              buildStage={buildStage}
+            />
+          </ErrorBoundary>
 
-      {/* Network-failure UX: visas bara om initial /api/runs failade
+          {/* Network-failure UX: visas bara om initial /api/runs failade
           OCH operatören ännu inte kommit in i builder-läget (då har vi
           redan en run och kan jobba mot den lokalt). Cardet ligger
           centrerat över hero-ytan så det syns även när PromptBuilder är
           dold. Retry-knappen anropar samma loader som useEffect:en. */}
-      {runsLoadError && !runsLoading && !builderActive ? (
-        <RunsLoadErrorCard
-          message={runsLoadError}
-          onRetry={() => {
-            setRunsLoading(true);
-            void loadRuns();
-          }}
-        />
-      ) : null}
+          {runsLoadError && !runsLoading && !builderActive ? (
+            <RunsLoadErrorCard
+              message={runsLoadError}
+              onRetry={() => {
+                setRunsLoading(true);
+                void loadRuns();
+              }}
+            />
+          ) : null}
 
-      {/* Prompt-rutan döljs visuellt medan bygget pågår (BuildProgressCard
+          {/* Prompt-rutan döljs visuellt medan bygget pågår (BuildProgressCard
           tar över hero-ytan) OCH när builder-mode är aktivt (då tar
           FloatingChat över follow-up-flödet). Vi får ABSOLUT inte
           unmounta komponenten under bygget — den äger fetch-promise:n
@@ -510,107 +518,110 @@ export default function Home() {
           nu alltid mountad även när builder-mode är aktivt. Tidigare
           conditional unmount → remount under follow-up återställde
           stage till "idle" och kraschade build-progress-cardet. */}
-      <ErrorBoundary area="Prompt-rutan">
-        <PromptBuilder
-          isBusy={building}
-          runs={runs}
-          projectInputs={projectInputs}
-          selectedRunId={selectedRunId}
-          selectedSiteId={selectedSiteId}
-          onBuildStart={() => setBuilding(true)}
-          onBuildEnd={() => setBuilding(false)}
-          // Rapportera stage endast när PromptBuilder är "owner" av
-          // bygget. I builder-mode driver FloatingChat follow-ups så
-          // PromptBuilder:s interna stage-effekt får inte skriva över
-          // buildStage med "idle" eller en stale tidigare success.
-          onStageChange={builderActive ? undefined : setBuildStage}
-          hidden={building || builderActive}
-          onBuildDone={handleBuildDone}
-        />
-      </ErrorBoundary>
+          <ErrorBoundary area="Prompt-rutan">
+            <PromptBuilder
+              isBusy={building}
+              runs={runs}
+              projectInputs={projectInputs}
+              selectedRunId={selectedRunId}
+              selectedSiteId={selectedSiteId}
+              onBuildStart={() => setBuilding(true)}
+              onBuildEnd={() => setBuilding(false)}
+              // Rapportera stage endast när PromptBuilder är "owner" av
+              // bygget. I builder-mode driver FloatingChat follow-ups så
+              // PromptBuilder:s interna stage-effekt får inte skriva över
+              // buildStage med "idle" eller en stale tidigare success.
+              onStageChange={builderActive ? undefined : setBuildStage}
+              hidden={building || builderActive}
+              onBuildDone={handleBuildDone}
+            />
+          </ErrorBoundary>
 
-      {/* Builder-shell: floating draggable chat + dolt verktygsmeny.
+          {/* Builder-shell: floating draggable chat + dolt verktygsmeny.
           Visas så snart vi har en prompt-genererad run vald. Pre-build
           eller exempel-only-runs faller tillbaka till PromptBuilder
           ovan. FloatingChat skickar follow-up-prompts till /api/prompt
           med mode:"followup" och delar build-state med page.tsx så
           ViewerPanel:s BuildProgressCard fortsätter fungera under
           rebuild-cykeln. */}
-      {builderActive && builderTarget ? (
-        <ErrorBoundary area="Builder">
-          <BuilderShell
-            siteId={builderTarget.siteId}
-            runId={selectedRunId}
-            isBuilding={building}
-            pendingBuild={pendingBuild}
-            onPendingBuildBegin={beginPending}
-            onPendingBuildClear={clearPending}
-            pendingBaseRunId={pendingBaseRunId}
-            onSetPendingBaseRunId={setPendingBaseRunId}
-            // Driv buildStage under follow-ups så ViewerPanel:s
-            // BuildProgressCard visar rätt steg. I builder-läge är
-            // PromptBuilder:s egen onStageChange avstängd, så detta är
-            // enda källan till buildStage tills bygget landar.
-            onStageChange={setBuildStage}
-            onBuildStart={() => setBuilding(true)}
-            onBuildEnd={() => {
-              setBuilding(false);
-              // Säkerhetsnet: om onPendingBuildClear inte hann kallas
-              // (t.ex. dialog som glömde rensa pending) tar vi bort den
-              // här så vi aldrig får orphan-pending-rader.
-              clearPending();
-              // OBS: pendingBaseRunId rensas INTE här. onBuildEnd kallas
-              // även när bygget misslyckas, och en operatör som klickar
-              // "Försök igen" på error-bubblan vill iterera från samma
-              // base-version — inte fall tillbaka till latest. Vi rensar
-              // istället i handleBuildDone (success-path), via TTL-guarden
-              // i usePendingBuild (5 min) och via "Iterera"-toggle.
-            }}
-            onBuildDone={(runId, outcome, visibleEffect) => {
-              // Bygget producerade en riktig version (ok/degraded) → iterationen
-              // konsumerades och ska inte oavsiktligt återanvändas av nästa
-              // fri-text-prompt. Vid ``failed`` BEHÅLLER vi base-run:en: error-
-              // bubblans "Försök igen" ska iterera från samma bas, inte falla
-              // tillbaka till latest (matchar onBuildEnd-kommentaren ovan).
-              // Signaturen i BuilderShell skickar inte siteId vidare; det löser
-              // handleBuildDone själv via runs-listan när den re-fetchar.
-              // ``visibleEffect`` (dialog-vägen) trådas vidare så studio-toasten
-              // blir ärlig om mount-only/no-op-byggen.
-              if (outcome !== "failed") setPendingBaseRunId(null);
-              handleBuildDone(runId, outcome, undefined, visibleEffect);
-            }}
-            onNewSite={() => {
-              // Återgår till pre-build-läget: rensar både selectedRunId
-              // och buildStage så hero + DiscoveryWizard tar över igen.
-              // Markera att operatören navigerat bort om ett bygge pågår
-              // så handleBuildDone inte rycker tillbaka selectedRunId.
-              if (building) userNavigatedAwayRef.current = true;
-              setSelectedRunId(null);
-              setBuildStage("idle");
-              setStatusText("Beskriv en ny sajt nedan så bygger vi den åt dig.");
-            }}
-            onOpenConsole={() => setConsoleOpen(true)}
-            onOpenHistory={() => setConsoleOpen(true)}
-          />
-        </ErrorBoundary>
-      ) : null}
+          {builderActive && builderTarget ? (
+            <ErrorBoundary area="Builder">
+              <BuilderShell
+                siteId={builderTarget.siteId}
+                runId={selectedRunId}
+                isBuilding={building}
+                pendingBuild={pendingBuild}
+                onPendingBuildBegin={beginPending}
+                onPendingBuildClear={clearPending}
+                pendingBaseRunId={pendingBaseRunId}
+                onSetPendingBaseRunId={setPendingBaseRunId}
+                // Driv buildStage under follow-ups så ViewerPanel:s
+                // BuildProgressCard visar rätt steg. I builder-läge är
+                // PromptBuilder:s egen onStageChange avstängd, så detta är
+                // enda källan till buildStage tills bygget landar.
+                onStageChange={setBuildStage}
+                onBuildStart={() => setBuilding(true)}
+                onBuildEnd={() => {
+                  setBuilding(false);
+                  // Säkerhetsnet: om onPendingBuildClear inte hann kallas
+                  // (t.ex. dialog som glömde rensa pending) tar vi bort den
+                  // här så vi aldrig får orphan-pending-rader.
+                  clearPending();
+                  // OBS: pendingBaseRunId rensas INTE här. onBuildEnd kallas
+                  // även när bygget misslyckas, och en operatör som klickar
+                  // "Försök igen" på error-bubblan vill iterera från samma
+                  // base-version — inte fall tillbaka till latest. Vi rensar
+                  // istället i handleBuildDone (success-path), via TTL-guarden
+                  // i usePendingBuild (5 min) och via "Iterera"-toggle.
+                }}
+                onBuildDone={(runId, outcome, visibleEffect) => {
+                  // Bygget producerade en riktig version (ok/degraded) → iterationen
+                  // konsumerades och ska inte oavsiktligt återanvändas av nästa
+                  // fri-text-prompt. Vid ``failed`` BEHÅLLER vi base-run:en: error-
+                  // bubblans "Försök igen" ska iterera från samma bas, inte falla
+                  // tillbaka till latest (matchar onBuildEnd-kommentaren ovan).
+                  // Signaturen i BuilderShell skickar inte siteId vidare; det löser
+                  // handleBuildDone själv via runs-listan när den re-fetchar.
+                  // ``visibleEffect`` (dialog-vägen) trådas vidare så studio-toasten
+                  // blir ärlig om mount-only/no-op-byggen.
+                  if (outcome !== "failed") setPendingBaseRunId(null);
+                  handleBuildDone(runId, outcome, undefined, visibleEffect);
+                }}
+                onNewSite={() => {
+                  // Återgår till pre-build-läget: rensar både selectedRunId
+                  // och buildStage så hero + DiscoveryWizard tar över igen.
+                  // Markera att operatören navigerat bort om ett bygge pågår
+                  // så handleBuildDone inte rycker tillbaka selectedRunId.
+                  if (building) userNavigatedAwayRef.current = true;
+                  setSelectedRunId(null);
+                  setBuildStage("idle");
+                  setStatusText(
+                    "Beskriv en ny sajt nedan så bygger vi den åt dig.",
+                  );
+                }}
+                onOpenConsole={() => setConsoleOpen(true)}
+                onOpenHistory={() => setConsoleOpen(true)}
+              />
+            </ErrorBoundary>
+          ) : null}
 
-      <ConsoleDrawer
-        open={consoleOpen}
-        onOpenChange={setConsoleOpen}
-        runs={runs}
-        projectInputs={projectInputs}
-        selectedSiteId={selectedSiteId}
-        onSelectSiteId={setSelectedSiteId}
-        selectedRunId={selectedRunId}
-        onSelectRunId={selectRunAndSyncSiteId}
-        runSiteId={runSiteId}
-        runSiteIdUnknown={runSiteIdUnknown}
-        isBuilding={building}
-        runsLoading={runsLoading}
-        statusText={statusText}
-      />
-    </main>
+          <ConsoleDrawer
+            open={consoleOpen}
+            onOpenChange={setConsoleOpen}
+            runs={runs}
+            projectInputs={projectInputs}
+            selectedSiteId={selectedSiteId}
+            onSelectSiteId={setSelectedSiteId}
+            selectedRunId={selectedRunId}
+            onSelectRunId={selectRunAndSyncSiteId}
+            runSiteId={runSiteId}
+            runSiteIdUnknown={runSiteIdUnknown}
+            isBuilding={building}
+            runsLoading={runsLoading}
+            statusText={statusText}
+          />
+        </main>
+      </PreviewInspectorProvider>
     </DevicePresetProvider>
   );
 }
@@ -625,7 +636,10 @@ function HostedNoticeBanner({ message }: { message: string }) {
       className="pointer-events-none fixed inset-x-0 top-16 z-30 mx-auto flex w-full max-w-2xl justify-center px-4"
     >
       <div className="border-border bg-card/95 text-muted-foreground pointer-events-auto flex items-start gap-2 rounded-xl border px-3 py-2 text-[12px] leading-relaxed shadow-sm backdrop-blur">
-        <Cloud className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <Cloud
+          className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0"
+          aria-hidden
+        />
         <p>{message}</p>
       </div>
     </div>
@@ -649,10 +663,7 @@ function RunsLoadErrorCard({
     >
       <div className="border-destructive/40 bg-card pointer-events-auto flex flex-col gap-3 rounded-2xl border p-4 shadow-md">
         <div className="flex items-center gap-2">
-          <WifiOff
-            className="text-destructive h-4 w-4 shrink-0"
-            aria-hidden
-          />
+          <WifiOff className="text-destructive h-4 w-4 shrink-0" aria-hidden />
           <h2 className="text-foreground text-sm font-semibold">
             Kunde inte ladda runs
           </h2>

@@ -3,6 +3,7 @@
 import {
   ChevronLeft,
   ChevronUp,
+  Crosshair,
   GitBranch,
   ImagePlus,
   Loader2,
@@ -28,6 +29,7 @@ import {
   DEVICE_PRESET_OPTIONS,
   useDevicePreset,
 } from "@/components/device-preset-context";
+import { usePreviewInspector } from "@/components/preview-inspector-context";
 import {
   classifyBuildStatus,
   outcomeToStage,
@@ -54,6 +56,7 @@ import {
   PANEL_MIN_HEIGHT,
   PROGRESS_RAMP_DURATION_MS,
   QUICK_PROMPT_CATEGORIES,
+  RESIZE_HANDLE_OVERHANG,
   TOOLBAR_ROW_HEIGHT,
 } from "./floating-chat/constants";
 import { ErrorBubble } from "./floating-chat/error-bubble";
@@ -1006,6 +1009,12 @@ export function FloatingChat({
   const [attachments, setAttachments] = useState<AssetRef[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Modulmarkeringar (sektionsmarkering i preview): skapas i Markera
+  // modul-läget i PreviewInspectorOverlay, visas som chips i composern
+  // och skickas som markedSections[] i nästa /api/prompt-anrop. Rensas
+  // efter skickat — markeringen gäller EN följdprompt, inte en session.
+  const { markedSections, removeMarkedSection, clearMarkedSections } =
+    usePreviewInspector();
   // Snabbförslag-chips ligger under en collapsed "Förslag"-toggle
   // för att hålla composern minimalistisk. State persisteras så
   // operatörens preference (kollapsad/öppen) lever över reloads.
@@ -1448,6 +1457,16 @@ export function FloatingChat({
       // Snapshot bilagorna innan vi tömmer listan så user-bubblan
       // kan visa rätt count även efter setAttachments([]).
       const sentAttachments = attachments;
+      // Snapshot modulmarkeringarna innan de rensas — de skickas som
+      // strukturerat markedSections[]-fält (routeId + sectionId ur
+      // preview-markörerna; headingText följer med som note).
+      const sentMarkedSections = markedSections.map((ref) => ({
+        routeId: ref.routeId,
+        sectionId: ref.sectionId,
+        // note cappas till 200 tecken — samma gräns som /api/prompt-zodens
+        // MarkedSectionSchema, så en lång sektionsrubrik aldrig 400:ar.
+        ...(ref.headingText ? { note: ref.headingText.slice(0, 200) } : {}),
+      }));
 
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -1467,6 +1486,7 @@ export function FloatingChat({
       setMessages((prev) => [...prev, userMessage, pendingMessage]);
       setInput("");
       setAttachments([]);
+      clearMarkedSections();
       setUploadError(null);
       setBuildProgress(0);
       setIsSending(true);
@@ -1497,6 +1517,13 @@ export function FloatingChat({
             // versionsräkningen blir max(latest, base) + 1.
             ...(pendingBaseRunId
               ? { baseRunId: pendingBaseRunId.baseRunId }
+              : {}),
+            // Sektionsmarkering i preview: strukturerade modulreferenser
+            // från Markera modul-läget. Mjuk signal — backend validerar
+            // mot base-runens emittedSections och droppar okända id:n
+            // med varning. Utelämnas helt när inga markeringar finns.
+            ...(sentMarkedSections.length > 0
+              ? { markedSections: sentMarkedSections }
               : {}),
           }),
         });
@@ -1630,6 +1657,8 @@ export function FloatingChat({
     },
     [
       attachments,
+      markedSections,
+      clearMarkedSections,
       isSending,
       isBuilding,
       isUploading,
@@ -2172,6 +2201,47 @@ export function FloatingChat({
             </div>
           ) : null}
 
+          {/* Markerade moduler (sektionsmarkering i preview). Chips med
+            routeId/sectionId + X — samma mönster som bilage-chipsen.
+            Rensas när prompten skickas (markeringen gäller en prompt). */}
+          {markedSections.length > 0 ? (
+            <div className="-mx-0.5 mb-2 flex flex-wrap gap-1">
+              {markedSections.map((ref) => (
+                <span
+                  key={`${ref.routeId}:${ref.sectionId}`}
+                  className="inline-flex max-w-full items-center gap-1 rounded-md border border-emerald-600/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-900 dark:text-emerald-200"
+                >
+                  <Crosshair
+                    className="h-3 w-3 shrink-0 text-emerald-600"
+                    aria-hidden
+                  />
+                  <span
+                    className="truncate"
+                    title={
+                      ref.headingText
+                        ? `${ref.routeId} · ${ref.sectionId} · ${ref.headingText}`
+                        : `${ref.routeId} · ${ref.sectionId}`
+                    }
+                  >
+                    {ref.routeId === "home"
+                      ? ref.sectionId
+                      : `${ref.routeId}/${ref.sectionId}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeMarkedSection(ref.routeId, ref.sectionId)
+                    }
+                    aria-label={`Ta bort markeringen ${ref.sectionId}`}
+                    className="text-emerald-700/80 hover:text-emerald-900 min-tap md:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95 dark:text-emerald-300/80 dark:hover:text-emerald-100"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
           {/* Pending-bilagor. Små chips med filnamn + X. När operatören
             skickar prompten töms listan. */}
           {attachments.length > 0 ? (
@@ -2297,37 +2367,6 @@ export function FloatingChat({
           aria-hidden
         />
 
-        {/* Resize-handtag (desktop): 4 kanter + 4 hörn. Wrappern är
-          pointer-events-none så den aldrig blockerar chat-innehållet;
-          varje handtag är pointer-events-auto med rätt resize-cursor.
-          z-50 lägger dem ovanför headern så top-kanten resize:ar i
-          stället för att dra (handleResizePointerDown stopPropagation:ar
-          så headerns drag aldrig triggas). Dolda på mobil (bottom-sheet). */}
-        {!isMobile ? (
-          <div aria-hidden className="pointer-events-none absolute inset-0 z-50">
-            {(
-              [
-                ["n", "top-0 right-3 left-3 h-1.5 cursor-ns-resize"],
-                ["s", "right-3 bottom-0 left-3 h-1.5 cursor-ns-resize"],
-                ["e", "top-3 right-0 bottom-3 w-1.5 cursor-ew-resize"],
-                ["w", "top-3 bottom-3 left-0 w-1.5 cursor-ew-resize"],
-                ["ne", "top-0 right-0 h-3 w-3 cursor-nesw-resize"],
-                ["nw", "top-0 left-0 h-3 w-3 cursor-nwse-resize"],
-                ["se", "right-0 bottom-0 h-3 w-3 cursor-nwse-resize"],
-                ["sw", "bottom-0 left-0 h-3 w-3 cursor-nesw-resize"],
-              ] as const
-            ).map(([edge, cls]) => (
-              <div
-                key={edge}
-                onPointerDown={handleResizePointerDown(edge)}
-                onPointerMove={handleResizePointerMove}
-                onPointerUp={handleResizePointerUp}
-                onPointerCancel={handleResizePointerUp}
-                className={cn("pointer-events-auto absolute", cls)}
-              />
-            ))}
-          </div>
-        ) : null}
       </aside>
 
       {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-
@@ -2392,6 +2431,54 @@ export function FloatingChat({
               {tools}
             </>
           ) : null}
+        </div>
+      ) : null}
+
+      {/* Resize-handtag (desktop): ett fixed lager som spänner över HELA
+        fönstret (chat-panelen + toolbar-raden = en visuell rektangel) och
+        sticker ut 4px utanför kanten, som riktiga OS-/webbläsarfönster.
+        Tidigare bodde handtagen inne i chat-panelen: dels klipptes de av
+        panelens overflow-hidden så de yttersta pixlarna träffade bordern
+        i stället för handtaget, dels saknade toolbar-raden (fönstrets
+        visuella nederkant) handtag helt — operatörsfynd 2026-06-10:
+        "går bara att dra uppe". Wrappern är pointer-events-none så den
+        aldrig blockerar chat-innehållet; varje handtag är pointer-
+        events-auto med rätt resize-cursor. z-50 lägger dem ovanför
+        headern så top-kanten resize:ar i stället för att dra
+        (handleResizePointerDown stopPropagation:ar). */}
+      {!isMobile && !isMinimized && position ? (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed z-50"
+          style={{
+            left: position.x - RESIZE_HANDLE_OVERHANG,
+            top: position.y - RESIZE_HANDLE_OVERHANG,
+            width: size.width + RESIZE_HANDLE_OVERHANG * 2,
+            height:
+              size.height + TOOLBAR_ROW_HEIGHT + RESIZE_HANDLE_OVERHANG * 2,
+          }}
+        >
+          {(
+            [
+              ["n", "top-0 right-4 left-4 h-2.5 cursor-ns-resize"],
+              ["s", "right-4 bottom-0 left-4 h-2.5 cursor-ns-resize"],
+              ["e", "top-4 right-0 bottom-4 w-2.5 cursor-ew-resize"],
+              ["w", "top-4 bottom-4 left-0 w-2.5 cursor-ew-resize"],
+              ["ne", "top-0 right-0 h-4 w-4 cursor-nesw-resize"],
+              ["nw", "top-0 left-0 h-4 w-4 cursor-nwse-resize"],
+              ["se", "right-0 bottom-0 h-4 w-4 cursor-nwse-resize"],
+              ["sw", "bottom-0 left-0 h-4 w-4 cursor-nesw-resize"],
+            ] as const
+          ).map(([edge, cls]) => (
+            <div
+              key={edge}
+              onPointerDown={handleResizePointerDown(edge)}
+              onPointerMove={handleResizePointerMove}
+              onPointerUp={handleResizePointerUp}
+              onPointerCancel={handleResizePointerUp}
+              className={cn("pointer-events-auto absolute", cls)}
+            />
+          ))}
         </div>
       ) : null}
     </>

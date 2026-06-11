@@ -2408,6 +2408,108 @@ def _prompt_meta_unapplied_followup_intents(
     return posts
 
 
+# ADR 0046 traceability: validated/dropped preview markings carried on the
+# meta sidecar by prompt_to_project_input.py. Same defensive-parsing posture
+# as _prompt_meta_unapplied_followup_intents — Viewser reads the lists
+# verbatim, so a malformed sidecar must never smuggle oversized payloads.
+_FOCUS_SECTION_ID_MAX_LENGTH = 80
+_FOCUS_SECTION_NOTE_MAX_LENGTH = 200
+_FOCUS_SECTION_REASON_MAX_LENGTH = 400
+_FOCUS_SECTION_MAX_ITEMS = 5
+
+
+def _prompt_meta_focus_sections(
+    prompt_meta: dict[str, Any] | None,
+    key: str,
+) -> list[dict[str, str]]:
+    """Return validated focus-section entries from the prompt sidecar.
+
+    ``key`` is ``"appliedFocusSections"`` or ``"droppedFocusSections"``.
+    Each entry is ``{"routeId", "sectionId", "note"?, "reason"?}`` (ADR
+    0046). Malformed entries are skipped, duplicates deduped on
+    (routeId, sectionId), strings capped, list bounded.
+    """
+    if not prompt_meta:
+        return []
+    raw = prompt_meta.get(key)
+    if not isinstance(raw, list):
+        return []
+    posts: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        route_id = item.get("routeId")
+        section_id = item.get("sectionId")
+        if not isinstance(route_id, str) or not isinstance(section_id, str):
+            continue
+        route_id = route_id.strip()[:_FOCUS_SECTION_ID_MAX_LENGTH]
+        section_id = section_id.strip()[:_FOCUS_SECTION_ID_MAX_LENGTH]
+        if not route_id or not section_id or (route_id, section_id) in seen:
+            continue
+        seen.add((route_id, section_id))
+        post: dict[str, str] = {"routeId": route_id, "sectionId": section_id}
+        note = item.get("note")
+        if isinstance(note, str) and note.strip():
+            post["note"] = note.strip()[:_FOCUS_SECTION_NOTE_MAX_LENGTH]
+        reason = item.get("reason")
+        if isinstance(reason, str) and reason.strip():
+            post["reason"] = reason.strip()[:_FOCUS_SECTION_REASON_MAX_LENGTH]
+        posts.append(post)
+        if len(posts) >= _FOCUS_SECTION_MAX_ITEMS:
+            break
+    return posts
+
+
+# Preview-markeringskontraktet (sektionsmarkering i preview): markörerna
+# emitteras av dispatchern/sidshims som data-section-id-attribut; build-result
+# fångar dem per route som suppression-aware facit för viewser-overlayn.
+_SECTION_MARKER_PATTERN = re.compile(r'data-section-id="([a-z0-9-]+)"')
+
+
+def collect_emitted_sections(
+    snapshot_dir: Path,
+    segment_to_route_id: dict[str, str],
+) -> dict[str, list[str]]:
+    """Return ``{routeId: [sectionId, ...]}`` from the generated-files snapshot.
+
+    Scans every ``app/**/page.tsx`` in the snapshot for the
+    ``data-section-id`` markers the section dispatcher stamped during
+    render and maps the file's URL segment back to the scaffold route id
+    via the site plan's routePlan (same translation as the targeted-render
+    diff). Because the scan reads what was actually written, runtime-
+    suppressed sections (empty fragments) never appear - the list is the
+    honest facit the preview overlay and follow-up validation use, not
+    sections.json's declared superset. Ids keep document order and are
+    deduplicated (hero emits two <section> elements for one id). Segments
+    missing from the routePlan map fall back to the raw segment so a
+    dossier-driven extra route is still traceable. Returns ``{}`` when the
+    snapshot has no app dir (failed/skipped runs).
+    """
+    app_dir = snapshot_dir / "app"
+    if not app_dir.is_dir():
+        return {}
+    emitted: dict[str, list[str]] = {}
+    for page_file in sorted(app_dir.rglob("page.tsx")):
+        try:
+            source = page_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        section_ids: list[str] = []
+        for match in _SECTION_MARKER_PATTERN.finditer(source):
+            section_id = match.group(1)
+            if section_id not in section_ids:
+                section_ids.append(section_id)
+        if not section_ids:
+            continue
+        segment = page_file.parent.relative_to(app_dir).as_posix()
+        if segment == ".":
+            segment = ""
+        route_id = segment_to_route_id.get(segment) or segment or "home"
+        emitted[route_id] = section_ids
+    return emitted
+
+
 def write_build_result(
     run_dir: Path,
     trace: Trace,
@@ -2527,10 +2629,32 @@ def write_build_result(
     unapplied_followup_intents = _prompt_meta_unapplied_followup_intents(prompt_meta)
     if unapplied_followup_intents:
         result["unappliedFollowupIntents"] = unapplied_followup_intents
+    # ADR 0046 traceability: mirror the operator's validated preview markings
+    # (and the honestly dropped ones) from the meta sidecar so the viewser
+    # changeSet can show what the operator pointed at in this version.
+    applied_focus_sections = _prompt_meta_focus_sections(
+        prompt_meta, "appliedFocusSections"
+    )
+    if applied_focus_sections:
+        result["appliedFocusSections"] = applied_focus_sections
+    dropped_focus_sections = _prompt_meta_focus_sections(
+        prompt_meta, "droppedFocusSections"
+    )
+    if dropped_focus_sections:
+        result["droppedFocusSections"] = dropped_focus_sections
     if codegen_summary is not None:
         result["codegen"] = codegen_summary
     if active_build_id is not None:
         result["activeBuildId"] = active_build_id
+    # Sektionsmarkering i preview: per-route facit över de data-section-id-
+    # markörer som faktiskt skrevs till snapshoten. Emitteras bara när
+    # snapshoten finns och innehåller markörer (äldre runs/failed runs får
+    # aldrig ett tomt fält).
+    emitted_sections = collect_emitted_sections(
+        snap_dir, _route_segment_to_id_map(run_dir)
+    )
+    if emitted_sections:
+        result["emittedSections"] = emitted_sections
     write_json(run_dir / "build-result.json", result)
     if unapplied_followup_intents:
         trace.event(

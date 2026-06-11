@@ -39,7 +39,37 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 
-def classify_to_json(message: str, site_id: str | None = None) -> str:
+def _parse_route_sections(raw: str | None) -> dict[str, list[str]]:
+    """Parse the optional ``--route-sections`` JSON into RouterContext shape.
+
+    ADR 0046: the caller (viewser /api/prompt) forwards the operator's
+    preview markings as ``{routeId: [sectionId, ...]}`` — read-only
+    prioritisation context the router may use for section resolution.
+    Malformed payloads degrade to ``{}`` (never break classification).
+    """
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    route_sections: dict[str, list[str]] = {}
+    for route_id, section_ids in payload.items():
+        if not isinstance(route_id, str) or not isinstance(section_ids, list):
+            continue
+        cleaned = [item for item in section_ids if isinstance(item, str)]
+        if cleaned:
+            route_sections[route_id] = cleaned
+    return route_sections
+
+
+def classify_to_json(
+    message: str,
+    site_id: str | None = None,
+    route_sections: dict[str, list[str]] | None = None,
+) -> str:
     """Classify ``message`` and return RouterDecision JSON (one line).
 
     Deferred import keeps the package dependency inside the function (mirrors
@@ -50,7 +80,11 @@ def classify_to_json(message: str, site_id: str | None = None) -> str:
         classify_message,
     )
 
-    context = RouterContext(siteId=site_id) if site_id else None
+    context = (
+        RouterContext(siteId=site_id, routeSections=route_sections or {})
+        if site_id or route_sections
+        else None
+    )
     decision = classify_message(message, context=context)
     return json.dumps(decision.model_dump(), ensure_ascii=False)
 
@@ -71,6 +105,15 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--route-sections",
+        default=None,
+        help=(
+            "Optional JSON object {routeId: [sectionId, ...]} for "
+            "RouterContext.routeSections (ADR 0046 preview markings). "
+            "Read-only context; malformed payloads are ignored."
+        ),
+    )
+    parser.add_argument(
         "message",
         nargs="?",
         default=None,
@@ -82,7 +125,13 @@ def main() -> int:
         print("classify_message.py requires a message argument.", file=sys.stderr)
         return 1
 
-    print(classify_to_json(args.message, site_id=args.site_id))
+    print(
+        classify_to_json(
+            args.message,
+            site_id=args.site_id,
+            route_sections=_parse_route_sections(args.route_sections),
+        )
+    )
     return 0
 
 

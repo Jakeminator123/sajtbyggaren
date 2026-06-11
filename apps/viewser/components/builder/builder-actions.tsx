@@ -2,6 +2,7 @@
 
 import {
   Blocks,
+  Crosshair,
   Globe,
   History,
   ImagePlus,
@@ -60,7 +61,8 @@ export type BuilderActionIcon =
   | "globe"
   | "rebuild"
   | "ask"
-  | "inspect";
+  | "inspect"
+  | "preview-inspect";
 
 export type BuilderAction = {
   id: string;
@@ -134,6 +136,8 @@ function iconComponent(kind: BuilderActionIcon) {
       return MessageCircleQuestion;
     case "inspect":
       return ScanSearch;
+    case "preview-inspect":
+      return Crosshair;
     default:
       return Settings2;
   }
@@ -279,7 +283,7 @@ export function BuilderActions({
         isInline
           ? "pointer-events-auto relative hidden md:inline-flex"
           : cn(
-              "pointer-events-none fixed bottom-safe-6 z-40 hidden md:flex flex-col items-start gap-2",
+              "bottom-safe-6 pointer-events-none fixed z-40 hidden flex-col items-start gap-2 md:flex",
               side === "left" ? "left-6 items-start" : "right-6 items-end",
             ),
       )}
@@ -292,7 +296,7 @@ export function BuilderActions({
           aria-label="Builder-verktyg"
           className={cn(
             "border-border/60 bg-card/95 pointer-events-auto flex w-[230px] flex-col gap-0.5 rounded-xl border p-1 shadow-2xl backdrop-blur-xl",
-            "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150 origin-bottom",
+            "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 origin-bottom motion-safe:duration-150",
           )}
         >
           {Array.from(groupedActions.entries()).map(
@@ -395,7 +399,7 @@ export function BuilderActions({
                     className={cn(
                       "group border-border/60 bg-card/80 flex flex-col items-center gap-2 rounded-xl border p-3 text-center shadow-sm transition",
                       "hover:bg-card hover:border-border focus-visible:ring-ring/50 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                      "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-card/80",
+                      "disabled:hover:bg-card/80 disabled:cursor-not-allowed disabled:opacity-45",
                       action.isDestructive && "hover:border-destructive/60",
                     )}
                   >

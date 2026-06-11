@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 
 import {
   useFollowupBuild,
+  type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
 import { Button } from "@/components/ui/button";
@@ -222,7 +223,14 @@ export function ScrapeUrlDialog({
   const handleApply = useCallback(async () => {
     if (!scrapedData || !scrapedUrl) return;
     const prompt = buildPromptFromData(scrapedUrl, scrapedData);
-    const result = await runFollowup(prompt);
+    // Strukturerad intent (specialist-dispatch steg 2): de råa scrape-
+    // fälten skickas som data så copy-specialisten (copyDirectiveModel
+    // i extraktionsläge) slipper re-parsa den serialiserade prompttexten.
+    const toolIntent: FollowupToolIntent = {
+      tool: "content_import",
+      params: { sourceUrl: scrapedUrl, fields: scrapedData },
+    };
+    const result = await runFollowup(prompt, { toolIntent });
     if (result.ok) handleClose(false);
   }, [scrapedData, scrapedUrl, runFollowup, handleClose]);
 

@@ -34,6 +34,31 @@ function readVersion(bundle: RunArtefactBundle): number | null {
 }
 
 /**
+ * ADR 0046: läs `appliedFocusSections` ur build-result.json defensivt —
+ * build_site.py har redan validerat/cappat posterna, men fält-drift på
+ * äldre runs får aldrig fälla changeSet:et. Trasiga poster skippas.
+ */
+function readAppliedFocusSections(
+  bundle: RunArtefactBundle,
+): { routeId: string; sectionId: string; note?: string }[] {
+  const raw = bundle.buildResult?.appliedFocusSections;
+  if (!Array.isArray(raw)) return [];
+  const entries: { routeId: string; sectionId: string; note?: string }[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const { routeId, sectionId, note } = item as Record<string, unknown>;
+    if (typeof routeId !== "string" || typeof sectionId !== "string") continue;
+    entries.push({
+      routeId,
+      sectionId,
+      ...(typeof note === "string" && note ? { note } : {}),
+    });
+    if (entries.length >= 5) break;
+  }
+  return entries;
+}
+
+/**
  * Hitta runen som follow-upen itererade från. Prioritetsordning:
  *   1. Explicit `baseRunId` (operatören klickade "Iterera från denna").
  *   2. Runen för samma siteId med version === currentVersion - 1.
@@ -105,10 +130,15 @@ export async function readRunChangeSet(
   const diff = computeRunDiff(previous, current);
   const variantChanged =
     !diff.variant.equal && Boolean(diff.variant.before || diff.variant.after);
+  // ADR 0046: markeringarna räknas som ett eget exakt delta — en follow-up
+  // som bara ändrade copy i en markerad sektion ska fortfarande ge ett
+  // changeSet så FloatingChat kan visa vad operatören pekade på.
+  const appliedFocusSections = readAppliedFocusSections(current);
   const hasExactDelta =
     diff.routesAdded.length > 0 ||
     diff.routesRemoved.length > 0 ||
-    variantChanged;
+    variantChanged ||
+    appliedFocusSections.length > 0;
   if (!hasExactDelta) return null;
 
   return {
@@ -117,5 +147,6 @@ export async function readRunChangeSet(
     routesRemoved: diff.routesRemoved,
     variantBefore: variantChanged ? diff.variant.before : null,
     variantAfter: variantChanged ? diff.variant.after : null,
+    appliedFocusSections,
   };
 }

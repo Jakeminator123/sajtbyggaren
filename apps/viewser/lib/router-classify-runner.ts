@@ -45,6 +45,12 @@ export type RouterDecisionPayload = Record<string, unknown>;
 export type ClassifyMessageOptions = {
   /** Optional siteId passed as RouterContext metadata (never read from disk). */
   siteId?: string;
+  /**
+   * ADR 0046: operatörens preview-markeringar som RouterContext.routeSections
+   * ({routeId: [sectionId, ...]}). Read-only prioriteringssignal — påverkar
+   * aldrig build/preview och Python-sidan ignorerar trasiga payloads.
+   */
+  routeSections?: Record<string, string[]>;
 };
 
 /**
@@ -63,6 +69,9 @@ export async function classifyMessage(
   const scriptPath = path.join(repoRoot(), "scripts", "classify_message.py");
   const args = [scriptPath];
   if (options.siteId) args.push("--site-id", options.siteId);
+  if (options.routeSections && Object.keys(options.routeSections).length > 0) {
+    args.push("--route-sections", JSON.stringify(options.routeSections));
+  }
   // The `--` separator stops argparse from treating a prompt that starts with
   // `-`/`--` as a CLI option (same guard as prompt-runner.ts).
   args.push("--", trimmed);

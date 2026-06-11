@@ -274,6 +274,13 @@ COMMON_WORDS = {
     # Same treatment as PruneReport / AuditResult - implementation
     # details for a tooling helper, not canonical domain terms.
     "BumpResult", "PullRequestSummary",
+    # scripts/eval_gate.py implementation symbols (eval-baseline regression
+    # gate). GateResult / GateTolerance are local dataclasses; same treatment
+    # as PruneReport / AuditResult / BumpResult above - tooling implementation,
+    # not canonical domain terms. TemporaryDirectory is the Python stdlib
+    # context manager the gate uses for isolated work dirs (same category as
+    # ArgumentParser / SimpleNamespace above).
+    "GateResult", "GateTolerance", "TemporaryDirectory",
     # Sprintvakt V1 local tooling implementation symbols. Sprintvakt is
     # an operator workflow/tooling label, while these names are Python
     # exception/type-alias identifiers inside tooling/sprintvakt_mcp.
@@ -624,6 +631,10 @@ COMMON_WORDS = {
     # UI-gap-fix (juni 2026): exakt change-set i FloatingChat ("Ändrat")
     # härledd ur run-diff istället för prompt-heuristik ("Troligen ändrat").
     "RunChangeSet",
+    # Sektionsmarkering i preview (ADR 0046): MarkedSectionRef är registrerad
+    # som canonical domänterm i naming-dictionary; dessa är lokala
+    # implementationssymboler runt overlay-läget och zod-valideringen.
+    "MarkedSectionSchema", "MarkableSection",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",
@@ -795,6 +806,34 @@ COMMON_WORDS = {
     # från builder-dialoger (use-followup-build.ts). UI-lokal typ tills
     # backend-dispatchen landar och kontraktet ev. kanoniseras.
     "FollowupToolIntent",
+    # Preview-inspector (peka-i-previewn, porterad från sajtmaskin med
+    # Jakob-OK 2026-06-10): viewser-lokala symboler i apps/viewser/
+    # lib/inspector/, app/api/inspector-*/route.ts samt komponenterna
+    # preview-inspector-context.tsx / preview-inspector-overlay.tsx.
+    # Typer för element-kartan, sektionszoner, platsval och Playwright-
+    # motorn — inga canonical domänbegrepp (samma lokala behandling som
+    # AddModuleDialog-symbolerna ovan). AppleWebKit/HeadersInit/MouseEvent
+    # är plattformsnamn (UA-sträng, DOM lib-typer), inte domäntermer.
+    "AppleWebKit",
+    "CapturePointDetails", "CaptureRequestSchema", "CaptureResponse",
+    "CapturedElement",
+    "ElementMapItem", "ElementMapRequestSchema", "ElementMapResponse",
+    "HeadersInit",
+    "InsertionPoint", "InspectedElement", "DropResizeEdge",
+    "InspectorPageUnavailable", "InspectorTargetCheck",
+    "MapFetchState", "MouseEvent", "MousePointerClick",
+    "PlacementPick", "PlacementDragPayload", "PlacementRequester",
+    "RequestPlacementPickOptions", "PlaywrightModule",
+    # Wireframe-mockups för drag-läget (module-mockups.tsx) + bannern.
+    "BuildProgressBanner",
+    "ModuleMockup", "GalleryMockup", "ContactFormMockup", "FaqMockup",
+    "TestimonialsMockup", "PricingMockup", "MapMockup",
+    "OpeningHoursMockup", "TeamMockup", "TrustBadgesMockup",
+    "GenericSectionMockup", "ReactElement",
+    "PreviewInspectorContext", "PreviewInspectorContextValue",
+    "PreviewInspectorOverlay", "PreviewInspectorProvider",
+    "ReactMouseEvent",
+    "SectionKind", "SectionZone",
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",
