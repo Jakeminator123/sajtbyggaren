@@ -82,6 +82,7 @@ def orchestrate(
     message: str,
     *,
     router_context: RouterContext | None = None,
+    router: RouterDecision | None = None,
     **context_kwargs: object,
 ) -> OpenClawDecision:
     """Run ``classify_message`` -> ``assemble_context`` -> ``decide``.
@@ -93,8 +94,16 @@ def orchestrate(
     ``assemble_context`` (e.g. ``site_id=``, ``run_id=``, ``paths=``); the
     context level is taken from the router so the assembler fetches exactly
     what the router asked for and nothing more.
+
+    ``router`` (additive, KÖR-6b bridge wiring): a caller that ALREADY ran the
+    router - e.g. once per CLI invocation, possibly via the routerModel
+    fallback - injects its decision here so the message is never classified
+    twice (and an escalated message never costs two model calls). ``None``
+    keeps the exact previous behaviour (deterministic ``classify_message``).
+    One router truth either way: ``decide`` still never re-classifies.
     """
-    router = classify_message(message, context=router_context)
+    if router is None:
+        router = classify_message(message, context=router_context)
     # Forward an external reference URL so the assembler can fetch reference
     # context: assemble_context("external_reference") needs ``url`` (kor-7a),
     # otherwise an OpenClaw reference plan would be built on empty context.

@@ -494,3 +494,30 @@ def test_genuine_conversation_stays_answer_only_after_infinitive_verbs(
     decision = classify_conversation(message)
     assert decision.conversationKind == expected_kind, message
     assert decision.expectsAnswer is True, message
+
+
+# ---------------------------------------------------------------------------
+# 6. KÖR-6b bridge wiring: an injected RouterDecision skips re-classification
+# ---------------------------------------------------------------------------
+
+
+def test_classify_conversation_accepts_injected_router(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The bridge classifies ONCE and injects the decision; the conversation
+    labelling composes it verbatim without calling either classifier again."""
+    import packages.generation.orchestration.openclaw.roles as roles
+
+    injected = classify_message("gör sajten mörkblå")
+
+    def _explode(*args, **kwargs):  # pragma: no cover - reaching this IS the bug
+        raise AssertionError(
+            "classify_conversation must not re-classify an injected router"
+        )
+
+    monkeypatch.setattr(roles, "classify_message", _explode)
+    monkeypatch.setattr(roles, "classify_message_with_llm_fallback", _explode)
+    decision = roles.classify_conversation("gör sajten mörkblå", router=injected)
+    assert decision.conversationKind == "edit"
+    assert decision.role == "stylist"
+    assert decision.messageKind == injected.messageKind

@@ -17,9 +17,17 @@ Guarantees (inherited from OpenClaw Core V0 + classify_message.py):
     - READ-ONLY. Prints the payload JSON as the final stdout line behind the
       ``OPENCLAW_BRIDGE_JSON:`` sentinel prefix (B174 contract with
       apps/viewser/lib/openclaw-runner.ts); no disk write, no build, no
-      preview, no shell, no network, no ``current.json`` mutation.
-    - DETERMINISTIC. ``classify_message`` (KÖR-6a) + the pure ``decide``; no
-      LLM, no ``OPENAI_API_KEY``, no per-prompt cost.
+      preview, no shell, no ``current.json`` mutation.
+    - DETERMINISTIC-FIRST. ``classify_message`` (KÖR-6a) + the pure ``decide``.
+      Since 2026-06-11 the router half MAY escalate an ambiguous message
+      (unclear / long / complex multi-intent - ``needs_llm_fallback``) to
+      ``routerModel`` (KÖR-6b), exactly as the chain in build_site.py already
+      does. A confident heuristic decision never calls the LLM, without
+      ``OPENAI_API_KEY`` the fallback IS the heuristic (no-key parity), and
+      ``OPENCLAW_ROUTER_LLM_FALLBACK=0`` restores the pure-heuristic mode.
+      The message is classified ONCE per invocation (the conversation layer
+      and Core V0 share the same RouterDecision), so an escalated message
+      costs at most ONE model call.
     - HONEST. An edit instruction returns ``action_bridge_missing`` rather than
       a faked applied change; ``appliedVisibleEffect`` stays False until the
       action bridge lands.
@@ -118,18 +126,61 @@ _CONVERSATION_DECISION_ANSWERS = {
 }
 
 
-def _classify_conversation(message: str, *, site_id: str | None):
-    """Run the slice-1 conductor classification (deterministic, no LLM).
+# KÖR-6b in the bridge (2026-06-11): the router half may escalate ambiguous
+# messages to routerModel. Kill-switch (same off-tokens as the repo's other
+# boolean envs); default ON because the chain (run_followup_chain) already
+# escalates - the bridge gate staying regex-only just made the two halves
+# disagree on exactly the ambiguous messages the fallback exists for.
+_ROUTER_FALLBACK_ENV = "OPENCLAW_ROUTER_LLM_FALLBACK"
+_ENV_OFF_VALUES = frozenset({"0", "false", "no", "off"})
+
+
+def _router_fallback_enabled() -> bool:
+    import os
+
+    value = os.environ.get(_ROUTER_FALLBACK_ENV, "")
+    return value.strip().lower() not in _ENV_OFF_VALUES
+
+
+def _classify_router(message: str, *, site_id: str | None):
+    """The ONE router classification per CLI invocation (KÖR-6a/6b).
+
+    Both layers (the conductor conversation labelling and the Core V0
+    decision) compose THIS decision, so an escalated message costs at most
+    one routerModel call - never one per layer. With the kill-switch off (or
+    no ``OPENAI_API_KEY``) this is exactly the deterministic KÖR-6a heuristic.
+    """
+    from packages.generation.orchestration.router import (
+        RouterContext,
+        classify_message,
+        classify_message_with_llm_fallback,
+    )
+
+    router_context = RouterContext(siteId=site_id) if site_id else None
+    if _router_fallback_enabled():
+        return classify_message_with_llm_fallback(message, context=router_context)
+    return classify_message(message, context=router_context)
+
+
+def _classify_conversation(message: str, *, site_id: str | None, router=None):
+    """Run the slice-1 conductor classification (deterministic labelling).
 
     Deferred import for the same import-light reason as ``_decide``. The
-    classification composes the unchanged router; ``model_fallback`` stays
-    False so this seam never costs an ``OPENAI_API_KEY`` call.
+    classification composes the unchanged router; the shared ``router``
+    decision from ``_classify_router`` is injected so the message is never
+    classified twice. ``model_fallback`` mirrors the bridge switch so the
+    decision's ``source`` label reports honestly how routing was produced.
     """
     from packages.generation.orchestration.openclaw import classify_conversation
     from packages.generation.orchestration.router import RouterContext
 
     router_context = RouterContext(siteId=site_id) if site_id else None
-    return classify_conversation(message, context=router_context)
+    return classify_conversation(
+        message,
+        context=router_context,
+        model_fallback=_router_fallback_enabled(),
+        router=router,
+    )
 
 
 def _conversation_metadata(conversation) -> dict[str, object]:
@@ -158,6 +209,7 @@ def _conversation_answer_decision(
     *,
     site_id: str | None,
     base_run_id: str | None,
+    router=None,
 ):
     """Build the honest answer-only decision for a conversation kind.
 
@@ -168,7 +220,9 @@ def _conversation_answer_decision(
     """
     from packages.generation.orchestration.openclaw import OpenClawDecision
 
-    base = _decide(message, site_id=site_id, base_run_id=base_run_id)
+    base = _decide(
+        message, site_id=site_id, base_run_id=base_run_id, router=router
+    )
     return OpenClawDecision(
         router=base.router,
         context=base.context,
@@ -201,12 +255,20 @@ def _latest_run_id(site_id: str) -> str | None:
     return run_dir.name if run_dir is not None else None
 
 
-def _decide(message: str, *, site_id: str | None, base_run_id: str | None):
+def _decide(
+    message: str,
+    *,
+    site_id: str | None,
+    base_run_id: str | None,
+    router=None,
+):
     """Run OpenClaw Core V0 read-only and return the ``OpenClawDecision``.
 
     Deferred import keeps the package dependency inside the function (mirrors
     ``scripts/classify_message.py`` / ``scripts/dev_generate.py``) so the module
-    stays import-light and ruff-clean.
+    stays import-light and ruff-clean. The shared ``router`` decision from
+    ``_classify_router`` is injected into ``orchestrate`` so the message is
+    never classified twice per invocation.
     """
     from packages.generation.orchestration.openclaw import orchestrate
     from packages.generation.orchestration.router import RouterContext
@@ -225,7 +287,9 @@ def _decide(message: str, *, site_id: str | None, base_run_id: str | None):
         # The context level is taken from the router; run_id only matters when
         # the router asks for site/run context. Forwarded verbatim (read-only).
         context_kwargs["run_id"] = base_run_id
-    return orchestrate(message, router_context=router_context, **context_kwargs)
+    return orchestrate(
+        message, router_context=router_context, router=router, **context_kwargs
+    )
 
 
 def decide_to_json(
@@ -242,13 +306,22 @@ def decide_to_json(
     answer-only decision instead of e.g. a clarification. Everything else -
     edits included - keeps the exact same decision as before.
     """
-    conversation = _classify_conversation(message, site_id=site_id)
+    router = _classify_router(message, site_id=site_id)
+    conversation = _classify_conversation(
+        message, site_id=site_id, router=router
+    )
     if conversation.conversationKind in _ANSWER_ONLY_CONVERSATION_KINDS:
         decision = _conversation_answer_decision(
-            message, conversation, site_id=site_id, base_run_id=base_run_id
+            message,
+            conversation,
+            site_id=site_id,
+            base_run_id=base_run_id,
+            router=router,
         )
     else:
-        decision = _decide(message, site_id=site_id, base_run_id=base_run_id)
+        decision = _decide(
+            message, site_id=site_id, base_run_id=base_run_id, router=router
+        )
     payload = decision.model_dump()
     payload["conversation"] = _conversation_metadata(conversation)
     return json.dumps(payload, ensure_ascii=False)
@@ -289,7 +362,10 @@ def apply_followup_to_json(
     An edit keeps the EXACT flow below unchanged; its owning role is attached
     as ``conversation`` metadata only.
     """
-    conversation = _classify_conversation(message, site_id=site_id)
+    router = _classify_router(message, site_id=site_id)
+    conversation = _classify_conversation(
+        message, site_id=site_id, router=router
+    )
     bridge: dict[str, object] = {
         "status": "no_build_needed",
         "applied": False,
@@ -298,7 +374,11 @@ def apply_followup_to_json(
     }
     if conversation.conversationKind in _ANSWER_ONLY_CONVERSATION_KINDS:
         decision = _conversation_answer_decision(
-            message, conversation, site_id=site_id, base_run_id=base_run_id
+            message,
+            conversation,
+            site_id=site_id,
+            base_run_id=base_run_id,
+            router=router,
         )
         decision_payload = decision.model_dump()
         decision_payload["conversation"] = _conversation_metadata(conversation)
@@ -307,7 +387,9 @@ def apply_followup_to_json(
             ensure_ascii=False,
         )
 
-    decision = _decide(message, site_id=site_id, base_run_id=base_run_id)
+    decision = _decide(
+        message, site_id=site_id, base_run_id=base_run_id, router=router
+    )
     if decision.action == "patch_plan_request":
         from scripts.build_site import run_followup_chain
 
@@ -350,8 +432,9 @@ def main() -> int:
         description=(
             "Emit a read-only OpenClaw follow-up decision (answer_only / "
             "clarification / plan_only / patch_plan_request) as schema-stable "
-            "JSON. Deterministic KÖR-6a router + OpenClaw Core V0; no LLM, no "
-            "build, no preview."
+            "JSON. Deterministic-first KÖR-6a router (ambiguous messages may "
+            "escalate to routerModel, KÖR-6b; OPENCLAW_ROUTER_LLM_FALLBACK=0 "
+            "disables) + OpenClaw Core V0; no build, no preview."
         )
     )
     parser.add_argument(

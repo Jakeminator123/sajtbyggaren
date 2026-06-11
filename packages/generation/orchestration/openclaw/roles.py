@@ -370,6 +370,7 @@ def classify_conversation(
     *,
     context: RouterContext | None = None,
     model_fallback: bool = False,  # noqa: FBT001, FBT002
+    router: RouterDecision | None = None,
 ) -> ConversationDecision:
     """Classify a follow-up into a conductor ``ConversationDecision``.
 
@@ -381,6 +382,12 @@ def classify_conversation(
     without ``OPENAI_API_KEY`` (the optional ``model_fallback`` only lets the
     router half consult ``routerModel``, which is itself no-key safe).
 
+    ``router`` (additive, KÖR-6b bridge wiring): a caller that ALREADY ran the
+    router injects its decision so the message is never classified twice (and
+    an escalated message never costs two model calls). The conversation
+    labelling on top stays deterministic either way; ``model_fallback`` then
+    only reports HOW the injected decision was produced (the ``source`` label).
+
     Branch order matters (B181): a ``bug_report`` / ``reference_analysis``
     is guarded to ``other`` right after the edit passthrough (those kinds
     have their own downstream handling and must never be relabelled by a
@@ -389,11 +396,12 @@ def classify_conversation(
     keeps its site context instead of being answered as chit-chat.
     """
     ctx = context or RouterContext()
-    router = (
-        classify_message_with_llm_fallback(message, context=ctx)
-        if model_fallback
-        else classify_message(message, context=ctx)
-    )
+    if router is None:
+        router = (
+            classify_message_with_llm_fallback(message, context=ctx)
+            if model_fallback
+            else classify_message(message, context=ctx)
+        )
 
     raw = message or ""
     text = _normalize(raw)
