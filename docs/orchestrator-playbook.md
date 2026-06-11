@@ -319,9 +319,13 @@ python -m pytest tests/test_docs_freshness.py tests/test_no_legacy_terms.py -q
 Minsta kod-/builder-checks:
 
 ```powershell
-python scripts/review_check.py
-python -m pytest tests/ -q
+python scripts/review_check.py --core
+python -m pytest tests/test_<berörd-svit>*.py -q
 ```
+
+Riktade tester är lokal default (operatörsbeslut 2026-06-11); full svit
+körs av CI på PR:en. Full svit lokalt bara vid breda ändringar:
+`python -m pytest tests/ -q -n auto` (pytest-xdist, se `docs/testing.md`).
 
 När buildern skriver generated preview-output lokalt, sätt
 `SAJTBYGGAREN_GENERATED_DIR` till en isolerad katalog under `.generated/` så

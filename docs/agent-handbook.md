@@ -80,7 +80,10 @@ Kort lista över det som oftast missas av agenten men fångas av en reviewer-run
    - `python scripts/governance_validate.py`
    - `python scripts/rules_sync.py --check`
    - `python scripts/check_term_coverage.py --strict`
-   - `python -m pytest tests/ -q`
+   - riktade pytest-sviter för ändrade filer/paket (lokal default,
+     operatörsbeslut 2026-06-11); full svit kör CI på PR:en. Full svit
+     lokalt bara vid breda ändringar: `python -m pytest tests/ -q -n auto`
+     (pytest-xdist, se `docs/testing.md`)
 5. Verifiera scope. En sprint som rör fil X ska deklarera X i sin scope-rad.
    Scope-läckage är värt en blocker, inte ett godkännande med kommentar.
 6. Naming-dictionary. Nya canonical termer kräver ADR. Lokala TS/Python-symboler bor i `scripts/check_term_coverage.py:COMMON_WORDS`.

@@ -45,7 +45,9 @@ Se `01-arkitekturval.md` (G5).
 - Redigera ALDRIG `.cursor/rules/` direkt — källan ligger i `governance/rules/`.
 - Skriv nya arkitekturbeslut som ADR under `governance/decisions/` (nästa lediga nummer).
 - Jobba på egen branch, committa, öppna PR — merga ALDRIG till `main` själv.
-- Kör guards före commit: `python -m ruff check .`, `python -m pytest tests/ -q`,
+- Kör guards före commit: `python -m ruff check .`, riktade pytest-sviter för de
+  filer/paket du ändrat (full svit körs av CI på PR:en; lokalt bara vid breda
+  ändringar, då med `python -m pytest tests/ -q -n auto` — se `docs/testing.md`),
   `python scripts/governance_validate.py`, `python scripts/rules_sync.py --check`,
   `python scripts/check_term_coverage.py --strict`.
 - term-coverage flaggar versaliserade ord och fraser i backticks eller fetstil i

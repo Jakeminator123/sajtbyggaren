@@ -12,13 +12,34 @@ historiska lås listas som operatörsbeslut (se sist).
 
 | Lane | Kommando | Omfattning | Riktvärde |
 | ---- | -------- | ---------- | --------- |
+| Riktade tester | `python -m pytest tests/test_<berörd>*.py -q` | sviterna som rör ändrade filer/paket — **lokal default före commit** (operatörsbeslut 2026-06-11) | sekunder–minut |
 | Kärnlane | `python -m pytest -m core -q` | ~28 filer som täcker kärnloopen (prompt → bygge → preview → följdprompt) | ~1 min |
-| Full svit | `python -m pytest tests/ -q` | allt — detta är merge-gaten | ~5–6 min |
+| Full svit (parallell) | `python -m pytest tests/ -q -n auto` | allt, via pytest-xdist — för breda ändringar (flera paket) eller på explicit begäran | ~5 min (uppmätt 291 s, 16 workers) |
+| Full svit (seriell) | `python -m pytest tests/ -q` | allt — det CI kör på varje PR; merge-gaten | ~13 min på operatörens Windows-maskin |
 | Grindade | markörerna `slow`, `e2e`, `requires_node` | skippas automatiskt när förutsättningen saknas (npm, nyckel, `SAJTBYGGAREN_E2E=1`) | varierar |
 
 `python scripts/review_check.py --core` kör hela guard-kedjan
 (governance, rules-sync, term coverage, ruff) med kärnlanen i stället
-för full pytest. Full svit utan `--core` är fortsatt kravet före merge.
+för full pytest. Full svit är fortsatt kravet före merge, men den körs
+av CI på PR:en (governance-workflowet kör `python -m pytest tests/ -v`
+på `pull_request`): lokalt räcker riktade tester som default.
+
+## Parallellkörning (pytest-xdist)
+
+`pytest-xdist` ligger i dev-beroendena (`requirements.txt` /
+`pip install -e .[dev]`). Uppmätt 2026-06-11 på operatörens maskin
+(16 logiska kärnor): full svit 291 s med `-n auto` mot ~13 min seriellt
+— allt grönt, inklusive de tre tyngsta testerna (golden-path real-build
+115 s, `/api/prompt`-smoke 109 s, B154-chunkkörningen 97 s) som spawnar
+egna Next-processer på slumpade portar med `tmp_path`-isolerade
+kataloger. Kända begränsningar:
+
+- `test_api_prompt_smoke` startar `next dev` i delade `apps/viewser/` —
+  samma `.next`-dev-lock-kollision som vid seriell körning gäller
+  (stäng Viewser på port 3000 först). Bara ett test i sviten gör detta,
+  så xdist-arbetarna kolliderar inte med varandra.
+- Golvet för väggtiden är det långsammaste enskilda testet (~2 min);
+  mer än ~8 workers ger marginell ytterligare vinst.
 
 Praktiska noter för full svit:
 
