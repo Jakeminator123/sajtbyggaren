@@ -198,7 +198,11 @@ Commands are documented in the README under "Snabbstart". Key commands:
   you start Viewser with an explicit override, e.g.
   `VIEWSER_PREVIEW_MODE=local-next npm run dev` (tmux session `viewser-dev`).
   Vercel sandbox preview still needs a fresh `VERCEL_OIDC_TOKEN` from
-  `vercel env pull apps/viewser/.env.vercel.local`.
+  `vercel env pull apps/viewser/.env.vercel.local`. That pull (and the
+  auto-refresh in `scripts/dev.mjs`) runs with cwd = repo root, so `vercel link`
+  must be run ONCE from the repo root — it creates a monorepo link at
+  `.vercel/repo.json` mapping the project to `apps/viewser`. A link made inside
+  `apps/viewser/` is not found from the root and the refresh silently degrades.
 - Cloud Agent secrets often set `SAJTBYGGAREN_EVALS_DIR` (and
   `SAJTBYGGAREN_GENERATED_DIR`). That is fine for builder work, but
   `tests/test_cleanup_dev_artifacts.py::test_default_evals_dir_is_inside_data_evals_artifacts_mini`
