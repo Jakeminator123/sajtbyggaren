@@ -113,7 +113,14 @@ this automatically.
 Commands are documented in the README under "Snabbstart". Key commands:
 
 - Lint: `python -m ruff check .` (ruff is installed inside the venv)
-- Tests: `python -m pytest tests/ -v`
+- Tests: targeted suites for the files/packages you changed are the local
+  default before commit (operator decision 2026-06-11), e.g.
+  `python -m pytest tests/test_<area>*.py -q` or the core lane
+  `python -m pytest -m core -q`. The FULL suite runs in CI on every PR
+  (governance workflow) and remains the merge gate. Run the full suite
+  locally only for broad changes (multiple packages) or on explicit request,
+  and then in parallel: `python -m pytest tests/ -q -n auto` (pytest-xdist;
+  see `docs/testing.md`).
 - Governance validation: `python scripts/governance_validate.py && python scripts/rules_sync.py --check && python scripts/check_term_coverage.py --strict`
 
 ### Gotchas

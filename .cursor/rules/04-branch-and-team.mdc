@@ -29,7 +29,7 @@ Kör i ordning; alla ska vara gröna. Aldrig commit + push på rött.
 2. `python scripts/governance_validate.py`
 3. `python scripts/rules_sync.py --check`
 4. `python scripts/check_term_coverage.py --strict`
-5. `python -m pytest -q` (vid kod-/policy-ändring som kan påverka tester)
+5. Pytest (vid kod-/policy-ändring som kan påverka tester) — **riktade tester är default** (operatörsbeslut 2026-06-11): kör de sviter som rör ändrade filer/paket, t.ex. `python -m pytest tests/test_<berörd>*.py -q` eller kärnlanen `python -m pytest -m core -q`. Full svit körs av CI på PR:en (governance-workflowet) och är fortsatt kravet för merge. Full svit lokalt bara vid breda ändringar (flera paket) eller på explicit begäran — och då parallellt: `python -m pytest tests/ -q -n auto` (pytest-xdist, se `docs/testing.md`).
 
 ## Push och merge
 

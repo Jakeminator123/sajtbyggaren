@@ -16,4 +16,6 @@ beautifulsoup4>=4.12
 # dev tooling (also installable via `pip install -e .[dev]`)
 pytest>=8.3
 pytest-cov>=5.0
+# parallel full-suite runs: python -m pytest tests/ -q -n auto (docs/testing.md)
+pytest-xdist>=3.8
 ruff>=0.6
