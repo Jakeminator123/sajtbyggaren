@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "purpose": "Read-only pris-snapshot (USD per 1M tokens) for Dirigentpult grupp G i backoffice. Skrivs av scripts/fetch_model_prices.py - redigera aldrig for hand. needsRefresh=true betyder att priserna ar placeholder/inaktuella: kor skriptet (nat/MCP kravs) for en riktig hamtning. Prisfalt ar null tills en riktig hamtning korts - inga pahittade siffror.",
+  "needsRefresh": true,
+  "lastFetched": null,
+  "source": "placeholder",
+  "models": [
+    {
+      "model": "gpt-5.5",
+      "inputPer1M": null,
+      "outputPer1M": null,
+      "source": null,
+      "fetchedAt": null
+    },
+    {
+      "model": "gpt-5.4",
+      "inputPer1M": null,
+      "outputPer1M": null,
+      "source": null,
+      "fetchedAt": null
+    },
+    {
+      "model": "gpt-4o",
+      "inputPer1M": null,
+      "outputPer1M": null,
+      "source": null,
+      "fetchedAt": null
+    },
+    {
+      "model": "text-embedding-3-small",
+      "inputPer1M": null,
+      "outputPer1M": null,
+      "source": null,
+      "fetchedAt": null
+    }
+  ]
+}
