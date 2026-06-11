@@ -56,6 +56,41 @@ sällsynta och smärtsamma rebaser. Tre vanor:
   "lösas", det är en återställning. Bär du oppushat arbete: rebasa det lilla
   ovanpå färsk synk-bas, inte tvärtom.
 
+## Obligatorisk lane-grind för christopher-lanen (operatörsbeslut 2026-06-12)
+
+Detta avsnitt är MÅSTE-krav (inte vanor) för alla agenter som arbetar på
+`christopher`-lanen. Bakgrund: kvällen 2026-06-11 — en oregistrerad term
+(`HostedRunStatePointer`) stoppade PR #304 i CI eftersom term-coverage inte
+kördes lokalt, och varje merge på `jakob-be` ogiltigförklarade väntande
+PR-rebaser. Reglerna stänger båda felklasserna:
+
+1. **MÅSTE auto-synka vid varje passtart.** Kör `git fetch origin --prune`
+   och `git reset --hard origin/jakob-be` (utan oppushat arbete) eller rebasa
+   det lilla oppushade ovanpå färsk bas — UTAN att vänta på klartecken.
+   Ett pass får aldrig börja på en gammal bas.
+2. **MÅSTE köra hela grinden före VARJE push på en PR-branch** — inte ett
+   urval: `governance_validate.py`, `rules_sync.py --check`,
+   `check_term_coverage.py --strict`, ruff, riktade pytest-sviter för
+   berörda filer, och `tsc --noEmit` vid viewser-ändringar. En push där
+   term-coverage hoppats över räknas som regelbrott, inte som glömska.
+3. **MÅSTE registrera nya identifierare i samma commit.** En commit som
+   inför en ny canonical-kandidat (klass/typ/policy-begrepp) bär själv
+   naming-dictionary-bumpen, med versionsnummer re-deriverat från färskt
+   `origin/jakob-be` (aldrig från ett löfte i inbox/handoff).
+4. **MÅSTE auto-rebasa öppna PR:ar när basen flyttar sig.** När
+   `origin/jakob-be` får nya commits medan en lane-PR är öppen: rebasa/
+   basmerga PR-branchen inom samma pass, eller flagga uttryckligen i inbox
+   att PR:en är stale och överlämnas. En stackad PR retargetas till
+   `jakob-be` OMEDELBART när dess bas-PR mergats.
+5. **Fallback (jakob-be-lanens rätt):** en grön-men-stale lane-PR får
+   slutföras av jakob-be-lanen via basmerge på PR-branchen (mönstret
+   `9774b199`/`57ceec9c`) — enbart mekaniska konfliktlösningar och
+   grind-fixar, alltid rapporterat i `docs/agent-inbox.jsonl`.
+
+Motsvarande skyldighet på jakob-be-lanen: små gröna lane-PR:ar reviewas och
+mergas SNABBT (kort review-SLA) — att låta dem ligga medan basen flyttar sig
+är det som skapar rebase-loopar.
+
 ## Delade löpnummer (ADR-nummer och policy-versioner)
 
 Vissa nummer är en delad seriell resurs över båda lanes och är den vanligaste

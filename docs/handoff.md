@@ -1,14 +1,66 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-11 ~22:55 UTC+2, checkpoint efter kvällspasset:
-OpenClaw-smartness-sviten + B198 del a + Dirigentpult-fallback + #269 +
-`/kort`-regeln. `origin/jakob-be = 6d740fcc` (rent träd, local == origin).
+**Datum:** 2026-06-12 ~00:30 UTC+2, midnattsstängning: main-sync KLAR,
+#305/#292/#304 mergade, B194 live + E2E-bevisad hostat, CI-actions v6,
+obligatorisk lane-grind införd. `main = jakob-be` (tom diff, rent träd).
 Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-11 ~22:55 — OPENCLAW-SMARTNESS + /KORT + STÄDNING (AUKTORITATIVT BLOCK)
+## PASS 2026-06-12 ~00:30 — MIDNATTSSTÄNGNING: B194 LIVE + MAIN-SYNK KLAR (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Git:** `main = jakob-be = origin/main = origin/jakob-be` (tom diff, rent
+> träd). Sista kodcommit `5109cc1f` (CI-actions v6); detta docs-pass ligger
+> ovanpå. Production deployar från `main` och kör B194-koden (deploy READY
+> från `main@78417aae`, app-identisk med tippen). Backup av för-sync-main:
+> `backup-main-2026-06-11-pre-evening-sync-cb0f6a5`.
+>
+> **Mergat efter 22:55-checkpointen:** **#305** Vercel Web Analytics
+> (Vercel-agentens PR, retargetad main→jakob-be, `<Analytics />` i
+> layout.tsx). **#292** hostad asset_set-forwarding (Christophers, ren
+> 1-commit-rebase). **#304** B194 — hostad run-state persisteras till blob
+> (`run-state/<siteId>/v<N>/`, immutabelt par) + KV-pekare; krävde basmerge
+> `57ceec9c` + naming-dictionary **v38** (`HostedRunStatePointer`,
+> term-coverage-grinden fångade oregistrerad term). `5109cc1f` bumpar
+> GitHub Actions till v6 (Node 20-deprecationsvarningarna borta).
+>
+> **HOSTADE FÖLJDPROMPTER ÄR LIVE OCH E2E-BEVISADE** mot
+> `sajtbyggaren-viewser.vercel.app`: init-bygge (`site-e342ef7b`, ok, ~141 s)
+> → run-state v1 i blob → följdprompt (ok, ~110 s) → v2 skapad (v1 orörd),
+> ändringen verifierad i v2-PI:n. **Build-context-tarballen omuppladdad**
+> (`build-context/current.tar.gz` var från 06-10 och saknade kvällens Python
+> — utan omuppladdningen hade hostade byggen kraschat på okänd CLI-flagga).
+> Kom ihåg att ladda om tarballen efter merges som rör
+> `scripts/`/`packages/`/`governance/`/`data/starters/`:
+> `node apps/viewser/scripts/upload-build-context-to-blob.mjs`.
+>
+> **Ny MÅSTE-regel för christopher-lanen** (operatörsbeslut, i
+> `governance/rules/04-branch-and-team.md`): auto-synk vid passtart, hela
+> grinden före varje push (inkl. term-coverage), nya identifierare
+> registreras i samma commit, auto-rebase av öppna PR:ar när basen flyttar
+> sig, jakob-be-lanen får slutföra stale gröna PR:ar via basmerge. Motkrav
+> på vår lane: kort review-SLA på små gröna PR:ar. Christopher har
+> kvitterat (msg-c-0084), synkat lanen till `5109cc1f` och påbörjat B197
+> (hostad discovery-paritet) — ingenting blockerar någon lane just nu.
+>
+> **Vercel-noteringar:** (1) `ignoreCommand`-fällan: en main-push vars SISTA
+> commit är docs-only får sitt prod-bygge cancelat — pusha appkods-commit
+> sist (tvåstegspush) eller promota manuellt. (2) Dashboard-bannern
+> "Revoke Token" på blob-storen får INTE klickas — hostade pipelinen
+> använder `BLOB_READ_WRITE_TOKEN` direkt (sandbox-env + run-state-uploads).
+> (3) OIDC-tokenen auto-refreshas vid dev-start + före varje Sandbox.create
+> (`lib/vercel-oidc-refresh.mjs`) — inget manuellt underhåll. (4) Christophers
+> lokala `.env.local` pekar på en ANNAN blob-store (`3xqg…`) än projektets
+> (`vxfg…`) — lokal/hostad delar inte asset-bibliotek; operatörsbeslut om
+> unifiering står öppet (msg-c-0083).
+>
+> **Kvarvarande öppet:** B198 del b (synlig contact-form-render), ADR
+> 0052-städ + eslint-fyndet i `industry-search.tsx:298`, Token Meter-priser
+> (står på 0), B155/B197 (Christophers pågående). ADR-liggare: nästa lediga
+> **0055** (0054 reserverad). naming-dictionary **v38**, llm-models **v11**.
+
+## PASS 2026-06-11 ~22:55 — OPENCLAW-SMARTNESS + /KORT + STÄDNING (HISTORIK)
 >
 > **Git:** `origin/jakob-be = 6d740fcc` (rent träd, local == origin). Lokal
 > `main`-pekare fast-forwardad till `origin/main = cb0f6a5d` (ren bokmärkesflytt).
