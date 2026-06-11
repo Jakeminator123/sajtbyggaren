@@ -72,7 +72,7 @@ export function VariantPickerDialog({
   const [options, setOptions] = useState<DiscoveryOption[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { runFollowup, isBusy, error } = useFollowupBuild({
+  const { runFollowup, isBusy, error, answer } = useFollowupBuild({
     siteId,
     onBuildStart,
     onBuildEnd,
@@ -204,6 +204,15 @@ export function VariantPickerDialog({
           </div>
         )}
 
+        {answer ? (
+          // B192: answer-only-svar (inget bygge kördes) är info, inte fel.
+          <p
+            role="status"
+            className="text-foreground bg-muted/60 border-border rounded-md border px-3 py-2 text-[12px]"
+          >
+            {answer}
+          </p>
+        ) : null}
         {error ? (
           <p
             role="alert"

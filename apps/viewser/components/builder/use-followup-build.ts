@@ -20,7 +20,9 @@ import {
  * sig själva när bygget startar och rapporterar via toast/inline-
  * error vid fel.
  *
- * Returnerar `{ runFollowup, isBusy, error, clearError }`.
+ * Returnerar `{ runFollowup, isBusy, error, answer, clearError }`.
+ * ``answer`` (B192) bär answer-only-svar från conversation gate:n —
+ * neutral info, aldrig ett fel. ``error`` bär enbart riktiga fel.
  *
  * `runFollowup(prompt)` triggar onBuildStart innan fetchen, anropar
  * onBuildDone(runId, outcome) när bygget är klart, och garanterar
@@ -279,8 +281,18 @@ export function useFollowupBuild({
 }: FollowupBuildOptions) {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // B192: answer-only-svar (conversation gate — backend svarade utan att
+  // bygga) hölls tidigare i samma ``error``-state, så dialogerna stylade
+  // ett ärligt svar som RÖTT fel. Separat state låter callers rendera
+  // svaret som neutral info — ``error`` bär nu enbart riktiga fel.
+  const [answer, setAnswer] = useState<string | null>(null);
 
-  const clearError = useCallback(() => setError(null), []);
+  // Rensar BÅDA tillstånden — callers använder denna som "rensa feedback"
+  // vid stängning/återöppning och ska inte behöva känna till uppdelningen.
+  const clearError = useCallback(() => {
+    setError(null);
+    setAnswer(null);
+  }, []);
 
   const runFollowup = useCallback(
     async (
@@ -317,6 +329,7 @@ export function useFollowupBuild({
 
       setIsBusy(true);
       setError(null);
+      setAnswer(null);
       onBuildStart();
       try {
         const response = await fetch("/api/prompt", {
@@ -356,12 +369,16 @@ export function useFollowupBuild({
             (typeof payload.answerText === "string" &&
               payload.answerText.trim()))
         ) {
-          const answer =
+          const answerReply =
             (typeof payload.answerText === "string" &&
               payload.answerText.trim()) ||
             "Jag svarade i chatten utan att bygga om något.";
-          setError(answer);
-          return { ok: false, error: answer, isAnswer: true };
+          // B192: svaret landar i ``answer``-state (info), inte ``error``
+          // (rött). Result-kontraktet är oförändrat: ``isAnswer: true``
+          // så befintliga callers som bara läser resultatet (toasten i
+          // builder-shell) fortsätter fungera identiskt.
+          setAnswer(answerReply);
+          return { ok: false, error: answerReply, isAnswer: true };
         }
         if (!response.ok || !payload.runId) {
           const msg =
@@ -392,5 +409,5 @@ export function useFollowupBuild({
     [isBusy, isBuilding, baseRunId, siteId, onBuildStart, onBuildEnd, onBuildDone],
   );
 
-  return { runFollowup, isBusy, error, clearError };
+  return { runFollowup, isBusy, error, answer, clearError };
 }

@@ -302,7 +302,7 @@ export function AddModuleDialog({
   // Etikett från senaste peka-i-previewn-valet ("Efter Omdömen → längst
   // ner") — visas vid placeringsraden som kvitto på var klicket landade.
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
-  const { runFollowup, isBusy, error } = useFollowupBuild({
+  const { runFollowup, isBusy, error, answer } = useFollowupBuild({
     siteId,
     onBuildStart,
     onBuildEnd,
@@ -694,6 +694,15 @@ export function AddModuleDialog({
           )}
         </div>
 
+        {answer ? (
+          // B192: answer-only-svar (inget bygge kördes) är info, inte fel.
+          <p
+            role="status"
+            className="text-foreground bg-muted/60 border-border rounded-md border px-3 py-2 text-[12px]"
+          >
+            {answer}
+          </p>
+        ) : null}
         {error ? (
           <p
             role="alert"
