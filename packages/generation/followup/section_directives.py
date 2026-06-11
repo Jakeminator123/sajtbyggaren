@@ -37,11 +37,13 @@ Conventions: identifiers + comments in English (governance/rules/code-in-english
 from __future__ import annotations
 
 __all__ = [
+    "DOSSIER_PREFERENCE_CUES",
     "INLINE_SECTION_PLACEMENTS",
     "INLINE_SECTION_ROUTES",
     "INLINE_SECTION_SCAFFOLDS",
     "SECTION_TYPE_CAPABILITY",
     "VISIBLE_SECTION_ROUTES",
+    "resolve_dossier_preferences",
     "resolve_inline_section_placements",
     "resolve_section_capabilities",
     "resolve_visible_section_pages",
@@ -324,6 +326,70 @@ def resolve_inline_section_placements(
             }
         )
     return placements
+
+
+# B198 (operatörsfynd 2026-06-11): a follow-up can name a SPECIFIC implementing
+# Dossier ("skapa en sektion för min resend-funktion") rather than accepting the
+# capability default (mailto). Deterministic prompt-cue lexicon, capability ->
+# {dossier id -> cue words}. A cue only ever PREFERS a Dossier that capability-
+# map.v1.json already lists for the SAME capability (validated in the resolver),
+# so chat can never mount an unregistered/foreign Dossier. Kept narrow on
+# purpose: resend-contact-form is the first (and so far only) named alternative.
+DOSSIER_PREFERENCE_CUES: dict[str, dict[str, tuple[str, ...]]] = {
+    "contact-form": {
+        "resend-contact-form": ("resend",),
+    },
+}
+
+
+def _word_in_prompt(text: str, phrase: str) -> bool:
+    import re
+
+    return (
+        re.search(r"(?<![\wåäö])" + re.escape(phrase) + r"(?![\wåäö])", text)
+        is not None
+    )
+
+
+def resolve_dossier_preferences(
+    prompt: str,
+    capabilities: list[str],
+) -> dict[str, str]:
+    """Resolve named-Dossier preferences from the follow-up prompt (B198).
+
+    Returns ``{capability: dossier_id}`` for every mounted capability whose
+    prompt names a registered alternative Dossier (``DOSSIER_PREFERENCE_CUES``).
+    Each candidate is validated against governance before it is returned: the
+    Dossier must be listed for that capability in ``capability-map.v1.json``
+    AND be enabled in its manifest - otherwise the preference is silently
+    dropped and apply falls back to the capability default (the honest
+    fallback; chat can never mount an unregistered/disabled Dossier).
+    Deterministic, offline, no LLM.
+    """
+    if not prompt or not capabilities:
+        return {}
+    from packages.generation.planning import dossier_is_enabled, load_capability_map
+
+    text = prompt.strip().lower()
+    capability_entries = (load_capability_map() or {}).get("capabilities", {})
+    preferences: dict[str, str] = {}
+    for capability in capabilities:
+        cues = DOSSIER_PREFERENCE_CUES.get(capability)
+        if not cues:
+            continue
+        entry = capability_entries.get(capability)
+        listed = entry.get("dossiers") if isinstance(entry, dict) else None
+        listed_ids = listed if isinstance(listed, list) else []
+        for dossier_id, words in cues.items():
+            if not any(_word_in_prompt(text, word) for word in words):
+                continue
+            if dossier_id not in listed_ids:
+                continue
+            if not dossier_is_enabled(dossier_id):
+                continue
+            preferences[capability] = dossier_id
+            break
+    return preferences
 
 
 def resolve_section_capabilities(

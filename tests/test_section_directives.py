@@ -24,10 +24,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from packages.generation.followup.section_directives import (  # noqa: E402
+    DOSSIER_PREFERENCE_CUES,
     INLINE_SECTION_PLACEMENTS,
     INLINE_SECTION_ROUTES,
     SECTION_TYPE_CAPABILITY,
     VISIBLE_SECTION_ROUTES,
+    resolve_dossier_preferences,
     resolve_inline_section_placements,
     resolve_section_capabilities,
     resolve_visible_section_pages,
@@ -350,3 +352,59 @@ def test_render_time_allowlist_mirrors_resolver_allowlists() -> None:
         "renderers._INLINE_SECTION_ALLOWLIST has drifted from the resolver's "
         f"INLINE_SECTION_* allowlists: actual={actual!r} expected={expected!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# B198: named-dossier preference ("resend") over the capability default
+# ---------------------------------------------------------------------------
+
+
+def test_resend_prompt_prefers_resend_contact_form() -> None:
+    """The "resend" cue on a mounted contact-form capability resolves to the
+    registered hard dossier instead of the mailto default."""
+    preferences = resolve_dossier_preferences(
+        "skapa en sektion för min resend-funktion för mejl", ["contact-form"]
+    )
+    assert preferences == {"contact-form": "resend-contact-form"}
+
+
+def test_prompt_without_cue_keeps_default() -> None:
+    """No cue word -> empty preferences -> apply mounts the capability default."""
+    preferences = resolve_dossier_preferences(
+        "lägg till ett kontaktformulär", ["contact-form"]
+    )
+    assert preferences == {}
+
+
+def test_cue_requires_word_boundary() -> None:
+    """A cue inside a longer word never matches (no substring surprises)."""
+    preferences = resolve_dossier_preferences(
+        "vi pratar om resending av paket", ["contact-form"]
+    )
+    assert preferences == {}
+
+
+def test_preference_only_applies_to_mounted_capabilities() -> None:
+    """A cue word without its capability among the mounted ones is ignored."""
+    preferences = resolve_dossier_preferences(
+        "resend vore fint", ["gallery"]
+    )
+    assert preferences == {}
+
+
+def test_every_cue_dossier_is_registered_for_its_capability() -> None:
+    """Governance guard: every Dossier named in DOSSIER_PREFERENCE_CUES must be
+    listed for its capability in capability-map.v1.json - the lexicon can never
+    point chat at an unregistered Dossier."""
+    from packages.generation.planning import load_capability_map
+
+    capability_entries = load_capability_map().get("capabilities", {})
+    for capability, cues in DOSSIER_PREFERENCE_CUES.items():
+        entry = capability_entries.get(capability)
+        assert isinstance(entry, dict), f"okänd capability {capability!r} i cues"
+        listed = entry.get("dossiers") or []
+        for dossier_id in cues:
+            assert dossier_id in listed, (
+                f"{dossier_id!r} är inte registrerad för {capability!r} i "
+                "capability-map.v1.json"
+            )
