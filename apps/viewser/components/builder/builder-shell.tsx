@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  BuilderActions,
+  ToolsPopover,
   type BuilderAction,
-} from "@/components/builder/builder-actions";
+} from "@/components/builder/tools-popover";
 import {
   AddModuleDialog,
   AskAiDialog,
   AssetUploaderDialog,
+  ColorizeSectionDialog,
   ColorPickerDialog,
   RebuildDialog,
   ScrapeUrlDialog,
@@ -28,7 +29,10 @@ import type {
   PendingBuildState,
 } from "@/components/builder/use-pending-build";
 import type { PromptStage } from "@/components/prompt-builder";
-import { usePreviewInspector } from "@/components/preview-inspector-context";
+import {
+  usePreviewInspector,
+  type MarkedSectionRef,
+} from "@/components/preview-inspector-context";
 import { useToast } from "@/components/ui/toast";
 
 /**
@@ -40,13 +44,13 @@ import { useToast } from "@/components/ui/toast";
  * 1. `FloatingChat`  — draggable + minimizable chat-ruta som
  *    skickar follow-up-prompts till `/api/prompt` med
  *    `mode: "followup"` + nuvarande siteId.
- * 2. `BuilderActions` — minimal "Verktyg"-pill som expanderar
- *    till en grupperad meny med builder-funktioner:
- *      - Designval (variant, primärfärg)
- *      - Innehåll (bilduppladdning, URL-scrape)
- *      - Bygg & versioner (re-build, versionshistorik, konsol)
- *      - AI-hjälp (Fråga utan att bygga)
- *      - Sajt (Ny sajt)
+ * 2. `ToolsPopover` — topp-centrerad "Verktyg ˅"-pill som expanderar
+ *    nedåt till en flik-panel med builder-funktioner:
+ *      - Innehåll (modul, markering, URL-scrape)
+ *      - Bild & film (bilduppladdning)
+ *      - Design (variant, primärfärg)
+ *      - Granska (inspektera, peka-i-previewn, Fråga AI)
+ *      - Sajt (re-build, konsol, Ny sajt)
  * 3. Sex dialog-komponenter som öppnas via menyn — varje dialog
  *    äger sin egen UI och triggar antingen useFollowupBuild-hooken
  *    (för bygg-utlösande actions) eller bara läs-anrop (Fråga AI).
@@ -105,6 +109,7 @@ type BuilderShellProps = {
 type DialogId =
   | "variant"
   | "color"
+  | "section-color"
   | "asset"
   | "module"
   | "scrape"
@@ -255,6 +260,11 @@ export function BuilderShell({
   const [moduleInitialPosition, setModuleInitialPosition] = useState<
     "top" | "bottom" | null
   >(null);
+  // Sektionskontext för "Färglägg sektionen" — dialogen behöver
+  // routeId+sectionId strukturerat (skickas som markedSections i
+  // followup-anropet, ADR 0046). Nollas när dialogen stängs.
+  const [colorizeSectionRef, setColorizeSectionRef] =
+    useState<MarkedSectionRef | null>(null);
   // Composer-prefill för "Ändra text"-åtgärden: text + monoton nonce så
   // FloatingChat kan skilja två likadana prefills åt. Chippen läggs
   // redan av overlayn (addMarkedSection) — här fylls bara composern.
@@ -286,6 +296,7 @@ export function BuilderShell({
       setOpenDialog(null);
       setAssetSectionHint(null);
       setModuleInitialPosition(null);
+      setColorizeSectionRef(null);
     }
   }, []);
 
@@ -322,6 +333,11 @@ export function BuilderShell({
         setOpenDialog("module");
         return;
       }
+      if (request.action === "colorize") {
+        setColorizeSectionRef(request.ref);
+        setOpenDialog("section-color");
+        return;
+      }
       // "move": kör followup direkt — overlayn visar bara alternativet
       // för sektioner i backend-allowlisten, men vi gate:ar ärligt en
       // gång till mot promptnoun-kartan i stället för att gissa.
@@ -349,17 +365,84 @@ export function BuilderShell({
     return () => window.clearTimeout(timerId);
   }, [sectionActionRequest, clearSectionAction, runSectionMove, toast]);
 
+  // `group` = flik i ToolsPopover. Flik-ordningen följer första
+  // förekomsten i arrayen: Innehåll → Bild & film → Design → Granska
+  // → Sajt. Varje flik är tänkt att mappa mot en specialist-domän
+  // (KÖR-6) och kan växa med fler verktyg utan att panelen blir en
+  // platt grid (operatörsbeslut 2026-06-11).
   const actions = useMemo<BuilderAction[]>(
     () => [
-      // Inspektera (Nivå 3) — överst eftersom det är den primära
-      // ingången till struktur, snabbprompts per sida/sektion,
-      // dossier-rejects och Quality-findings.
+      // Innehåll — moduler + markering + extern info.
+      {
+        id: "module",
+        label: "Lägg till modul",
+        description: "Dra in en sektion på en sida",
+        icon: "module",
+        group: "Innehåll",
+        onSelect: openDialogFactory("module"),
+        disabled: isBuilding,
+      },
+      // Markera modul (sektionsmarkering i preview): klick på en sektion
+      // skapar en strukturerad markering {routeId, sectionId} som visas
+      // som chip i chatten och följer med nästa följdprompt som
+      // markedSections[]. Samma rena-canvas-princip som granskningen.
+      {
+        id: "preview-mark",
+        label: markModeActive ? "Avsluta markeringen" : "Markera modul",
+        description: markModeActive
+          ? "Stänger modulmarkeringen"
+          : "Klicka en sektion → chip i chatten",
+        icon: "preview-inspect",
+        group: "Innehåll",
+        onSelect: () => setMarkModeActive(!markModeActive),
+        disabled: !inspectorPreviewUrl || isBuilding,
+      },
+      {
+        id: "scrape",
+        label: "Hämta från URL",
+        description: "Skrapa info från en sajt",
+        icon: "globe",
+        group: "Innehåll",
+        onSelect: openDialogFactory("scrape"),
+        disabled: isBuilding,
+      },
+      // Bild & film — egen flik som växer med video/bildbank när
+      // asset_set-backenden landar.
+      {
+        id: "asset",
+        label: "Ladda upp bild",
+        description: "Logo, hero eller galleri",
+        icon: "image",
+        group: "Bild & film",
+        onSelect: openDialogFactory("asset"),
+        disabled: isBuilding,
+      },
+      // Design
+      {
+        id: "variant",
+        label: "Byt designvariant",
+        description: "Annan scaffold + känsla",
+        icon: "design",
+        group: "Design",
+        onSelect: openDialogFactory("variant"),
+        disabled: isBuilding,
+      },
+      {
+        id: "color",
+        label: "Byt färger",
+        description: "Primär- och accentfärg",
+        icon: "palette",
+        group: "Design",
+        onSelect: openDialogFactory("color"),
+        disabled: isBuilding,
+      },
+      // Granska — inspektion + AI-bollande utan bygge.
       {
         id: "inspect",
         label: "Inspektera sajten",
         description: "Sidor, brief, dossiers, kvalitet",
         icon: "inspect",
-        group: "Inspektera",
+        group: "Granska",
         onSelect: openDialogFactory("inspect"),
       },
       // Peka i previewn (preview-inspector): togglar hover-inspektionen
@@ -375,79 +458,25 @@ export function BuilderShell({
           ? "Stänger hover-inspektionen"
           : "Hovra och identifiera element",
         icon: "preview-inspect",
-        group: "Inspektera",
+        group: "Granska",
         onSelect: () => setInspectModeActive(!inspectModeActive),
         disabled: !inspectorPreviewUrl || isBuilding,
       },
-      // Markera modul (sektionsmarkering i preview): klick på en sektion
-      // skapar en strukturerad markering {routeId, sectionId} som visas
-      // som chip i chatten och följer med nästa följdprompt som
-      // markedSections[]. Samma rena-canvas-princip som granskningen.
       {
-        id: "preview-mark",
-        label: markModeActive ? "Avsluta markeringen" : "Markera modul",
-        description: markModeActive
-          ? "Stänger modulmarkeringen"
-          : "Klicka en sektion → chip i chatten",
-        icon: "preview-inspect",
-        group: "Inspektera",
-        onSelect: () => setMarkModeActive(!markModeActive),
-        disabled: !inspectorPreviewUrl || isBuilding,
+        id: "ask",
+        label: "Fråga utan att bygga",
+        description: "Bolla idéer först",
+        icon: "ask",
+        group: "Granska",
+        onSelect: openDialogFactory("ask"),
       },
-      // Design
-      {
-        id: "variant",
-        label: "Byt designvariant",
-        description: "Annan scaffold + känsla",
-        icon: "design",
-        group: "Design",
-        onSelect: openDialogFactory("variant"),
-        disabled: isBuilding,
-      },
-      {
-        id: "color",
-        label: "Byt primärfärg",
-        description: "Knappar, länkar, accenter",
-        icon: "palette",
-        group: "Design",
-        onSelect: openDialogFactory("color"),
-        disabled: isBuilding,
-      },
-      // Innehåll
-      {
-        id: "asset",
-        label: "Ladda upp bild",
-        description: "Logo, hero eller galleri",
-        icon: "image",
-        group: "Innehåll",
-        onSelect: openDialogFactory("asset"),
-        disabled: isBuilding,
-      },
-      {
-        id: "module",
-        label: "Lägg till modul",
-        description: "Dra in en sektion på en sida",
-        icon: "module",
-        group: "Innehåll",
-        onSelect: openDialogFactory("module"),
-        disabled: isBuilding,
-      },
-      {
-        id: "scrape",
-        label: "Hämta från URL",
-        description: "Skrapa info från en sajt",
-        icon: "globe",
-        group: "Innehåll",
-        onSelect: openDialogFactory("scrape"),
-        disabled: isBuilding,
-      },
-      // Bygg & versioner
+      // Sajt — bygg & versioner + ny sajt.
       {
         id: "rebuild",
         label: "Bygg om utan ändring",
         description: "Verifiera Quality Gate",
         icon: "rebuild",
-        group: "Bygg",
+        group: "Sajt",
         onSelect: openDialogFactory("rebuild"),
         disabled: isBuilding,
       },
@@ -462,19 +491,9 @@ export function BuilderShell({
         label: "Konsol",
         description: "Runs, project inputs, tokens",
         icon: "console",
-        group: "Bygg",
+        group: "Sajt",
         onSelect: onOpenConsole,
       },
-      // AI-hjälp
-      {
-        id: "ask",
-        label: "Fråga utan att bygga",
-        description: "Bolla idéer först",
-        icon: "ask",
-        group: "AI",
-        onSelect: openDialogFactory("ask"),
-      },
-      // Sajt
       {
         id: "new-site",
         label: "Ny sajt",
@@ -522,14 +541,12 @@ export function BuilderShell({
         // Sektionsmenyns "Ändra text"-åtgärd: förifyll composern med en
         // promptstart för den klickade sektionen (chippen är redan lagd).
         composerPrefill={composerPrefill}
-        tools={
-          <BuilderActions
-            actions={actions}
-            pulsing={isBuilding}
-            variant="inline"
-          />
-        }
       />
+
+      {/* Topp-centrerad "Verktyg ˅"-pill + flik-panel. Ersätter den
+          tidigare Verktyg-pillen i FloatingChat-toolbaren — verktygen
+          hör hemma över previewn de verkar på, inte i chatten. */}
+      <ToolsPopover actions={actions} pulsing={isBuilding} />
 
       <VariantPickerDialog
         open={openDialog === "variant"}
@@ -545,6 +562,17 @@ export function BuilderShell({
         open={openDialog === "color"}
         onOpenChange={closeDialog}
         siteId={siteId}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
+        onBuildDone={handleSurfaceBuildDone}
+        isBuilding={isBuilding}
+        baseRunId={pendingBaseRunId?.baseRunId ?? null}
+      />
+      <ColorizeSectionDialog
+        open={openDialog === "section-color"}
+        onOpenChange={closeDialog}
+        siteId={siteId}
+        sectionRef={colorizeSectionRef}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={handleSurfaceBuildDone}

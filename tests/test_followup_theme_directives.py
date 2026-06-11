@@ -142,6 +142,70 @@ def test_duplicate_colour_synonyms_do_not_become_accent() -> None:
     assert directive.accentColorHex is None
 
 
+# --- literal hex extraction (colour-tools dialog, 2026-06-11) ---------------
+# The viewser colour dialog emits "Ändra sajtens primärfärg till #rrggbb." —
+# previously only understood via the styleDirectiveModel LLM fallback, so the
+# dialog was a silent no-op without an OPENAI_API_KEY. These lock the
+# deterministic hex path.
+
+
+@pytest.mark.tooling
+def test_extract_primary_hex_literal_deterministically() -> None:
+    directive = extract_theme_directive(
+        "Ändra sajtens primärfärg till #2D5F3F. Behåll övrig design intakt."
+    )
+    assert directive is not None
+    assert directive.primaryColorHex == "#2d5f3f"
+    assert directive.colorWord == "#2d5f3f"
+    assert directive.accentColorHex is None
+
+
+@pytest.mark.tooling
+def test_extract_accent_hex_literal_stands_alone() -> None:
+    directive = extract_theme_directive(
+        "Ändra sajtens accentfärg till #B45309. Behåll övrig design intakt."
+    )
+    assert directive is not None
+    assert directive.primaryColorHex is None
+    assert directive.accentColorHex == "#b45309"
+    assert directive.accentWord == "#b45309"
+
+
+@pytest.mark.tooling
+def test_extract_both_hex_literals_by_nearest_target_word() -> None:
+    directive = extract_theme_directive(
+        "Ändra primärfärgen till #112233 och accentfärgen till #aabbcc."
+    )
+    assert directive is not None
+    assert directive.primaryColorHex == "#112233"
+    assert directive.accentColorHex == "#aabbcc"
+
+
+@pytest.mark.tooling
+def test_extract_untargeted_hex_defaults_to_primary() -> None:
+    directive = extract_theme_directive("byt färg till #abc")
+    assert directive is not None
+    # #rgb expands to #rrggbb.
+    assert directive.primaryColorHex == "#aabbcc"
+    assert directive.accentColorHex is None
+
+
+@pytest.mark.tooling
+def test_hex_literal_wins_over_colour_word_for_same_slot() -> None:
+    directive = extract_theme_directive(
+        "gör den blå, närmare bestämt primärfärg #2d5f3f"
+    )
+    assert directive is not None
+    assert directive.primaryColorHex == "#2d5f3f"
+
+
+@pytest.mark.tooling
+def test_invalid_hex_lengths_are_ignored() -> None:
+    # 4/5/8-siffriga "hex" är inte giltiga tokens — ingen träff, inget direktiv.
+    assert extract_theme_directive("byt färg till #abcd") is None
+    assert extract_theme_directive("byt färg till #aabbccdd") is None
+
+
 @pytest.mark.tooling
 @pytest.mark.parametrize(
     "prompt",

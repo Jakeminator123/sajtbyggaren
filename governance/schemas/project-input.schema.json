@@ -265,6 +265,40 @@
             }
           }
         },
+        "sectionStyleOverrides": {
+          "type": "array",
+          "maxItems": 16,
+          "description": "Per-sektion färg-overrides satta via 'Färglägg sektionen' i preview-markeringsläget (fas 3 av Verktyg-omgörningen, 2026-06-11). Varje post binder en validerad preview-markering (routeId+sectionId, ADR 0046-facit) till en bakgrunds- och/eller textfärg. build_site.py emitterar CSS-overrides i globals.css med selektor [data-section-id=\"<sectionId>\"] — v1-begränsning: samma sectionId på flera routes får samma färg (selektorn är global; routeId bevaras för framtida route-scoping). Posterna ackumuleras över versioner (samma varaktighet som directives.sectionTreatments) och upsert:as per (routeId, sectionId). En post vars sektion försvinner ur scaffolden blir en död selektor — ofarlig, aldrig en byggkrasch.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["routeId", "sectionId"],
+            "properties": {
+              "routeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Logiskt route-id från preview-markeringen (validerad mot base-runens emittedSections-facit)."
+              },
+              "sectionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Kanoniskt sektions-id (data-section-id-markören) från preview-markeringen."
+              },
+              "backgroundColorHex": {
+                "type": "string",
+                "pattern": "^#[0-9a-f]{6}$",
+                "description": "Sektionsrotens bakgrundsfärg. Normaliserad gemen #rrggbb (kortform expanderas vid extraktion)."
+              },
+              "textColorHex": {
+                "type": "string",
+                "pattern": "^#[0-9a-f]{6}$",
+                "description": "Textfärg för sektionens rubriker/brödtext (h1–h6, p, li). Länkar/knappar behåller sina egna färger (kontrastsäkring). Normaliserad gemen #rrggbb."
+              }
+            }
+          }
+        },
         "mountedSections": {
           "type": "array",
           "maxItems": 16,

@@ -8,6 +8,7 @@ import {
   Loader2,
   MessageSquareText,
   Move,
+  Palette,
   Pin,
   X,
 } from "lucide-react";
@@ -761,6 +762,7 @@ export function PreviewInspectorOverlay({
         | "prefill-copy"
         | "asset"
         | "module"
+        | "colorize"
         | "move-top"
         | "move-bottom",
     ) => {
@@ -785,6 +787,8 @@ export function PreviewInspectorOverlay({
         requestSectionAction({ action: "prefill-copy", ref });
       } else if (action === "asset") {
         requestSectionAction({ action: "asset", ref });
+      } else if (action === "colorize") {
+        requestSectionAction({ action: "colorize", ref });
       } else if (action === "module") {
         requestSectionAction({
           action: "module",
@@ -1395,6 +1399,7 @@ export function PreviewInspectorOverlay({
                     | "prefill-copy"
                     | "asset"
                     | "module"
+                    | "colorize"
                     | "move-top"
                     | "move-bottom";
                   label: string;
@@ -1407,6 +1412,11 @@ export function PreviewInspectorOverlay({
                     Icon: MessageSquareText,
                   },
                   { key: "asset", label: "Byt bild här", Icon: ImagePlus },
+                  {
+                    key: "colorize",
+                    label: "Färglägg sektionen",
+                    Icon: Palette,
+                  },
                   {
                     key: "module",
                     label: "Lägg till modul här",

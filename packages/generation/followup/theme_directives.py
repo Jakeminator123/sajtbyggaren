@@ -68,6 +68,79 @@ from packages.generation.followup.text import (
 # expression - a near-white primary breaks button/CTA contrast.
 _COLOR_TOKEN_RE = re.compile(r"[a-zåäöéü0-9]+")
 
+# Literal hex tokens in the prompt ("ändra primärfärgen till #2d5f3f").
+# Until 2026-06-11 a hex literal was ONLY understood via the
+# styleDirectiveModel LLM fallback — the colour-tools dialog in viewser
+# emits exactly this prompt shape, so without an OPENAI_API_KEY the
+# dialog was a silent no-op. Deterministic now: ``#rgb``/``#rrggbb``
+# tokens are extracted directly, with the nearest PRECEDING target word
+# (primärfärg/accentfärg) deciding which slot the hex fills.
+_HEX_LITERAL_RE = re.compile(r"#(?:[0-9a-f]{6}|[0-9a-f]{3})(?![0-9a-f])")
+
+# Target words searched BACKWARDS from each hex literal. Substring match
+# is intentional ("primärfärgen"/"accentfärgen" inflections); the two
+# sets share no substring so the nearest match is unambiguous.
+_PRIMARY_TARGET_WORDS: tuple[str, ...] = (
+    "primärfärg",
+    "primarfarg",
+    "huvudfärg",
+    "huvudfarg",
+    "primary",
+)
+_ACCENT_TARGET_WORDS: tuple[str, ...] = (
+    "accentfärg",
+    "accentfarg",
+    "accent",
+)
+
+
+def _expand_short_hex(token: str) -> str:
+    """``#rgb`` -> ``#rrggbb`` (``#rrggbb`` passes through unchanged)."""
+    if len(token) == 4:
+        return "#" + "".join(channel * 2 for channel in token[1:])
+    return token
+
+
+def _nearest_target_before(text: str, position: int) -> str | None:
+    """Return ``"primary"``/``"accent"`` for the target word closest before
+    ``position``, or ``None`` when neither appears before it."""
+    best_kind: str | None = None
+    best_index = -1
+    for word in _PRIMARY_TARGET_WORDS:
+        index = text.rfind(word, 0, position)
+        if index > best_index:
+            best_index = index
+            best_kind = "primary"
+    for word in _ACCENT_TARGET_WORDS:
+        index = text.rfind(word, 0, position)
+        if index > best_index:
+            best_index = index
+            best_kind = "accent"
+    return best_kind
+
+
+def _resolve_hex_literals(text: str) -> tuple[str | None, str | None]:
+    """Resolve ``(primary_hex, accent_hex)`` from literal hex tokens.
+
+    Each hex is assigned by the nearest preceding target word. A hex with
+    no target word defaults to the primary slot when it is still free,
+    otherwise the accent slot — so "byt färg till #aabbcc" recolours the
+    brand primary and "primärfärg till #x och accentfärg till #y" fills
+    both. Later mentions of the same slot win (operator's last word).
+    """
+    primary: str | None = None
+    accent: str | None = None
+    for match in _HEX_LITERAL_RE.finditer(text):
+        hex_value = _expand_short_hex(match.group(0))
+        kind = _nearest_target_before(text, match.start())
+        if kind is None:
+            kind = "primary" if primary is None else "accent"
+        if kind == "primary":
+            primary = hex_value
+        else:
+            accent = hex_value
+    return primary, accent
+
 
 # Whole-word match with the same boundary rule as ``text._contains_word`` (so a
 # colour word is never matched inside a longer word, e.g. "blå" inside "marinblå").
@@ -270,12 +343,25 @@ def extract_theme_directive(
     color_hex, color_word, accent_hex, accent_word = _resolve_colors(text)
     vibe, vibe_word = _match_font_vibe(text)
 
+    # Literal hex tokens win per slot over word-resolved colours — an
+    # explicit "#2d5f3f" is the operator's exact intent (the colour-tools
+    # dialog emits this shape), a colour word is an approximation. The
+    # matched literal is recorded as the source word for honest summaries.
+    hex_primary, hex_accent = _resolve_hex_literals(text)
+    if hex_primary is not None:
+        color_hex, color_word = hex_primary, hex_primary
+    if hex_accent is not None:
+        accent_hex, accent_word = hex_accent, hex_accent
+
     # A bare "ändra typsnittet" (font trigger, no vibe) gets a tasteful default
     # so the request is honoured visibly instead of silently dropped.
     if vibe is None and _font_change_requested(text):
         vibe = _DEFAULT_FONT_VIBE
 
-    if color_hex is None and vibe is None:
+    # An explicit accent hex may stand alone (the operator chose the slot
+    # deliberately in the colour-tools dialog); the word path still requires
+    # a primary so a bare "vit" stays an honest no-op.
+    if color_hex is None and accent_hex is None and vibe is None:
         return None
 
     return ThemeDirective(

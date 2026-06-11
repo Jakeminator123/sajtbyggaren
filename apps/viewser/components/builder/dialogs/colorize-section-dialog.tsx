@@ -1,13 +1,13 @@
 "use client";
 
-import { Loader2, Palette } from "lucide-react";
+import { Loader2, PaintBucket } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import {
   useFollowupBuild,
-  type FollowupToolIntent,
   type OnFollowupBuildDone,
 } from "@/components/builder/use-followup-build";
+import type { MarkedSectionRef } from "@/components/preview-inspector-context";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,56 +22,52 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 /**
- * Byt sajtens färger (Färg-fliken i ToolsPopover, fas 2 2026-06-11).
+ * Färglägg en markerad sektion (sektionsmenyns "Färglägg sektionen",
+ * Verktyg fas 3 2026-06-11).
  *
- * Två mål — primärfärg (knappar/länkar/accenter) och accentfärg
- * (detaljer/highlights) — väljs via en segmented control; färgkartan,
- * hex-fältet och native-pickern redigerar det valda målet. Operatören
- * kan sätta båda innan hen bygger: prompten nämner varje satt mål
- * ("Ändra sajtens primärfärg till #x och accentfärgen till #y.").
+ * Öppnas från preview-markeringsläget med sektionskontexten
+ * (routeId+sectionId) från klicket. Operatören väljer mål (bakgrund
+ * eller text) + en färg; dialogen bygger en deterministisk prompt
+ * ("Ändra bakgrundsfärgen i den markerade sektionen … till #hex") och
+ * skickar markeringen strukturerat som ``markedSections`` (ADR 0046).
+ * Python-sidan (followup/section_style.py) tolkar prompten utan LLM
+ * och persisterar en per-sektion override i
+ * ``directives.sectionStyleOverrides``; build_site.py renderar den som
+ * CSS mot ``data-section-id``-markören.
  *
- * Prompten tolkas numera DETERMINISTISKT i Python
- * (theme_directives._resolve_hex_literals): hex-literal + närmaste
- * föregående målord → brand.primaryColorHex/accentColorHex. Tidigare
- * krävde hex-prompts styleDirectiveModel-LLM:en — utan OPENAI_API_KEY
- * var dialogen en tyst no-op.
- *
- * Den strukturerade ``toolIntent`` (theme_change) skickas också med:
- * backend utan dispatch strippar fältet tyst (prompten bär samma
- * information), med dispatch slipper den regex:a fram hex ur fritext.
- *
- * Målen speglar exakt vad byggaren renderar (--primary/--accent +
- * skalor i tokens.py). Text-/bakgrundsfärg per element är fas 3
- * (per-sektion style-overrides) och erbjuds inte här förrän backend
- * finns — ärlighet före knappar.
+ * Ett mål per bygge — backend-extraktorn bär exakt ett direktiv per
+ * prompt, och två snabba byggen är ärligare än en prompt extraktorn
+ * bara halvförstår.
  */
 
 const PRESET_PALETTE: ReadonlyArray<{ hex: string; label: string }> = [
+  { hex: "#FFFFFF", label: "Vit" },
+  { hex: "#F8FAFC", label: "Ljusgrå" },
   { hex: "#0F172A", label: "Mörk slate" },
   { hex: "#1E40AF", label: "Djup blå" },
   { hex: "#2D5F3F", label: "Skogsgrön" },
   { hex: "#B45309", label: "Höstambar" },
-  { hex: "#9333EA", label: "Plommonlila" },
-  { hex: "#DC2626", label: "Signalröd" },
 ];
 
 const HEX_PATTERN = /^#([0-9a-fA-F]{6})$/;
 
-type ColorTarget = "primary" | "accent";
+type SectionColorTarget = "background" | "text";
 
 const TARGET_OPTIONS: ReadonlyArray<{
-  id: ColorTarget;
+  id: SectionColorTarget;
   label: string;
   hint: string;
 }> = [
-  { id: "primary", label: "Primärfärg", hint: "Knappar, länkar, accenter" },
-  { id: "accent", label: "Accentfärg", hint: "Detaljer och highlights" },
+  { id: "background", label: "Bakgrund", hint: "Hela sektionens yta" },
+  { id: "text", label: "Text", hint: "Rubriker och brödtext" },
 ];
 
-type ColorPickerDialogProps = {
+type ColorizeSectionDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   siteId: string;
+  /** Sektionen som färgläggs — från sektionsmenyns klickkontext. */
+  sectionRef: MarkedSectionRef | null;
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: OnFollowupBuildDone;
@@ -80,24 +76,19 @@ type ColorPickerDialogProps = {
   baseRunId?: string | null;
 };
 
-export function ColorPickerDialog({
+export function ColorizeSectionDialog({
   open,
   onOpenChange,
   siteId,
+  sectionRef,
   onBuildStart,
   onBuildEnd,
   onBuildDone,
   isBuilding = false,
   baseRunId = null,
-}: ColorPickerDialogProps) {
-  const [target, setTarget] = useState<ColorTarget>("primary");
-  // null = målet är orört och utelämnas ur prompten/intentet. Bara mål
-  // som operatören aktivt satt skickas — annars skulle ett rent
-  // accent-byte alltid släpa med en default-primär.
-  const [chosen, setChosen] = useState<Record<ColorTarget, string | null>>({
-    primary: null,
-    accent: null,
-  });
+}: ColorizeSectionDialogProps) {
+  const [target, setTarget] = useState<SectionColorTarget>("background");
+  const [chosenHex, setChosenHex] = useState<string | null>(null);
   const [hexInput, setHexInput] = useState<string>("");
   const { runFollowup, isBusy, error } = useFollowupBuild({
     siteId,
@@ -108,100 +99,88 @@ export function ColorPickerDialog({
     baseRunId,
   });
 
-  const activeColor = chosen[target];
+  const sectionLabel =
+    sectionRef?.headingText?.trim() || sectionRef?.sectionId || "";
 
-  const setColorForTarget = useCallback(
-    (hex: string) => {
-      setChosen((prev) => ({ ...prev, [target]: hex }));
-      setHexInput(hex);
-    },
-    [target],
-  );
-
-  const handleTargetSwitch = useCallback(
-    (next: ColorTarget) => {
-      setTarget(next);
-      setHexInput(chosen[next] ?? "");
-    },
-    [chosen],
-  );
+  const pickColor = useCallback((hex: string) => {
+    setChosenHex(hex);
+    setHexInput(hex);
+  }, []);
 
   const handleHexChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const raw = event.target.value;
       setHexInput(raw);
-      if (HEX_PATTERN.test(raw)) {
-        setChosen((prev) => ({ ...prev, [target]: raw }));
-      }
+      if (HEX_PATTERN.test(raw)) setChosenHex(raw);
     },
-    [target],
+    [],
   );
 
-  const handleNativePickerChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setColorForTarget(event.target.value);
-    },
-    [setColorForTarget],
-  );
-
-  // Minst ett mål satt + hex-fältet får inte stå i ett halvskrivet,
-  // ogiltigt läge (tomt är ok — då gäller senast klickade swatch).
   const canSubmit = useMemo(() => {
-    const anyChosen = chosen.primary !== null || chosen.accent !== null;
     const hexFieldOk = hexInput === "" || HEX_PATTERN.test(hexInput);
-    return anyChosen && hexFieldOk;
-  }, [chosen, hexInput]);
+    return Boolean(sectionRef) && chosenHex !== null && hexFieldOk;
+  }, [sectionRef, chosenHex, hexInput]);
 
   const handleSubmit = useCallback(async () => {
-    if (!canSubmit) return;
-    const parts: string[] = [];
-    if (chosen.primary) parts.push(`primärfärg till ${chosen.primary}`);
-    if (chosen.accent) parts.push(`accentfärg till ${chosen.accent}`);
+    if (!canSubmit || !sectionRef || !chosenHex) return;
+    // Exakt promptgrammatik som section_style.extract_section_style_directive
+    // tolkar deterministiskt: sektionsreferens + explicit mål + hex.
+    const targetNoun =
+      target === "background" ? "bakgrundsfärgen" : "textfärgen";
     const prompt =
-      `Ändra sajtens ${parts.join(" och ")}. ` +
-      "Behåll övrig design intakt, men uppdatera knapp-, länk- och accentfärger så de matchar.";
-    // Strukturerad intent bredvid prompten — backend med specialist-
-    // dispatch går rakt till tema-pipelinen utan texttolkning.
-    const toolIntent: FollowupToolIntent = {
-      tool: "theme_change",
-      params: {
-        ...(chosen.primary ? { primaryColorHex: chosen.primary } : {}),
-        ...(chosen.accent ? { accentColorHex: chosen.accent } : {}),
-      },
-    };
-    const result = await runFollowup(prompt, { toolIntent });
+      `Ändra ${targetNoun} i den markerade sektionen "${sectionLabel}" ` +
+      `till ${chosenHex}. Behåll övrig design, copy och struktur intakt.`;
+    const result = await runFollowup(prompt, {
+      markedSections: [
+        { routeId: sectionRef.routeId, sectionId: sectionRef.sectionId },
+      ],
+    });
     if (result.ok) onOpenChange(false);
-  }, [canSubmit, chosen, runFollowup, onOpenChange]);
+  }, [
+    canSubmit,
+    sectionRef,
+    chosenHex,
+    target,
+    sectionLabel,
+    runFollowup,
+    onOpenChange,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Byt färger</DialogTitle>
+          <DialogTitle>Färglägg sektionen</DialogTitle>
           <DialogDescription>
-            Välj primär- och/eller accentfärg så bygger vi om sajten med
-            uppdaterade knappar, länkar och detaljer.
+            {sectionLabel ? (
+              <>
+                Gäller sektionen{" "}
+                <span className="text-foreground font-medium">
+                  ”{sectionLabel}”
+                </span>
+                . Välj vad som ska färgas och med vilken färg.
+              </>
+            ) : (
+              "Välj vad som ska färgas och med vilken färg."
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {/* Målväljare: vilket färgmål redigeras just nu. En liten
-              swatch i knappen visar redan valda färger per mål. */}
           <div
             role="radiogroup"
-            aria-label="Färgmål"
+            aria-label="Färgmål i sektionen"
             className="grid grid-cols-2 gap-2"
           >
             {TARGET_OPTIONS.map((option) => {
               const isActive = target === option.id;
-              const value = chosen[option.id];
               return (
                 <button
                   key={option.id}
                   type="button"
                   role="radio"
                   aria-checked={isActive}
-                  onClick={() => handleTargetSwitch(option.id)}
+                  onClick={() => setTarget(option.id)}
                   className={cn(
                     "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition active:scale-[0.98]",
                     "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
@@ -210,14 +189,7 @@ export function ColorPickerDialog({
                       : "border-border/60 hover:border-border",
                   )}
                 >
-                  <span className="flex items-center gap-1.5 text-[12.5px] font-medium tracking-tight">
-                    {value ? (
-                      <span
-                        aria-hidden
-                        className="border-border/60 inline-block h-3 w-3 rounded-full border"
-                        style={{ backgroundColor: value }}
-                      />
-                    ) : null}
+                  <span className="text-[12.5px] font-medium tracking-tight">
                     {option.label}
                   </span>
                   <span className="text-muted-foreground text-[10.5px]">
@@ -235,12 +207,12 @@ export function ColorPickerDialog({
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
               {PRESET_PALETTE.map((preset) => {
                 const isActive =
-                  activeColor?.toLowerCase() === preset.hex.toLowerCase();
+                  chosenHex?.toLowerCase() === preset.hex.toLowerCase();
                 return (
                   <button
                     key={preset.hex}
                     type="button"
-                    onClick={() => setColorForTarget(preset.hex)}
+                    onClick={() => pickColor(preset.hex)}
                     title={preset.label}
                     aria-label={preset.label}
                     aria-pressed={isActive}
@@ -260,32 +232,32 @@ export function ColorPickerDialog({
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <Label
-                htmlFor="builder-color-hex"
+                htmlFor="colorize-section-hex"
                 className="text-muted-foreground mb-1.5 block text-[11px] tracking-tight uppercase"
               >
                 Hex-värde
               </Label>
               <Input
-                id="builder-color-hex"
+                id="colorize-section-hex"
                 value={hexInput}
                 onChange={handleHexChange}
-                placeholder="#2D5F3F"
+                placeholder="#F8FAFC"
                 spellCheck={false}
                 className="font-mono text-base md:text-sm"
               />
             </div>
             <div>
               <Label
-                htmlFor="builder-color-picker"
+                htmlFor="colorize-section-picker"
                 className="text-muted-foreground mb-1.5 block text-[11px] tracking-tight uppercase"
               >
                 Plocka
               </Label>
               <input
-                id="builder-color-picker"
+                id="colorize-section-picker"
                 type="color"
-                value={activeColor ?? "#2D5F3F"}
-                onChange={handleNativePickerChange}
+                value={chosenHex ?? "#F8FAFC"}
+                onChange={(event) => pickColor(event.target.value)}
                 className="border-border/60 min-tap sm:min-tap-0 w-14 cursor-pointer rounded-md border bg-transparent p-1 sm:h-9 sm:w-12"
               />
             </div>
@@ -310,7 +282,11 @@ export function ColorPickerDialog({
           >
             Avbryt
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isBusy || !canSubmit}>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isBusy || !canSubmit}
+          >
             {isBusy ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -318,8 +294,8 @@ export function ColorPickerDialog({
               </>
             ) : (
               <>
-                <Palette className="h-4 w-4" />
-                Använd färger
+                <PaintBucket className="h-4 w-4" />
+                Färglägg
               </>
             )}
           </Button>

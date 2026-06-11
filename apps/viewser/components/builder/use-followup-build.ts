@@ -77,8 +77,13 @@ export type FollowupToolIntent =
   | {
       tool: "theme_change";
       params: {
-        /** Giltig #RRGGBB-hex — dialogen validerar mot sitt HEX_PATTERN innan skick. */
-        primaryColorHex: string;
+        /**
+         * Giltig #RRGGBB-hex — dialogen validerar mot sitt HEX_PATTERN
+         * innan skick. Minst ett av fälten sätts (färgdialogen kan byta
+         * primär, accent eller båda i ett bygge, fas 2 2026-06-11).
+         */
+        primaryColorHex?: string;
+        accentColorHex?: string;
       };
     }
   | {
@@ -266,7 +271,16 @@ export function useFollowupBuild({
   const runFollowup = useCallback(
     async (
       prompt: string,
-      options?: { toolIntent?: FollowupToolIntent },
+      options?: {
+        toolIntent?: FollowupToolIntent;
+        /**
+         * ADR 0046-markeringar för dialog-utlösta byggen (fas 3:s
+         * "Färglägg sektionen"). Samma kontrakt som chipsen i
+         * FloatingChat: valideras mot base-runens facit på Python-sidan
+         * och triggar aldrig ensam ett bygge. Max 5 (API-schemat).
+         */
+        markedSections?: Array<{ routeId: string; sectionId: string }>;
+      },
     ): Promise<RunFollowupResult> => {
       const trimmed = prompt.trim();
       if (!trimmed) {
@@ -308,6 +322,11 @@ export function useFollowupBuild({
             // redan strukturerade parametrar sätter den. Backend utan stöd
             // strippar fältet tyst (icke-strict Zod) och kör prompt-vägen.
             ...(options?.toolIntent ? { toolIntent: options.toolIntent } : {}),
+            // Strukturerade preview-markeringar (ADR 0046) — utelämnas
+            // helt när dialogen inte har någon sektionskontext.
+            ...(options?.markedSections?.length
+              ? { markedSections: options.markedSections }
+              : {}),
           }),
         });
         const payload = (await response.json()) as PromptApiResponse;

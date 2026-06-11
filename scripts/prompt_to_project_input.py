@@ -76,6 +76,10 @@ from packages.generation.followup.marked_sections import (  # noqa: E402
     parse_marked_sections,
     validate_marked_sections,
 )
+from packages.generation.followup.section_style import (  # noqa: E402
+    apply_section_style_directive,
+    extract_section_style_directive,
+)
 from packages.generation.followup.text import (  # noqa: E402
     _contains_any,
     _contains_any_word,
@@ -2909,6 +2913,31 @@ def merge_followup_project_input(
                 company_now.pop("story", None)
             elif company_now.get("story") != pre_patch_story:
                 company_now["story"] = pre_patch_story
+    # Section-scoped recolour (Verktyg fas 3, "Färglägg sektionen"): an
+    # explicit bakgrund/textfärg request that references a section AND
+    # arrives with validated preview markings lands as a per-section
+    # override (directives.sectionStyleOverrides) instead of a site-wide
+    # theme change. Checked BEFORE the theme extractor and short-circuits
+    # it on success — fas 2's untargeted-hex-defaults-to-primary rule
+    # would otherwise ALSO repaint the brand primary from the same
+    # prompt. Gated on "no copy directive applied" so a literal copy edit
+    # that merely mentions a colour can never be hijacked into a
+    # recolour. Without markings the prompt falls through to the theme
+    # path unchanged (today's behaviour).
+    if not copy_directives:
+        section_style_directive = extract_section_style_directive(
+            follow_up_prompt, language=language
+        )
+        if section_style_directive is not None:
+            apply_section_style_directive(
+                merged, section_style_directive, marked_sections
+            )
+            # A section-scoped recolour prompt NEVER falls through to the
+            # theme path — without validated markings (dropped by the
+            # ADR 0046 facit check, or none sent) an honest no-op beats
+            # repainting the whole brand from a prompt that explicitly
+            # said "sektionen".
+            return merged
     # visual_style follow-up: a colour/font restyle request ("gör färgen rosa
     # och typsnittet snyggt") sets brand.primaryColorHex + tone.primary, which
     # the builder already renders via patch_globals_css on rebuild. Honest

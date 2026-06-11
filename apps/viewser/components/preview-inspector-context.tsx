@@ -110,7 +110,12 @@ export const MAX_MARKED_SECTIONS = 5;
  *     ADR 0042). Visas bara för sektioner backendens inline-allowlist
  *     faktiskt kan flytta (gallery/hours-summary på home).
  */
-export type SectionAction = "prefill-copy" | "asset" | "module" | "move";
+export type SectionAction =
+  | "prefill-copy"
+  | "asset"
+  | "module"
+  | "move"
+  | "colorize";
 
 export type SectionActionRequest = {
   action: SectionAction;

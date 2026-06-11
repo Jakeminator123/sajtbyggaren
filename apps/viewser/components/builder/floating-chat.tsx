@@ -86,7 +86,7 @@ import type {
  *
  * Designprinciper:
  * 1. SUPERMINIMALISM. Vi visar bara chat + skicka. Andra "häftiga
- *    ändringar" lever i `BuilderActions`-FAB:en bredvid.
+ *    ändringar" lever i den topp-centrerade `ToolsPopover`-panelen.
  * 2. ALDRIG IN I VÄGEN FÖR PREVIEW. Användaren ska kunna dra panelen
  *    var som helst, eller minimera till en liten bubbla. Position
  *    persisteras per användare i localStorage.
@@ -974,7 +974,6 @@ export function FloatingChat({
   pendingBaseRunId,
   onClearBaseRunId,
   onShowVersions,
-  tools,
   focusComposerSignal,
   composerPrefill,
 }: FloatingChatProps) {
@@ -2405,8 +2404,9 @@ export function FloatingChat({
       </aside>
 
       {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-
-        knapparna (375/768/1024/Full), en subtil vertikal divider, och
-        en optional `tools`-slot (typiskt BuilderActions inline-knappen).
+        knapparna (375/768/1024/Full). Verktyg-pillen som tidigare bodde
+        här flyttade 2026-06-11 till den topp-centrerade ToolsPopover
+        över previewn (renderas av BuilderShell).
         Bredd = PANEL_WIDTH (360px) och `rounded-b-2xl` så toolbar-raden
         + chat-panelen ovanför formar visuellt EN sammanhängande
         rektangel: chat = rounded-t-2xl, toolbar = rounded-b-2xl, raka
@@ -2418,13 +2418,13 @@ export function FloatingChat({
 
         Renderas bara på desktop (md+) och endast när panelen inte är
         minimerad — på mobile är enheten själv liten och toggle-värdet
-        är meningslöst, och Verktyg-pillen är ändå dold under md:.
+        är meningslöst.
         position-null guard:en hanterar SSR + initial hydration innan
         first-mount-effekten satt position-state. */}
       {!isMobile && !isMinimized && position ? (
         <div
           role="toolbar"
-          aria-label="Förhandsvisningsbredd och verktyg"
+          aria-label="Förhandsvisningsbredd"
           className="border-border/60 bg-card/95 pointer-events-auto fixed z-40 hidden items-center justify-center gap-0.5 rounded-b-2xl border border-t-0 p-1 shadow-2xl backdrop-blur-xl md:flex"
           style={{
             left: position.x,
@@ -2460,12 +2460,6 @@ export function FloatingChat({
               </button>
             );
           })}
-          {tools ? (
-            <>
-              <span aria-hidden className="bg-border/60 mx-0.5 h-5 w-px" />
-              {tools}
-            </>
-          ) : null}
         </div>
       ) : null}
 

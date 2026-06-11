@@ -653,6 +653,18 @@ COMMON_WORDS = {
     # Skrollbar preview i peka-lägena (operatörsbugg 2026-06-10): lokal
     # retur-shape för dokument-relativ elementkarta + sidhöjd.
     "CollectedElementMap",
+    # Topp-centrerad verktygspanel med flikar (operatörsbeslut 2026-06-11):
+    # ersätter BuilderActions-pillen i FloatingChat-toolbaren. Lokala
+    # React-symboler, inte domänbegrepp.
+    "ToolsPopover", "ToolsPopoverProps",
+    # Färgdialogens målväljare (fas 2, 2026-06-11): lokalt union-alias
+    # ("primary" | "accent") i color-picker-dialog.tsx.
+    "ColorTarget",
+    # "Färglägg sektionen" (fas 3, 2026-06-11): sektionsmenyns färgdialog
+    # (React-komponent + props + lokalt målalias "background"|"text") och
+    # Python-extraktorns dataclass i followup/section_style.py.
+    "ColorizeSectionDialog", "ColorizeSectionDialogProps",
+    "SectionColorTarget", "SectionStyleDirective",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",
@@ -852,6 +864,10 @@ COMMON_WORDS = {
     "PreviewInspectorOverlay", "PreviewInspectorProvider",
     "ReactMouseEvent",
     "SectionKind", "SectionZone",
+    # BuilderActions/BuilderActionsProps togs ur koden 2026-06-11
+    # (builder-actions.tsx ersatt av ToolsPopover) men nämns kvar i
+    # arkiverade docs/workboard — behålls i allowlisten av det skälet.
+    # BuilderAction/BuilderActionIcon lever vidare i tools-popover.tsx.
     "BuilderAction", "BuilderActionIcon", "BuilderActions",
     "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
     "BusinessFamily", "BusinessFamilyId",
