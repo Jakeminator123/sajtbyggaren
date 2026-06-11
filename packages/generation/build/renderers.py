@@ -212,6 +212,17 @@ def _route_href(route: str) -> str:
     return _call_build_site("_route_href", route)
 
 
+def _hard_dossier_runtime(dossier: dict, dossier_id: str) -> dict[str, Any] | None:
+    runtime = dossier.get("dossierRuntime")
+    if not isinstance(runtime, dict):
+        return None
+    hard = runtime.get("hardDossiers")
+    if not isinstance(hard, dict):
+        return None
+    entry = hard.get(dossier_id)
+    return entry if isinstance(entry, dict) else None
+
+
 def resolve_media_asset(dossier: dict, kind: str) -> dict | None:
     return _call_build_site("resolve_media_asset", dossier, kind)
 
@@ -1044,6 +1055,7 @@ def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt"
     quote alike.
     """
     contact = dossier["contact"]
+    resend_runtime = _hard_dossier_runtime(dossier, "resend-contact-form")
     hero_body = _contact_page_hero_body(dossier)
     header = (
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
@@ -1066,7 +1078,7 @@ def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt"
         or is_placeholder_opening_hours(contact.get("openingHours"))
         or is_placeholder_address_lines(contact.get("addressLines"))
     )
-    if no_placeholders:
+    if no_placeholders and resend_runtime is None:
         # Filter individual placeholder lines even on the fast path: a mixed
         # address (real line + fallback line) takes this branch because
         # is_placeholder_address_lines() is True only when EVERY line is a
@@ -1186,6 +1198,62 @@ def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt"
         cards.append(
             '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
             + contact_cta_anchor
+            + "            </article>\n"
+        )
+
+    if resend_runtime is not None:
+        submit_path = str(
+            resend_runtime.get("submitTarget") or "/api/contact/resend"
+        )
+        mode = "integration" if resend_runtime.get("mode") == "integration" else "design"
+        heading = (
+            "Send us a message"
+            if language == "en"
+            else "Skicka ett meddelande"
+        )
+        intro = (
+            "Use the form below and we reply by email."
+            if language == "en"
+            else "Fyll i formuläret nedan så svarar vi via e-post."
+        )
+        if mode == "design":
+            mode_note = (
+                "Design mode is active until runtime env is configured."
+                if language == "en"
+                else "Designläge är aktivt tills runtime-env är konfigurerad."
+            )
+        else:
+            mode_note = (
+                "Integration mode is active for this build."
+                if language == "en"
+                else "Integrationsläge är aktivt för denna build."
+            )
+        behavior = (
+            str(resend_runtime.get("designModeBehavior", "")).strip()
+            if mode == "design"
+            else str(resend_runtime.get("integrationModeBehavior", "")).strip()
+        )
+        behavior_line = (
+            f'              <p className="mt-2 text-sm text-[color:var(--muted)]">{_jsx_safe_string(behavior)}</p>\n'
+            if behavior
+            else ""
+        )
+        design_mode_message = str(
+            resend_runtime.get("designModeBehavior", "")
+        ).strip()
+        if not design_mode_message:
+            design_mode_message = (
+                "Design mode active: submission is a no-op until RESEND_API_KEY is configured."
+            )
+        cards.append(
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
+            f'              <h2 className="text-base font-semibold">{_jsx_safe_string(heading)}</h2>\n'
+            f'              <p className="mt-2 text-[color:var(--muted)]">{_jsx_safe_string(intro)}</p>\n'
+            f'              <p className="mt-2 text-sm font-medium text-[color:var(--muted)]">{_jsx_safe_string(mode_note)}</p>\n'
+            + behavior_line
+            + "              <div className=\"mt-4\">\n"
+            + f'                <ResendContactForm submitPath={_jsx_safe_string(submit_path)} designModeAtBuild={"{true}" if mode == "design" else "{false}"} designModeMessage={_jsx_safe_string(design_mode_message)} />\n'
+            + "              </div>\n"
             + "            </article>\n"
         )
     return header + "".join(cards) + footer
@@ -2098,8 +2166,14 @@ def render_contact(dossier: dict, *, contact_path: str = "/kontakt") -> str:
         if icons
         else ""
     )
+    form_import = (
+        'import { ResendContactForm } from "@/components/resend-contact-form";\n\n'
+        if _hard_dossier_runtime(dossier, "resend-contact-form") is not None
+        else ""
+    )
     return (
-        icon_import
+        form_import
+        + icon_import
         + "export default function ContactPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'

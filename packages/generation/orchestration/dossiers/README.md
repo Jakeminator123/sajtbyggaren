@@ -62,12 +62,14 @@ och deklarerar `class` (`soft` eller `hard`), `capability`, `codeFidelity`,
 `files`, `exposes` och `lastVerified`. Obligatoriska filer per
 [`dossier-contract.v1.json:dossierDirectoryLayout.requiredFilesAllClasses`](../../../../governance/policies/dossier-contract.v1.json)
 är idag bara `manifest.json` och `instructions.md`. Övriga filer i listan
-ovan är optional och fylls när hard Dossiers importeras i Sprint 3+.
+ovan är optional för soft Dossiers. Hard Dossiers ska dessutom ha
+`env-contract.json`, `code-contract.json` och `integration-contract.json`
+enligt ADR 0053.
 
 ## Status
 
 Tretton (13) soft Dossiers är implementerade idag (alla instructions-only,
-inga verbatim TSX-filer):
+inga verbatim TSX-filer). En (1) hard Dossier är implementerad idag.
 
 **Pre-Week-1 (basbygglock):**
 
@@ -85,8 +87,15 @@ inga verbatim TSX-filer):
   hours, för restaurang/klinik/frisör-bokning.
 - [`soft/mailto-contact-form/`](soft/mailto-contact-form/) — capability
   `contact-form`, `defaultForCapability=true`. Mailto-baserat kontaktformulär
-  (zero env, zero backend) som default tills den planerade hard
-  `resend-contact-form` importeras från MIN_IDE.
+  (zero env, zero backend) som default även efter att hard-alternativet
+  `resend-contact-form` tillkom.
+
+**Hard Dossiers (första importen, 2026-06-11):**
+
+- [`hard/resend-contact-form/`](hard/resend-contact-form/) — capability
+  `contact-form`, `defaultForCapability=false`. Server-side submit via lokal
+  `/api/contact/resend`-route med Resend provider. Vid saknad `RESEND_API_KEY`
+  kör dossiern i ärligt designläge (no-op + tydlig status), aldrig fake success.
 
 **Week 1 batch 2 (universella brick-and-mortar-byggstenar, 2026-05-24):**
 
@@ -140,8 +149,9 @@ har fortfarande tomma `dossiers`-listor och är dokumenterade gap
 (`empty list = gap, not feature`): `newsletter-subscribe`, `payments`,
 `auth`, `analytics`, `ai-chat`, `error-tracking`, `carousel`, `marquee`,
 `command-search`. De väntar på MIN_IDE-import i kommande sprintar.
-Ingen hard Dossier (stripe-checkout, supabase-auth, clerk-auth,
-shopify-cart, resend-contact-form) är implementerad än.
+Hard roadmapen innehåller fortfarande fler planerade imports
+(`stripe-checkout`, `supabase-auth`, `clerk-auth`, `shopify-cart`), men
+`resend-contact-form` är nu implementerad.
 
 Builder MVP läser primärt ett `Project Input` under
 `examples/<siteId>.project-input.json` (t.ex. `painter-palma`) och patchar

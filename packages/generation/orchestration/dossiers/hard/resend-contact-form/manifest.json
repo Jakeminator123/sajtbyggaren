@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "resend-contact-form",
+  "enabled": true,
+  "label": "Resend Contact Form",
+  "capability": "contact-form",
+  "class": "hard",
+  "codeFidelity": "rewritable",
+  "complexity": "medium",
+  "defaultForCapability": false,
+  "summary": "Hard contact-form dossier with a server-side Resend submit path. When RESEND_API_KEY is missing it still renders a complete form in honest design mode: submit is an explicit no-op message, never a fake success.",
+  "envVars": ["RESEND_API_KEY"],
+  "dependencies": [],
+  "files": ["components/resend-contact-form.tsx"],
+  "exposes": ["ResendContactForm"],
+  "lastVerified": "2026-06-11"
+}

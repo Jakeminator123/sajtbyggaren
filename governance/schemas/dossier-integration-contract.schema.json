@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dossier-integration-contract.schema.json",
+  "title": "Dossier Integration Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "activation", "mockMode", "verification"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "provider": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selectionMode", "requiresUserMention"],
+      "properties": {
+        "selectionMode": { "type": "string", "const": "explicit-or-strong-semantic" },
+        "requiresUserMention": { "type": "boolean", "const": true }
+      }
+    },
+    "mockMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trigger", "behavior"],
+      "properties": {
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["whenMissingEnv"],
+          "properties": {
+            "whenMissingEnv": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }
+            }
+          }
+        },
+        "behavior": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["useEnvContractField", "honestyRule"],
+          "properties": {
+            "useEnvContractField": { "type": "string", "const": "designModeBehavior" },
+            "honestyRule": { "type": "string", "const": "no-fake-success" }
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steps"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "requiresOperatorFlag": { "type": "boolean" }
+      }
+    }
+  }
+}

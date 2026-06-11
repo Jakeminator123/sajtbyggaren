@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/dossier-contract.schema.json",
   "policyId": "dossier-contract.v1",
-  "version": 3,
+  "version": 4,
   "status": "draft-but-authoritative",
-  "purpose": "Definierar vad en Dossier är, vilka klasser som finns, och exakt vilken filstruktur och vilka fält varje Dossier måste följa. Version 3 låser capability som obligatoriskt manifestfält enligt MIN_IDE-formatet. Version 2 (ADR 0012) tar bort 'hybrid' som klass; en Dossier som behöver mock i designläge är 'hard' med mockMode-konfiguration.",
+  "purpose": "Definierar vad en Dossier är, vilka klasser som finns, och exakt vilken filstruktur och vilka fält varje Dossier måste följa. Version 4 (ADR 0053) gör hard-kontrakten obligatoriska via env-contract.json, code-contract.json och integration-contract.json. Version 3 låser capability som obligatoriskt manifestfält enligt MIN_IDE-formatet. Version 2 (ADR 0012) tar bort 'hybrid' som klass; en Dossier som behöver mock i designläge är 'hard' med mockMode-konfiguration.",
   "principles": [
     "Dossier är en återanvändbar capability/legokloss, inte en komponent och inte ett konkret kundprojekt (det är Project Input).",
     "En Dossier har default-kompatibilitet med alla Scaffolds tills den explicit deklarerar 'incompatibleScaffolds'.",
@@ -31,7 +31,11 @@
     ],
     "additionalRequiredFilesByClass": {
       "soft": [],
-      "hard": []
+      "hard": [
+        "env-contract.json",
+        "code-contract.json",
+        "integration-contract.json"
+      ]
     }
   },
   "dossierJsonRequiredFields": [
@@ -54,6 +58,7 @@
   "promptContractRequiredFields": ["must", "avoid"],
   "codeContractRequiredFields": ["must", "avoid"],
   "envContractRequiredFields": ["requires", "designModeBehavior", "integrationModeBehavior"],
+  "integrationContractRequiredFields": ["provider", "activation", "mockMode", "verification"],
   "forbiddenInDossierFiles": [
     "alias för Dossier som inte står i naming-dictionary",
     "automatisk injektion i alla Scaffolds utan compatibility-check",
