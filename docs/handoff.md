@@ -1,14 +1,75 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-12 ~05:45 UTC+2, gryningsstängning: #306 (B198 del b) +
-#307 (hostad follow-up-paritet) reviewade, squash-mergade och i produktion;
-lane grön; build-context-tarball omladdad efter mergen. `main = jakob-be =
-a67a25b0`. Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
+**Datum:** 2026-06-12 ~07:30 UTC+2, morgonpass: B199 v2 — hostad
+run-historik/artefakter/inspector läses från KV/blob, builder-läget
+överlever omladdning, historisk baseRunId hydreras. Direkt på `jakob-be`
+på operatörsmandat, synkad till `main`. Detaljerad köplan:
+[`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-12 ~05:45 — GRYNINGSSTÄNGNING: #306 + #307 MERGADE OCH LIVE (AUKTORITATIVT BLOCK)
+## PASS 2026-06-12 ~07:30 — B199 V2: HOSTAD RUN-HISTORIK + ARTEFAKT-LÄSNING + OMLADDNINGS-ÅTERSTÄLLNING (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Mandat:** operatören beordrade explicit (efter bannerfrågan på
+> `/studio`) att hela hostade gapet fixas nu, inklusive omladdnings-delen
+> som låg nära Christophers spår. B197 (discovery-payload-forwarding till
+> sandboxen) är INTE rörd — den är fortfarande Christophers; be om tidig
+> rebase, `hosted-build-runner.ts` är ändrad IGEN av detta pass.
+>
+> **Vad som landade (B199 v2, en commit-kedja på jakob-be → main):**
+>
+> 1. **Skriv-sidan** (`hosted-build-runner.ts`): orkestrerings-skriptet
+>    publicerar efter varje lyckat bygge ett durabelt KV-index —
+>    `HostedRunIndexEntry` (naming-dictionary **v39**) under
+>    `viewser:run:<runId>` + `viewser:site:<siteId>:run:v<N>` (en
+>    pipeline-POST), med ärlig `buildStatus` (även på run-state-pekaren).
+>    Init-byggen skriver nu också result-blocket (engine=legacy) så svaret
+>    bär den KANONISKA build_site-runIden, inte orkestrerings-UUID:t.
+>    Historisk `baseRunId` hydrerar SIN versions artefakter via indexet
+>    (siteId-bundet) — #307:s "bara senaste versionen"-gräns är stängd.
+> 2. **Läs-sidan** (ny `lib/hosted-run-history.ts`): listar sajtens runs ur
+>    KV (RunMeta-paritet, pekar-fallback för pre-v2-sajter), packar upp
+>    run-artifacts-tarballen i minnet (gunzip + minimal ustar-läsare,
+>    cache per immutabel URL) och serverar samma bundle-/trace-former som
+>    lokalt. `/api/runs?siteId=` är hostade ingången — **siteId är
+>    capability-nyckeln** (B196-modellen): utan siteId listas INGET
+>    (ingen global publik enumeration). artifacts/trace serveras hostat;
+>    olösbar run = VANLIG 404 utan `hostedNotice`.
+> 3. **Klient-sidan** (`studio/page.tsx` m.fl.): builder-valet persisteras
+>    i sessionStorage och återställs efter hård omladdning (validerat mot
+>    hämtade listan; hostat via per-sajt-fetch). Bannern flyttade till eget
+>    fält `hostedBanner` och **armar ALDRIG 404-latchen** — latchen
+>    (lib/hosted-run-artefacts.ts) är nu enbart belt-and-braces för
+>    riktiga 404+hostedNotice-former, som ingen run-route längre skickar.
+>    Banner-texten omskriven till nya läget. files-routens hostade 404
+>    bär inte längre `hostedNotice` (skulle döda fungerande ytor).
+> 4. **Tester/governance:** `tests/test_viewser_hosted_run_history.py`
+>    (14 källkods-lås), uppdaterad hydrerings-docstring, naming-dictionary
+>    v39 (`HostedRunIndexEntry`), B199 STÄNGD i known-issues (16 aktiva,
+>    170 stängda). tsc + eslint gröna; prettier-avvikelser är
+>    pre-existerande CRLF-status-quo på Windows-checkouten (ej gateat).
+>
+> **Kvarvarande ärliga gap (ej blockers):** filträdet per run
+> (StackBlitz-fallback) serveras inte hostat; `changeSet` är `null` i
+> hostade followup-svar; runs byggda FÖRE detta deploy har bara senaste
+> versionen i historiken (pekar-fallback) och UUID-valda gamla flikar
+> löses via 24h-statusdoken. KV-/blob-prune är fortsatt ett öppet
+> operatörsbeslut (samma liggare som `generated/`-prune).
+>
+> **Nästa pass börjar här:** (1) E2E-verifiera i produktion på `/studio`:
+> init → historik/inspector synliga → omladdning → builder-läget kvar →
+> edit-följdprompt (OpenClaw apply) → ren fråga (answer-only), kolla
+> `engine`-attribution. (2) B197-review (Christophers) — kräv tidig rebase
+> mot nya `hosted-build-runner.ts`. (3) Blob/KV-prune-beslutet + Token
+> Meter-priser + Christophers lokala blob-store `3xqg…`. ADR-liggare:
+> nästa lediga **0055** (0054 reserverad). naming-dictionary **v39**,
+> llm-models **v12**.
+
+## PASS 2026-06-12 ~05:45 — GRYNINGSSTÄNGNING: #306 + #307 MERGADE OCH LIVE (HISTORIK)
+
+> Historiskt block (ersatt av B199 v2-passet ovan) — verifiera alltid mot
+> git/koden.
 >
 > **Git:** `main = jakob-be = origin/main = origin/jakob-be = a67a25b0`
 > (rent träd, CI grön på båda grenarna, produktionsdeploy READY).

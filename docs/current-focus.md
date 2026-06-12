@@ -6,48 +6,50 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-12 ~05:45 — gryningsstängning: #306 + #307 mergade och i produktion, lane grön)
+## Status nu (2026-06-12 ~07:30 — B199 v2: hostad run-historik + artefakt-läsning + omladdnings-återställning)
 
-**Git:** `main = jakob-be = a67a25b0` (rent träd, local == origin, CI grön).
-Production (`sajtbyggaren-viewser.vercel.app`) deployar från `main` och kör
-`a67a25b0`-kedjan. Build-context-tarballen omladdad EFTER #307-mergen, så
-hostade sandbox-byggen kör samma kod som `main`.
+**Git:** `main = jakob-be` (rent träd, local == origin). B199 v2-passet är
+landat direkt på `jakob-be` på operatörsmandat och synkat till `main`.
+Production deployar från `main`. Ingen tarball-omladdning behövs — passet
+rör bara `apps/viewser/` + tester/docs (orkestrerings-skriptet genereras av
+TS-koden, inte av build-context-tarballen).
 
-**Mergat i gryningen (båda via cloud-PR → vår lane-review → squash):**
+**Landat i morgonpasset (B199 v2, operatörsmandat efter bannerfrågan):**
 
-- **#306 — B198 del b** (`d1a1b98d`): synlig contact-form-render på
-  ecommerce-lite. Surfas mot befintliga kontakt-routen, ENBART när
-  `resend-contact-form` är monterad (mailto förblir ärligt mount-only).
-- **#307 — hostad follow-up-paritet** (`a67a25b0`): B199-hydrering (kanoniska
-  run-artefakter tarballas till blob + hydreras i sandboxen), OpenClaw
-  apply-söm i sandbox med answer-only-gate och ärlig legacy-fallback
-  (`engine`-attribution, aldrig fejkad apply-success), `baseRunId`/
-  `markedSections` forwardas, rikt hostat svar via KV-result. Sex nya
-  regressionstester. v1-begränsning: artefakt-pekaren spårar senaste
-  versionen; `changeSet` är `null` hostat.
-- Före merge lagades två röda källkods-lås på basen (`64aaeea4`):
-  run-details-panel clear-before-fetch + versions-tab under 1300 rader
-  (regression från `691bd835`). Lärdom inskriven: full svit före lane-push,
-  inte bara riktade tester.
+- **Hostad run-historik/artefakter/inspector:** orkestrerings-skriptet
+  publicerar durabelt KV-index (`HostedRunIndexEntry`, naming-dictionary
+  v39) per lyckat bygge; ny `lib/hosted-run-history.ts` läser indexet +
+  artefakt-tarballen från blob; `/api/runs?siteId=` (siteId =
+  capability-nyckel, ingen global listning) + artifacts/trace serveras
+  hostat. B199 STÄNGD i known-issues.
+- **Omladdnings-återställning:** builder-valet persisteras i
+  sessionStorage och återställs efter hård reload (lokalt + hostat).
+  Bannern är eget fält (`hostedBanner`) och armar aldrig 404-latchen;
+  banner-texten omskriven till nya läget.
+- **Init-paritet + historisk baseRunId:** init-svar bär kanonisk
+  build_site-runId; historisk `baseRunId` hydrerar sin egen versions
+  artefakter via runId-indexet (siteId-bundet).
+- 14 nya källkods-lås i `tests/test_viewser_hosted_run_history.py`.
 
 **Nästa 3 prioriteringar:**
 
-1. **E2E-verifiera #307 i produktion:** hostat init-bygge → följdprompt
-   (edit via OpenClaw apply) → ren fråga (answer-only utan bygge) på
-   `/studio`, och bekräfta `engine`-attribution + rikt svar i UI:t.
+1. **E2E-verifiera B199 v2 + #307 i produktion** på `/studio`: init →
+   historik/inspector → omladdning (builder-läget kvar) → edit-följdprompt
+   (OpenClaw apply) → ren fråga (answer-only), kolla `engine`-attribution.
 2. **B197 (Christophers, pågår):** snabb review när PR kommer. OBS:
-   `hosted-build-runner.ts` är kraftigt omskriven av #307 — be honom rebasa
-   tidigt om hans gren rör den.
-3. **Uppföljningar i prioritetsordning:** per-run artefakt-historik
-   (historisk `baseRunId` + `changeSet` hostat, B199 v2), blob-prune-strategi
-   för `generated/`-prefixet, operatörsbesluten (Token Meter-priser,
-   Christophers lokala blob-store `3xqg…`).
+   `hosted-build-runner.ts` är ändrad av BÅDE #307 och B199 v2 — be honom
+   rebasa tidigt.
+3. **Uppföljningar:** blob-/KV-prune-strategi (`generated/` +
+   run-index-nycklarna), `changeSet` hostat, operatörsbesluten (Token
+   Meter-priser, Christophers lokala blob-store `3xqg…`).
 
-**Öppna blockers:** inga hårda. B197/B199-v2 är spår, inte blockers.
+**Öppna blockers:** inga hårda. B197 och `changeSet`-hostat är spår, inte
+blockers.
 
-Last verified state: `a67a25b0` (2026-06-12 ~05:45 UTC+2; `main = jakob-be`,
-rent träd, CI grön på båda, prod READY, tarball == main. #306 + #307 mergade;
-inga öppna PR:ar.)
+Last verified state: `261f0c63` (2026-06-12 ~09:10 UTC+2; B199 v2-kodcommiten
+på `jakob-be`, synkas till `main` i samma push — rent träd, full svit
+(`pytest -n auto`) + ruff + governance + term-coverage + tsc + eslint gröna
+lokalt).
 
 ## Öppna PR att känna till
 
