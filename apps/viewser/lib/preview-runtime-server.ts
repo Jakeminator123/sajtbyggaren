@@ -17,8 +17,10 @@ import {
   stopSandboxPreview,
 } from "./vercel-sandbox-runner";
 import {
+  getHostedCurrentBuildId,
   recordSandboxSession,
   stopSandboxSessionForSite,
+  tryReuseSessionPreview,
 } from "./vercel-sandbox-sessions";
 
 /**
@@ -92,20 +94,54 @@ export function installViewserPreviewRuntimeHandlers(): void {
         // SAMMA siteId innan en ny skapas, så vi aldrig kör två parallellt
         // (TTL ~15 min + kostar ören per körning). Idempotent no-op om ingen
         // session finns. Detta täcker re-select/re-POST utan rebuild; ett nytt
-        // bygge stoppas dessutom redan av build-runner via
-        // ``stopSandboxSessionForSite``.
+        // bygge stoppas dessutom redan av build-runner (lokalt) respektive
+        // startHostedBuild (hostat) via ``stopSandboxSessionForSite``.
         //
         // Tier 2 (ADR 0041): i reuse-läge HOPPAR vi detta stopp — reuse-vägen
         // äger livscykeln (återanslut + best-effort cleanup vid död handle), och
         // att stoppa här skulle döda just den varma sandbox vi vill återanvända.
         // Bakom samma default-AV-flagga, så när reuse är av är beteendet
         // byte-identiskt med idag (stoppa ev. tidigare session som förr).
+        //
+        // buildId läses EN gång FÖRE källinsamlingen och återanvänds i
+        // recordSandboxSession nedan — läses den efter create kan ett bygge
+        // som blev klart mitt under preview-starten märka sessionen med NYA
+        // byggets id fast sandboxen serverar det gamla (se sessions-modulen).
+        let currentBuildId: string | null = null;
         if (!isSandboxReuseEnabled()) {
           await stopSandboxSessionForSite(siteId);
+        } else {
+          const tReuse = Date.now();
+          currentBuildId = await getHostedCurrentBuildId(siteId);
+          // Tier 2-snabbvägen med buildId-invalidering (2026-06-12): en varm
+          // session vars buildId matchar pekaren OCH vars URL svarar
+          // återanvänds direkt — ingen Sandbox-SDK-rundtur, ingen upload.
+          // Mismatch/död session stoppas av tryReuseSessionPreview
+          // (invalidering) och vi faller igenom till fulla vägen. Utan
+          // hostad pekare (lokalt disk-läge) är detta en no-op och den
+          // lokala reuse-vägen (tryReuseSandboxPreview) gäller som förr.
+          const reusedSession = await tryReuseSessionPreview(siteId);
+          if (reusedSession) {
+            return {
+              status: "ready",
+              url: reusedSession.url,
+              sessionId: reusedSession.sandboxId,
+              logs: [
+                `Återanvänder sandbox-session ${reusedSession.sandboxId} ` +
+                  `(buildId ${reusedSession.buildId} matchar pekaren, URL svarar).`,
+              ],
+              timings: { totalMs: Date.now() - tReuse, reused: true },
+            };
+          }
         }
         const result = await createSandboxPreview({ siteId, runId: config.runId });
         if (result.status === "ready" && result.url) {
-          await recordSandboxSession(siteId, result.sandboxId ?? siteId, result.url);
+          await recordSandboxSession(
+            siteId,
+            result.sandboxId ?? siteId,
+            result.url,
+            currentBuildId,
+          );
         }
         return {
           status: result.status === "ready" ? "ready" : "failed",

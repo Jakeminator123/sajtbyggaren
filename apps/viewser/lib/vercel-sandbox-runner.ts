@@ -855,13 +855,20 @@ async function createSandboxPreviewAttempt(
   const ttlMs = clampTtl(request.ttlMs);
   // Tier 2 (ADR 0041) namn-kollisionsstrategi:
   //  - reuse AV → dagens tidsstämplade, unika namn (oförändrat).
-  //  - reuse PÅ, REN miss (default) → DETERMINISTISKT namn (bootstrap, så nästa
-  //    preview kan återansluta).
+  //  - reuse PÅ, disk-källa, REN miss (default) → DETERMINISTISKT namn
+  //    (bootstrap, så nästa preview kan återansluta via Sandbox.get).
   //  - reuse PÅ, FUNNEN-MEN-DÖD (tryReuseSandboxPreview markerade siteId:t efter
   //    stop/delete) → TIDSSTÄMPLAT namn just denna cykel, så create inte race:ar
   //    mot den asynkrona deleten av det deterministiska namnet.
+  //  - reuse PÅ, BLOB-källa (hostat, 2026-06-12) → alltid TIDSSTÄMPLAT namn:
+  //    hostad reuse går via sessions-snabbvägen (URL + buildId i KV,
+  //    preview-runtime-server.ts), aldrig via reconnect-by-name — ett
+  //    deterministiskt namn skulle bara ge create-krockar mot en nyss
+  //    invaliderad (asynkront raderad) sandbox.
   const useEphemeralName =
-    !isSandboxReuseEnabled() || pendingEphemeralFallbackSites.has(request.siteId);
+    !isSandboxReuseEnabled() ||
+    sourceDir === null ||
+    pendingEphemeralFallbackSites.has(request.siteId);
   const sandboxName = useEphemeralName
     ? ephemeralSandboxName(request.siteId)
     : reuseSandboxName(request.siteId);

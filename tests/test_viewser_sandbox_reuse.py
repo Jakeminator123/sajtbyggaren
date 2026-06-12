@@ -40,6 +40,7 @@ from tests.support.viewser import VIEWSER_DIR
 
 RUNNER_PATH = VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts"
 WIRING_PATH = VIEWSER_DIR / "lib" / "preview-runtime-server.ts"
+SESSIONS_PATH = VIEWSER_DIR / "lib" / "vercel-sandbox-sessions.ts"
 
 
 def _runner_text() -> str:
@@ -380,6 +381,100 @@ def test_transient_reuse_failures_mark_ephemeral_fallback() -> None:
             "fulla vägen skapar då med det deterministiska namnet medan den "
             "stoppade recorden finns kvar → namnkollision (Vercel-bot-fyndet)."
         )
+
+
+# --- Tier 2 i prod: buildId-invalidering + sessions-snabbväg (2026-06-12) ----
+
+
+@pytest.mark.tooling
+def test_session_carries_build_identity() -> None:
+    """Invalidering kräver att sessionen bär byggets identitet: SandboxSession
+    har ett ``buildId``-fält och ``recordSandboxSession`` tar emot det (med
+    ``null``-default så lokala/legacy-callers förblir giltiga)."""
+    text = SESSIONS_PATH.read_text(encoding="utf-8")
+    session_block = text.split("export interface SandboxSession", 1)[1].split("\n}", 1)[0]
+    assert "buildId?: string | null;" in session_block, (
+        "SandboxSession måste deklarera ``buildId?: string | null`` — utan "
+        "byggets identitet kan en varm sandbox aldrig invalideras."
+    )
+    assert "buildId: string | null = null," in text, (
+        "recordSandboxSession måste ta emot buildId (default null) och skriva "
+        "det i sessionen."
+    )
+
+
+@pytest.mark.tooling
+def test_session_reuse_invalidates_on_build_mismatch() -> None:
+    """Sessions-snabbvägen (``tryReuseSessionPreview``) återanvänder BARA när
+    sessionens buildId matchar den hostade pekaren (viewser:site:<siteId>:current)
+    OCH URL:en bevisligen svarar. Mismatch/okänt buildId/död URL → sessionen
+    STOPPAS (invalidering) och null returneras så fulla vägen bygger nytt.
+    Saknad pekare (lokalt disk-läge) → null UTAN stopp, så den lokala
+    reconnect-vägen (tryReuseSandboxPreview) förblir orörd."""
+    text = SESSIONS_PATH.read_text(encoding="utf-8")
+    assert "export function hostedSiteCurrentKey" in text
+    assert "return `viewser:site:${siteId}:current`;" in text, (
+        "Pekarnyckeln måste vara exakt den orkestrerings-skriptet skriver."
+    )
+    assert "export async function tryReuseSessionPreview" in text
+    fn = text.split("export async function tryReuseSessionPreview", 1)[1].split(
+        "\n}\n", 1
+    )[0]
+    # Ingen pekare → null utan att röra sessionen (lokalt disk-läge orört).
+    assert "if (!currentBuildId) return null;" in fn
+    # Mismatch/okänt buildId → invalidera (stoppa) och bygg nytt.
+    assert "session.buildId !== currentBuildId" in fn
+    assert fn.count("await stopSandboxSessionForSite(siteId);") >= 2, (
+        "Både buildId-mismatch och död URL måste STOPPA sessionen — annars "
+        "ligger en stale sandbox kvar och serverar gammalt innehåll till TTL."
+    )
+    # Liveness-probe: bara en bevisat svarande sandbox återanvänds.
+    assert "isSessionUrlAlive" in fn
+
+
+@pytest.mark.tooling
+def test_wiring_uses_session_fast_path_and_records_build_id() -> None:
+    """DI-wiringen (preview-runtime-server.ts) i reuse-läge: (a) snabbvägen
+    ``tryReuseSessionPreview`` provas FÖRE ``createSandboxPreview`` och en träff
+    returnerar ``reused: true`` utan SDK-rundtur; (b) ``currentBuildId`` läses
+    EN gång FÖRE källinsamlingen (getHostedCurrentBuildId) och samma värde
+    skickas till ``recordSandboxSession`` — läses den efter create kan ett
+    bygge som blev klart under preview-starten märka sessionen med fel id."""
+    text = WIRING_PATH.read_text(encoding="utf-8")
+    assert "tryReuseSessionPreview" in text and "getHostedCurrentBuildId" in text, (
+        "Wiringen måste importera/använda sessions-snabbvägen + pekar-läsaren."
+    )
+    read_idx = text.find("getHostedCurrentBuildId(siteId)")
+    fast_idx = text.find("tryReuseSessionPreview(siteId)")
+    create_idx = text.find("createSandboxPreview({ siteId")
+    record_idx = text.find("recordSandboxSession(")
+    assert -1 not in (read_idx, fast_idx, create_idx, record_idx)
+    assert read_idx < create_idx and fast_idx < create_idx, (
+        "buildId-läsningen + snabbvägen måste ligga FÖRE createSandboxPreview."
+    )
+    assert "currentBuildId," in text[record_idx : record_idx + 200], (
+        "recordSandboxSession måste få det FÖR-create-lästa currentBuildId."
+    )
+    assert "timings: { totalMs: Date.now() - tReuse, reused: true }" in text, (
+        "Sessions-snabbvägens träff ska rapportera reused: true i timings."
+    )
+
+
+@pytest.mark.tooling
+def test_blob_source_uses_ephemeral_name_in_reuse_mode() -> None:
+    """Hostad reuse går via sessions-snabbvägen (URL + buildId i KV), aldrig
+    via reconnect-by-name. Blob-källan (sourceDir === null) måste därför alltid
+    få TIDSSTÄMPLAT namn även i reuse-läge — ett deterministiskt namn skulle ge
+    create-krockar mot en nyss invaliderad (asynkront raderad) sandbox."""
+    text = _runner_text()
+    assert re.search(
+        r"const useEphemeralName =\s*\n\s*!isSandboxReuseEnabled\(\)\s*\|\|\s*\n"
+        r"\s*sourceDir === null\s*\|\|",
+        text,
+    ), (
+        "createSandboxPreviewAttempt måste välja tidsstämplat namn när "
+        "källan är blob (``sourceDir === null``) även i reuse-läge."
+    )
 
 
 @pytest.mark.tooling
