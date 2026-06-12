@@ -47,7 +47,10 @@ FloatingChat — de tysta early-returns loggar nu `console.warn` med vilken
 vakt som stoppade, upptagen-läget visar statusrads-hint och saknad siteId ger
 ärligt fel i chatten (vakterna är oförändrade i styrka); (3) lyckad
 sandbox-preview-start loggar EN server-side JSON-rad med fas-timings +
-prebuilt/reused-flaggor i `vercel-sandbox-runner.ts`.
+prebuilt/reused-flaggor i `vercel-sandbox-runner.ts`. Plus deploy-fix:
+`ignoreCommand` i `apps/viewser/vercel.json` är nu fail-open när
+`VERCEL_GIT_PREVIOUS_SHA` saknas i den grunda klonen (gav "fatal: bad
+object" + deploy-ERROR på första hotfix-pushen).
 
 **Nästa 3 prioriteringar:**
 

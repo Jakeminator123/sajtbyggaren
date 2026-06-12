@@ -27,6 +27,12 @@ oförändrade i styrka, summarizeBuildResult-regionen orörd); (3) lyckad
 sandbox-preview-start loggar EN server-side JSON-rad (fas-timings + siteId +
 prebuilt/reused) via chokepoint-wrapper i `vercel-sandbox-runner.ts` —
 runtime-loggarna kan nu besvara "var tog tiden vägen" utan klient.
+Uppföljning i samma pass: första prod-deployen av hotfixen ERRORade i
+`ignoreCommand` ("fatal: bad object" — `VERCEL_GIT_PREVIOUS_SHA` pekade på en
+deploy ~12 commits bak som saknades i Vercels grunda klon, och exit 128 ≠
+0/1 fäller hela deployen). `apps/viewser/vercel.json` är nu fail-open:
+`git cat-file -e "$BASE" || exit 1` före diffen, så saknad bas → bygg i
+stället för ERROR (verifierat i riktig bash).
 
 ## PASS 2026-06-12 ~12:00 — HOSTAD PREVIEW-STANDARDISERING: ADR 0055 (AUKTORITATIVT BLOCK)
 

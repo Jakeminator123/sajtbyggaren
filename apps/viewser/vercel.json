@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "installCommand": "npm install",
-  "ignoreCommand": "BASE=\"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\"; git diff --quiet \"$BASE\" HEAD -- . ../../governance/policies ../../packages/generation/orchestration/scaffolds ../../docs/openclaw-workspace",
+  "ignoreCommand": "BASE=\"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\"; git cat-file -e \"$BASE\" 2>/dev/null || exit 1; git diff --quiet \"$BASE\" HEAD -- . ../../governance/policies ../../packages/generation/orchestration/scaffolds ../../docs/openclaw-workspace",
   "git": {
     "deploymentEnabled": {
       "feat/*": false,
