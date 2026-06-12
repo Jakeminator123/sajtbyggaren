@@ -611,6 +611,103 @@ async function generateAppliedConfirmation(
   }
 }
 
+type FollowupOutcomeFacts = {
+  engine: string;
+  version: number | null;
+  buildStatus: string | null;
+  appliedVisibleEffect: boolean | null;
+  appliedVisibleEffectReason: string | null;
+  appliedCopyDirectives: { target: string; operation: string; payload: string }[];
+  changedRoutes: string[];
+  unappliedFollowupIntents: { target: string; reason: string }[];
+  openClawDecisionAction: string | null;
+  role: string | null;
+};
+
+/**
+ * Del D (site-3e7d71ad, 2026-06-12): an honest, build-grounded chat line for
+ * EVERY follow-up answer — including the ones that used to fall through to a
+ * generic deterministic "Klart!" (or the B155 no-op info row) with no answer.
+ *
+ * Grounded ENTIRELY in the build's facts: it never claims the operator's wish
+ * was carried out unless the facts say so. A no-op ("ta bort sidan Kontakt",
+ * "gör badges responsiva") gets an honest line like "Jag byggde en ny version
+ * (v4), men din ändring kunde inte mappas till någon förmåga — inget synligt
+ * ändrades." Without OPENAI_API_KEY -> null (the deterministic rows stand).
+ *
+ * Reuses generateAppliedConfirmation's hard-honesty system-prompt style + the
+ * APPLIED_CONFIRMATION_TIMEOUT_MS race + chatWithOpenAi, so a hung confirmation
+ * call can never hold the already-finished build response hostage.
+ */
+async function generateFollowupOutcomeSummary(
+  prompt: string,
+  facts: FollowupOutcomeFacts,
+): Promise<string | null> {
+  if (!openaiEnv("OPENAI_API_KEY")) return null;
+  const lines: string[] = [];
+  if (typeof facts.version === "number") lines.push(`Ny version: v${facts.version}`);
+  if (facts.buildStatus) lines.push(`Byggstatus: ${facts.buildStatus}`);
+  lines.push(
+    facts.appliedVisibleEffect === true
+      ? "Synlig ändring: ja"
+      : facts.appliedVisibleEffect === false
+        ? "Synlig ändring: nej (inget syntes i previewen)"
+        : "Synlig ändring: okänd",
+  );
+  if (facts.appliedVisibleEffectReason) {
+    lines.push(`Skäl (maskinellt): ${facts.appliedVisibleEffectReason}`);
+  }
+  if (facts.appliedCopyDirectives.length > 0) {
+    lines.push(
+      `Tillämpade textändringar: ${facts.appliedCopyDirectives
+        .map((d) => `${d.target} (${d.operation})`)
+        .join(", ")}`,
+    );
+  }
+  if (facts.changedRoutes.length > 0) {
+    lines.push(`Ändrade sidor: ${facts.changedRoutes.join(", ")}`);
+  }
+  if (facts.unappliedFollowupIntents.length > 0) {
+    lines.push(
+      `Önskemål som INTE kunde göras: ${facts.unappliedFollowupIntents
+        .map((p) => (p.target && p.reason ? `${p.target} – ${p.reason}` : p.target || p.reason))
+        .join("; ")}`,
+    );
+  }
+  if (facts.openClawDecisionAction) {
+    lines.push(`Dirigentens beslut: ${facts.openClawDecisionAction}`);
+  }
+  if (facts.role) lines.push(`Utförande roll: ${facts.role}`);
+  const systemContent = [
+    "Du är OpenClaw, dirigenten i Sajtbyggaren — operatörens chattassistent.",
+    "Sammanfatta ärligt vad följdprompten faktiskt resulterade i.",
+    "Grunda dig ENBART i Fakta nedan. Hitta aldrig på detaljer som inte står där.",
+    // Hård ärlighetsregel: en no-op får ALDRIG låta som en lyckad ändring.
+    "Om 'Synlig ändring' är nej ELLER ett önskemål inte kunde göras: säg " +
+      "UTTRYCKLIGEN att ändringen INTE syntes/landade och varför — påstå aldrig " +
+      "att den genomfördes.",
+    "Påstå aldrig att operatörens önskan genomfördes om den inte står i Fakta " +
+      "(operatörens prompt är en ÖNSKAN, inte ett facit).",
+    "1–2 meningar, svenska, ställ ingen fråga. Nämn versionsnumret när det finns.",
+    `Fakta:\n${lines.join("\n") || "(inga ytterligare fakta)"}`,
+  ].join("\n");
+  try {
+    const timeout = new Promise<null>((resolve) => {
+      const timer = setTimeout(() => resolve(null), APPLIED_CONFIRMATION_TIMEOUT_MS);
+      if (typeof timer.unref === "function") timer.unref();
+    });
+    const completion = chatWithOpenAi([
+      { role: "system", content: systemContent },
+      { role: "user", content: `Min önskan var: ${prompt.slice(0, 500)}` },
+    ])
+      .then(({ message }) => message.content.trim() || null)
+      .catch(() => null);
+    return await Promise.race([completion, timeout]);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * B164 helper: the freshest COMPLETED run on disk for a siteId, or null.
  *
@@ -1108,6 +1205,35 @@ async function runPromptBuildOnce(
     ? null
     : openClawDecisionRaw;
 
+  // Del D (site-3e7d71ad): an honest, build-grounded chat line for this
+  // follow-up's outcome — including the no-op cases that used to fall through
+  // to a generic deterministic "Klart!" with no answer. Init builds keep
+  // answerText null; without OPENAI_API_KEY the helper returns null and the
+  // deterministic rows stand. Grounded ENTIRELY in the build facts.
+  const followupAnswerText =
+    payload.mode === "followup"
+      ? await generateFollowupOutcomeSummary(payload.prompt, {
+          engine: "legacy",
+          version: typeof helper.version === "number" ? helper.version : null,
+          buildStatus: extractBuildStatus(build.buildResult),
+          appliedVisibleEffect: extractAppliedVisibleEffect(build.buildResult),
+          appliedVisibleEffectReason: extractAppliedVisibleEffectReason(
+            build.buildResult,
+          ),
+          appliedCopyDirectives,
+          changedRoutes: extractChangedRoutes(build.buildResult, changeSet),
+          unappliedFollowupIntents: extractUnappliedFollowupIntents(
+            build.buildResult,
+          ),
+          openClawDecisionAction:
+            openClawDecision &&
+            typeof (openClawDecision as Record<string, unknown>).action === "string"
+              ? ((openClawDecision as Record<string, unknown>).action as string)
+              : null,
+          role: conversationMeta?.role ?? null,
+        })
+      : null;
+
   return {
     runId: build.runId,
     siteId: helper.siteId,
@@ -1134,6 +1260,9 @@ async function runPromptBuildOnce(
     // Skiva 1b: the action-bridge outcome (applied=false on this fallback path)
     // for transparency; null on init. FloatingChat ignores a non-applied bridge.
     bridge: applyResult?.bridge ?? null,
+    // Del D: honest LLM-grounded outcome line (nullable; null on init + no-key).
+    // FloatingChat lets it replace ONLY the generic "Klart!"/no-op content.
+    answerText: followupAnswerText,
     // F1 slice 3: which role acted (stylist/copy/section_builder or null) for
     // the honest role-row; threaded but never controls build/preview.
     conversation: conversationMeta,
@@ -1298,6 +1427,48 @@ async function buildHostedFollowupResponse(
       chain,
       conversation?.role ?? null,
     );
+  } else {
+    // Del D (site-3e7d71ad): every OTHER follow-up outcome (engine "legacy", or
+    // an "openclaw" mount-only that did not refresh the preview) gets the same
+    // honest, build-grounded line as the local legacy path — so a hosted no-op
+    // never falls through to a bare deterministic "Klart!". Grounded ENTIRELY
+    // in result.* facts; null on no-key. generateAppliedConfirmation is kept
+    // ABOVE for the visibly-applied OpenClaw change.
+    const buildResult =
+      result.buildResult && typeof result.buildResult === "object"
+        ? (result.buildResult as Record<string, unknown>)
+        : {};
+    const decision = result.openClawDecision as Record<string, unknown> | null;
+    answerText = await generateFollowupOutcomeSummary(prompt, {
+      engine: result.engine,
+      version: typeof result.version === "number" ? result.version : null,
+      buildStatus: typeof result.buildStatus === "string" ? result.buildStatus : null,
+      appliedVisibleEffect: extractAppliedVisibleEffect(buildResult),
+      appliedVisibleEffectReason: extractAppliedVisibleEffectReason(buildResult),
+      // Sandboxen har redan validerat copyDirectives till {target,operation,
+      // payload}-formen (write_hosted_result), men typen är unknown[] på wire:t
+      // — coerce defensivt så vi aldrig läcker en icke-strukturerad post.
+      appliedCopyDirectives: (Array.isArray(result.appliedCopyDirectives)
+        ? result.appliedCopyDirectives
+        : []
+      ).flatMap((entry) => {
+        if (!entry || typeof entry !== "object") return [];
+        const obj = entry as Record<string, unknown>;
+        if (
+          typeof obj.target !== "string" ||
+          typeof obj.operation !== "string" ||
+          typeof obj.payload !== "string"
+        ) {
+          return [];
+        }
+        return [{ target: obj.target, operation: obj.operation, payload: obj.payload }];
+      }),
+      changedRoutes: extractChangedRoutes(buildResult, null),
+      unappliedFollowupIntents: extractUnappliedFollowupIntents(buildResult),
+      openClawDecisionAction:
+        decision && typeof decision.action === "string" ? decision.action : null,
+      role: conversation?.role ?? null,
+    });
   }
   return {
     runId: result.runId ?? fallbackRunId,
