@@ -779,14 +779,23 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   + validerad dossier-preferens i section_add→apply — OBS att bara ordet
   "resend" väljer resend-dossiern ("mejlformulär" namnger typen, inte
   dossiern); preferensen är exklusiv per capability (ersätter monterad
-  mailto) och negeras av "inte/utan/ej resend". **Kvar (del b):** synlig
-  render för contact-form på ecommerce-lite (samma dedikerad-route-mönster
-  som faq/team) — tills dess är monteringen ärligt mount-only. Passar efter
-  B194 i prioritetslistan. Källa: operatörsfynd 2026-06-11 (orkestratorpass)
-  + kodverifiering (`section_directives`, action-registry, kottbulle-PI-
-  snapshots v5/v6). Fix: open (del a `05e62911`+; del b kvar). Test:
+  mailto) och negeras av "inte/utan/ej resend". **Del b LEVERERAD
+  (2026-06-12):** contact-form surfas nu VISIBELT på ecommerce-lite genom
+  den BEFINTLIGA `/kontakt`-routen (routeId `contact`, ingen ny wizard-extra-
+  sida som skulle dedupliceras bort) när `resend-contact-form`-dossiern
+  faktiskt är monterad — `render_contact` injicerar `<ResendContactForm>`, så
+  targeted rebuild diffar `app/kontakt/page.tsx` och kedjan rapporterar ärligt
+  `appliedVisibleEffect=true` med `affectedRoutes=["contact"]`. Smal gate:
+  `CONTACT_FORM_VISIBLE_SCAFFOLDS={ecommerce-lite}` (speglar
+  `INLINE_SECTION_SCAFFOLDS`, breddar INTE `_WIZARD_ROUTE_SCAFFOLDS`) + grundat
+  på monterad resend-dossier. mailto-defaulten saknar synlig komponent och
+  förblir ärligt mount-only, liksom contact-form på alla andra scaffolds.
+  Källa: operatörsfynd 2026-06-11 (orkestratorpass) + kodverifiering
+  (`section_directives`, action-registry, kottbulle-PI-snapshots v5/v6).
+  Fix: **closed** (del a `05e62911`+; del b 2026-06-12). Test:
   `tests/test_section_directives.py`, `tests/test_patch_apply.py`,
-  `tests/test_router_classify.py` (del a); del b open.
+  `tests/test_router_classify.py` (del a); `tests/test_section_directives.py`
+  + `tests/test_followup_chain_cli.py` (del b).
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
