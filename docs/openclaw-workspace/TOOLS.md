@@ -16,6 +16,15 @@ ytor, inga nätverksanrop.
   `appliedVisibleEffect=false`). Registryts `visibleTypes` är sanningen för
   vad som syns och korsvalideras mot rollkontrakten i
   `tests/test_openclaw_registry_consistency.py`.
+- component_add — lägga till en katalog-grundad komponent. Ägs av
+  `component_builder`-rollen (ADR 0057), grundad i Component Catalog (ADR 0040:
+  capability-map `components` + per-Starter `component-manifest.json`). PARTIAL +
+  mount-only i denna slice: en component_add-följdprompt ger ett katalog-grundat
+  svar ELLER en ÄRLIG no-op som pekar på det kurerade shadcn-intaget
+  (`scripts/component_intake.py`) — den monterar inget och skriver inga filer
+  (kedjan rapporterar no-op:en via `unappliedFollowupIntents`). Att vendorera in
+  en ny komponent förblir en operatörs-PR (intag → granskning → Starter), aldrig
+  en runtime-montering.
 - layout_change — flytta/ordna sektioner (planerad)
 - site_review — svara/granska read-only, ingen build. Ägs av dispatchern
   (router-rollen) by design — ingen egen agentroll och inget eget

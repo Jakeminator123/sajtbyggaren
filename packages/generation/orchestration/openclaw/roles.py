@@ -7,13 +7,14 @@ apply chain *validates and applies* (conductor principle from
 docs/heavy-llm-flow/openclaw-2.0-conductor.md).
 
 1. Role contracts (``ROLE_CONTRACTS`` + ``RoleContract``)
-   The four conductor roles the plan names - ``router``, ``section_builder``,
-   ``stylist`` and ``copy`` - locked as immutable, typed dataclasses. Each
-   contract states, as data, which router ``EditKind`` values the role
-   consumes (input) and which directive kinds it may emit (output):
+   The conductor roles the plan names - ``router``, ``section_builder``,
+   ``stylist``, ``copy`` and ``component_builder`` - locked as immutable, typed
+   dataclasses. Each contract states, as data, which router ``EditKind`` values
+   the role consumes (input) and which directive kinds it may emit (output):
    ``section_add`` -> ``section_builder``, ``visual_style`` -> ``stylist``,
-   ``copy_change`` -> ``copy``. The ``router`` role is the dispatcher and
-   produces a routing decision, never a directive.
+   ``copy_change`` -> ``copy``, ``component_add`` -> ``component_builder`` (ADR
+   0057, partial/mount-only). The ``router`` role is the dispatcher and produces
+   a routing decision, never a directive.
 
 2. Conversation classification (``classify_conversation``)
    An ADDITIVE, conductor-level extension of the router's ``messageKind``. It
@@ -72,13 +73,20 @@ __all__ = [
 # Role contract types (data, not behaviour)
 # ---------------------------------------------------------------------------
 
-# The four conductor roles named in the conductor plan. ``router`` dispatches;
-# the other three each own exactly one editing directive.
-Role = Literal["router", "section_builder", "stylist", "copy"]
+# The conductor roles named in the conductor plan. ``router`` dispatches; the
+# editing roles each own exactly one editing directive. ``component_builder``
+# (ADR 0057) owns ``component_add`` as a partial, mount-only role: it answers
+# from the Component Catalog or does an honest no-op pointing at the intake CLI;
+# it mounts nothing and writes no files in this slice.
+Role = Literal[
+    "router", "section_builder", "stylist", "copy", "component_builder"
+]
 
-# Directive kinds a role may produce. These mirror the three editing
-# ``EditKind`` values; the router role itself emits no directive.
-RoleDirectiveKind = Literal["section_add", "visual_style", "copy_change"]
+# Directive kinds a role may produce. These mirror the editing ``EditKind``
+# values an owning role exists for; the router role itself emits no directive.
+RoleDirectiveKind = Literal[
+    "section_add", "visual_style", "copy_change", "component_add"
+]
 
 
 @dataclass(frozen=True)
@@ -181,15 +189,37 @@ ROLE_CONTRACTS: dict[Role, RoleContract] = {
             "LLM-understood, with deterministic grounding/leak/schema guards."
         ),
     ),
+    "component_builder": RoleContract(
+        role="component_builder",
+        acceptsEditKinds=("component_add",),
+        producesDirectives=("component_add",),
+        contextLevel="component_registry",
+        status="partial",
+        mountOnly=True,
+        skill="skills/component-add/SKILL.md",
+        summary=(
+            "Owns the component_add edit kind (ADR 0057), grounded in the "
+            "Component Catalog (ADR 0040: capability-map components + per-Starter "
+            "component-manifest). In this slice it is PARTIAL and mount-only: a "
+            "component_add follow-up gets a catalog-grounded answer or an HONEST "
+            "no-op that points at the curated shadcn intake CLI "
+            "(scripts/component_intake.py). It mounts nothing and writes no files; "
+            "the existing chain reports the honest no-op via "
+            "unappliedFollowupIntents. Vendoring a new component stays an operator "
+            "PR (intake -> review -> Starter), never a runtime mount."
+        ),
+    ),
 }
 
-# Router EditKind -> the role that owns its directive. Only the three editing
-# roles are mapped; other router edit kinds (component_add/remove,
-# layout_change, route_add, none) are not owned by a role in this slice.
+# Router EditKind -> the role that owns its directive. The editing roles plus
+# component_builder (ADR 0057, partial/mount-only) are mapped; the remaining
+# router edit kinds (component_remove, layout_change, route_add, none) are not
+# owned by a role in this slice.
 _ROLE_BY_EDIT_KIND: dict[EditKind, Role] = {
     "section_add": "section_builder",
     "visual_style": "stylist",
     "copy_change": "copy",
+    "component_add": "component_builder",
 }
 
 
@@ -202,9 +232,10 @@ def role_for_edit_kind(edit_kind: str) -> Role | None:
     """Return the role that owns ``edit_kind``'s directive, or None.
 
     Honest about the current surface: section_add -> section_builder,
-    visual_style -> stylist, copy_change -> copy. Any other edit kind
-    (component_add/remove, layout_change, route_add, none) returns None
-    because no role in this slice produces its directive yet.
+    visual_style -> stylist, copy_change -> copy, component_add ->
+    component_builder (ADR 0057, partial/mount-only). Any other edit kind
+    (component_remove, layout_change, route_add, none) returns None because no
+    role in this slice produces its directive yet.
     """
     return _ROLE_BY_EDIT_KIND.get(edit_kind)  # type: ignore[arg-type]
 
@@ -226,8 +257,9 @@ def skill_for_edit_kind(edit_kind: str | None) -> str | None:
     deterministic apply chain still validates and applies (conductor principle).
 
     Returns ``None`` when ``edit_kind`` is missing/``"none"``, when no role owns
-    the kind (component_add/remove, layout_change, route_add), or when the owning
-    role declares no skill (the router dispatcher). Defensive on purpose:
+    the kind (component_remove, layout_change, route_add), or when the owning
+    role declares no skill (the router dispatcher). ``component_add`` resolves to
+    the ``component_builder`` skill (ADR 0057). Defensive on purpose:
     ``decision.editKind`` can be ``"none"``, so this accepts ``str | None`` and
     never raises.
     """
