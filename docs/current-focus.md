@@ -6,92 +6,65 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-12 ~12:00 — hostad preview-standardisering, ADR 0055)
+## Status nu (2026-06-12 ~16:00 — avslutningsrunda: dagens mergar landade, main synkad för produktionstest)
 
-**Git:** `main = jakob-be` (rent träd, local == origin). Förmiddagspasset är
-landat direkt på `jakob-be` på operatörsmandat (Jakob ~11:00) och synkat till
-`main`. Production deployar från `main`. **Tarball-omladdning KRÄVS efter
-main-mergen** (passet rör `packages/preview-runtime/` + `governance/`) —
-gjord i avslutningen, verifiera KV-URL:en vid tvivel.
+**Git:** `main = jakob-be` (rent träd, local == origin) efter denna rundas
+main-sync. Production deployar från `main`. Tarball-omladdningen är GJORD
+(efter #312/#313-mergarna, se handoff) — build-kontexten i blob speglar
+`56dc754f`. Alla PR-köer är tomma; sessionsbranches och worktrees städade
+(se handoff).
 
-**Landat i förmiddagspasset (operatörsbeslut: Vercel Sandbox + Blob är
-STANDARD för användarpreviews; StackBlitz förblir pausad, ej avvecklad):**
+**Landat under eftermiddagen (squash-mergat till `jakob-be`):**
 
-- **Docs-sanering:** föråldrade B194-/run-historik-påståenden rättade
-  (deploy-guide, prompt-JSDoc, `.env.example`, `preview-runtime.md`,
-  rättelsenot i ADR 0033).
-- **Preview-refresh-gate:** followups med visibleEffect `none`/`registered`
-  river inte preview-sandboxen — `previewRunId` skiljs från `selectedRunId`
-  i studio-sidan; FloatingChat trådar signalen via delade
-  `readFollowupVisibleEffect`. Lås: `tests/test_viewser_preview_refresh_gate.py`.
-- **Byggstart stoppar previewn:** `startHostedBuild` stoppar
-  preview-sessionen före `Sandbox.create` (paritet med lokala build-runner;
-  best-effort).
-- **Pre-built hostat (ADR 0055):** bygget laddar upp `.next` (minus
-  cache/trace) till blob; preview-sandboxen kör `npm install --omit=dev` +
-  `next start`, ärlig fallback utan komplett `.next`.
-- **Default-flippen:** tomt `VIEWSER_PREVIEW_MODE` = `vercel-sandbox`
-  (registry, policy v4, next.config, dev.mjs, viewer-panel; `.env.example`-
-  mallen sätter `local-next` explicit för lokal dev).
-- **Reuse i prod:** sessions-snabbväg med buildId-invalidering mot
-  `viewser:site:<siteId>:current` + liveness-probe; `VIEWSER_SANDBOX_REUSE=1`
-  satt i Vercel (Production+Development; Preview-miljön blockerades av en
-  CLI-bugg — sätt manuellt i dashboarden vid behov).
+- **#310 (ADR 0056, dossier-dependencies):** dossierer deklarerar pinnade
+  npm-paket som följer med in i genererad `package.json`; npm ci med
+  install-fallback.
+- **#311 (Projektinnehåll-panelen):** site-composition-API +
+  panel i ConsoleDrawer som visar sidor/dossiers/komponenter/paket,
+  deriverat ur befintliga run-artefakter (lokalt + hostat).
+- **#312 (uppgift E, komponentintag v1):** kurerad shadcn-intake-CLI
+  (`scripts/component_intake.py`, ADR 0054), component_builder-rollkontrakt
+  (ADR 0057), zero-dep accordion-pilot synlig på FAQ, naming v40,
+  repo-boundaries v13, ny pip-dep `openai-agents==0.17.5`.
+- **#313 (del F+D, ärlighetsfix):** `appliedFollowupDirectiveKinds`-signal +
+  `intent_not_executable` stoppar falska "Klart!" (byte-diff räcker inte
+  längre som framgångsbevis); ärlig okänd-slug i `unappliedFollowupIntents`;
+  honesty-gates kräver konkreta direktiv; `generateFollowupOutcomeSummary`
+  ger ärlig LLM-svarsrad på varje följdprompt.
 
-**Tillägg ~13:30 (hotfix-pass efter prod-E2E-incidentutredningen):** tre
-fixar direkt på `jakob-be` + ff `main` (operatörsmandat): (1) hostad
-preview-POST snabbare — blob-filerna laddas nu ner med begränsad samtidighet
-(16 parallella, `downloadBlobEntries` i `generated-blob-source.ts`; vakter
-och fel-semantik oförändrade, enhetstester utökade); (2) ärlig submit-gate i
-FloatingChat — de tysta early-returns loggar nu `console.warn` med vilken
-vakt som stoppade, upptagen-läget visar statusrads-hint och saknad siteId ger
-ärligt fel i chatten (vakterna är oförändrade i styrka); (3) lyckad
-sandbox-preview-start loggar EN server-side JSON-rad med fas-timings +
-prebuilt/reused-flaggor i `vercel-sandbox-runner.ts`. Plus deploy-fix:
-`ignoreCommand` i `apps/viewser/vercel.json` är nu fail-open när
-`VERCEL_GIT_PREVIOUS_SHA` saknas i den grunda klonen (gav "fatal: bad
-object" + deploy-ERROR på första hotfix-pushen).
+Förmiddagens ADR 0055-pass (preview-standardisering) + hotfixarna är
+historik: [`docs/archive/current-focus-2026-06-12-middag.md`](archive/current-focus-2026-06-12-middag.md).
 
 **Nästa 3 prioriteringar:**
 
-1. **E2E-verifiera hela standardvägen i produktion** på `/studio`: init →
-   preview (pre-built, kolla `timings`) → no-op-följdprompt (previewn ska
-   INTE rivas) → edit-följdprompt (ny version → invalidering → ny sandbox)
-   → re-POST (reused:true). Även B199 v2/#307-flödet från morgonpasset.
-2. **B197 (Christophers, pågår):** `hosted-build-runner.ts` +
-   `vercel-sandbox-runner.ts` ändrade IGEN — tidig rebase krävs
-   (msg-0085).
-3. **Uppföljningar:** blob-/KV-prune (mer angeläget nu — `.next` i
-   `generated/`), `changeSet` hostat, Preview-miljöns reuse-flagga,
-   Safari/Firefox-E2E för B125-stängning.
+1. **Operatörens produktionstest på `main`:** hela E2E-flödet på `/studio`
+   i produktion (init → pre-built preview → no-op-följdprompt → edit-
+   följdprompt → reuse), nu inklusive #312/#313-beteendet. Görs av
+   operatören separat — agenter ska INTE förekomma testet.
+2. **Uppgift G (nästa byggsteg):** snabb chat utan sandbox-spinn för rena
+   frågor + tarball-bundling för förbyggda previews.
+3. **Backlog/deferred (ej blockers):** componentSource/mountRules/
+   qualityGate-dossierfälten från E; viewser-rolletikett för
+   component_builder; deterministisk intent_not_executable-rad för
+   no-key-fallet från F+D; B197 discovery-paritet hostat (Christophers,
+   tidig rebase msg-0085); blob-/KV-prune; `changeSet` hostat;
+   Preview-miljöns reuse-flagga; Safari/Firefox-E2E för B125.
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `f642b1a5` (2026-06-12 ~14:10 UTC+2; squash-merge av #311
-— feat(viewser) Projektinnehåll-panel, deriverad sammansättningsbild av
-sajt-projektet i ConsoleDrawer — ovanpå hotfix-passets `3150b471`. Review-dom
-GO, alla 6 checkar gröna på PR-head efter ready-flippen, MERGEABLE/CLEAN,
-`main` ff:ad till samma SHA. **Tarball-omladdningen är GJORD** direkt efter
-mergen (#311 rörde `scripts/check_term_coverage.py`): build-kontexten
-ompaketerad från merge-commiten och uppladdad till blob
-`build-context/current.tar.gz`, KV-nyckeln `viewser:build-context:url`
-uppdaterad. Föregående checkpoint `9671de59` (#310-mergen + hotfix-passet
-~13:30) är historik — detaljerna står kvar i statusblocket ovan.)
+Last verified state: `56dc754f` (2026-06-12 ~16:00 UTC+2; squash-merge av
+#313 ovanpå #312/#311/#310-kedjan. Avslutningsrundan: branch-/worktree-
+städning, known-issues-städning (B195 flyttad till Stängda, B155-slice för
+#313), handoff + detta block, `main` synkad till samma innehåll för
+operatörens produktionstest. Tarball-omladdningen till blob
+`build-context/current.tar.gz` gjordes direkt efter #313-mergen.)
 
 ## Öppna PR att känna till
 
-Inga öppna just nu. #306, #307, #308, #309, #310 och #311 är squash-mergade
-till `jakob-be` och ff:ade till `main`. (#311 = feat(viewser)
-Projektinnehåll-panel i ConsoleDrawer — sidor/dossiers/komponenter/paket
-deriverat ur befintliga run-artefakter, mergad 2026-06-12 ~14:10 —
-tarball-omladdning gjord direkt efter, se Last verified state. #310 =
-feat(build) dossier-deklarerade dependencies in i genererad package.json,
-ADR 0056, mergad 2026-06-12 ~13:20 — tarball-omladdning gjord direkt efter.
-#309 = test(eval) deterministisk
-conductor-classification-baseline, testfil-only, mergad 2026-06-12 ~12:55 —
-Vercel prod-rebuild kan ha cancelats av ignoreCommand, väntat. #308 =
-docs(heavy-llm-flow) ärlighetspass, mergad ~12:45 efter rebase + fyra
-review-fixar; konflikten i `handoff-orchestration.md` löstes till PR:ens stubb.)
+Inga öppna just nu. #306–#313 är squash-mergade till `jakob-be` och synkade
+till `main`. (#312 = komponentintag v1 / uppgift E, mergad 2026-06-12 ~15:20.
+#313 = del F+D ärlighetsfix, mergad 2026-06-12 ~15:41. Äldre detaljer:
+arkivet + `docs/handoff.md`.)
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
@@ -128,6 +101,9 @@ dev-uttryck med korta parenteser första gången per konversation. Mönstret i
 
 Historiska statusblock + checkpoint-kedjan ligger i arkivet:
 
+- [`docs/archive/current-focus-2026-06-12-middag.md`](archive/current-focus-2026-06-12-middag.md)
+  (middagsblocket per `f642b1a5`: ADR 0055 preview-standardisering,
+  hotfix-passet ~13:30, #308–#311).
 - [`docs/archive/current-focus-2026-06-12-morgon.md`](archive/current-focus-2026-06-12-morgon.md)
   (morgonblocket per `261f0c63`: B199 v2 — hostad run-historik/artefakter
   live, omladdnings-återställning).

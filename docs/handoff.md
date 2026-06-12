@@ -1,11 +1,72 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-12 ~12:00 UTC+2, förmiddagspass: hostad
-preview-standardisering (ADR 0055) — Vercel Sandbox + Blob är STANDARD för
-användarpreviews: pre-built `.next` i blob, default-flip till
-`vercel-sandbox`, sessions-reuse med buildId-invalidering, preview-refresh-
-gate. Direkt på `jakob-be` på operatörsmandat, synkad till `main`.
-Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
+**Datum:** 2026-06-12 ~16:00 UTC+2, eftermiddag: avslutningsrunda efter en
+intensiv arbetsdag — #310–#313 squash-mergade till `jakob-be`, branch-/
+worktree-städning, dokumentstädning, `jakob-be` → `main` synkad för
+operatörens produktionstest. Detaljerad köplan:
+[`docs/current-focus.md`](current-focus.md).
+
+## PASS 2026-06-12 ~16:00 — AVSLUTNINGSRUNDA: DAGENS MERGAR + MAIN-SYNC FÖR PRODUKTIONSTEST (AUKTORITATIVT BLOCK)
+
+> **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
+> verifiera alltid mot git/koden.**
+>
+> **Mandat:** operatören (Jakob) gav före frånvaro mandat för hela
+> avslutningsrundan: städning av worktrees/branches, dokumentstädning,
+> handoff/focus-uppdatering och `jakob-be` → `main`-sync.
+>
+> **Dagens fyra eftermiddagsmergar (squash till `jakob-be`):**
+>
+> 1. **#310 — ADR 0056 dossier-dependencies:** dossierer deklarerar pinnade
+>    npm-paket som buildern bakar in i genererad `package.json`
+>    (npm ci → install-fallback).
+> 2. **#311 — Projektinnehåll-panelen (`f642b1a5`):** site-composition-API
+>    (`GET /api/site/[siteId]/composition`) + panel i ConsoleDrawer som
+>    visar sidor/dossiers/komponenter/paket ur befintliga run-artefakter.
+> 3. **#312 — uppgift E, komponentintag v1 (`0fe94617`):** kurerad
+>    shadcn-intake-CLI (`scripts/component_intake.py`, ADR 0054),
+>    component_builder-rollkontrakt (ADR 0057), zero-dep accordion-pilot
+>    synlig på FAQ, naming v40, repo-boundaries v13, pip-dep
+>    `openai-agents==0.17.5`.
+> 4. **#313 — del F+D ärlighetsfix (`56dc754f`):**
+>    `appliedFollowupDirectiveKinds`-signal + `intent_not_executable`
+>    (byte-diff kan inte längre bevisa framgång), ärlig okänd-slug i
+>    `unappliedFollowupIntents`, honesty-gates kräver konkreta direktiv,
+>    `generateFollowupOutcomeSummary` ger ärlig LLM-svarsrad på varje
+>    följdprompt. B155-slicen dokumenterad i known-issues.
+>
+> Tidigare under dagen (se historikblocken nedan): B199 v2 hostad parity,
+> ADR 0055 preview-standardisering, tre hotfixar (parallella
+> blob-downloads, ärlig submit-gate i FloatingChat, fail-open
+> `ignoreCommand`). Build-context-tarballen är omladdad till blob efter
+> #313 (`56dc754f`).
+>
+> **Städat i denna runda:** lokala branchen `feat/project-composition`
+> (mergad som #311) borttagen; elva remote-branches för mergade/stängda
+> PRs + verifierade dubbletter borttagna (bl.a. fyra cloud-sessionsbranches
+> för #309/#310/#312/#313, dubbletterna `cloud/komponentintag-v1` =
+> #312-head och `feat/hosted-followup-parity` = #307-head, samt fyra
+> stängda PR-branches #156/#158/#177/#281). Inga överblivna worktrees
+> fanns. known-issues: B195 flyttad till Stängda (#287 mergad 2026-06-11),
+> B155 fick #313-slicen. B197 (discovery-paritet hostat) är FORTSATT öppen
+> — den hostade byggvägen skickar fortfarande bara `PROMPT_TEXT`.
+>
+> **NÄSTA steg är operatörens produktions-E2E på `main`** (görs separat av
+> operatören, inte av agenter): hela `/studio`-flödet i produktion med
+> dagens mergar. Därefter är **uppgift G** nästa byggsteg i kön: snabb chat
+> utan sandbox-spinn för rena frågor + tarball-bundling för förbyggda
+> previews.
+>
+> **Backlog/deferred (ej blockers):** componentSource/mountRules/
+> qualityGate-dossierfälten från E; viewser-rolletikett för
+> component_builder; deterministisk intent_not_executable-rad för
+> no-key-fallet (F+D); B197; blob-/KV-prune; `changeSet` hostat;
+> Preview-miljöns reuse-flagga; Safari/Firefox-E2E för B125.
+
+## PASS 2026-06-12 ~12:00 — HOSTAD PREVIEW-STANDARDISERING: ADR 0055 (HISTORIK)
+
+> Historiskt block (ersatt av avslutningsrundan ovan) — verifiera alltid
+> mot git/koden.
 
 **Tillägg ~12:45:** PR #308 (docs(heavy-llm-flow) ärlighetspass mot verifierad
 kod) squash-mergad till `jakob-be` + ff till `main` efter rebase och fyra
@@ -44,11 +105,6 @@ dossier-tillagda paket (ADR 0056) som egen kategori. Deriveras via
 disk, hostat B199-kedjan), ingen ny lagring. Tarball-omladdning gjord
 direkt efter mergen (#311 rörde `scripts/check_term_coverage.py`).
 
-## PASS 2026-06-12 ~12:00 — HOSTAD PREVIEW-STANDARDISERING: ADR 0055 (AUKTORITATIVT BLOCK)
-
-> **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
-> verifiera alltid mot git/koden.**
->
 > **Mandat:** operatörsbeslut (Jakob, bekräftat 2026-06-12 ~11:00): Vercel
 > Sandbox + Blob ska vara standardlösningen för previews av användarsajter,
 > streamade in i Viewser-iframen genom OpenClaw-flödet. StackBlitz-adaptern

@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 22 öppna), 6 unknown, 170 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 171 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -412,6 +412,21 @@ integrate christopher-ui discovery and asset workflow`, merge
   tappas tyst i dag. Icke-numeriska påhittade fakta hålls bara av systemprompten
   (samma begränsning som ADR 0034). Fler sektioner/routes/scaffolds är också
   utanför slicen.
+  Slice 2026-06-12 (#313, `56dc754f`, del F+D — falska "Klart!"-ytan stängd):
+  legacy-full-rebuild-vägen kan inte längre bevisa framgång med enbart
+  byte-diff. `prompt_to_project_input` observerar vilka utförar-ägda direktiv
+  som faktiskt applicerades (`appliedFollowupDirectiveKinds` i meta-sidecaren)
+  och en okänd nytillkommen capability-slug namnges ärligt i
+  `unappliedFollowupIntents`; `build_site` flippar `appliedVisibleEffect` till
+  false med reason `intent_not_executable` när inga direktiv applicerades, och
+  Viewsers honesty-gates (lokalt + hostat) nollar bara OpenClaws ärliga beslut
+  när konkreta direktiv finns. Del D: `generateFollowupOutcomeSummary` ger en
+  ärlig LLM-svarsrad grundad enbart i byggets fakta på varje följdprompt-svar
+  (no-op får ett "landade inte"-svar; null utan nyckel). B155 förblir öppen som
+  kapacitets-gap (fri copy-replace mot rubriker, multi-target, service-label)
+  men falsk-framgångs-ytan från B178-repron är stängd. Test:
+  `tests/test_followup_honest_no_op.py` +
+  `tests/test_viewser_hosted_followup_parity.py`.
 
 - **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
   renderar företagets logo via Next.js `Image` utan ett komplett aspekt-
@@ -716,19 +731,6 @@ utan att stänga av publik drift. Skyddet i drift är rate-limit per IP
 sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
 (icke-streamande klienter tolkade 202-accepted som färdigt bygge).
 
-- **`B195` Medel** (publik-deploy-defekt, fix i PR) - blob-upload skriver över
-  `generated/<siteId>/...` men raderade aldrig gamla filer → en borttagen
-  route/asset blev kvar i preview vid ombygge mot samma `siteId` (stale fil).
-  Åtgärdad med manifest-baserad servering (approach a): det hostade bygget
-  publicerar sist ett `generated/<siteId>/.manifest.json` med byggets exakta
-  fil-set, och `collectSourceFromBlob` serverar bara manifest-listade filer, så
-  stale blobbar ignoreras utan radering eller race-känslighet. Den tidigare
-  upload-loop-härdningen (`fa268c5` — manifest-fil + verifierat antal) löste en
-  annan bugg (tyst noll-uppladdning från trasig processsubstitution) och stänger
-  inte B195. Källa: extern granskning #284 (fynd B). Fix:
-  `fix/b195-stale-blob-cleanup` (PR mot jakob-be, inväntar merge). Test:
-  `apps/viewser/lib/generated-blob-source.test.ts` (`selectServedRelPaths`) +
-  `tests/test_viewser_hosted_blob_cleanup.py`.
 - **`B197` Låg-Medel** (P3-spår) - discovery-paritet hostat: den hostade
   byggvägen (`runHostedPromptFlow` -> `startHostedBuild`) skickar bara
   `PROMPT_TEXT` in i bygg-sandboxen — wizardens strukturerade
@@ -815,6 +817,20 @@ round 2); se Stängda-sektionen.
   `tests/test_section_directives.py`, `tests/test_patch_apply.py`,
   `tests/test_router_classify.py` (del a); `tests/test_section_directives.py`
   + `tests/test_followup_chain_cli.py` (del b).
+
+- **`B195` Medel** (stängd 2026-06-11, #287 manifest-baserad servering) - blob-upload skriver över
+  `generated/<siteId>/...` men raderade aldrig gamla filer → en borttagen
+  route/asset blev kvar i preview vid ombygge mot samma `siteId` (stale fil).
+  Åtgärdad med manifest-baserad servering (approach a): det hostade bygget
+  publicerar sist ett `generated/<siteId>/.manifest.json` med byggets exakta
+  fil-set, och `collectSourceFromBlob` serverar bara manifest-listade filer, så
+  stale blobbar ignoreras utan radering eller race-känslighet. Den tidigare
+  upload-loop-härdningen (`fa268c5` — manifest-fil + verifierat antal) löste en
+  annan bugg (tyst noll-uppladdning från trasig processsubstitution) och stänger
+  inte B195. Källa: extern granskning #284 (fynd B). Fix:
+  `08575a03` (PR #287, mergad 2026-06-11). Test:
+  `apps/viewser/lib/generated-blob-source.test.ts` (`selectServedRelPaths`) +
+  `tests/test_viewser_hosted_blob_cleanup.py`.
 
 - **`B194` Låg** (stängd 2026-06-11, P3-spårets första slice) - hostade
   följdpromptar (`startHostedBuild(... followup: true)`) kunde inte härleda
