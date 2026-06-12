@@ -62,3 +62,51 @@ export function hostedRunNoticeFromResponse(
   }
   return null;
 }
+
+/**
+ * Hämtar en run-artefakt-bundle hostat-medvetet från
+ * `/api/runs/[runId]/artifacts`. Samlar latch-skip + svarsforms-detektering
+ * + defensiv shape-validering på ett ställe så ytor som behöver en rå bundle
+ * (versions-tab:ens compare-diff m.fl.) slipper duplicera logiken.
+ *
+ *   - Latch-skip: är hosted-läget redan känt skippas anropet helt och
+ *     notisens text kastas som Error (hostat är versionslistan tom så hit når
+ *     vi i praktiken aldrig; grinden är belt-and-braces mot framtida vägar).
+ *   - Svarsform: armar latchen om svaret visar sig vara den hostade 404-formen
+ *     (error-fältet bär då samma notis-sträng som kastas nedan).
+ *   - Shape: ett malformat svar fångas med ett tydligt fel i stället för att
+ *     låta diff-vyn rendera tomma sektioner (speglar run-details-panel.tsx).
+ *
+ * Kastar Error vid hostat/HTTP-fel/malformat svar. Returnerar den validerade
+ * bundeln som ett objekt; caller castar till sin egen bundle-typ.
+ */
+export async function fetchHostedAwareArtefactBundle(
+  runId: string,
+): Promise<Record<string, unknown>> {
+  const known = knownHostedRunNotice();
+  if (known) {
+    throw new Error(known);
+  }
+  const response = await fetch(`/api/runs/${runId}/artifacts`);
+  const raw = (await response.json()) as unknown;
+  hostedRunNoticeFromResponse(response.status, raw);
+  const errorField =
+    raw && typeof raw === "object" && "error" in raw
+      ? (raw as { error: unknown }).error
+      : null;
+  if (!response.ok || typeof errorField === "string") {
+    throw new Error(
+      typeof errorField === "string" ? errorField : `HTTP ${response.status}`,
+    );
+  }
+  if (!raw || typeof raw !== "object" || !("runId" in raw)) {
+    throw new Error(
+      "Artefakt-svar saknar förväntat shape (runId/buildResult/sitePlan).",
+    );
+  }
+  const bundle = raw as Record<string, unknown>;
+  if (typeof bundle.runId !== "string" || bundle.runId.length === 0) {
+    throw new Error("Artefakt-svar har ogiltigt runId.");
+  }
+  return bundle;
+}

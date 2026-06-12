@@ -740,7 +740,6 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
       }
 
       if (cancelled) return;
-      setBundle(null);
       setError(null);
       setHostedNotice(null);
 
@@ -748,10 +747,14 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
       // i konsolen) och visa notisen direkt.
       const known = knownHostedRunNotice();
       if (known) {
+        setBundle(null);
         setHostedNotice(known);
         setLoading(false);
         return;
       }
+      // Stale-artefakt-skydd: nollställ bundle omedelbart före ny fetch så
+      // panelen aldrig visar förra runens kort under laddning.
+      setBundle(null);
       setLoading(true);
 
       try {
