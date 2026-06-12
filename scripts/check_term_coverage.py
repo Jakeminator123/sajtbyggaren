@@ -854,6 +854,18 @@ COMMON_WORDS = {
     # UI-typ — domänbegreppet HostedRunIndexEntry är registrerat i
     # naming-dictionary v39; detta är bara klientens persistens-shape.
     "SavedStudioSelection",
+    # Projektinnehåll-ytan (2026-06-12): viewser-lokala TS-implementation-
+    # symboler för GET /api/site/[siteId]/composition + panelen i
+    # ConsoleDrawer. ``SiteComposition`` är den DERIVERADE svars-shapen i
+    # lib/site-composition.ts (ingen ny lagrad artefakt → inget canonical
+    # domain term, samma logik som RunArtefactBundle ovan);
+    # ``CompositionPayload`` är klientens fetch-spegel av samma shape;
+    # ``ProjectCompositionPanel`` + ``SectionBlock`` + ``UnknownNote`` är
+    # React-komponenten och två lokala presentationshjälpare i
+    # project-composition-panel.tsx — samma kategori som RunDetailsPanel /
+    # StatusBadge / MissingNote ovan.
+    "SiteComposition", "CompositionPayload", "ProjectCompositionPanel",
+    "SectionBlock", "UnknownNote",
     # Preview-inspector (peka-i-previewn, porterad från sajtmaskin med
     # Jakob-OK 2026-06-10): viewser-lokala symboler i apps/viewser/
     # lib/inspector/, app/api/inspector-*/route.ts samt komponenterna
