@@ -70,10 +70,11 @@ midnattsblocket: hostad paritet-fixar `4162a14a`/`bc074edb`/`cdd6785d`/
 
 ## Öppna PR att känna till
 
-Inga öppna PR:ar just nu (~03:30). Nästa väntade: två cloud-PR:ar mot
-`jakob-be` — hostad follow-up-paritet (B199-hydrering → sandbox apply-seam →
-request/response-paritet) och B198 del b contact-form-render. Reviewa snabbt
-enligt lane-grindens review-SLA.
+**#306** (cloud-lane, draft mot `jakob-be`): B198 del b — synlig
+contact-form-render på ecommerce-lite. Det är köad cloud-prompt 2; reviewa
+snabbt enligt lane-grindens review-SLA när den lämnar draft. Fortfarande
+väntad: köad cloud-prompt 1 (hostad follow-up-paritet — B199-hydrering →
+sandbox apply-seam → request/response-paritet).
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
