@@ -7,6 +7,13 @@ användarpreviews: pre-built `.next` i blob, default-flip till
 gate. Direkt på `jakob-be` på operatörsmandat, synkad till `main`.
 Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
 
+**Tillägg ~12:45:** PR #308 (docs(heavy-llm-flow) ärlighetspass mot verifierad
+kod) squash-mergad till `jakob-be` + ff till `main` efter rebase och fyra
+review-fixar (arkivets local-next-rad, readiness-frontmatter historisk,
+känt-gap-förbehåll i README + kor-o1-noten; vinkelparentes-platshållarna
+visade sig redan vara intakta i råfilerna). Docs-only — Vercel avbryter
+prod-rebuild via ignoreCommand, väntat.
+
 ## PASS 2026-06-12 ~12:00 — HOSTAD PREVIEW-STANDARDISERING: ADR 0055 (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —

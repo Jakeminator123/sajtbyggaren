@@ -53,22 +53,21 @@ STANDARD för användarpreviews; StackBlitz förblir pausad, ej avvecklad):**
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `6b6d6627` (2026-06-12 ~12:00 UTC+2; förmiddagspassets
-sista kodcommit på `jakob-be` — kedjan `6fe80cb3` → `2236621c` → `890afba9`
-→ `8b1573fe` → `d6cd2c74` → `3515bf59` → `6b6d6627`, docs-/ADR-toppen ovanpå.
+Last verified state: `3d1c53a0` (2026-06-12 ~12:45 UTC+2; #308 docs-only
+squash-merge ovanpå förmiddagspassets kodkedja `6fe80cb3` → … → `6b6d6627`.
 Full svit (`pytest -n auto`) + ruff + governance + rules-sync + term-coverage
-+ tsc + eslint körda gröna på sluttoppen före push.)
++ tsc + eslint körda gröna på `6b6d6627` före push; på #308 kördes
+governance + rules-sync + term-coverage + docs-freshness lokalt och full
+CI-svit grön i PR:en.)
 
 ## Öppna PR att känna till
 
-- **#308** (DRAFT, `cursor/llm-fl-desdokumentation-rlighet-0a19`):
-  docs(heavy-llm-flow) ärlighetspass mot verifierad kod. Skapad
-  2026-06-12 ~10:09 av en parallell agent — docs-only; review när den
-  markeras redo. OBS: förmiddagspasset rättade en rad i
-  `docs/heavy-llm-flow/handoff-orchestration.md` (local-next-defaulten) —
-  liten konfliktrisk.
-
-#306 och #307 är squash-mergade till `jakob-be` och ff:ade till `main`.
+Inga öppna PR i vår lane just nu. #306, #307 och #308 är squash-mergade till
+`jakob-be` och ff:ade till `main`. (#308 = docs(heavy-llm-flow) ärlighetspass,
+mergad 2026-06-12 ~12:45 efter rebase + fyra review-fixar: förmiddagens
+local-next-rättelse inburen i arkivkopian, readiness-frontmattern satt till
+historisk, känt-gap-förbehåll om no-op-"Klart!" i README + kor-o1-noten.
+Den befarade konflikten i `handoff-orchestration.md` löstes till PR:ens stubb.)
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
