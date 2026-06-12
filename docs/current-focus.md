@@ -53,20 +53,22 @@ STANDARD för användarpreviews; StackBlitz förblir pausad, ej avvecklad):**
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `3c8e5aa7` (2026-06-12 ~13:00 UTC+2; docs-only focus-bump
-ovanpå #309:s testfil-only squash-merge `8a3ff7b5` — deterministisk
-eval-baseline för conductor-klassificering i
-`tests/test_eval_baseline_conductor.py`, ovanpå #308-checkpointen `3d1c53a0`
-där full svit + ruff + governance-kedjan kördes gröna. På #309: full CI-svit
-grön på PR-head (inkl. eval-baseline-jobbet), ingen rebase behövdes.)
+Last verified state: `9671de59` (2026-06-12 ~13:20 UTC+2; squash-merge av #310
+— feat(build) dossier-deklarerade dependencies in i genererad package.json,
+ADR 0056 — ovanpå focus-bumpen `3c8e5aa7`. Full CI-svit grön på PR-head,
+MERGEABLE/CLEAN, `main` ff:ad till samma SHA. **Tarball-omladdningen är GJORD**
+direkt efter mergen (#310 rörde `scripts/` + `governance/`): build-kontexten
+ompaketerad från merge-commiten och uppladdad till blob
+`build-context/current.tar.gz`, KV-nyckeln `viewser:build-context:url`
+uppdaterad — hostade byggen kör nu rätt Python-kod.)
 
 ## Öppna PR att känna till
 
-Öppen just nu: #310 (feat(build): dossier-deklarerade dependencies in i
-genererad package.json, ADR 0056) — draft från en cloud-agent, bas `jakob-be`;
-invänta dess review-lopp innan överlappande builder-/codegen-arbete startas.
-#306, #307, #308 och #309 är squash-mergade
-till `jakob-be` och ff:ade till `main`. (#309 = test(eval) deterministisk
+Inga öppna just nu. #306, #307, #308, #309 och #310 är squash-mergade
+till `jakob-be` och ff:ade till `main`. (#310 = feat(build)
+dossier-deklarerade dependencies in i genererad package.json, ADR 0056,
+mergad 2026-06-12 ~13:20 — tarball-omladdning gjord direkt efter, se
+Last verified state. #309 = test(eval) deterministisk
 conductor-classification-baseline, testfil-only, mergad 2026-06-12 ~12:55 —
 Vercel prod-rebuild kan ha cancelats av ignoreCommand, väntat. #308 =
 docs(heavy-llm-flow) ärlighetspass, mergad ~12:45 efter rebase + fyra
