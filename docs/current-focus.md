@@ -62,11 +62,11 @@ fungerar redan hostat via legacy-vägen).
 
 Vår action: reviewa inkommande cloud-PR:ar snabbt (lane review-SLA).
 
-Last verified state: `575af63b` + nattpassets docs-checkpoint (2026-06-12
-~03:30 UTC+2; `main = jakob-be`, rent träd, local == origin. Nattpass efter
-midnattsblocket: hostad paritet-fixar `4162a14a`/`bc074edb`/`cdd6785d`/
+Last verified state: `84d4facf` (2026-06-12 ~03:30 UTC+2; `main = jakob-be`,
+rent träd, local == origin. Nattpassets kod/canvas-checkpoint `575af63b` +
+docs-pass ovanpå. Hostad paritet-fixar `4162a14a`/`bc074edb`/`cdd6785d`/
 `b4f6e2d2`/`691bd835`/`15ea0fda` + canvas-rättningar `ed0a2039`/`42a54945`/
-`575af63b`. Inga öppna PR:ar.)
+`575af63b`. Öppen draft-PR: #306 (B198 del b).)
 
 ## Öppna PR att känna till
 
