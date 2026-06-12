@@ -20,6 +20,10 @@
 > har den på som default och `OPENCLAW_ROUTER_LLM_FALLBACK=0` som kill-switch.
 > Det kvarvarande arbetet är alltså inte fler kör-kort, utan ärlig eval och
 > fortsatt breddning där evalen visar störst produktgap.
+>
+> Känt gap (prod-bevisat 2026-06-12): på edit-kinds som ingen utförare äger kan
+> användarsvaret påstå "Klart!" trots no-op — `appliedVisibleEffect` luras av
+> parafras-brus i legacy-ombygget. Fix pågår som separat uppgift.
 
 Den här mappen är en **byggplan** för att lyfta Sajtbyggaren från en kontrollerad
 mall-/scaffold-generator med LLM-hjälp till en **riktig AI-hemsidebyggare** i v0-/

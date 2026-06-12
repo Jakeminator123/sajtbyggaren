@@ -1,8 +1,8 @@
 ---
-status: active-plan
+status: historical
 owner: backend
-truth_level: summary
-last_verified_commit: d234941
+truth_level: historical-reference
+last_verified_commit: eec570c
 ---
 
 # OpenClaw F1-readiness — install-grundning + registry-runtime-plan

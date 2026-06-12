@@ -46,7 +46,10 @@ I den ursprungliga V0-designen **bygger V0 aldrig**, **skriver aldrig filer**, *
 **installerar aldrig dependencies**, **kör aldrig shell** och **rör aldrig**
 `current.json`. Den är lika read-only som `kor-7a` — den föreslår, den utför inte.
 Detta var rätt för V0-kontraktet; dagens apply-brygga ligger ovanpå detta och
-rapporterar sitt faktiska utfall separat under `bridge`.
+rapporterar sitt faktiska utfall separat under `bridge`. Känt gap (prod-bevisat
+2026-06-12): på edit-kinds som ingen utförare äger kan användarsvaret ändå påstå
+"Klart!" trots no-op — `appliedVisibleEffect` luras av parafras-brus i
+legacy-ombygget. Fix pågår som separat uppgift.
 
 ## Icke-mål (hårda gränser, från `04` §3–4 + `open_claw.txt`)
 
