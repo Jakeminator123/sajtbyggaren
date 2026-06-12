@@ -2,26 +2,19 @@
  * hosted-run-artefacts — klientsidans hjälpare för det hostade
  * "run-artefakter finns inte"-läget.
  *
- * Hostat (Vercel, VERCEL=1) svarar /api/runs/[runId]/{artifacts,trace,files}
- * med en MEDVETEN 404 vars body bär `hostedNotice` — run-artefakterna ligger
- * på operatörens lokala disk (data/runs/), inte i den hostade runtimen (se
- * route-filerna under apps/viewser/app/api/runs/[runId]/). Det är en ärlig
- * degradering, inget fel. UI-komponenter ska därför behandla det svaret som
- * ett lugnt "otillgängligt hostat"-läge med notisens text — aldrig som
- * fel-state, retry-loop eller console-brus.
+ * HISTORIK/NULÄGE (B199 v2): före B199 v2 svarade
+ * /api/runs/[runId]/{artifacts,trace,files} hostat med en MEDVETEN 404 vars
+ * body bar `hostedNotice` ("hela förmågan saknas hostat"), och latchen nedan
+ * armades tidigt så komponenter kunde hoppa över dömda anrop. Sedan B199 v2
+ * serveras artefakter + trace hostat ur KV/blob, /api/runs bär en ren
+ * info-banner i fältet `hostedBanner` (ALDRIG `hostedNotice`), och en run
+ * som inte kan lösas svarar en VANLIG 404 utan `hostedNotice` — den ska
+ * behandlas som ett per-run-fel, inte som "förmågan saknas".
  *
- * Två mekanismer, båda svarsformsbaserade (ingen egen env-läsning klientsidigt):
- *
- *   1. `hostedRunNoticeFromResponse(status, body)` — detekterar den medvetna
- *      404+hostedNotice-formen och returnerar notisen (annars null, så
- *      riktiga fel förblir fel).
- *   2. En modul-latch som minns notisen för resten av sidvisningen
- *      (hosted-läget kan inte ändras under en session). page.tsx armar den
- *      tidigt via /api/runs-svaret (hostedNotice på en 200), och varje
- *      detekterad 404-form armar den också. Komponenter kan då hoppa över
- *      anropet helt nästa gång — det tystar även browserns automatiska
- *      "Failed to load resource: 404"-rad i konsolen, som inte går att
- *      undertrycka från JS när requesten väl skickats.
+ * Latchen behålls som belt-and-braces: den armar ENBART på den medvetna
+ * 404+hostedNotice-svarsformen, som idag ingen run-route returnerar. Skulle
+ * en framtida route återinföra en hel-förmåga-degradering fungerar de lugna
+ * UI-lägena i konsumenterna direkt igen.
  *
  * Lokalt är latchen alltid null och alla kodvägar är oförändrade.
  */

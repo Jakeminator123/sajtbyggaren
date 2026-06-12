@@ -37,10 +37,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  knownHostedRunNotice,
-  rememberHostedRunNotice,
-} from "@/lib/hosted-run-artefacts";
+import { knownHostedRunNotice } from "@/lib/hosted-run-artefacts";
 import type { RunMeta, RunStatus, RunTraceResponse } from "@/lib/runs";
 
 export type BuildPhase = "understand" | "plan" | "build" | "unknown";
@@ -98,9 +95,11 @@ function emptyState(): BuildTraceState {
 
 type RunsApiResponse = {
   runs?: RunMeta[];
-  // Hostat (Vercel) svarar /api/runs alltid med tomma runs + denna notis —
-  // pending-runen kan aldrig dyka upp, så pollingen stoppas ärligt direkt.
-  hostedNotice?: string;
+  // Hostat (Vercel) bär /api/runs alltid denna info-banner. Hostade byggen
+  // har ingen pending-rad på disk (KV-indexet skrivs först när bygget är
+  // klart) — pollingen avslutas tyst utan att arma artefakt-latchen, som
+  // sedan B199 v2 är reserverad för riktiga 404+hostedNotice-svar.
+  hostedBanner?: string;
 };
 
 export function useBuildTracePolling(
@@ -190,10 +189,10 @@ export function useBuildTracePolling(
           }
           const payload = (await response.json()) as RunsApiResponse;
           if (controller.signal.aborted) return;
-          // Belt-and-braces om latchen inte var armad ännu: notisen i
-          // svaret armar den och pollingen stoppas (se grinden ovan).
-          if (payload.hostedNotice) {
-            rememberHostedRunNotice(payload.hostedNotice);
+          // Hostat: ingen pending-rad kan dyka upp (KV-indexet skrivs när
+          // bygget är KLART) — avsluta pollingen tyst. OBS: armar INTE
+          // latchen; artefakt-/trace-ytorna fungerar numera hostat.
+          if (payload.hostedBanner) {
             return;
           }
           const runs = (payload.runs ?? [])

@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (av 23 öppna), 6 unknown, 169 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 22 öppna), 6 unknown, 170 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -737,26 +737,6 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   serialiseras in i sandboxen (env/fil) när P3-persistensen läggs.
   Källa: extern granskning #284 (fynd 4), kod-verifierad i review-sweepen
   2026-06-11. Fix: open. Test: open.
-- **`B199` Låg** (P3-spår, utredd 2026-06-12) - hostade run-artefakter:
-  `/api/runs/[runId]/{artifacts,trace,files}` är hostat en MEDVETEN 404 +
-  `hostedNotice` (artefakterna ligger på lokal disk, `data/runs/`). UI:t
-  behandlar numera den svarsformen som ett lugnt "otillgängligt hostat"-läge
-  (lib/hosted-run-artefacts.ts: latch + svarsformsdetektering) i stället för
-  fel-state/404-brus/meningslös polling. Utredningsdom blob-läsning: en
-  runId→siteId-mappning FINNS hostat (KV `viewser:hosted-run:<runId>` bär
-  `siteId`, TTL 24 h; durabla per-site-pekare `viewser:site:<siteId>:run-state`
-  → blob-URL:er för `project-input.json` + `meta.json`, samt
-  `viewser:site:<siteId>:current`), men en partiell bundle därifrån vore
-  tom i praktiken: blob-paret innehåller INGEN av de fyra kanoniska
-  artefakterna (`siteBrief`/`sitePlan`/`buildResult`/`qualityResult`) som
-  inspector/run-details renderar, och run-state-pekaren pekar dessutom bara
-  på sajtens SENASTE version (fel run vid historisk runId). Riktig hostad
-  artefakt-läsning kräver att byggskriptet i sandboxen även publicerar
-  artefakt-JSON:erna till blob (naturlig följeslagare till B197/P3) —
-  först då är en blob-backad artifacts-endpoint värd KV-/blob-lasten på en
-  publik oautentiserad route. Källa: agentutredning 2026-06-12 (del 2 av
-  404-brus-uppdraget). Fix: open (UI-tystnaden landad i denna commit).
-  Test: open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
@@ -770,6 +750,33 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B199` Låg** (stängd 2026-06-12, B199 v2 - hostad run-historik + artefakt-läsning) - hostade run-artefakter:
+  `/api/runs/[runId]/{artifacts,trace,files}` var hostat en MEDVETEN 404 +
+  `hostedNotice` (artefakterna låg på lokal disk, `data/runs/`), `/api/runs`
+  alltid tom, och builder-läget dog vid en hård omladdning. #307 (B199 v1)
+  persisterade artefakt-tarballen till blob men ingen UI-yta läste den.
+  **B199 v2 stänger kedjan:** orkestrerings-skriptet publicerar ett durabelt
+  KV-index per lyckat bygge (`HostedRunIndexEntry` under runId-indexet
+  `viewser:run:<runId>` + per-versions-posten
+  `viewser:site:<siteId>:run:v<N>`, naming-dictionary v39) med ärlig
+  `buildStatus`; `lib/hosted-run-history.ts` läser indexet + packar upp
+  run-artifacts-tarballen i minnet och serverar samma RunMeta-/bundle-/
+  trace-former som lokalt; `/api/runs?siteId=` listar sajtens historik
+  (siteId är capability-nyckeln, samma åtkomstmodell som B196 — INGEN
+  global publik listning), artifacts/trace serveras från blob, och en
+  olösbar run är en VANLIG 404 utan `hostedNotice` (latchen armas aldrig
+  mer på fungerande ytor; bannern flyttade till eget fält `hostedBanner`).
+  Builder-valet persisteras i sessionStorage och återställs efter
+  omladdning (lokalt + hostat). Init-byggen returnerar nu den KANONISKA
+  build_site-runIden (result-block även för init), och en historisk
+  `baseRunId` hydrerar SIN versions artefakter via runId-indexet
+  (siteId-bundet) — #307:s "bara senaste versionen"-begränsning är stängd.
+  Kvarvarande ärliga gap (ej blockers): filträdet per run
+  (StackBlitz-fallback) serveras inte hostat, och `changeSet` är fortsatt
+  `null` i hostade followup-svar. Källa: agentutredning 2026-06-12 +
+  operatörsmandat (B199 v2-passet). Fix: B199 v2-passet 2026-06-12. Test:
+  `tests/test_viewser_hosted_run_history.py`.
 
 - **`B198` Medel** (stängd 2026-06-12, del b #306 - contact-form synlig på ecommerce-lite) - följdprompt kan inte aktivera en NAMNGIVEN dossier:
   kedjan följdprompt → hard-dossier-montering är inte trådad. Konkret

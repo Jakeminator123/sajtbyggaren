@@ -22,9 +22,10 @@ B199 (commit 1 av hostad follow-up-paritet) stänger gapet med EN tarball:
 4. En äldre pekare (före B199) eller misslyckad nedladdning är INTE fatal:
    apply degraderar ärligt till legacy-vägen (som bara behöver PI/meta).
 
-Begränsning (v1, ärligt dokumenterad): pekaren spårar SENASTE versionen, så en
-historisk baseRunId vars version ≠ senaste saknar hydrerade artefakter —
-per-run-blob-historik är framtida arbete.
+Begränsningen i v1 (pekaren spårar bara SENASTE versionen) är stängd av
+B199 v2: runId-indexet ``viewser:run:<runId>`` låter ``startHostedBuild``
+hydrera en HISTORISK baseRunId:s artefakter — se
+``test_viewser_hosted_run_history.py``.
 """
 
 from __future__ import annotations

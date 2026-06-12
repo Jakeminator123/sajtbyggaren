@@ -840,6 +840,11 @@ COMMON_WORDS = {
     # från builder-dialoger (use-followup-build.ts). UI-lokal typ tills
     # backend-dispatchen landar och kontraktet ev. kanoniseras.
     "FollowupToolIntent",
+    # B199 v2 (2026-06-12): sessionStorage-formen för builder-valets
+    # omladdnings-återställning i studio-sidan (page.tsx). Viewser-lokal
+    # UI-typ — domänbegreppet HostedRunIndexEntry är registrerat i
+    # naming-dictionary v39; detta är bara klientens persistens-shape.
+    "SavedStudioSelection",
     # Preview-inspector (peka-i-previewn, porterad från sajtmaskin med
     # Jakob-OK 2026-06-10): viewser-lokala symboler i apps/viewser/
     # lib/inspector/, app/api/inspector-*/route.ts samt komponenterna

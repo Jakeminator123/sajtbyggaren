@@ -903,12 +903,15 @@ def test_page_useeffect_guards_success_path_with_cancelled_check() -> None:
     """
     text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
-    # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` eller
+    # Look for ``await fetchRuns(...)`` -> ``if (cancelled) return`` eller
     # ``if (cancelledRef?.current) return`` -> ``applyRunsData`` (eller
-    # ``setRuns(``) ordering inside the same try-block. 0-300 character
-    # window håller regexen tight.
+    # ``setRuns(``) ordering inside the same try-block. B199 v2: fetchRuns
+    # tar numera en valfri siteId-hint (hostad capability-modell), så
+    # parenteserna får bära ett argument. Fönstret breddat till 600 tecken
+    # — den hostade saved-selection-refetchen ligger mellan första fetchen
+    # och guarden, men ordningen fetch -> guard -> apply är oförändrad.
     pattern = re.compile(
-        r"await\s+fetchRuns\(\)[\s\S]{0,300}?"
+        r"await\s+fetchRuns\([^)]*\)[\s\S]{0,600}?"
         r"if\s*\(\s*(?:cancelled|cancelledRef\??\.current)\s*\)\s*return\s*;"
         r"[\s\S]{0,300}?(?:applyRunsData|setRuns\()",
         re.MULTILINE,
@@ -928,8 +931,10 @@ def test_page_on_build_done_passes_apply_runs_context() -> None:
     and reset selectedSiteId to the first Project Input.
     """
     text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
+    # B199 v2: fetchRuns tar en valfri siteId-hint hostat — parenteserna
+    # får bära ett argument; ctx-snapshot-låset är oförändrat.
     pattern = re.compile(
-        r"fetchRuns\(\)[\s\S]{0,400}?applyRunsData\(\s*data\s*,\s*\{[\s\S]{0,200}?selectedRunId:\s*runId",
+        r"fetchRuns\([^)]*\)[\s\S]{0,400}?applyRunsData\(\s*data\s*,\s*\{[\s\S]{0,200}?selectedRunId:\s*runId",
         re.MULTILINE,
     )
     assert pattern.search(text), (

@@ -21,23 +21,51 @@ import type { RunHistoryItem } from "@/components/run-history";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ViewerPanel } from "@/components/viewer-panel";
-import { rememberHostedRunNotice } from "@/lib/hosted-run-artefacts";
 
 type RunsApiPayload = {
   runs?: RunHistoryItem[];
   projectInputs?: ProjectInputOption[];
   error?: string;
-  // Hostad Vercel-vy: bygge/run-historik körs lokalt i denna version. Sätts
-  // av /api/runs när VERCEL=1 så UI:t kan visa en ärlig banner i stället för
-  // en tyst tom lista.
-  hostedNotice?: string;
+  // Hostad Vercel-vy: ren info-banner från /api/runs (VERCEL=1). Sedan
+  // B199 v2 är detta ENBART en banner — den armar INTE 404-latchen i
+  // lib/hosted-run-artefacts.ts, eftersom artefakt-/trace-ytorna numera
+  // serveras hostat (KV/blob) och ska få fetcha som lokalt.
+  hostedBanner?: string;
 };
 
 type FetchedRunsPayload = {
   nextRuns: RunHistoryItem[];
   nextInputs: ProjectInputOption[];
-  hostedNotice: string | null;
+  hostedBanner: string | null;
 };
+
+// B197-omladdning: builder-valet (runId + siteId) persisteras per flik i
+// sessionStorage så en hård reload kan återställa builder-läget — hostat
+// är det dessutom nyckeln till per-sajt-historiken (/api/runs?siteId=).
+const STUDIO_SELECTION_STORAGE_KEY = "viewser-studio-selection";
+const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+
+type SavedStudioSelection = { runId: string; siteId: string };
+
+function readSavedStudioSelection(): SavedStudioSelection | null {
+  try {
+    const raw = sessionStorage.getItem(STUDIO_SELECTION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SavedStudioSelection>;
+    if (typeof parsed.runId !== "string" || parsed.runId.length === 0) {
+      return null;
+    }
+    if (
+      typeof parsed.siteId !== "string" ||
+      !SITE_ID_PATTERN.test(parsed.siteId)
+    ) {
+      return null;
+    }
+    return { runId: parsed.runId, siteId: parsed.siteId };
+  } catch {
+    return null;
+  }
+}
 
 function headerStatusForOutcome(
   runId: string,
@@ -54,21 +82,26 @@ function headerStatusForOutcome(
 // this split the success path runs setState unconditionally even when
 // the effect has been cancelled (component unmount), which races with
 // a fresh effect that has already populated state.
-async function fetchRuns(): Promise<FetchedRunsPayload> {
-  const response = await fetch("/api/runs", { cache: "no-store" });
+//
+// ``siteIdHint`` (B199 v2): hostat listar /api/runs bara per sajt (siteId
+// är capability-nyckeln), så hostade anrop skickar den aktiva sajten.
+// Lokalt skickas aldrig en hint — listan förblir ofiltrerad som förut.
+async function fetchRuns(
+  siteIdHint?: string | null,
+): Promise<FetchedRunsPayload> {
+  const url =
+    siteIdHint && SITE_ID_PATTERN.test(siteIdHint)
+      ? `/api/runs?siteId=${encodeURIComponent(siteIdHint)}`
+      : "/api/runs";
+  const response = await fetch(url, { cache: "no-store" });
   const payload = (await response.json()) as RunsApiPayload;
   if (!response.ok || payload.error) {
     throw new Error(payload.error ?? "Kunde inte läsa /api/runs.");
   }
-  // Arma den modulvida hosted-latchen tidigt: run-artefakt-konsumenter
-  // (inspector, run-details, route-kartan) kan då hoppa över sina
-  // /api/runs/[runId]/-fetchar helt hostat i stället för att samla
-  // 404-rader i konsolen. No-op lokalt (hostedNotice saknas).
-  rememberHostedRunNotice(payload.hostedNotice);
   return {
     nextRuns: payload.runs ?? [],
     nextInputs: payload.projectInputs ?? [],
-    hostedNotice: payload.hostedNotice ?? null,
+    hostedBanner: payload.hostedBanner ?? null,
   };
 }
 
@@ -89,10 +122,9 @@ export default function Home() {
   // när allt är OK eller ännu inte laddat. Sätts av `loadRuns()` nedan.
   const [runsLoadError, setRunsLoadError] = useState<string | null>(null);
   const [runsLoading, setRunsLoading] = useState(true);
-  // Hostad Vercel-vy: när /api/runs svarar med en hostedNotice (VERCEL=1) visar
-  // vi en ärlig banner — bygge/följdprompt/run-historik körs lokalt i denna
-  // version. Null lokalt (oförändrad upplevelse).
-  const [hostedNotice, setHostedNotice] = useState<string | null>(null);
+  // Hostad Vercel-vy: när /api/runs svarar med en hostedBanner (VERCEL=1)
+  // visar vi en ärlig info-banner. Null lokalt (oförändrad upplevelse).
+  const [hostedBanner, setHostedBanner] = useState<string | null>(null);
   const toast = useToast();
   // Live Build Sync: pending-build-state delas mellan BuilderShell
   // (som äger FloatingChat + dialogerna) och Versions-tab. Sätts
@@ -117,6 +149,10 @@ export default function Home() {
   // listan så den färdiga runen finns där om operatören vill gå
   // tillbaka. B6 i scout-review 2026-05-24.
   const userNavigatedAwayRef = useRef(false);
+  // B197-omladdning: återställningen från sessionStorage får bara ske en
+  // gång per sidvisning (första lyckade /api/runs-laddningen) — annars
+  // skulle en senare refetch kunna rycka tillbaka ett aktivt operatörsval.
+  const restoredSelectionRef = useRef(false);
   // Hostad builder-paritet (B194-uppföljning): hostat returnerar /api/runs
   // alltid tomma runs/projectInputs, så builderTarget kan aldrig aktiveras
   // via listorna. Men byggen som klienten SJÄLV slutfört i denna session
@@ -137,6 +173,24 @@ export default function Home() {
     consoleOpenRef.current = consoleOpen;
   }, [consoleOpen]);
 
+  // B197-omladdning: persistera builder-valet per flik. Rensas när
+  // operatören går till "Ny sajt" (selectedRunId null). Best-effort —
+  // privat läge utan sessionStorage degraderar tyst till dagens beteende.
+  useEffect(() => {
+    try {
+      if (selectedRunId) {
+        sessionStorage.setItem(
+          STUDIO_SELECTION_STORAGE_KEY,
+          JSON.stringify({ runId: selectedRunId, siteId: selectedSiteId }),
+        );
+      } else {
+        sessionStorage.removeItem(STUDIO_SELECTION_STORAGE_KEY);
+      }
+    } catch {
+      // Storage otillgänglig (privat läge/kvot) — återställning är opt-in.
+    }
+  }, [selectedRunId, selectedSiteId]);
+
   // siteId som är "aktivt" via vald run (om någon). Används för att
   // visa "Följer vald run"-hint i ProjectInputPicker så operatören ser
   // att panelen automatiskt följer runens DNA istället för det
@@ -155,7 +209,7 @@ export default function Home() {
     {
       nextRuns,
       nextInputs,
-      hostedNotice: nextHostedNotice,
+      hostedBanner: nextHostedBanner,
     }: FetchedRunsPayload,
     ctx?: {
       selectedRunId: string | null;
@@ -167,7 +221,7 @@ export default function Home() {
 
     setRuns(nextRuns);
     setProjectInputs(nextInputs);
-    setHostedNotice(nextHostedNotice);
+    setHostedBanner(nextHostedBanner);
     // Auto-väljer INTE senaste run vid mount. Det orsakade att
     // ViewerPanel direkt triggade en /api/runs/:runId/files-fetch
     // mot en gammal run innan operatören överhuvudtaget bett om något,
@@ -227,9 +281,37 @@ export default function Home() {
   const loadRuns = useCallback(
     async (cancelledRef?: { current: boolean }): Promise<void> => {
       try {
-        const data = await fetchRuns();
+        let data = await fetchRuns();
+        // B197-omladdning, hostade halvan: /api/runs utan siteId är tom
+        // hostat (capability-modellen), så finns ett sparat val hämtar vi
+        // den sajtens historik innan återställningen nedan. Best-effort —
+        // ett fel behåller bas-payloaden (banner + tomma listor).
+        if (data.hostedBanner && !restoredSelectionRef.current) {
+          const saved = readSavedStudioSelection();
+          if (saved) {
+            try {
+              data = await fetchRuns(saved.siteId);
+            } catch {
+              // Behåll bas-payloaden — återställningen är best-effort.
+            }
+          }
+        }
         if (cancelledRef?.current) return;
         applyRunsData(data);
+        // B197-omladdning: återställ builder-valet EN gång per sidvisning,
+        // och bara om den sparade runen faktiskt finns i den hämtade listan
+        // (annars vore builder-läget en lögn mot en raderad/okänd run).
+        if (!restoredSelectionRef.current) {
+          restoredSelectionRef.current = true;
+          const saved = readSavedStudioSelection();
+          if (
+            saved &&
+            data.nextRuns.some((run) => run.runId === saved.runId)
+          ) {
+            setSelectedRunId(saved.runId);
+            setSelectedSiteId(saved.siteId);
+          }
+        }
         setRunsLoadError(null);
       } catch (error) {
         if (cancelledRef?.current) return;
@@ -360,9 +442,10 @@ export default function Home() {
         ? selectedRun.siteId
         : selectedSiteId;
     if (!targetSiteId || targetSiteId === "unknown") return null;
-    // Hostad vy: listorna är tomma per design, men ett bygge som den här
-    // sessionen själv slutförde är ett giltigt followup-mål (B194).
-    if (hostedNotice && sessionBuiltRuns.get(selectedRunId) === targetSiteId) {
+    // Hostad vy: ett bygge som den här sessionen själv slutförde är ett
+    // betrott followup-mål (B194) även innan per-sajt-historiken hunnit
+    // refetchas — KV-indexet (B199 v2) fyller listorna strax efter.
+    if (hostedBanner && sessionBuiltRuns.get(selectedRunId) === targetSiteId) {
       return { siteId: targetSiteId };
     }
     const targetInput = projectInputs.find(
@@ -375,7 +458,7 @@ export default function Home() {
     runs,
     selectedSiteId,
     projectInputs,
-    hostedNotice,
+    hostedBanner,
     sessionBuiltRuns,
   ]);
 
@@ -455,7 +538,7 @@ export default function Home() {
     if (userNavigatedAwayRef.current) {
       userNavigatedAwayRef.current = false;
       setStatusText(headerStatusForOutcome(runId, outcome));
-      void fetchRuns()
+      void fetchRuns(hostedBanner ? selectedSiteId : null)
         .then((data) =>
           applyRunsData(data, {
             selectedRunId,
@@ -484,7 +567,7 @@ export default function Home() {
       setSelectedSiteId(siteId);
     }
     setStatusText(headerStatusForOutcome(runId, outcome));
-    void fetchRuns()
+    void fetchRuns(hostedBanner ? effectiveSiteId : null)
       .then((data) =>
         applyRunsData(data, {
           selectedRunId: runId,
@@ -519,7 +602,7 @@ export default function Home() {
             hideBrand={builderActive}
           />
 
-          {hostedNotice ? <HostedNoticeBanner message={hostedNotice} /> : null}
+          {hostedBanner ? <HostedNoticeBanner message={hostedBanner} /> : null}
 
           <ErrorBoundary area="Förhandsvisningen" className="h-full w-full">
             {/* C4: preview-POST:en går mot /api/preview/<siteId> medan runId
@@ -673,8 +756,8 @@ export default function Home() {
 }
 
 // Hostad Vercel-vy: en lugn, icke-blockerande info-banner högst upp som ärligt
-// säger att bygge/följdprompt/run-historik körs lokalt i denna version. Visas
-// bara när /api/runs svarat med en hostedNotice (VERCEL=1) — aldrig lokalt.
+// beskriver det hostade driftläget. Visas bara när /api/runs svarat med en
+// hostedBanner (VERCEL=1) — aldrig lokalt.
 function HostedNoticeBanner({ message }: { message: string }) {
   return (
     <div

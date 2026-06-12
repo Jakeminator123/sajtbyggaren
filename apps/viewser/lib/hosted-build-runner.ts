@@ -183,6 +183,12 @@ export interface HostedRunStatePointer {
   updatedAt: string;
   buildId?: string;
   /**
+   * B199 v2: build-result.json-status för pekarens version ("ok"/"degraded").
+   * Additivt — äldre pekare saknar fältet och rapporteras "unknown" i den
+   * hostade run-historiken.
+   */
+  buildStatus?: string;
+  /**
    * B199: ``build_site.py``-stdout-runId för DENNA versions run-katalog
    * (``data/runs/<runId>/``). Skilt från orkestreringens KV-UUID
    * (``viewser:hosted-run:<uuid>``) — det här är den kanoniska
@@ -202,6 +208,46 @@ export interface HostedRunStatePointer {
    * så en historisk baseRunId vars version ≠ senaste saknar hydrerade
    * artefakter — per-run-blob-historik är framtida arbete (B199).
    */
+  runArtifactsUrl?: string;
+}
+
+/**
+ * B199 v2 — durabelt hostat run-index. Två KV-nyckelfamiljer skrivna av
+ * orkestrerings-skriptet efter varje lyckat hostat bygge (utöver run-state-
+ * pekaren som bara spårar SENASTE versionen):
+ *
+ *   - ``viewser:site:<siteId>:run:v<N>`` — per-versions-posten för en sajt.
+ *     Listas av den hostade run-historiken (siteId är capability-nyckeln,
+ *     samma åtkomstmodell som B196:s siteId-bundna status-route).
+ *   - ``viewser:run:<runId>`` — kanonisk build_site-runId → samma post.
+ *     Löser /api/runs/[runId]/{artifacts,trace} hostat och låter
+ *     ``startHostedBuild`` hydrera en HISTORISK baseRunId:s artefakter
+ *     (stänger #307:s "bara senaste versionen"-begränsning).
+ *
+ * Båda är durabla (ingen TTL) — samma livscykel som
+ * ``viewser:site:<siteId>:current``; prune-strategin är ett spårat
+ * operatörsbeslut tillsammans med blob-prune för ``generated/``.
+ */
+export function hostedRunIndexKey(runId: string): string {
+  return `viewser:run:${runId}`;
+}
+
+/** KV-nyckel för per-versions-posten i den hostade run-historiken. */
+export function hostedRunVersionKey(siteId: string, version: number): string {
+  return `viewser:site:${siteId}:run:v${version}`;
+}
+
+/** JSON-formen under ``viewser:run:<runId>`` och ``viewser:site:<siteId>:run:v<N>``. */
+export interface HostedRunIndexEntry {
+  /** Kanonisk build_site-runId (data/runs/<runId>/), INTE orkestrerings-UUID:t. */
+  runId: string;
+  siteId: string;
+  version: number | null;
+  buildId?: string;
+  /** build-result.json-status ("ok"/"degraded"); saknas → "unknown" i UI. */
+  buildStatus?: string;
+  updatedAt: string;
+  /** Publik blob-URL till versionens run-artifacts.tar.gz (B199). */
   runArtifactsUrl?: string;
 }
 
@@ -883,7 +929,7 @@ if [ -n "$RUN_STATE_VERSION" ] && [ -f "$PI_SNAPSHOT" ] && [ -f "$META_SNAPSHOT"
     fi
   fi
   if [ -n "$RUN_STATE_PI_PUBLISHED" ] && [ -n "$RUN_STATE_META_PUBLISHED" ]; then
-    RUN_STATE_PAYLOAD=$(PI_URL="$RUN_STATE_PI_PUBLISHED" META_URL="$RUN_STATE_META_PUBLISHED" RS_VERSION="$RUN_STATE_VERSION" BUILD_ID="$ACTIVE_BUILD_ID" ARTIFACTS_URL="$RUN_ARTIFACTS_PUBLISHED" ARTIFACT_RUN_ID="\${RUN_ARTIFACT_RUN_ID:-}" python3 - <<'PY'
+    RUN_STATE_PAYLOAD=$(PI_URL="$RUN_STATE_PI_PUBLISHED" META_URL="$RUN_STATE_META_PUBLISHED" RS_VERSION="$RUN_STATE_VERSION" BUILD_ID="$ACTIVE_BUILD_ID" ARTIFACTS_URL="$RUN_ARTIFACTS_PUBLISHED" ARTIFACT_RUN_ID="\${RUN_ARTIFACT_RUN_ID:-}" REPO_DIR="$REPO_DIR" python3 - <<'PY'
 import json, os
 from datetime import datetime, timezone
 doc = {
@@ -900,6 +946,19 @@ artifact_run_id = os.environ.get("ARTIFACT_RUN_ID") or ""
 if artifacts_url and artifact_run_id:
     doc["runId"] = artifact_run_id
     doc["runArtifactsUrl"] = artifacts_url
+# B199 v2: arlig build-status i pekaren (ok/degraded) sa den hostade
+# run-historiken slipper gissa. Saknad/olasbar fil -> faltet utelamnas.
+if artifact_run_id:
+    try:
+        with open(
+            os.path.join(os.environ.get("REPO_DIR") or ".", "data", "runs", artifact_run_id, "build-result.json"),
+            encoding="utf-8",
+        ) as _bf:
+            _status = json.load(_bf).get("status")
+        if isinstance(_status, str) and _status:
+            doc["buildStatus"] = _status
+    except (OSError, ValueError):
+        pass
 key = "viewser:site:" + os.environ["SITE_ID"] + ":run-state"
 print(json.dumps(["SET", key, json.dumps(doc, ensure_ascii=False)]))
 PY
@@ -918,19 +977,70 @@ PY
   else
     echo "hosted-build: VARNING — run-state-paret kunde inte publiceras; foljdprompter utgar fran foregaende version." >&2
   fi
+  # B199 v2 — durabelt run-index sa hostad run-historik/artefakt-lasning och
+  # historisk baseRunId-hydrering fungerar: per-versions-posten
+  # viewser:site:<siteId>:run:v<N> + runId-indexet viewser:run:<runId>.
+  # Skrivs oberoende av PI/meta-utfallet (historiken ar byggets sanning) och
+  # best-effort: ett index-fel faller aldrig ett redan publicerat bygge.
+  if [ -n "\${RUN_ARTIFACT_RUN_ID:-}" ]; then
+    RUN_INDEX_PAYLOAD=$(ARTIFACT_RUN_ID="$RUN_ARTIFACT_RUN_ID" RS_VERSION="$RUN_STATE_VERSION" BUILD_ID="$ACTIVE_BUILD_ID" ARTIFACTS_URL="\${RUN_ARTIFACTS_PUBLISHED:-}" REPO_DIR="$REPO_DIR" python3 - <<'PY'
+import json, os
+from datetime import datetime, timezone
+run_id = os.environ["ARTIFACT_RUN_ID"]
+site_id = os.environ["SITE_ID"]
+version_raw = os.environ.get("RS_VERSION") or ""
+build_status = ""
+try:
+    with open(
+        os.path.join(os.environ.get("REPO_DIR") or ".", "data", "runs", run_id, "build-result.json"),
+        encoding="utf-8",
+    ) as fh:
+        _status = json.load(fh).get("status")
+    if isinstance(_status, str):
+        build_status = _status
+except (OSError, ValueError):
+    pass
+entry = {
+    "runId": run_id,
+    "siteId": site_id,
+    "version": int(version_raw) if version_raw.isdigit() else None,
+    "buildId": os.environ.get("BUILD_ID") or "",
+    "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+}
+if build_status:
+    entry["buildStatus"] = build_status
+artifacts_url = os.environ.get("ARTIFACTS_URL") or ""
+if artifacts_url:
+    entry["runArtifactsUrl"] = artifacts_url
+doc = json.dumps(entry, ensure_ascii=False)
+commands = [["SET", "viewser:run:" + run_id, doc]]
+if version_raw.isdigit():
+    commands.append(["SET", "viewser:site:" + site_id + ":run:v" + version_raw, doc])
+print(json.dumps(commands))
+PY
+)
+    if [ -n "$KV_REST_URL" ] && [ -n "$KV_REST_TOKEN" ]; then
+      curl -s -X POST "$KV_REST_URL/pipeline" \\
+        -H "Authorization: Bearer $KV_REST_TOKEN" \\
+        -H "Content-Type: application/json" \\
+        -d "$RUN_INDEX_PAYLOAD" >/dev/null || true
+    fi
+    echo "hosted-build: run-index publicerat (B199 v2, runId $RUN_ARTIFACT_RUN_ID)."
+  fi
 else
   echo "hosted-build: VARNING — run-state-snapshot saknas pa disk; foljdprompter forblir oforandrade." >&2
 fi
 
-# Commit 3 (svars-paritet): bygg det rika followup-resultatet fore done.
-# Bara i followup-laget — init behaller det tunna svaret (runId/buildStatus).
+# Commit 3 (svars-paritet): bygg det rika resultatet fore done.
 # engine=openclaw nar OpenClaw apply landade, annars legacy (arlig attribution).
-if [ "$FOLLOWUP_MODE" = "1" ]; then
-  if [ "$OPENCLAW_APPLIED" = "1" ]; then
-    write_hosted_result "openclaw"
-  else
-    write_hosted_result "legacy"
-  fi
+# B199 v2 — init-paritet: aven initialbygget skriver result-blocket sa
+# TS-svaret bar den KANONISKA build_site-runIden (samma id som den hostade
+# run-historiken listar), inte orkestrerings-UUID:t. Init gar alltid den
+# deterministiska vagen -> arligt engine=legacy.
+if [ "$FOLLOWUP_MODE" = "1" ] && [ "$OPENCLAW_APPLIED" = "1" ]; then
+  write_hosted_result "openclaw"
+else
+  write_hosted_result "legacy"
 fi
 
 post_status "done" "" "$ACTIVE_BUILD_ID"
@@ -1097,6 +1207,33 @@ export async function startHostedBuild(
   const safeMarkedSections = req.followup
     ? sanitizedMarkedSections(req.markedSections)
     : [];
+
+  // B199 v2 — historisk baseRunId: hydrera DEN versionens artefakter i
+  // stället för pekarens senaste, via det durabla runId-indexet
+  // (viewser:run:<runId>). siteId-bindningen stoppar artefakt-läckage över
+  // sajtgränser via en stulen runId (samma princip som B196). Saknas
+  // indexet (bygge före B199 v2) behålls pekarens senaste artefakter och
+  // apply-sömmen degraderar exakt som förut — aldrig ett hårt fel.
+  if (req.followup && runState && safeBaseRunId) {
+    const baseEntry = await kvGetJson<HostedRunIndexEntry>(
+      store,
+      hostedRunIndexKey(safeBaseRunId),
+    );
+    if (
+      baseEntry &&
+      baseEntry.siteId === req.siteId &&
+      typeof baseEntry.runId === "string" &&
+      baseEntry.runId.length > 0 &&
+      typeof baseEntry.runArtifactsUrl === "string" &&
+      baseEntry.runArtifactsUrl.startsWith("https://")
+    ) {
+      runState = {
+        ...runState,
+        runId: baseEntry.runId,
+        runArtifactsUrl: baseEntry.runArtifactsUrl,
+      };
+    }
+  }
 
   const sandboxEnv: Record<string, string> = {
     RUN_ID: runId,

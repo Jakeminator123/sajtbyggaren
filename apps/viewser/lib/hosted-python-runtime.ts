@@ -53,15 +53,17 @@ export const HOSTED_LOCAL_ONLY_NOTICE =
   "bygg-kedjan flyttas till en riktig backend-runtime.";
 
 /**
- * Honest notice for hosted deployments where the build chain IS enabled:
- * building works, but disk-backed views (run-historik, artefakter, inspector)
- * still read local repo disk and stay empty hosted.
+ * Honest notice for hosted deployments where the build chain IS enabled.
+ * Since B199 v2 the hosted view also serves run history, artefakter and
+ * inspector data from KV/blob (per site — siteId is the capability key) and
+ * the builder selection survives a page reload via sessionStorage. The
+ * remaining honest gap is the per-run file tree (StackBlitz fallback).
  */
 export const HOSTED_BUILD_ENABLED_NOTICE =
-  "Hostade byggen är PÅ: init-bygge och följdprompt körs i Vercel Sandbox " +
-  "direkt från den här vyn. Run-historik, artefakter och inspector läser dock " +
-  "fortfarande lokal disk och är tomma hostat — byggläget i fliken försvinner " +
-  "vid omladdning av sidan.";
+  "Hostad drift: byggen och följdprompter körs i Vercel Sandbox, och " +
+  "run-historik, artefakter och inspector läses från molnlagringen för " +
+  "sajter byggda i den här vyn. Filträdet för enskilda runs serveras inte " +
+  "hostat ännu.";
 
 /** Pick the notice that matches the hosted deployment's actual capability. */
 export function hostedRuntimeNotice(): string {

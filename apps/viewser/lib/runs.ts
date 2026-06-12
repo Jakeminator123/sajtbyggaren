@@ -262,7 +262,9 @@ async function readLastTraceEvent(runId: string): Promise<TraceEvent | null> {
   }
 }
 
-function parseTraceLine(line: string): TraceEvent | null {
+// Exporterad så den hostade trace-läsningen (lib/hosted-run-history.ts)
+// delar EXAKT samma radparsning som den lokala disk-vägen.
+export function parseTraceLine(line: string): TraceEvent | null {
   try {
     const parsed = JSON.parse(line) as Partial<TraceEvent>;
     if (

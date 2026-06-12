@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { isHostedVercelRuntime } from "@/lib/hosted-python-runtime";
 import {
-  hostedRuntimeNotice,
-  isHostedVercelRuntime,
-} from "@/lib/hosted-python-runtime";
+  fetchHostedRunArtefactsTar,
+  hostedRunTrace,
+  resolveHostedRunEntry,
+} from "@/lib/hosted-run-history";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { readRunTrace } from "@/lib/runs";
 
@@ -30,14 +32,6 @@ export async function GET(request: Request, context: RouteContext) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
 
-  // No persistent repo disk hosted → trace lives under `data/runs/<runId>/`.
-  if (isHostedVercelRuntime()) {
-    return NextResponse.json(
-      { error: hostedRuntimeNotice(), hostedNotice: hostedRuntimeNotice() },
-      { status: 404 },
-    );
-  }
-
   let runId: string;
   try {
     runId = (await context.params).runId;
@@ -58,6 +52,35 @@ export async function GET(request: Request, context: RouteContext) {
       );
     }
     limit = parsed;
+  }
+
+  // Hostat (VERCEL=1, B199 v2): trace.ndjson läses ur versionens
+  // run-artifacts.tar.gz i blob via KV-indexet. Olösbar run → vanlig 404
+  // utan `hostedNotice` (latch-kontraktet gäller "förmågan saknas", inte
+  // "denna run saknas").
+  if (isHostedVercelRuntime()) {
+    try {
+      const entry = await resolveHostedRunEntry(runId);
+      const files = entry ? await fetchHostedRunArtefactsTar(entry) : null;
+      if (!entry || !files) {
+        return NextResponse.json(
+          {
+            error:
+              "Trace saknas i den hostade vyn för denna run — den byggdes " +
+              "lokalt eller före hostad artefakt-persistens (B199).",
+          },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json(hostedRunTrace(entry, files, { since, limit }));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Okänt fel vid hostad trace-läsning.";
+      const status = /Ogiltigt since/.test(message) ? 400 : 500;
+      return NextResponse.json({ error: message }, { status });
+    }
   }
 
   try {

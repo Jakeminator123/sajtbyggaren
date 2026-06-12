@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { isHostedVercelRuntime } from "@/lib/hosted-python-runtime";
 import {
-  hostedRuntimeNotice,
-  isHostedVercelRuntime,
-} from "@/lib/hosted-python-runtime";
+  fetchHostedRunArtefactsTar,
+  hostedRunArtefactBundle,
+  resolveHostedRunEntry,
+} from "@/lib/hosted-run-history";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { readRunArtefacts } from "@/lib/runs";
 
@@ -18,24 +20,46 @@ type RouteContext = {
  * äldre run" labels instead of failing with 500. This route never
  * invents artefakter or normalises shapes - the underlying
  * scripts/build_site.py and scripts/dev_generate.py contracts apply.
+ *
+ * Hostat (VERCEL=1, B199 v2): bundeln läses ur versionens
+ * run-artifacts.tar.gz i blob via KV-indexet. En run som inte kan lösas
+ * (byggd lokalt, eller före artefakt-persistensen) svarar en VANLIG 404
+ * utan `hostedNotice` — latch-kontraktet i lib/hosted-run-artefacts.ts är
+ * reserverat för "hela förmågan saknas hostat", vilket inte längre stämmer.
  */
 export async function GET(request: Request, context: RouteContext) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
-
-  // No persistent repo disk hosted → run artefakter live under `data/runs/`.
-  if (isHostedVercelRuntime()) {
-    return NextResponse.json(
-      { error: hostedRuntimeNotice(), hostedNotice: hostedRuntimeNotice() },
-      { status: 404 },
-    );
-  }
 
   let runId: string;
   try {
     runId = (await context.params).runId;
   } catch {
     return NextResponse.json({ error: "Saknar runId i URL." }, { status: 400 });
+  }
+
+  if (isHostedVercelRuntime()) {
+    try {
+      const entry = await resolveHostedRunEntry(runId);
+      const files = entry ? await fetchHostedRunArtefactsTar(entry) : null;
+      if (!entry || !files) {
+        return NextResponse.json(
+          {
+            error:
+              "Run-artefakter saknas i den hostade vyn för denna run — den " +
+              "byggdes lokalt eller före hostad artefakt-persistens (B199).",
+          },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json(hostedRunArtefactBundle(entry, files));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Okänt fel vid hostad artefakt-läsning.";
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   }
 
   try {
