@@ -2370,6 +2370,23 @@ def _detect_followup_applied_visible_effect(
                     "applied": False,
                     "reason": "copy_directive_not_applied",
                 }
+            # 1a (site-3e7d71ad, 2026-06-12): a byte diff is NOT proof the
+            # operator's edit landed when this follow-up applied NO executor-
+            # owned directive. The legacy resolver records exactly which
+            # executor-owned edits it applied in appliedFollowupDirectiveKinds;
+            # an empty list (key present) over a byte diff means the diff is
+            # pure brief-paraphrase noise (notesForPlanner / positioning /
+            # service summaries) while the operator's intent ("ta bort sidan
+            # Kontakt", "gör badges responsiva") has no executor - report an
+            # honest no-op so a regenerated paraphrase never masquerades as a
+            # successful edit. ``None`` (key absent: targeted path / legacy
+            # meta) preserves the pre-signal "visible_files_changed" behaviour.
+            applied_kinds = _prompt_meta_applied_followup_directive_kinds(prompt_meta)
+            if applied_kinds is not None and not applied_kinds:
+                return {
+                    "applied": False,
+                    "reason": "intent_not_executable",
+                }
             return {
                 "applied": True,
                 "reason": "visible_files_changed",
@@ -2527,6 +2544,48 @@ def _prompt_meta_unapplied_followup_intents(
         if len(posts) >= _UNAPPLIED_FOLLOWUP_MAX_ITEMS:
             break
     return posts
+
+
+# 1a honesty signal (site-3e7d71ad, 2026-06-12): bounds for the
+# appliedFollowupDirectiveKinds list so a malformed sidecar cannot smuggle
+# arbitrary/oversized strings into build-result.json (Viewser + the honesty
+# gates read it verbatim).
+_APPLIED_DIRECTIVE_KIND_MAX_LENGTH = 40
+_APPLIED_DIRECTIVE_KINDS_MAX_ITEMS = 16
+
+
+def _prompt_meta_applied_followup_directive_kinds(
+    prompt_meta: dict[str, Any] | None,
+) -> list[str] | None:
+    """Return the executor-owned edit kinds this follow-up applied, or ``None``.
+
+    ``None`` means the key is ABSENT (init builds, the targeted apply path, or a
+    legacy meta written before this signal existed) - callers MUST preserve the
+    pre-signal behaviour in that case. A present key (even an empty list) means
+    the legacy resolver computed the signal: an empty list is the honest "this
+    follow-up applied no executor-owned edit" answer (see
+    ``_detect_followup_applied_visible_effect``). Defensive parsing mirrors
+    ``_prompt_meta_unapplied_followup_intents``: keep only non-empty strings,
+    dedupe, cap length and count.
+    """
+    if not prompt_meta:
+        return None
+    raw = prompt_meta.get("appliedFollowupDirectiveKinds")
+    if not isinstance(raw, list):
+        return None
+    kinds: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        kind = item.strip()
+        if not kind or kind in seen:
+            continue
+        seen.add(kind)
+        kinds.append(kind[:_APPLIED_DIRECTIVE_KIND_MAX_LENGTH])
+        if len(kinds) >= _APPLIED_DIRECTIVE_KINDS_MAX_ITEMS:
+            break
+    return kinds
 
 
 # ADR 0046 traceability: validated/dropped preview markings carried on the
@@ -2750,6 +2809,13 @@ def write_build_result(
     unapplied_followup_intents = _prompt_meta_unapplied_followup_intents(prompt_meta)
     if unapplied_followup_intents:
         result["unappliedFollowupIntents"] = unapplied_followup_intents
+    # 1a honesty signal (site-3e7d71ad): surface which executor-owned edits this
+    # follow-up applied so the route.ts + hosted honesty gates can require actual
+    # directives (not just appliedVisibleEffect=true). Emitted whenever the
+    # legacy resolver computed it (even empty); absent on init/targeted builds.
+    applied_directive_kinds = _prompt_meta_applied_followup_directive_kinds(prompt_meta)
+    if applied_directive_kinds is not None:
+        result["appliedFollowupDirectiveKinds"] = applied_directive_kinds
     # ADR 0046 traceability: mirror the operator's validated preview markings
     # (and the honestly dropped ones) from the meta sidecar so the viewser
     # changeSet can show what the operator pointed at in this version.

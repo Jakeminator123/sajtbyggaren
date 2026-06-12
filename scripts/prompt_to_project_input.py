@@ -2993,6 +2993,14 @@ def merge_followup_project_input(
 _UNAPPLIED_CAPABILITY_REASON = (
     "Förmågan '{capability}' känns igen men byggsteget renderar den inte ännu."
 )
+# 1b (site-3e7d71ad, 2026-06-12): briefModel kan uppfinna en capability-slug
+# ("responsive-badges") som varken finns i capability-map eller renderas, och
+# Phase 2-planen rejectar den. En NYTILLKOMMEN okänd slug ska därför namnges
+# ärligt i unappliedFollowupIntents i stället för att tigas ihjäl.
+_UNAPPLIED_UNKNOWN_CAPABILITY_REASON = (
+    "Önskemålet '{capability}' kunde inte kopplas till någon känd förmåga och "
+    "byggdes därför inte."
+)
 _UNAPPLIED_HERO_TARGET = "hero"
 # B155: target label for an ambiguous unquoted literal-replace no-op (the reason
 # string itself lives in copy_directives._UNQUOTED_AMBIGUOUS_REASON).
@@ -3122,6 +3130,148 @@ def _media_assets_changed(
     return (previous.get("gallery") or []) != (merged.get("gallery") or [])
 
 
+def _required_dossiers(payload: dict[str, Any]) -> set[str]:
+    """``selectedDossiers.required`` as a set of non-empty slugs."""
+    selected = payload.get("selectedDossiers")
+    if not isinstance(selected, dict):
+        return set()
+    return {
+        dossier
+        for dossier in (selected.get("required") or [])
+        if isinstance(dossier, str) and dossier.strip()
+    }
+
+
+def _service_signatures(payload: dict[str, Any]) -> set[tuple[str, str]]:
+    """``(id, label)`` pairs for the site's services.
+
+    The signature deliberately excludes ``summary`` so a brief-regenerated
+    paraphrase of an existing service (same id + label) is NOT mistaken for an
+    applied edit, while a genuine product add/remove (id delta) or a rename
+    (label delta) is detected.
+    """
+    services = payload.get("services")
+    if not isinstance(services, list):
+        return set()
+    signatures: set[tuple[str, str]] = set()
+    for service in services:
+        if not isinstance(service, dict):
+            continue
+        service_id = service.get("id")
+        label = service.get("label")
+        signatures.add(
+            (
+                service_id if isinstance(service_id, str) else "",
+                label if isinstance(label, str) else "",
+            )
+        )
+    return signatures
+
+
+def compute_applied_followup_directive_kinds(
+    previous: dict[str, Any],
+    merged: dict[str, Any],
+) -> list[str]:
+    """Report which executor-owned edits this follow-up ACTUALLY applied.
+
+    Pure observer over ``(previous, merged)`` - no mutation. Returns a sorted
+    list of the change "kinds" a deterministic executor owns and that genuinely
+    differ between the two versions. It deliberately ignores brief-paraphrase
+    surfaces (notesForPlanner, positioning.oneLiner, service summaries) so a
+    regenerated brief can never masquerade as an applied change: the honest
+    follow-up signal in ``build_site.py`` uses an EMPTY list to refuse letting a
+    byte diff prove success (reason ``intent_not_executable`` - the 2026-06-12
+    site-3e7d71ad trust bug where a route-removal / restyle that no executor
+    owns still reported ``appliedVisibleEffect=true``), while a non-empty list
+    keeps the byte-diff ``visible_files_changed`` honesty.
+
+    Kinds (English identifiers): copy, section-content, section-style, theme,
+    services, capability, asset, company.
+    """
+    kinds: set[str] = set()
+
+    prev_directives = (
+        previous.get("directives") if isinstance(previous.get("directives"), dict) else {}
+    )
+    merged_directives = (
+        merged.get("directives") if isinstance(merged.get("directives"), dict) else {}
+    )
+
+    # copy: copyDirectives is REPLACED per version (_apply_copy_directives), so
+    # its mere presence on merged means THIS follow-up applied a copy edit.
+    if merged.get("copyDirectives") or merged_directives.get("copyDirectives"):
+        kinds.add("copy")
+    # section-content (ADR 0043): a directives.sectionContentOverrides delta.
+    if merged_directives.get("sectionContentOverrides") and merged_directives.get(
+        "sectionContentOverrides"
+    ) != prev_directives.get("sectionContentOverrides"):
+        kinds.add("section-content")
+    # section-style ("Färglägg sektionen"): a sectionStyleOverrides delta.
+    if merged_directives.get("sectionStyleOverrides") and merged_directives.get(
+        "sectionStyleOverrides"
+    ) != prev_directives.get("sectionStyleOverrides"):
+        kinds.add("section-style")
+    # theme: brand colour / tone vibe (apply_theme_directive writes these).
+    prev_brand = previous.get("brand") if isinstance(previous.get("brand"), dict) else {}
+    merged_brand = merged.get("brand") if isinstance(merged.get("brand"), dict) else {}
+    prev_tone = previous.get("tone") if isinstance(previous.get("tone"), dict) else {}
+    merged_tone = merged.get("tone") if isinstance(merged.get("tone"), dict) else {}
+    if (
+        prev_brand.get("primaryColorHex") != merged_brand.get("primaryColorHex")
+        or prev_brand.get("accentColorHex") != merged_brand.get("accentColorHex")
+        or _string_value(prev_tone.get("primary"))
+        != _string_value(merged_tone.get("primary"))
+    ):
+        kinds.add("theme")
+    # asset: brand.logo / brand.heroImage / gallery delta (asset_set / media).
+    if _media_assets_changed(previous, merged):
+        kinds.add("asset")
+    # services: the SET of (id, label) signatures changed - a product add/remove
+    # or rename. Summary-only paraphrase keeps the signature, so it is ignored.
+    if _service_signatures(previous) != _service_signatures(merged):
+        kinds.add("services")
+    # company: name/tagline/story changed via a semantic patch or direct edit
+    # (the merge keeps previous byte-stable for additive/unclear prompts).
+    prev_company = (
+        previous.get("company") if isinstance(previous.get("company"), dict) else {}
+    )
+    merged_company = (
+        merged.get("company") if isinstance(merged.get("company"), dict) else {}
+    )
+    if any(
+        _string_value(prev_company.get(field)) != _string_value(merged_company.get(field))
+        for field in ("name", "tagline", "story")
+    ):
+        kinds.add("company")
+    # capability: a newly MOUNTED capability - either selectedDossiers.required
+    # changed, or a newly requested slug that IS mounted. An unknown / unmounted
+    # slug (the briefModel-invented "responsive-badges") never counts, mirroring
+    # compute_unapplied_followup_intents' "only mounted capabilities render" rule.
+    prev_required = _required_dossiers(previous)
+    merged_required = _required_dossiers(merged)
+    if prev_required != merged_required:
+        kinds.add("capability")
+    else:
+        previous_caps = {
+            cap
+            for cap in (previous.get("requestedCapabilities") or [])
+            if isinstance(cap, str) and cap.strip()
+        }
+        capability_map = _load_capability_map()
+        for raw_cap in merged.get("requestedCapabilities") or []:
+            if not isinstance(raw_cap, str) or not raw_cap.strip():
+                continue
+            cap = raw_cap.strip()
+            if cap in previous_caps:
+                continue
+            entry = capability_map.get(cap)
+            if entry is not None and _capability_is_mounted(entry, merged_required):
+                kinds.add("capability")
+                break
+
+    return sorted(kinds)
+
+
 def compute_unapplied_followup_intents(
     previous: dict[str, Any],
     merged: dict[str, Any],
@@ -3164,7 +3314,19 @@ def compute_unapplied_followup_intents(
             continue
         entry = capability_map.get(cap)
         if entry is None:
-            # Not a recognised capability slug - don't claim anything about it.
+            # 1b: a NEWLY requested slug (delta vs previous) absent from the
+            # capability-map is an honest miss - the brief/classifier invented a
+            # capability that codegen v1 cannot mount and Phase 2 rejects. Name
+            # it instead of silently dropping it (the route-removal / restyle
+            # trust bug, site-3e7d71ad). ``cap in previous_caps`` was already
+            # filtered above, so only this follow-up's delta reaches here.
+            seen_targets.add(cap)
+            posts.append(
+                {
+                    "target": cap,
+                    "reason": _UNAPPLIED_UNKNOWN_CAPABILITY_REASON.format(capability=cap),
+                }
+            )
             continue
         if _capability_is_mounted(entry, required_dossiers):
             continue
@@ -3665,6 +3827,16 @@ def generate(
         )
         if unapplied_followup_intents:
             meta["unappliedFollowupIntents"] = unapplied_followup_intents
+        # 1a honesty signal (site-3e7d71ad, 2026-06-12): name which executor-
+        # owned edits this follow-up ACTUALLY applied so build_site.py can refuse
+        # to let a brief-paraphrase byte diff prove success. ALWAYS written on a
+        # follow-up over a previous version (even when empty) - build_site uses
+        # the KEY'S PRESENCE to know the legacy resolver computed the signal, so
+        # targeted-path / legacy-without-signal metas keep their old behaviour.
+        meta["appliedFollowupDirectiveKinds"] = compute_applied_followup_directive_kinds(
+            base_project_input,
+            project_input,
+        )
     # asset_set-spårbarhet (task A): meta-sidecaren namnger den landade
     # refen så Backoffice/build-result kan visa VAD det strukturerade
     # intentet faktiskt skrev — samma mönster som appliedFocusSections.

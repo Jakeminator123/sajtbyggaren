@@ -867,6 +867,14 @@ function summarizeBuildResult(
         versionText = ` Version 1 publicerad.`;
       }
     }
+    // Del D (site-3e7d71ad): en ärlig, byggfaktagrundad dirigent-rad i
+    // ``payload.answerText`` (läses direkt som bridge-grenen ovan, INTE via
+    // extractConversationAnswer som kräver !runId). Den ersätter ENDAST content
+    // i (a) de generiska "Klart!"-success-grenarna och (b) B155-no-op-info-
+    // grenarna nedan — variant/changes/grindar förblir deterministiska. Tom/
+    // saknad (no-key) → de deterministiska raderna står oförändrade.
+    const honestAnswer =
+      typeof payload.answerText === "string" ? payload.answerText.trim() : "";
     // B155 (2026-05-30): backend signalerar via build-result.json om
     // följdprompten faktiskt gav en synlig ändring. När motorn
     // upptäcker att inget visible-file-set ändrats (eller att intent
@@ -889,15 +897,22 @@ function summarizeBuildResult(
     // tests/test_viewser_files.py::test_b155_floating_chat_no_op_does_not_claim_success.
     const effect = extractAppliedVisibleEffect(payload.buildResult);
     if (effect && effect.applied === false) {
+      // ``variant`` ligger FÖRST i objektet (funktionellt identiskt) så den
+      // ärliga no-op-låsningen (b155-testet) hålls nära ``effect.applied ===
+      // false`` även när Del D:s answerText ersätter den längre content-texten.
       if (effect.reason === "visible_files_unchanged") {
         return {
-          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter på startsidan (företagsnamn, rubrik, tagline) — rubriker på undersidor och större layout-/strukturändringar (centrera hero, lägga till sektion) stöds inte än.${unappliedNote}`,
           variant: "info",
+          content:
+            honestAnswer ||
+            `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter på startsidan (företagsnamn, rubrik, tagline) — rubriker på undersidor och större layout-/strukturändringar (centrera hero, lägga till sektion) stöds inte än.${unappliedNote}`,
         };
       }
       return {
-        content: `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".${unappliedNote}`,
         variant: "info",
+        content:
+          honestAnswer ||
+          `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".${unappliedNote}`,
       };
     }
     // ADR 0034 väg B: när path A faktiskt skrev strukturerade copy-
@@ -932,7 +947,9 @@ function summarizeBuildResult(
     // Faller bara igenom till heuristiken när change-set:en saknas/är tom.
     if (exactChanges.length > 0) {
       return {
-        content: `Klart!${versionText} Previewen laddas om automatiskt.`,
+        // Del D: den ärliga dirigent-raden ersätter ENDAST den generiska
+        // "Klart!"-texten; variant + changes förblir deterministiska.
+        content: honestAnswer || `Klart!${versionText} Previewen laddas om automatiskt.`,
         variant: "success",
         changes: exactChanges,
         changesExact: true,
@@ -940,7 +957,8 @@ function summarizeBuildResult(
     }
     const changes = summarizeChangesFromPrompt(userPrompt);
     return {
-      content: `Klart!${versionText} Previewen laddas om automatiskt.`,
+      // Del D: samma content-ersättning på den sista generiska "Klart!"-grenen.
+      content: honestAnswer || `Klart!${versionText} Previewen laddas om automatiskt.`,
       variant: "success",
       changes: changes.length > 0 ? changes : undefined,
     };

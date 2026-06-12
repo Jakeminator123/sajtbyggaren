@@ -399,12 +399,19 @@ version = int(version_raw) if version_raw.isdigit() else None
 build_result = {}
 build_status = None
 applied_visible = False
+applied_directive_kinds = []
 if run_id:
     br = read_json(os.path.join(repo, "data", "runs", run_id, "build-result.json"))
     if isinstance(br, dict):
         build_result = br
         build_status = br.get("status") if isinstance(br.get("status"), str) else None
         applied_visible = br.get("appliedVisibleEffect") is True
+        # 1a honesty signal (site-3e7d71ad): which executor-owned edits this
+        # follow-up actually applied. The legacy honesty-gate below requires
+        # CONCRETE directives, never just appliedVisibleEffect.
+        raw_kinds = br.get("appliedFollowupDirectiveKinds")
+        if isinstance(raw_kinds, list):
+            applied_directive_kinds = [k for k in raw_kinds if isinstance(k, str)]
 
 # appliedCopyDirectives ur PI-snapshotet (samma falt readAppliedCopyDirectives
 # laser TS-side; lat validering — schemat har redan validerat pa write-sidan).
@@ -474,7 +481,11 @@ if engine == "answer-only":
 elif engine == "openclaw":
     open_claw_decision = None  # applied -> bridge staller, beslutet nollas (som lokalt)
 else:  # legacy
-    legacy_visible = bool(copy_directives) or applied_visible
+    # 1c (site-3e7d71ad): require CONCRETE applied directives (copy directives
+    # OR a non-empty appliedFollowupDirectiveKinds) before nulling the honest
+    # OpenClaw decision — never just appliedVisibleEffect, which a brief
+    # paraphrase byte diff could flip. Mirrors route.ts legacyPathAppliedVisibleChange.
+    legacy_visible = bool(copy_directives) or bool(applied_directive_kinds)
     open_claw_decision = None if legacy_visible else decision
 
 result = {

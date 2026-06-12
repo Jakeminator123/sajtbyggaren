@@ -161,6 +161,33 @@ def test_legacy_fallback_is_honest_engine_attribution() -> None:
     assert "generateAppliedConfirmation" in route
 
 
+def test_legacy_honesty_gate_requires_concrete_directives() -> None:
+    """1c (site-3e7d71ad): den hostade legacy-gaten får INTE nolla det ärliga
+    OpenClaw-beslutet enbart på appliedVisibleEffect — den måste kräva konkreta
+    direktiv (copy_directives ELLER appliedFollowupDirectiveKinds)."""
+    runner = _runner()
+    assert "appliedFollowupDirectiveKinds" in runner, (
+        "Hostade write_hosted_result måste läsa appliedFollowupDirectiveKinds "
+        "ur build-result.json."
+    )
+    assert "legacy_visible = bool(copy_directives) or bool(applied_directive_kinds)" in runner, (
+        "Legacy-gaten måste kräva konkreta direktiv, aldrig enbart "
+        "appliedVisibleEffect."
+    )
+    route = _route()
+    assert "extractAppliedFollowupDirectiveKinds" in route, (
+        "route.ts legacyPathAppliedVisibleChange måste läsa konkreta "
+        "applied-direktiv via extractAppliedFollowupDirectiveKinds."
+    )
+    # Gaten får inte längre lita på appliedVisibleEffect===true för att nolla
+    # beslutet — den raden ska bara använda appliedCopyDirectives + kinds.
+    gate = route.split("const legacyPathAppliedVisibleChange", 1)[1].split(";", 1)[0]
+    assert "appliedDirectiveKinds.length > 0" in gate
+    assert "extractAppliedVisibleEffect" not in gate, (
+        "Honesty-gaten får inte nolla beslutet enbart på appliedVisibleEffect."
+    )
+
+
 # --- 6. hostad response-payload speglar lokala kontraktsformen ----------------
 
 
@@ -224,3 +251,78 @@ def test_hosted_build_stops_preview_sandbox_before_create() -> None:
         "Stoppet ska vara awaited och ligga i try/catch (best-effort) — "
         "ett stopp-fel får aldrig falla bygget."
     )
+
+
+# --- 8. Del D: ärlig answerText på VARJE followup-svar (site-3e7d71ad) ---------
+
+
+def test_followup_outcome_summary_helper_exists_with_honesty_guard() -> None:
+    """Del D: route.ts har generateFollowupOutcomeSummary med no-key-guard och
+    hårda ärlighetsregler i systemprompten."""
+    route = _route()
+    assert "async function generateFollowupOutcomeSummary(" in route, (
+        "route.ts måste ha helpern generateFollowupOutcomeSummary."
+    )
+    body = route.split("async function generateFollowupOutcomeSummary(", 1)[1].split(
+        "\n}\n", 1
+    )[0]
+    # No-key → null (deterministiska rader står, ingen fejkad chatt).
+    assert 'if (!openaiEnv("OPENAI_API_KEY")) return null;' in body, (
+        "Helpern måste returnera null utan OPENAI_API_KEY."
+    )
+    # Grundning + ärlighetsregler i systemprompten.
+    assert "Grunda dig ENBART i Fakta nedan." in body
+    assert "INTE syntes/landade" in body, (
+        "Systemprompten måste tvinga ett uttryckligt 'syntes/landade inte' på no-op."
+    )
+    # Återanvänder appliedConfirmation-racet (ingen hängande chatt blockerar svaret).
+    assert "APPLIED_CONFIRMATION_TIMEOUT_MS" in body
+
+
+def test_followup_outcome_summary_called_on_legacy_and_hosted() -> None:
+    """Del D: helpern anropas på lokala legacy-grenen OCH i
+    buildHostedFollowupResponse, och answerText bärs på legacy-returobjektet."""
+    route = _route()
+    # Lokala legacy-grenen: facts + answerText på returobjektet.
+    assert "generateFollowupOutcomeSummary(payload.prompt, {" in route, (
+        "Lokala legacy-grenen måste anropa generateFollowupOutcomeSummary."
+    )
+    assert "answerText: followupAnswerText," in route, (
+        "Lokala legacy-returobjektet måste bära answerText."
+    )
+    # Hostade buildHostedFollowupResponse else-grenen kör nya helpern; den
+    # synliga OpenClaw-ändringen behåller generateAppliedConfirmation.
+    hosted_block = route.split("async function buildHostedFollowupResponse", 1)[1].split(
+        "\n}\n", 1
+    )[0]
+    assert "generateFollowupOutcomeSummary(prompt, {" in hosted_block, (
+        "buildHostedFollowupResponse måste köra generateFollowupOutcomeSummary "
+        "för övriga followup-fall (legacy / openclaw mount-only)."
+    )
+    assert "generateAppliedConfirmation(" in hosted_block, (
+        "Den synligt applicerade OpenClaw-ändringen behåller "
+        "generateAppliedConfirmation."
+    )
+
+
+def test_floating_chat_answer_text_replaces_only_content() -> None:
+    """Del D: i floating-chat.tsx får answerText ENDAST ersätta content
+    (``honestAnswer || <deterministisk>``), aldrig variant."""
+    text = (VIEWSER / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        'const honestAnswer =\n      typeof payload.answerText === "string"' in text
+    ), "summarizeBuildResult måste läsa payload.answerText som honestAnswer."
+    # Ersätter content via ``honestAnswer || ...`` — minst den generiska
+    # "Klart!"-grenen och no-op-grenarna.
+    assert "honestAnswer || `Klart!" in text, (
+        "Den generiska Klart!-grenen måste låta honestAnswer ersätta content."
+    )
+    # answerText får aldrig sätta variant: honestAnswer förekommer aldrig
+    # tillsammans med 'variant:' på samma rad.
+    for line in text.splitlines():
+        if "honestAnswer" in line:
+            assert "variant" not in line, (
+                "answerText/honestAnswer får aldrig styra variant — bara content."
+            )
