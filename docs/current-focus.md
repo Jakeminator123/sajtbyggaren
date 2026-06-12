@@ -6,65 +6,73 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-12 ~16:00 — avslutningsrunda: dagens mergar landade, main synkad för produktionstest)
+## Status nu (2026-06-12 ~18:45 — kvällens avslutningsrunda: #314/#315 landade, slutlig main-sync)
 
 **Git:** `main = jakob-be` (rent träd, local == origin) efter denna rundas
-main-sync. Production deployar från `main`. Tarball-omladdningen är GJORD
-(efter #312/#313-mergarna, se handoff) — build-kontexten i blob speglar
-`56dc754f`. Alla PR-köer är tomma; sessionsbranches och worktrees städade
-(se handoff).
+slutsynk. Production deployar från `main`. Tarball-omladdningen är GJORD
+efter #314 (verifierad via blob-uploadedAt 17:51:48, 27 s efter mergen) —
+build-kontexten i blob speglar `de04e8f6`. #315 krävde ingen omladdning
+(endast `apps/viewser/` + `tests/`). Alla PR-köer är tomma.
 
-**Landat under eftermiddagen (squash-mergat till `jakob-be`):**
+**Landat under kvällen (squash-mergat till `jakob-be`):**
 
-- **#310 (ADR 0056, dossier-dependencies):** dossierer deklarerar pinnade
-  npm-paket som följer med in i genererad `package.json`; npm ci med
-  install-fallback.
-- **#311 (Projektinnehåll-panelen):** site-composition-API +
-  panel i ConsoleDrawer som visar sidor/dossiers/komponenter/paket,
-  deriverat ur befintliga run-artefakter (lokalt + hostat).
-- **#312 (uppgift E, komponentintag v1):** kurerad shadcn-intake-CLI
-  (`scripts/component_intake.py`, ADR 0054), component_builder-rollkontrakt
-  (ADR 0057), zero-dep accordion-pilot synlig på FAQ, naming v40,
-  repo-boundaries v13, ny pip-dep `openai-agents==0.17.5`.
-- **#313 (del F+D, ärlighetsfix):** `appliedFollowupDirectiveKinds`-signal +
-  `intent_not_executable` stoppar falska "Klart!" (byte-diff räcker inte
-  längre som framgångsbevis); ärlig okänd-slug i `unappliedFollowupIntents`;
-  honesty-gates kräver konkreta direktiv; `generateFollowupOutcomeSummary`
-  ger ärlig LLM-svarsrad på varje följdprompt.
+- **#314 (uppgift G, `de04e8f6` — stänger B200/B201, ADR 0058):**
+  G1 hostad answer-only — ren fråga med hög konfidens besvaras på sekunder
+  utan sandbox-spinn (`apps/viewser/lib/hosted-answer-only.ts`, kortslutning
+  före `startHostedBuild`); G2 preview-bundle-tarball — bygget paketerar
+  publicerade fil-setet som EN tarball i blob, preview-sandboxen skapas
+  direkt från den (`source=preview-bundle` i loggarna) med ärlig
+  fil-för-fil-fallback för äldre sajter. Naming v41.
+- **#315 (uppgift H, restpost-svep, `54de9b9c`):** dedikerad deterministisk
+  `intent_not_executable`-rad i FloatingChat (no-key-fallbacken säger ärligt
+  att önskemålet saknar byggförmåga — aldrig "var mer specifik"-rådet;
+  LLM-answerText från #313 vinner fortsatt); rolletiketten
+  `component_builder` → "komponenter" (ADR 0057). Plus hygientak-split:
+  copy-directive-/change-set-låsen bor nu i
+  `tests/test_viewser_copy_change_set.py`.
 
-Förmiddagens ADR 0055-pass (preview-standardisering) + hotfixarna är
-historik: [`docs/archive/current-focus-2026-06-12-middag.md`](archive/current-focus-2026-06-12-middag.md).
+Eftermiddagens runda (#310–#313 + första main-synken) är historik:
+[`docs/archive/current-focus-2026-06-12-em.md`](archive/current-focus-2026-06-12-em.md).
 
 **Nästa 3 prioriteringar:**
 
-1. **Operatörens produktionstest på `main`:** hela E2E-flödet på `/studio`
-   i produktion (init → pre-built preview → no-op-följdprompt → edit-
-   följdprompt → reuse), nu inklusive #312/#313-beteendet. Görs av
-   operatören separat — agenter ska INTE förekomma testet.
-2. **Uppgift G (nästa byggsteg):** snabb chat utan sandbox-spinn för rena
-   frågor + tarball-bundling för förbyggda previews.
-3. **Backlog/deferred (ej blockers):** componentSource/mountRules/
-   qualityGate-dossierfälten från E; viewser-rolletikett för
-   component_builder; deterministisk intent_not_executable-rad för
-   no-key-fallet från F+D; B197 discovery-paritet hostat (Christophers,
-   tidig rebase msg-0085); blob-/KV-prune; `changeSet` hostat;
-   Preview-miljöns reuse-flagga; Safari/Firefox-E2E för B125.
+1. **Operatörens produktions-E2E på `main`** (görs av operatören separat —
+   agenter ska INTE förekomma testet). Konkreta verifieringspunkter:
+   (i) ren fråga i chatten ska svara på sekunder utan sandbox;
+   (ii) första hostade bygget efter merge skapar första preview-bundlen —
+   andra previewn därefter ska starta på sekunder (kolla `sourceMs` +
+   `source=preview-bundle` i runtime-loggarna; äldre sajter tar
+   fil-för-fil-fallback tills de byggs om);
+   (iii) no-op-följdprompt ska ge ärlig no-op-rad, aldrig grön "Klart!".
+2. **Uppgift I (nästa byggsteg): B197 discovery-paritet hostat** — idag
+   skickas endast prompttexten in i sandboxen; discovery-svar/
+   konversationskontext trådas inte. (Koordinera med Christophers spår,
+   msg-0085 begärde tidig rebase på `hosted-build-runner.ts`.)
+3. **Backlog/deferred (ej blockers):** dossierfälten componentSource/
+   mountRules/qualityGate från E (kräver design/ADR först — ej specade i
+   ADR 0054/0057); targeted-apply-trådning av
+   `appliedFollowupDirectiveKinds`; blob-prune-skulden + dubbellagring av
+   källan per bygge tills bundle-vägen är prod-bevisad (ADR 0058); G1:s
+   medvetna klassificeringslatens (~1–3 s, 8 s tak) på byggvägen;
+   `changeSet` hostat; Preview-miljöns reuse-flagga; Safari/Firefox-E2E
+   för B125.
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `56dc754f` (2026-06-12 ~16:00 UTC+2; squash-merge av
-#313 ovanpå #312/#311/#310-kedjan. Avslutningsrundan: branch-/worktree-
-städning, known-issues-städning (B195 flyttad till Stängda, B155-slice för
-#313), handoff + detta block, `main` synkad till samma innehåll för
-operatörens produktionstest. Tarball-omladdningen till blob
-`build-context/current.tar.gz` gjordes direkt efter #313-mergen.)
+Last verified state: `54de9b9c` (2026-06-12 ~18:45 UTC+2; squash-merge av
+#315 ovanpå #314. #315-mergen krävde en hygientak-split i CI-rundan
+(`test_viewser_floating_chat.py` 1221 > 1200 rader — copy-directive-/
+change-set-låsen flyttade till `tests/test_viewser_copy_change_set.py`,
+samma mönster som tidigare splittar). Kvällsrundan: handoff + detta block,
+slutlig `jakob-be` → `main`-sync så operatörens produktions-E2E kör på
+dagens fulla leverans.)
 
 ## Öppna PR att känna till
 
-Inga öppna just nu. #306–#313 är squash-mergade till `jakob-be` och synkade
-till `main`. (#312 = komponentintag v1 / uppgift E, mergad 2026-06-12 ~15:20.
-#313 = del F+D ärlighetsfix, mergad 2026-06-12 ~15:41. Äldre detaljer:
-arkivet + `docs/handoff.md`.)
+Inga öppna just nu. #306–#315 är squash-mergade till `jakob-be` och synkade
+till `main`. (#314 = uppgift G snabb chat + preview-bundle, mergad
+2026-06-12 ~17:51. #315 = uppgift H restpost-svep, mergad 2026-06-12 ~18:26.
+Äldre detaljer: arkivet + `docs/handoff.md`.)
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
@@ -101,6 +109,9 @@ dev-uttryck med korta parenteser första gången per konversation. Mönstret i
 
 Historiska statusblock + checkpoint-kedjan ligger i arkivet:
 
+- [`docs/archive/current-focus-2026-06-12-em.md`](archive/current-focus-2026-06-12-em.md)
+  (eftermiddagsblocket per `56dc754f`: #310–#313-mergarna, branch-städning,
+  första main-synken för produktionstest).
 - [`docs/archive/current-focus-2026-06-12-middag.md`](archive/current-focus-2026-06-12-middag.md)
   (middagsblocket per `f642b1a5`: ADR 0055 preview-standardisering,
   hotfix-passet ~13:30, #308–#311).

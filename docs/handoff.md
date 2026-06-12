@@ -1,15 +1,99 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-12 ~16:00 UTC+2, eftermiddag: avslutningsrunda efter en
-intensiv arbetsdag — #310–#313 squash-mergade till `jakob-be`, branch-/
-worktree-städning, dokumentstädning, `jakob-be` → `main` synkad för
-operatörens produktionstest. Detaljerad köplan:
+**Datum:** 2026-06-12 ~18:45 UTC+2, kväll: kvällens avslutningsrunda —
+#314 (uppgift G) + #315 (uppgift H) squash-mergade till `jakob-be`,
+slutlig `jakob-be` → `main`-sync så operatörens produktions-E2E kör på
+dagens fulla leverans. Detaljerad köplan:
 [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-12 ~16:00 — AVSLUTNINGSRUNDA: DAGENS MERGAR + MAIN-SYNC FÖR PRODUKTIONSTEST (AUKTORITATIVT BLOCK)
+## PASS 2026-06-12 ~18:45 — KVÄLLSRUNDA: #314 + #315 MERGADE, SLUTLIG MAIN-SYNC (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Mandat:** operatören (Jakob) gav före frånvaro fullt mandat för
+> kvällsrundan: merge av #315 efter granskning, docs-avslutning och den
+> slutliga `jakob-be` → `main`-synken.
+>
+> **Kvällens två mergar (squash till `jakob-be`):**
+>
+> 1. **#314 — uppgift G (`de04e8f6`, stänger B200/B201, ADR 0058):**
+>    - **G1 hostad answer-only:** en följdprompt som pre-klassificeras som
+>      ren fråga med hög konfidens besvaras på sekunder, grundat i sajtens
+>      hostade kontext (composition + site-brief via KV/blob) — ingen
+>      sandbox spinner upp. Kortslutningen ligger FÖRE `startHostedBuild`;
+>      alla felvägar/no-key/låg konfidens tar byggvägen som förr.
+>      Modul: `apps/viewser/lib/hosted-answer-only.ts`.
+>    - **G2 preview-bundle-tarball:** bygget paketerar det publicerade
+>      fil-setet som EN tarball i blob; preview-sandboxen skapas direkt
+>      från tarballen (inga per-fil-fetchar). Pekaren
+>      `viewser:site:<siteId>:current` bär `previewBundleUrl` m.fl. additivt;
+>      ärlig fil-för-fil-fallback för sajter byggda före G2, död blob eller
+>      för stor tarball. `sourceMs` + `source`
+>      (`preview-bundle`|`blob-files`|`disk`) i loggraden
+>      `sandbox-preview-start` är verifieringen. Naming v41.
+>    - **Tarball-omladdningen efter #314 är GJORD** (#314 rörde
+>      `scripts/check_term_coverage.py` + `governance/`): blob-uploadedAt
+>      17:51:48 UTC+2, 27 s efter mergen — build-kontexten speglar
+>      `de04e8f6`.
+> 2. **#315 — uppgift H, restpost-svep (`54de9b9c`):** två deferred-poster
+>    från #312/#313:
+>    - Dedikerad deterministisk gren i `summarizeBuildResult` för
+>      `effect.reason === "intent_not_executable"` (no-key-/LLM-timeout-
+>      fallbacken): ärlig svensk rad om att önskemålet inte kunde kopplas
+>      till någon känd byggförmåga — aldrig "ange exakt rubrik/text"-rådet.
+>      Variant "info", unapplied-svansen kvar, `honestAnswer` från #313
+>      vinner fortsatt. Lås:
+>      `test_floating_chat_dedicated_intent_not_executable_row`.
+>    - `CONVERSATION_ROLE_LABELS` får `component_builder` → "komponenter"
+>      (ADR 0057; stavning speglar `roles.py`/`action-registry.json`).
+>    - **CI-rundan krävde en hygientak-split:** PR:ens +46 testrader
+>      tippade `test_viewser_floating_chat.py` till 1221 rader (tak 1200 i
+>      `test_test_hygiene.py`). Copy-directive-/change-set-låsen (9 tester,
+>      oförändrat innehåll) flyttades till nya
+>      `tests/test_viewser_copy_change_set.py` — samma mönster som
+>      `test_viewser_builder_dialogs.py`/`test_viewser_openclaw_slice3.py`.
+>      Ingen tarball-omladdning för #315 (endast `apps/viewser/` +
+>      `tests/`). Röktest efter merge: 62 riktade tester gröna
+>      (floating-chat/b155-låsen, copy-change-set, openclaw slice 3,
+>      hosted-followup-parity, hygien).
+>
+> **Git-läget:** `jakob-be` == `main` efter denna rundas slutsynk (ff-only).
+> Production deployar från `main`. Inga öppna PR mot `jakob-be`.
+>
+> **NÄSTA steg är operatörens produktions-E2E på `main`** (görs separat av
+> operatören, inte av agenter). Konkreta verifieringspunkter:
+>
+> 1. **Ren fråga i chatten** (t.ex. "Vad tycker du om sajten?") ska svara
+>    på sekunder UTAN att en sandbox spinner upp (G1; loggraden
+>    `hosted-answer-only-preclassified`).
+> 2. **Första hostade bygget efter merge skapar första preview-bundlen** —
+>    andra previewn därefter ska starta på sekunder. Kolla `sourceMs` +
+>    `source=preview-bundle` i runtime-loggarna. Äldre sajter (byggda före
+>    G2) tar fil-för-fil-fallbacken tills de byggs om — väntat, inte fel.
+> 3. **No-op-följdprompt** ska ge ärlig no-op-rad (info), aldrig grön
+>    "Klart!" (#313/#315-beteendet, inkl. den nya
+>    intent_not_executable-raden utan nyckel).
+>
+> Därefter är **uppgift I** nästa byggsteg i kön: **B197 discovery-paritet
+> hostat** — idag skickas endast prompttexten in i sandboxen;
+> discovery-svar/konversationskontext trådas inte. (Koordinera med
+> Christophers spår — msg-0085 begärde tidig rebase,
+> `hosted-build-runner.ts` är ändrad IGEN av #314.)
+>
+> **Backlog/deferred (ej blockers):** dossierfälten componentSource/
+> mountRules/qualityGate från E (kräver design/ADR först — ej entydigt
+> specade i ADR 0054/0057, medvetet HOPPADE i #315); targeted-apply-
+> trådning av `appliedFollowupDirectiveKinds` (ej gjord enligt direktiv);
+> blob-prune-skulden + G2:s dubbellagring av källan per bygge (per-fil +
+> bundle) tills bundle-vägen är prod-bevisad (ADR 0058); G1:s medvetna
+> klassificeringslatens (~1–3 s, 8 s tak) på byggvägen; `changeSet` hostat;
+> Preview-miljöns reuse-flagga; Safari/Firefox-E2E för B125.
+
+## PASS 2026-06-12 ~16:00 — AVSLUTNINGSRUNDA: DAGENS MERGAR + MAIN-SYNC FÖR PRODUKTIONSTEST (HISTORIK)
+
+> Historiskt block (ersatt av kvällsrundan ovan) — verifiera alltid mot
+> git/koden.
 >
 > **Mandat:** operatören (Jakob) gav före frånvaro mandat för hela
 > avslutningsrundan: städning av worktrees/branches, dokumentstädning,
