@@ -43,6 +43,15 @@ export const MANIFEST_RELPATH = ".manifest.json";
 const MAX_FILES = 4_000;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 
+/**
+ * Begränsad samtidighet för blob-nedladdningarna i ``collectSourceFromBlob``.
+ * Incident 2026-06-12: den seriella en-await-fetch-per-fil-loopen gjorde den
+ * hostade preview-POST:en långsam, och pre-built-passet förvärrade det genom
+ * att fil-mängden växte (``.next`` ingår numera). 16 parallella hämtningar
+ * kapar väntetiden rejält utan ny dependency och utan att hamra blob-CDN:et.
+ */
+const BLOB_FETCH_CONCURRENCY = 16;
+
 const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 export interface CollectedBlobSource {
@@ -151,6 +160,92 @@ export function hasPrebuiltNextRelPath(relPaths: readonly string[]): boolean {
   return relPaths.includes(".next/BUILD_ID");
 }
 
+/** En blob-fil som ska laddas ner: relPath i sajten + listad blob-URL. */
+export interface BlobDownloadEntry {
+  relPath: string;
+  url: string;
+  pathname: string;
+}
+
+/**
+ * Ladda ner blob-filerna med begränsad samtidighet (enkel worker-pool,
+ * ingen ny dependency). Ersätter den seriella en-fetch-per-fil-loopen
+ * (incident 2026-06-12) men bevarar dess kontrakt exakt:
+ *
+ *   - Resultatordningen följer ``entries`` (inte slutförandeordningen).
+ *   - ``MAX_FILES``-vakten är deterministisk: fil nummer ``MAX_FILES + 1``
+ *     (index >= MAX_FILES) startas aldrig utan kastar samma "orimligt
+ *     stort"-fel som den seriella vägen.
+ *   - ``MAX_TOTAL_BYTES``-vakten räknas på SLUTFÖRDA hämtningar:
+ *     ``totalBytes`` summeras efter varje avslutad fetch och inga nya
+ *     fetchar startas när taket är passerat (redan in-flight hämtningar
+ *     får löpa klart — paralleliseringens medvetna, begränsade overshoot).
+ *   - En fil som svarar icke-OK kastar samma fel som förr (ingen retry —
+ *     den seriella vägen hade ingen heller); övriga workers slutar då
+ *     plocka nya filer och första felet vinner.
+ *
+ * Exporterad för enhetstest (``generated-blob-source.test.ts``);
+ * produktionsvägen anropar via ``collectSourceFromBlob``.
+ */
+export async function downloadBlobEntries(
+  siteId: string,
+  entries: readonly BlobDownloadEntry[],
+  concurrency: number = BLOB_FETCH_CONCURRENCY,
+): Promise<{ files: { relPath: string; content: Buffer }[]; totalBytes: number }> {
+  const results: ({ relPath: string; content: Buffer } | undefined)[] =
+    new Array(entries.length);
+  let nextIndex = 0;
+  let totalBytes = 0;
+  let abortError: Error | null = null;
+
+  const sizeGuardError = (): Error =>
+    new Error(
+      `Blob-snapshotet för ${siteId} är orimligt stort (>${MAX_FILES} filer ` +
+        `eller >${Math.round(MAX_TOTAL_BYTES / 1024 / 1024)} MB). Kontrollera ` +
+        "att node_modules/.next exkluderades innan snapshot.",
+    );
+
+  const worker = async (): Promise<void> => {
+    while (abortError === null) {
+      const index = nextIndex;
+      nextIndex += 1;
+      if (index >= entries.length) return;
+      if (index >= MAX_FILES || totalBytes > MAX_TOTAL_BYTES) {
+        abortError = sizeGuardError();
+        return;
+      }
+      const entry = entries[index];
+      try {
+        const res = await fetch(entry.url);
+        if (!res.ok) {
+          throw new Error(
+            `Kunde inte hämta blob ${entry.pathname} (HTTP ${res.status}).`,
+          );
+        }
+        const content = Buffer.from(await res.arrayBuffer());
+        totalBytes += content.byteLength;
+        results[index] = { relPath: entry.relPath, content };
+      } catch (error) {
+        if (abortError === null) {
+          abortError =
+            error instanceof Error ? error : new Error(String(error));
+        }
+        return;
+      }
+    }
+  };
+
+  const workerCount = Math.max(1, Math.min(concurrency, entries.length));
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  if (abortError !== null) throw abortError;
+
+  const files: { relPath: string; content: Buffer }[] = [];
+  for (const file of results) {
+    if (file) files.push(file);
+  }
+  return { files, totalBytes };
+}
+
 /**
  * Hämta och tolka publicerings-manifestet (``.manifest.json``). Accepterar
  * antingen en ren array av relPaths eller ``{ files: string[] }``. Vid nät-
@@ -242,10 +337,9 @@ export async function collectSourceFromBlob(
     options?.includeBuiltNext === true,
   );
 
-  const files: { relPath: string; content: Buffer }[] = [];
-  const dirSet = new Set<string>();
-  let totalBytes = 0;
-
+  // Kandidatlista i serveringsordning. ``.env*``-skyddet och saknade blobbar
+  // filtreras bort FÖRE nedladdningen — samma urval som den seriella vägen.
+  const entries: BlobDownloadEntry[] = [];
   for (const relPath of servedRelPaths) {
     // Säkerhet: ladda aldrig upp ``.env*`` (utom ``.env.example``) till den
     // publika sandboxen — spegel av disk-vägens B54/B58-skydd.
@@ -255,29 +349,19 @@ export async function collectSourceFromBlob(
 
     const item = byRel.get(relPath);
     if (!item) continue;
+    entries.push({ relPath, url: item.url, pathname: item.pathname });
+  }
 
-    if (files.length >= MAX_FILES || totalBytes > MAX_TOTAL_BYTES) {
-      throw new Error(
-        `Blob-snapshotet för ${siteId} är orimligt stort (>${MAX_FILES} filer ` +
-          `eller >${Math.round(MAX_TOTAL_BYTES / 1024 / 1024)} MB). Kontrollera ` +
-          "att node_modules/.next exkluderades innan snapshot.",
-      );
-    }
+  // Parallelliserad nedladdning (incident 2026-06-12) — vakter och fel-
+  // semantik bevarade, se ``downloadBlobEntries``.
+  const { files, totalBytes } = await downloadBlobEntries(siteId, entries);
 
-    const res = await fetch(item.url);
-    if (!res.ok) {
-      throw new Error(
-        `Kunde inte hämta blob ${item.pathname} (HTTP ${res.status}).`,
-      );
-    }
-    const content = Buffer.from(await res.arrayBuffer());
-    totalBytes += content.byteLength;
-
-    const dir = relPath.includes("/")
-      ? relPath.slice(0, relPath.lastIndexOf("/"))
+  const dirSet = new Set<string>();
+  for (const file of files) {
+    const dir = file.relPath.includes("/")
+      ? file.relPath.slice(0, file.relPath.lastIndexOf("/"))
       : "";
     if (dir) dirSet.add(dir);
-    files.push({ relPath, content });
   }
 
   if (files.length === 0) return null;

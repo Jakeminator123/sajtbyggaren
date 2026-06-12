@@ -1333,7 +1333,9 @@ COMMON_WORDS = {
     # FAS 2B hostad artefaktkälla (apps/viewser/lib/generated-blob-source.ts):
     # lokala TS-implementation-shapes för blob-snapshot-läsningen. Inte canonical
     # domain terms — samma kategori som CollectedSource ovan.
-    "CollectedBlobSource", "BlobSdkListItem",
+    # ``BlobDownloadEntry`` tillkom med den parallelliserade nedladdningen
+    # (hotfix 2026-06-12): kandidat-shapen som ``downloadBlobEntries`` tar in.
+    "CollectedBlobSource", "BlobSdkListItem", "BlobDownloadEntry",
     # Heavy-LLM-flow run-plan docs (docs/heavy-llm-flow/, commit 8c0e7c4).
     # These docs were pushed directly to jakob-be without a CI run, so
     # term-coverage first surfaced them on later PRs. They are NOT canonical
