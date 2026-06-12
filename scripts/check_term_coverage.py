@@ -315,6 +315,15 @@ COMMON_WORDS = {
     # qualityRisks) are already registered in naming-dictionary.v1 (kor-1a).
     # Same treatment as PlanningChoice / SectionPlanEntry above.
     "RenderBlueprint",
+    # ADR 0056: DependencyMerge is the frozen dataclass returned by
+    # packages/generation/build/dossier_dependencies.merge_dossier_dependencies
+    # (and referenced from scripts/build_site.py). It is the transient outcome
+    # of merging operator-curated, pinned dossier dependencies into the
+    # generated package.json - an implementation symbol, NOT a canonical domain
+    # term. The canonical field ``dependencies`` already lives in
+    # governance/schemas/dossier.schema.json. Same treatment as the
+    # PlanResult / RenderBlueprint / AutoPruneReport families above.
+    "DependencyMerge",
     # Discovery Resolver module (B121 PR A) internal implementation symbols.
     # The canonical domain terms (Discovery Payload, Discovery Decision,
     # Discovery Taxonomy, Discovery Resolver, Field Source) are registered
