@@ -5,6 +5,10 @@ import { AlertTriangle, ExternalLink, Loader2, X as XIcon } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  hostedRunNoticeFromResponse,
+  knownHostedRunNotice,
+} from "@/lib/hosted-run-artefacts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -291,12 +295,22 @@ const PreviewPane = forwardRef<
 
     void (async () => {
       try {
+        // Hostat är files-endpointen en känd medveten 404 (filer på lokal
+        // disk) — skippa anropet och visa unavailable-kortet direkt.
+        if (knownHostedRunNotice()) {
+          if (cancelled) return;
+          setStatus({ kind: "unavailable" });
+          return;
+        }
         const response = await fetch(`/api/runs/${runId}/files`);
         const payload = (await response.json()) as FilesPayload;
 
         if (cancelled) return;
 
         if (response.status === 404) {
+          // Armar hosted-latchen om 404:an är den hostade formen så nästa
+          // panel/öppning slipper anropet; UI-kortet är detsamma.
+          hostedRunNoticeFromResponse(response.status, payload);
           setStatus({ kind: "unavailable" });
           return;
         }

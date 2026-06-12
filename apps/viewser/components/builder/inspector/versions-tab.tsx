@@ -39,6 +39,10 @@ import type {
 } from "@/components/builder/use-pending-build";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  hostedRunNoticeFromResponse,
+  knownHostedRunNotice,
+} from "@/lib/hosted-run-artefacts";
 import { SECONDARY_INTERACTIONS } from "@/lib/ui-tokens";
 import { cn } from "@/lib/utils";
 
@@ -1270,8 +1274,19 @@ async function fetchBundle(
   if (runId === currentRunId) {
     return currentBundle;
   }
+  // Hostat är artefakt-endpointen en medveten 404 + hostedNotice — skippa
+  // anropet när läget redan är känt och låt notisens text vara den ärliga
+  // förklaringen. (Hostat är versionslistan tom så hit når vi i praktiken
+  // aldrig; grinden är belt-and-braces mot framtida vägar.)
+  const known = knownHostedRunNotice();
+  if (known) {
+    throw new Error(known);
+  }
   const response = await fetch(`/api/runs/${runId}/artifacts`);
   const raw = (await response.json()) as unknown;
+  // Armar hosted-latchen om svaret visar sig vara den hostade 404-formen
+  // (feltexten nedan är redan notisen — error-fältet bär samma sträng).
+  hostedRunNoticeFromResponse(response.status, raw);
   const errorField =
     raw && typeof raw === "object" && "error" in raw
       ? (raw as { error: unknown }).error

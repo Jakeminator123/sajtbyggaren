@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  hostedRunNoticeFromResponse,
+  knownHostedRunNotice,
+} from "@/lib/hosted-run-artefacts";
+
 /**
  * Hook som fetchar /api/runs/[runId]/artifacts när inspectorn öppnas.
  * Returnerar siteBrief, sitePlan, buildResult, qualityResult,
@@ -12,6 +17,12 @@ import { useCallback, useEffect, useState } from "react";
  * Re-fetchar när `runId` ändras eller när inspectorn öppnas igen
  * (open false → true) så ny build-status syns direkt efter ett
  * "Bygg om".
+ *
+ * Hostat (Vercel) svarar endpointen med en medveten 404 + `hostedNotice`
+ * (artefakter ligger på lokal disk). Det landar som ett eget
+ * `hosted-unavailable`-state — lugn notis i UI:t, inte rött fel — och
+ * via latchen i lib/hosted-run-artefacts skippas anropet helt när
+ * hosted-läget redan är känt.
  */
 
 export type RunArtefactBundle = {
@@ -28,6 +39,9 @@ type FetchState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "ok"; bundle: RunArtefactBundle }
+  // Hostad vy: artefakterna finns bara på operatörens lokala disk.
+  // Eget state (inte "error") så UI:t kan visa en lugn notis.
+  | { status: "hosted-unavailable"; notice: string }
   | { status: "error"; error: string };
 
 type UseRunArtefactsResult = {
@@ -68,11 +82,25 @@ export function useRunArtefacts(
     void (async () => {
       await Promise.resolve();
       if (cancelled) return;
+      // Hostat är artefakt-endpointen en känd medveten 404 — skippa
+      // anropet helt (tystar browserns 404-rad) och visa notisen direkt.
+      const known = knownHostedRunNotice();
+      if (known) {
+        setState({ status: "hosted-unavailable", notice: known });
+        return;
+      }
       setState({ status: "loading" });
       try {
         const response = await fetch(`/api/runs/${runId}/artifacts`);
         const raw = (await response.json()) as unknown;
         if (cancelled) return;
+        // Svarsformsbaserad hosted-detektering (belt-and-braces om
+        // latchen inte hunnit armas): lugn notis, inte error-state.
+        const hostedNotice = hostedRunNoticeFromResponse(response.status, raw);
+        if (hostedNotice) {
+          setState({ status: "hosted-unavailable", notice: hostedNotice });
+          return;
+        }
         const errorField =
           raw && typeof raw === "object" && "error" in raw
             ? (raw as { error: unknown }).error

@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  hostedRunNoticeFromResponse,
+  knownHostedRunNotice,
+} from "@/lib/hosted-run-artefacts";
 
 type RunDetailsPanelProps = {
   runId: string | null;
@@ -711,6 +715,10 @@ function ModelsSection({ build }: { build: Record<string, unknown> | null }) {
 export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
   const [bundle, setBundle] = useState<ArtefactBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Hostad vy: artefakt-endpointen är en medveten 404 + hostedNotice
+  // (artefakter ligger på lokal disk). Eget state så vi visar en lugn
+  // notis i stället för den röda fel-rutan.
+  const [hostedNotice, setHostedNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -726,18 +734,41 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
         if (cancelled) return;
         setBundle(null);
         setError(null);
+        setHostedNotice(null);
         setLoading(false);
         return;
       }
 
       if (cancelled) return;
       setBundle(null);
-      setLoading(true);
       setError(null);
+      setHostedNotice(null);
+
+      // Känt hostat läge: skippa anropet helt (tystar browserns 404-rad
+      // i konsolen) och visa notisen direkt.
+      const known = knownHostedRunNotice();
+      if (known) {
+        setHostedNotice(known);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
 
       try {
         const response = await fetch(`/api/runs/${runId}/artifacts`);
         const payload = (await response.json()) as ArtefactBundle & { error?: string };
+        // Svarsformsbaserad hosted-detektering (om latchen inte var armad):
+        // lugn notis, aldrig error-state.
+        const fromResponse = hostedRunNoticeFromResponse(
+          response.status,
+          payload,
+        );
+        if (fromResponse) {
+          if (!cancelled) {
+            setHostedNotice(fromResponse);
+          }
+          return;
+        }
         if (!response.ok || payload.error) {
           throw new Error(payload.error ?? "Kunde inte hämta artefakter.");
         }
@@ -797,6 +828,15 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
             <Skeleton className="h-20 w-full rounded-md" />
             <Skeleton className="h-20 w-full rounded-md" />
           </div>
+        ) : null}
+        {hostedNotice ? (
+          // Medveten hostad degradering — lugn info-ruta, inte fel-röd.
+          <p
+            role="status"
+            className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+          >
+            {hostedNotice}
+          </p>
         ) : null}
         {error ? (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">

@@ -37,6 +37,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import {
+  knownHostedRunNotice,
+  rememberHostedRunNotice,
+} from "@/lib/hosted-run-artefacts";
 import type { RunMeta, RunStatus, RunTraceResponse } from "@/lib/runs";
 
 export type BuildPhase = "understand" | "plan" | "build" | "unknown";
@@ -94,6 +98,9 @@ function emptyState(): BuildTraceState {
 
 type RunsApiResponse = {
   runs?: RunMeta[];
+  // Hostat (Vercel) svarar /api/runs alltid med tomma runs + denna notis —
+  // pending-runen kan aldrig dyka upp, så pollingen stoppas ärligt direkt.
+  hostedNotice?: string;
 };
 
 export function useBuildTracePolling(
@@ -158,6 +165,13 @@ export function useBuildTracePolling(
 
     const poll = async () => {
       if (controller.signal.aborted) return;
+      // Hostat finns ingen run-historik på disk: /api/runs är alltid tom
+      // (+hostedNotice) och trace-endpointen en medveten 404. Sluta polla
+      // i stället för att skicka ~40 meningslösa anrop per bygge tills
+      // discovery-timeouten slår. Pending-bubblans statiska label står
+      // kvar och /api/prompt-fetchen levererar slutbubblan precis som
+      // i timeout-fallet.
+      if (knownHostedRunNotice()) return;
       try {
         if (!runIdRef.current) {
           // Steg 1: leta efter pending run för denna site. Vi tar de
@@ -176,6 +190,12 @@ export function useBuildTracePolling(
           }
           const payload = (await response.json()) as RunsApiResponse;
           if (controller.signal.aborted) return;
+          // Belt-and-braces om latchen inte var armad ännu: notisen i
+          // svaret armar den och pollingen stoppas (se grinden ovan).
+          if (payload.hostedNotice) {
+            rememberHostedRunNotice(payload.hostedNotice);
+            return;
+          }
           const runs = (payload.runs ?? [])
             .filter((run) => run.siteId === siteId)
             .slice(0, RUNS_LIST_LIMIT);

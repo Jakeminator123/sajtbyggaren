@@ -204,6 +204,13 @@ export function SiteInspectorSheet({
             // sätter loading efter en mikrotask). Visa skelett direkt så vi
             // inte blinkar "Ingen aktiv run" en frame innan hämtningen börjar.
             <InspectorLoadingSkeleton />
+          ) : state.status === "hosted-unavailable" ? (
+            // Hostad vy: artefakterna ligger på operatörens lokala disk —
+            // medveten degradering, inte ett fel. Lugn notis i samma stil
+            // som tom-statet nedan (aldrig destructive-röd).
+            <div className="text-muted-foreground flex h-full items-center justify-center px-6 text-center text-[12px]">
+              <p className="max-w-sm leading-relaxed">{state.notice}</p>
+            </div>
           ) : state.status === "error" ? (
             <div className="p-5">
               <p

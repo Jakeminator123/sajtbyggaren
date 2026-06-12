@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (av 23 öppna), 6 unknown, 168 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 168 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -737,6 +737,26 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   serialiseras in i sandboxen (env/fil) när P3-persistensen läggs.
   Källa: extern granskning #284 (fynd 4), kod-verifierad i review-sweepen
   2026-06-11. Fix: open. Test: open.
+- **`B199` Låg** (P3-spår, utredd 2026-06-12) - hostade run-artefakter:
+  `/api/runs/[runId]/{artifacts,trace,files}` är hostat en MEDVETEN 404 +
+  `hostedNotice` (artefakterna ligger på lokal disk, `data/runs/`). UI:t
+  behandlar numera den svarsformen som ett lugnt "otillgängligt hostat"-läge
+  (lib/hosted-run-artefacts.ts: latch + svarsformsdetektering) i stället för
+  fel-state/404-brus/meningslös polling. Utredningsdom blob-läsning: en
+  runId→siteId-mappning FINNS hostat (KV `viewser:hosted-run:<runId>` bär
+  `siteId`, TTL 24 h; durabla per-site-pekare `viewser:site:<siteId>:run-state`
+  → blob-URL:er för `project-input.json` + `meta.json`, samt
+  `viewser:site:<siteId>:current`), men en partiell bundle därifrån vore
+  tom i praktiken: blob-paret innehåller INGEN av de fyra kanoniska
+  artefakterna (`siteBrief`/`sitePlan`/`buildResult`/`qualityResult`) som
+  inspector/run-details renderar, och run-state-pekaren pekar dessutom bara
+  på sajtens SENASTE version (fel run vid historisk runId). Riktig hostad
+  artefakt-läsning kräver att byggskriptet i sandboxen även publicerar
+  artefakt-JSON:erna till blob (naturlig följeslagare till B197/P3) —
+  först då är en blob-backad artifacts-endpoint värd KV-/blob-lasten på en
+  publik oautentiserad route. Källa: agentutredning 2026-06-12 (del 2 av
+  404-brus-uppdraget). Fix: open (UI-tystnaden landad i denna commit).
+  Test: open.
 
 ## Operatörsfynd 2026-06-11 (kvällspasset, kottbulle v5→v6)
 

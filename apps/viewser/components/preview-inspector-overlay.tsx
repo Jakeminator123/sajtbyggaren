@@ -28,6 +28,10 @@ import {
   type MarkedSectionRef,
 } from "@/components/preview-inspector-context";
 import {
+  hostedRunNoticeFromResponse,
+  knownHostedRunNotice,
+} from "@/lib/hosted-run-artefacts";
+import {
   extractSectionZones,
   nearestInsertionPoint,
   type InsertionPoint,
@@ -348,6 +352,10 @@ export function PreviewInspectorOverlay({
   // tillbaka på path-segmentet (routeIdForPath).
   useEffect(() => {
     if (!markMode || !runId) return;
+    // Hostat är artefakt-endpointen en medveten 404 (artefakter på lokal
+    // disk) — skippa anropet helt och låt segment-fallbacken gälla, i
+    // stället för att lägga en 404-rad i konsolen per aktivering.
+    if (knownHostedRunNotice()) return;
     const token = ++routeMapTokenRef.current;
     void (async () => {
       try {
@@ -356,6 +364,9 @@ export function PreviewInspectorOverlay({
           sitePlan?: { routePlan?: unknown } | null;
         } | null;
         if (token !== routeMapTokenRef.current) return;
+        // Armar hosted-latchen om svaret är den hostade 404-formen så
+        // nästa aktivering inte fetchar igen; routePlan saknas → fallback.
+        hostedRunNoticeFromResponse(response.status, bundle);
         const routePlan = bundle?.sitePlan?.routePlan;
         if (!Array.isArray(routePlan)) return;
         const mapping: Record<string, string> = {};

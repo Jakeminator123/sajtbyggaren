@@ -4,6 +4,10 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  hostedRunNoticeFromResponse,
+  knownHostedRunNotice,
+} from "@/lib/hosted-run-artefacts";
 
 /**
  * StackblitzPreview — LEGACY / PAUSED WebContainer-preview-väg (ADR 0033).
@@ -124,6 +128,18 @@ export function StackblitzPreview({
 
     void (async () => {
       try {
+        // Hostat är files-endpointen en känd medveten 404 (filer på lokal
+        // disk) — skippa anropet helt och visa notisen lugnt.
+        const known = knownHostedRunNotice();
+        if (known) {
+          if (cancelled) return;
+          setStatus({
+            kind: "unavailable",
+            title: "Körfilerna finns inte i den hostade vyn",
+            message: known,
+          });
+          return;
+        }
         const response = await fetch(`/api/runs/${runId}/files`);
         const payload = (await response.json()) as FilesPayload;
         if (!response.ok || payload.error) {
@@ -135,6 +151,20 @@ export function StackblitzPreview({
             // inte skriva över UI-state för den nu valda runen (race när
             // runId byts snabbare än in-flight-fetchen hinner resolva).
             if (cancelled) return;
+            // Hostad 404-form (armar latchen): det är inte en mock-run —
+            // filerna ligger på operatörens lokala disk. Egen ärlig text.
+            const hostedNotice = hostedRunNoticeFromResponse(
+              response.status,
+              payload,
+            );
+            if (hostedNotice) {
+              setStatus({
+                kind: "unavailable",
+                title: "Körfilerna finns inte i den hostade vyn",
+                message: hostedNotice,
+              });
+              return;
+            }
             setStatus({
               kind: "unavailable",
               title: "Mock-run utan generated-files",

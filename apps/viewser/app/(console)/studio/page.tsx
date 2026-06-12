@@ -21,6 +21,7 @@ import type { RunHistoryItem } from "@/components/run-history";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ViewerPanel } from "@/components/viewer-panel";
+import { rememberHostedRunNotice } from "@/lib/hosted-run-artefacts";
 
 type RunsApiPayload = {
   runs?: RunHistoryItem[];
@@ -59,6 +60,11 @@ async function fetchRuns(): Promise<FetchedRunsPayload> {
   if (!response.ok || payload.error) {
     throw new Error(payload.error ?? "Kunde inte läsa /api/runs.");
   }
+  // Arma den modulvida hosted-latchen tidigt: run-artefakt-konsumenter
+  // (inspector, run-details, route-kartan) kan då hoppa över sina
+  // /api/runs/[runId]/-fetchar helt hostat i stället för att samla
+  // 404-rader i konsolen. No-op lokalt (hostedNotice saknas).
+  rememberHostedRunNotice(payload.hostedNotice);
   return {
     nextRuns: payload.runs ?? [],
     nextInputs: payload.projectInputs ?? [],
