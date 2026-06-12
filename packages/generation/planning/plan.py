@@ -33,6 +33,7 @@ from packages.generation.brief.models import has_openai_api_key
 from packages.generation.orchestration.section_treatments import (
     load_section_treatments_catalogue,
 )
+from packages.policies.component_catalog import SCAFFOLD_STARTER_MAP
 from packages.policies.llm_model_params import resolve_role_params, responses_kwargs
 
 from .blueprint import (
@@ -65,54 +66,14 @@ DEFAULT_SCAFFOLD_ID = "local-service-business"
 
 # Hardcoded scaffold -> starter mapping for Sprint 2B.
 #
-# ``marketing-base`` covers the local-service-business chrome and is the
-# only starter wired into ``_REAL_CODEGEN_STARTERS`` in
-# packages/generation/codegen/codegen.py (see ADR 0017). ``commerce-base``
-# was vendored in PR #16 (ADR 0018, vendor-only checkpoint) and the
-# runtime mapping ``ecommerce-lite -> commerce-base`` was activated in
-# B20 step 2 per ADR 0019; ecommerce-lite runs through the
-# deterministic-v1 codegen path until real-codegen scope is widened in
-# a follow-up sprint with its own ADR extension on top of 0017.
-SCAFFOLD_TO_STARTER: dict[str, str] = {
-    "local-service-business": "marketing-base",
-    "ecommerce-lite": "commerce-base",
-    # clinic-healthcare reuses ``marketing-base`` (Next.js + Tailwind) per
-    # Path B step 12 — every route renders via the section dispatcher,
-    # not by extending the starter. Added 2026-05-25 alongside the
-    # ``_DISPATCHED_SCAFFOLDS`` entry in scripts/build_site.py.
-    "clinic-healthcare": "marketing-base",
-    # professional-services is the second Path B native scaffold (step 13,
-    # 2026-05-25). It also runs on ``marketing-base`` because the four
-    # default routes (home / expertise / about / contact) are pure
-    # informational pages — no checkout, no booking surface — and the
-    # scaffold-distinct character lives entirely in the section
-    # composition (expertise-areas / practice-grid / partners-grid).
-    "professional-services": "marketing-base",
-    # agency-studio is the third Path B native scaffold (step 14,
-    # 2026-05-25). Same starter for the same reason — informational
-    # routes (home / work / about / contact); the work-led
-    # composition (selected-work-preview / selected-work-grid /
-    # manifesto-block / process-steps / client-roster) carries the
-    # creative-studio voice.
-    "agency-studio": "marketing-base",
-    # Restaurant-hospitality is enabled in scaffold-contract.v1.json and
-    # therefore appears in load_scaffold_registry(); without a starter
-    # mapping here, produce_site_plan() raises in _resolve_starter_id when
-    # the planner (real LLM or a pinned scaffoldId) picks it.
-    #
-    # As of Issue #90 the route renderers for ``menu`` and ``booking``
-    # are wired in scripts/build_site.py:write_pages (Path A — per-route
-    # if/elif), so a full restaurant build now produces a complete
-    # Next.js project. Path B (section-driven generic dispatcher from
-    # docs/scaffold-runtime-extension-needed.md) is still the longer-
-    # term direction; Path A keeps the surface area small until more
-    # scaffolds land on disk.
-    #
-    # ``marketing-base`` is the documented mapping in
-    # data/starters/README.md line 34 and matches the long-running test
-    # tests/test_starter_scaffold_mapping.py.
-    "restaurant-hospitality": "marketing-base",
-}
+# The mapping itself was moved (surgically, ADR 0040 lager 3) to
+# ``packages/policies/component_catalog.py`` so the BUILD layer can resolve a
+# build's Starter for the Component Catalog gate WITHOUT importing this planning
+# module (repo-boundaries: build may import packages/policies, not planning).
+# It is re-exported here as ``SCAFFOLD_TO_STARTER`` so every existing
+# planning-side reference (planning/__init__.py, backoffice, tests) is
+# unchanged - this stays the runtime mapping and the single source of truth.
+SCAFFOLD_TO_STARTER: dict[str, str] = SCAFFOLD_STARTER_MAP
 
 # Phase 3 (ADR 0032, originally landed as ADR 0031 on origin/main pre-port;
 # renumbered during the B146 port to avoid colliding with jakob-be:s
