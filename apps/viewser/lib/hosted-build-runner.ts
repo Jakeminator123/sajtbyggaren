@@ -134,6 +134,27 @@ export interface HostedRunStatePointer {
   metaUrl: string;
   updatedAt: string;
   buildId?: string;
+  /**
+   * B199: ``build_site.py``-stdout-runId för DENNA versions run-katalog
+   * (``data/runs/<runId>/``). Skilt från orkestreringens KV-UUID
+   * (``viewser:hosted-run:<uuid>``) — det här är den kanoniska
+   * artefakt-run-iden som ``run_followup_chain`` /
+   * ``assemble_context("artifacts_plus_sections")`` läser. Sätts bara när
+   * artefakt-tarballen (nedan) publicerats.
+   */
+  runId?: string;
+  /**
+   * B199: publik blob-URL till artefakt-tarballen
+   * (``run-artifacts/<siteId>/v<N>/run-artifacts.tar.gz``) som innehåller
+   * ``data/runs/<runId>/`` med de kanoniska artefakterna (input/site-brief/
+   * site-plan/generation-package/build-result/quality-result). Vid followup
+   * curlas + extraheras den tillbaka i sandboxen så OpenClaw apply-sömmen
+   * (commit 2) och ``--base-run-id`` (commit 3) har artefakter att läsa.
+   * Begränsning (v1, ärligt dokumenterad): pekaren spårar SENASTE versionen,
+   * så en historisk baseRunId vars version ≠ senaste saknar hydrerade
+   * artefakter — per-run-blob-historik är framtida arbete (B199).
+   */
+  runArtifactsUrl?: string;
 }
 
 const SANDBOX_RUNTIME = "node24";
@@ -304,6 +325,26 @@ if [ "$FOLLOWUP_MODE" = "1" ]; then
     || fail "Kunde inte hamta persisterad project-input fran blob (run-state, B194)."
   fetch_run_state "$RUN_STATE_META_URL" "$REPO_DIR/data/prompt-inputs/$SITE_ID.meta.json" \\
     || fail "Kunde inte hamta persisterad meta fran blob (run-state, B194)."
+  # B199 — hydrera de kanoniska run-artefakterna (data/runs/<runId>/) tillbaka
+  # i sandboxen. Lokalt ligger de pa disk; hostat curlas tarballen som TS-sidan
+  # laste ur pekarens runArtifactsUrl och extraheras sa
+  # run_followup_chain / assemble_context("artifacts_plus_sections") och
+  # prompt_to_project_input --base-run-id har artefakter att lasa. En aldre
+  # pekare (fore B199) eller misslyckad nedladdning ar INTE fatalt har: apply-
+  # somen (commit 2) degraderar da arligt till legacy-vagen, som bara behover
+  # PI/meta-paret ovan. Tom URL = ingen hydrering (set -u-sakert).
+  if [ -n "\${RUN_ARTIFACTS_URL:-}" ] && [ -n "\${RUN_ARTIFACTS_RUN_ID:-}" ]; then
+    mkdir -p "$REPO_DIR/data/runs"
+    if fetch_run_state "$RUN_ARTIFACTS_URL" /tmp/run-artifacts.tar.gz; then
+      if tar -xzf /tmp/run-artifacts.tar.gz -C "$REPO_DIR/data/runs" 2>/dev/null; then
+        echo "hosted-build: run-artefakter hydrerade (B199, runId $RUN_ARTIFACTS_RUN_ID)."
+      else
+        echo "hosted-build: VARNING — run-artefakt-tarballen kunde inte extraheras; apply degraderar till legacy." >&2
+      fi
+    else
+      echo "hosted-build: VARNING — run-artefakt-tarballen kunde inte hamtas; apply degraderar till legacy." >&2
+    fi
+  fi
   # asset_set-forwarding: TOOL_INTENT_JSON ar redan sanerad TS-side
   # (sanitizedAssetSetIntent) och nar bash enbart som quotad env-expansion
   # — aldrig interpolerad i skriptkoden. Tom strang = ingen flagga.
@@ -327,6 +368,13 @@ fi
 post_status "building" "" ""
 BUILD_OUT=$("$PYTHON_BIN" scripts/build_site.py --dossier "$DOSSIER_PATH" --generated-dir "$GENERATED_DIR" 2>&1) \\
   || fail "build_site.py misslyckades: $(printf '%s' "$BUILD_OUT" | tail -c 600)"
+
+# B199 — den kanoniska artefakt-run-iden (data/runs/<runId>/) som build_site.py
+# skrev. SKILD fran orkestreringens KV-UUID ($RUN_ID): det har ar
+# build_site.py-stdout-runId ("runId: <id>") som run-artefakt-persistensen
+# nedan tarballar och nasta followup hydrerar. (Commit 2:s OpenClaw apply-gren
+# satter samma variabel ur bridge.chain.runId i stallet.)
+RUN_ARTIFACT_RUN_ID=$(printf '%s\\n' "$BUILD_OUT" | sed -n 's/^runId: //p' | head -n 1)
 
 # Aktiv immutable build via current.json — samma pekar-kontrakt som lokalt.
 ACTIVE_BUILD_ID=$(GENERATED_DIR="$GENERATED_DIR" python3 - <<'PY'
@@ -474,6 +522,34 @@ upload_run_state() {
   return 1
 }
 
+# B199 — ladda upp de kanoniska run-artefakterna som EN tarball (1 PUT i
+# stallet for sex separata) versions-scopat under
+# run-artifacts/<siteId>/v<N>/run-artifacts.tar.gz. Tarballens topp-katalog AR
+# runId, sa nasta followup extraherar den rakt tillbaka till data/runs/<runId>/.
+# Best-effort: ett fel lamnar RUN_ARTIFACTS_PUBLISHED tom — pekaren far da
+# fortfarande PI/meta (B194) men ingen artefakt-URL, och nasta followup
+# degraderar arligt till legacy. Samma robusthet som upload_run_state.
+upload_run_artifacts() {
+  src="$1"
+  attempt=1
+  while [ "$attempt" -le 3 ]; do
+    http_code=$(curl -s -o /tmp/run-artifacts-resp -w "%{http_code}" -X PUT "$BLOB_API/run-artifacts/$SITE_ID/v$RUN_STATE_VERSION/run-artifacts.tar.gz" \\
+      -H "Authorization: Bearer $BLOB_READ_WRITE_TOKEN" \\
+      -H "x-api-version: 7" \\
+      -H "x-add-random-suffix: 0" \\
+      --data-binary "@$src" || echo "000")
+    case "$http_code" in
+      2*)
+        RUN_ARTIFACTS_LAST_URL=$(python3 -c 'import json; print(json.load(open("/tmp/run-artifacts-resp")).get("url", ""))' 2>/dev/null)
+        [ -n "$RUN_ARTIFACTS_LAST_URL" ] && return 0
+        ;;
+    esac
+    sleep "$attempt"
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+
 if [ -n "$RUN_STATE_VERSION" ] && [ -f "$PI_SNAPSHOT" ] && [ -f "$META_SNAPSHOT" ]; then
   RUN_STATE_PI_PUBLISHED=""
   RUN_STATE_META_PUBLISHED=""
@@ -483,8 +559,22 @@ if [ -n "$RUN_STATE_VERSION" ] && [ -f "$PI_SNAPSHOT" ] && [ -f "$META_SNAPSHOT"
       RUN_STATE_META_PUBLISHED="$RUN_STATE_LAST_URL"
     fi
   fi
+  # B199 — tarballa + ladda upp data/runs/<runId>/ (best-effort, oberoende av
+  # PI/meta-utfallet ovan men trastas in i samma pekare nedan).
+  RUN_ARTIFACTS_PUBLISHED=""
+  if [ -n "\${RUN_ARTIFACT_RUN_ID:-}" ] && [ -d "$REPO_DIR/data/runs/$RUN_ARTIFACT_RUN_ID" ]; then
+    if tar -czf /tmp/run-artifacts.tar.gz -C "$REPO_DIR/data/runs" "$RUN_ARTIFACT_RUN_ID" 2>/dev/null; then
+      if upload_run_artifacts /tmp/run-artifacts.tar.gz; then
+        RUN_ARTIFACTS_PUBLISHED="$RUN_ARTIFACTS_LAST_URL"
+      else
+        echo "hosted-build: VARNING — run-artefakt-tarballen kunde inte publiceras (B199); followups degraderar till legacy." >&2
+      fi
+    else
+      echo "hosted-build: VARNING — run-artefakt-tarballen kunde inte skapas (B199)." >&2
+    fi
+  fi
   if [ -n "$RUN_STATE_PI_PUBLISHED" ] && [ -n "$RUN_STATE_META_PUBLISHED" ]; then
-    RUN_STATE_PAYLOAD=$(PI_URL="$RUN_STATE_PI_PUBLISHED" META_URL="$RUN_STATE_META_PUBLISHED" RS_VERSION="$RUN_STATE_VERSION" BUILD_ID="$ACTIVE_BUILD_ID" python3 - <<'PY'
+    RUN_STATE_PAYLOAD=$(PI_URL="$RUN_STATE_PI_PUBLISHED" META_URL="$RUN_STATE_META_PUBLISHED" RS_VERSION="$RUN_STATE_VERSION" BUILD_ID="$ACTIVE_BUILD_ID" ARTIFACTS_URL="$RUN_ARTIFACTS_PUBLISHED" ARTIFACT_RUN_ID="\${RUN_ARTIFACT_RUN_ID:-}" python3 - <<'PY'
 import json, os
 from datetime import datetime, timezone
 doc = {
@@ -494,6 +584,13 @@ doc = {
     "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     "buildId": os.environ["BUILD_ID"],
 }
+# B199: bara med pekaren nar tarballen faktiskt publicerades — annars far
+# nasta followup arligt veta att artefakter saknas (tom URL = ingen hydrering).
+artifacts_url = os.environ.get("ARTIFACTS_URL") or ""
+artifact_run_id = os.environ.get("ARTIFACT_RUN_ID") or ""
+if artifacts_url and artifact_run_id:
+    doc["runId"] = artifact_run_id
+    doc["runArtifactsUrl"] = artifacts_url
 key = "viewser:site:" + os.environ["SITE_ID"] + ":run-state"
 print(json.dumps(["SET", key, json.dumps(doc, ensure_ascii=False)]))
 PY
@@ -504,7 +601,11 @@ PY
         -H "Content-Type: application/json" \\
         -d "$RUN_STATE_PAYLOAD" >/dev/null || true
     fi
-    echo "hosted-build: run-state v$RUN_STATE_VERSION persisterad (B194)."
+    if [ -n "$RUN_ARTIFACTS_PUBLISHED" ]; then
+      echo "hosted-build: run-state v$RUN_STATE_VERSION persisterad (B194) + run-artefakter (B199, runId $RUN_ARTIFACT_RUN_ID)."
+    else
+      echo "hosted-build: run-state v$RUN_STATE_VERSION persisterad (B194); run-artefakter saknas — followups degraderar till legacy." >&2
+    fi
   else
     echo "hosted-build: VARNING — run-state-paret kunde inte publiceras; foljdprompter utgar fran foregaende version." >&2
   fi
@@ -674,6 +775,13 @@ export async function startHostedBuild(
     // i followup-läge är pekaren redan preflight-validerad ovan.
     RUN_STATE_PI_URL: runState?.projectInputUrl ?? "",
     RUN_STATE_META_URL: runState?.metaUrl ?? "",
+    // B199: kanoniska run-artefakter (data/runs/<runId>/) för followup-
+    // hydrering. Tomma strängar vid initialbygge / äldre pekare utan
+    // artefakt-tarball (set -u-säkert) — skriptet hoppar då ärligt över
+    // hydreringen och apply-sömmen degraderar till legacy (som bara behöver
+    // PI/meta). Sätts bara när followup-pekaren bär dem.
+    RUN_ARTIFACTS_URL: runState?.runArtifactsUrl ?? "",
+    RUN_ARTIFACTS_RUN_ID: runState?.runId ?? "",
     BLOB_READ_WRITE_TOKEN: blobToken,
     // Samma env-upplösning som kv-store/upstash-redis.ts; tomma strängar når
     // skriptet, som då hoppar över status-POST:arna ärligt (set -u-säkert).
