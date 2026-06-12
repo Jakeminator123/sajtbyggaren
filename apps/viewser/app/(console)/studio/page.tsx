@@ -383,10 +383,16 @@ export default function Home() {
   ) {
     // Kom ihåg lyckade byggen i sessionen så hostad vy kan aktivera
     // builder-läget trots tomma runs/projectInputs (se sessionBuiltRuns).
-    if (outcome !== "failed" && siteId && siteId !== "unknown") {
+    // OBS: follow-ups via BuilderShell skickar siteId=undefined (löses lokalt
+    // via runs-listan, som hostat alltid är tom) — fall tillbaka på
+    // selectedSiteId, som i builder-läget är den aktiva sajten. Utan
+    // fallbacken tappade hostade följdprompter builder-läget efter rebuild.
+    const sessionSiteId =
+      siteId && siteId !== "unknown" ? siteId : selectedSiteId;
+    if (outcome !== "failed" && sessionSiteId && sessionSiteId !== "unknown") {
       setSessionBuiltRuns((prev) => {
         const next = new Map(prev);
-        next.set(runId, siteId);
+        next.set(runId, sessionSiteId);
         return next;
       });
     }
@@ -614,7 +620,8 @@ export default function Home() {
                   // bubblans "Försök igen" ska iterera från samma bas, inte falla
                   // tillbaka till latest (matchar onBuildEnd-kommentaren ovan).
                   // Signaturen i BuilderShell skickar inte siteId vidare; det löser
-                  // handleBuildDone själv via runs-listan när den re-fetchar.
+                  // handleBuildDone själv via runs-listan när den re-fetchar
+                  // (hostat via selectedSiteId-fallbacken i sessionBuiltRuns).
                   // ``visibleEffect`` (dialog-vägen) trådas vidare så studio-toasten
                   // blir ärlig om mount-only/no-op-byggen.
                   if (outcome !== "failed") setPendingBaseRunId(null);
