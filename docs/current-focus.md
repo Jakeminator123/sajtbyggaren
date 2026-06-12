@@ -53,21 +53,20 @@ STANDARD för användarpreviews; StackBlitz förblir pausad, ej avvecklad):**
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `3d1c53a0` (2026-06-12 ~12:45 UTC+2; #308 docs-only
-squash-merge ovanpå förmiddagspassets kodkedja `6fe80cb3` → … → `6b6d6627`.
-Full svit (`pytest -n auto`) + ruff + governance + rules-sync + term-coverage
-+ tsc + eslint körda gröna på `6b6d6627` före push; på #308 kördes
-governance + rules-sync + term-coverage + docs-freshness lokalt och full
-CI-svit grön i PR:en.)
+Last verified state: `8a3ff7b5` (2026-06-12 ~12:55 UTC+2; #309 testfil-only
+squash-merge — deterministisk eval-baseline för conductor-klassificering i
+`tests/test_eval_baseline_conductor.py` — ovanpå #308-checkpointen `3d1c53a0`,
+där full svit + ruff + governance-kedjan kördes gröna. På #309: full CI-svit
+grön på PR-head (inkl. eval-baseline-jobbet), ingen rebase behövdes.)
 
 ## Öppna PR att känna till
 
-Inga öppna PR i vår lane just nu. #306, #307 och #308 är squash-mergade till
-`jakob-be` och ff:ade till `main`. (#308 = docs(heavy-llm-flow) ärlighetspass,
-mergad 2026-06-12 ~12:45 efter rebase + fyra review-fixar: förmiddagens
-local-next-rättelse inburen i arkivkopian, readiness-frontmattern satt till
-historisk, känt-gap-förbehåll om no-op-"Klart!" i README + kor-o1-noten.
-Den befarade konflikten i `handoff-orchestration.md` löstes till PR:ens stubb.)
+Inga öppna PR i vår lane just nu. #306, #307, #308 och #309 är squash-mergade
+till `jakob-be` och ff:ade till `main`. (#309 = test(eval) deterministisk
+conductor-classification-baseline, testfil-only, mergad 2026-06-12 ~12:55 —
+Vercel prod-rebuild kan ha cancelats av ignoreCommand, väntat. #308 =
+docs(heavy-llm-flow) ärlighetspass, mergad ~12:45 efter rebase + fyra
+review-fixar; konflikten i `handoff-orchestration.md` löstes till PR:ens stubb.)
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
