@@ -1,0 +1,16 @@
+{
+  "intakeInfoVersion": 1,
+  "slug": "accordion",
+  "prompt": "accordion for an FAQ section, accessible, zero new dependencies if possible",
+  "model": "gpt-5.4",
+  "registrySource": "@shadcn",
+  "componentName": "FaqAccordion",
+  "shadcnItemsUsed": [
+    "accordion"
+  ],
+  "requiredNpmDeps": [],
+  "contentHash": "sha256:2b93884ffa2f099b9238639ee80259cd12c348759534c75d4969c2ac5ded957a",
+  "notes": "Uses native accessible patterns to avoid Radix dependency: <details>/<summary> for multiple-open mode and button + aria-expanded for single-open mode. Styled to resemble shadcn accordion behavior, but lacks Radix keyboard roving/focus management and animated height handling.",
+  "createdAt": "2026-06-12T12:37:17Z",
+  "generatedBy": "scripts/component_intake.py"
+}
