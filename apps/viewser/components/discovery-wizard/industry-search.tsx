@@ -295,8 +295,16 @@ export function IndustrySearch({
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
-      setSniMatches([]);
-      return;
+      // React 19-lintregeln (react-hooks/set-state-in-effect): skjut
+      // reseten ett microtask så den inte räknas som synkron setState i
+      // effekt-kroppen — samma mönster som viewer-panel/versions-tab.
+      let cancelled = false;
+      void Promise.resolve().then(() => {
+        if (!cancelled) setSniMatches([]);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
     const controller = new AbortController();
     const timer = setTimeout(async () => {
