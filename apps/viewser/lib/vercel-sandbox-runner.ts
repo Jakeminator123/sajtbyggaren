@@ -45,6 +45,10 @@ import {
   type CollectedBlobSource,
 } from "./generated-blob-source";
 import {
+  resolvePreviewBundleSource,
+  type PreviewBundleSource,
+} from "./hosted-preview-bundle";
+import {
   decodeJwtExpirySeconds,
   ensureFreshVercelOidcToken,
   OIDC_REFRESH_MARGIN_SECONDS,
@@ -143,8 +147,24 @@ export interface SandboxPreviewResult {
    * uppladdad, ``next build`` hoppad i sandboxen.
    */
   prebuilt?: boolean;
+  /**
+   * Vilken käll-väg som faktiskt togs (G2, ADR 0058) — loggas i den
+   * strukturerade preview-start-raden så tarball-vinsten/fallbacken alltid är
+   * verifierbar i runtime-loggarna:
+   *   - "preview-bundle": EN tarball, extraherad i Sandbox.create.
+   *   - "blob-files": fil-för-fil från blob (fallback/bakåtkompat).
+   *   - "disk": lokal disk-källa (oförändrad lokal väg).
+   */
+  source?: "preview-bundle" | "blob-files" | "disk";
   /** Fas-timing för cold-start-analys (ms). */
   timings?: {
+    /**
+     * Källinhämtningstid (G2): tiden för att lösa upp/ladda ner källan i
+     * funktionen — fil-för-fil-vägens lista+nedladdning respektive
+     * bundle-vägens pekarläsning+HEAD-probe (själva tarball-nedladdningen
+     * sker då inne i Sandbox.create och syns i createMs).
+     */
+    sourceMs?: number;
     createMs?: number;
     uploadMs?: number;
     installMs?: number;
@@ -706,6 +726,10 @@ export async function createSandboxPreview(
         ...(request.runId ? { runId: request.runId } : {}),
         prebuilt: result.prebuilt === true,
         reused: result.timings?.reused === true,
+        // G2 (ADR 0058): vilken käll-väg som togs (preview-bundle | blob-files
+        // | disk) så tarball-vinsten och fil-för-fil-fallbacken är verifierbara
+        // i runtime-loggarna utan klient.
+        source: result.source ?? null,
         timings: result.timings ?? null,
       }),
     );
@@ -798,7 +822,13 @@ async function createSandboxPreviewAttempt(
     prebuiltUploadEnabled() &&
     sourceDir !== null &&
     hasCompletedNextBuild(sourceDir);
-  let collected: CollectedSource;
+  // G2 (ADR 0058): hostad tarball-snabbväg. Sätts bara i blob-grenen nedan;
+  // när den är satt hoppas collect/upload helt över och sandboxen skapas
+  // direkt från tarballen (source { type: "tarball" }).
+  let bundleSource: PreviewBundleSource | null = null;
+  let collected: CollectedSource | null = null;
+  let sourceKind: NonNullable<SandboxPreviewResult["source"]> = "disk";
+  let sourceMs: number | undefined;
   if (sourceDir) {
     logs.push(`Käll-katalog: ${sourceDir}.`);
     if (prebuilt) {
@@ -807,6 +837,7 @@ async function createSandboxPreviewAttempt(
           `hoppar över next build i sandboxen (${UPLOAD_BUILT_ENV}=0 stänger av).`,
       );
     }
+    const tSource = Date.now();
     try {
       collected = collectSource(sourceDir, prebuilt);
     } catch (error) {
@@ -814,48 +845,78 @@ async function createSandboxPreviewAttempt(
       // .next-innehållet) kan lyckas på fulla vägen → fallback-berättigat.
       return { result: failed(messageFromError(error), logs), fallbackEligible: prebuilt };
     }
+    sourceMs = Date.now() - tSource;
   } else {
     // Hostad pre-built (2026-06-12): be blob-källan om .next bara när
     // pre-built-vägen får användas — den ärliga fallbacken (allowPrebuilt
     // false) laddar aldrig ner/upp en .next som ändå byggs om.
     const wantPrebuilt = allowPrebuilt && prebuiltUploadEnabled();
-    let fromBlob: CollectedBlobSource | null;
-    try {
-      fromBlob = await collectSourceFromBlob(request.siteId, {
-        includeBuiltNext: wantPrebuilt,
-      });
-    } catch (error) {
-      // T.ex. fil-/byte-taket nått PGA .next-innehållet — kan lyckas utan
-      // .next på fulla vägen → fallback-berättigat när pre-built valdes.
-      return { result: failed(messageFromError(error), logs), fallbackEligible: wantPrebuilt };
+    const tSource = Date.now();
+    // G2 (ADR 0058) tarball-först: när bygget publicerade en preview-bundle
+    // (EN tar.gz med exakt det served fil-setet, alltid med komplett .next)
+    // skapas sandboxen direkt från den — inga hundratals blob-fetchar i
+    // funktionen (prod-incidenten 2026-06-12). Bundlen är pre-built per
+    // kontrakt (bygget publicerar den bara när .next/BUILD_ID ingår), så den
+    // provas bara när pre-built-vägen får användas; den ärliga fallbacken
+    // (allowPrebuilt=false) och kill-switchen tar alltid fil-för-fil-vägen.
+    if (wantPrebuilt) {
+      bundleSource = await resolvePreviewBundleSource(request.siteId, logs);
     }
-    if (!fromBlob) {
-      return {
-        result: failed(
-          `Hittade ingen byggd sajt för siteId="${request.siteId}" — varken på ` +
-            `disk (${resolveGeneratedDir()}) eller som blob-snapshot ` +
-            `(${blobPrefixForSite(request.siteId)}). Kör build_site.py lokalt, ` +
-            "eller snapshotta sajten till blob med scripts/snapshot-site-to-blob.mjs.",
-          logs,
-        ),
-        fallbackEligible: false,
-      };
-    }
-    collected = fromBlob;
-    // Saknad/inkomplett .next i blob (bygge före pre-built-passet, eller
-    // trasig upload utan BUILD_ID) → ärlig fallback till fulla bygg-vägen.
-    prebuilt =
-      wantPrebuilt &&
-      hasPrebuiltNextRelPath(collected.files.map((f) => f.relPath));
-    logs.push(
-      `Käll: blob-snapshot ${blobPrefixForSite(request.siteId)} ` +
-        `(${collected.files.length} filer${prebuilt ? ", pre-built .next" : ""}).`,
-    );
-    if (prebuilt) {
+    if (bundleSource) {
+      sourceMs = Date.now() - tSource;
+      sourceKind = "preview-bundle";
+      prebuilt = true;
       logs.push(
-        "Pre-built .next i blob-källan (BUILD_ID) — hoppar över next build " +
-          `i sandboxen (${UPLOAD_BUILT_ENV}=0 stänger av).`,
+        `Käll: preview-bundle-tarball (${bundleSource.fileCount ?? "okänt antal"} ` +
+          `filer, ${bundleSource.totalBytes ?? "okända"} byte okomprimerat) — ` +
+          `källupplösning ${sourceMs} ms; nedladdning + extraktion sker i ` +
+          "Sandbox.create.",
       );
+    } else {
+      // Fil-för-fil-vägen (bakåtkompat för sajter byggda före G2, och ärlig
+      // fallback när bundlen saknas/är trasig — orsaken är redan loggad av
+      // resolvePreviewBundleSource).
+      let fromBlob: CollectedBlobSource | null;
+      try {
+        fromBlob = await collectSourceFromBlob(request.siteId, {
+          includeBuiltNext: wantPrebuilt,
+        });
+      } catch (error) {
+        // T.ex. fil-/byte-taket nått PGA .next-innehållet — kan lyckas utan
+        // .next på fulla vägen → fallback-berättigat när pre-built valdes.
+        return { result: failed(messageFromError(error), logs), fallbackEligible: wantPrebuilt };
+      }
+      if (!fromBlob) {
+        return {
+          result: failed(
+            `Hittade ingen byggd sajt för siteId="${request.siteId}" — varken på ` +
+              `disk (${resolveGeneratedDir()}) eller som blob-snapshot ` +
+              `(${blobPrefixForSite(request.siteId)}). Kör build_site.py lokalt, ` +
+              "eller snapshotta sajten till blob med scripts/snapshot-site-to-blob.mjs.",
+            logs,
+          ),
+          fallbackEligible: false,
+        };
+      }
+      collected = fromBlob;
+      sourceMs = Date.now() - tSource;
+      sourceKind = "blob-files";
+      // Saknad/inkomplett .next i blob (bygge före pre-built-passet, eller
+      // trasig upload utan BUILD_ID) → ärlig fallback till fulla bygg-vägen.
+      prebuilt =
+        wantPrebuilt &&
+        hasPrebuiltNextRelPath(collected.files.map((f) => f.relPath));
+      logs.push(
+        `Käll: blob-snapshot ${blobPrefixForSite(request.siteId)} ` +
+          `(${collected.files.length} filer${prebuilt ? ", pre-built .next" : ""}, ` +
+          `källinhämtning ${sourceMs} ms).`,
+      );
+      if (prebuilt) {
+        logs.push(
+          "Pre-built .next i blob-källan (BUILD_ID) — hoppar över next build " +
+            `i sandboxen (${UPLOAD_BUILT_ENV}=0 stänger av).`,
+        );
+      }
     }
   }
 
@@ -873,10 +934,12 @@ async function createSandboxPreviewAttempt(
   }
   const { Sandbox } = sdk;
 
-  logs.push(
-    `Samlade ${collected.files.length} filer ` +
-      `(${Math.round(collected.totalBytes / 1024)} kB) för upload.`,
-  );
+  if (collected) {
+    logs.push(
+      `Samlade ${collected.files.length} filer ` +
+        `(${Math.round(collected.totalBytes / 1024)} kB) för upload.`,
+    );
+  }
 
   const ttlMs = clampTtl(request.ttlMs);
   // Tier 2 (ADR 0041) namn-kollisionsstrategi:
@@ -927,23 +990,38 @@ async function createSandboxPreviewAttempt(
       timeout: ttlMs,
       // Ephemeral preview: ingen auto-snapshot på stop (sparar snapshot-storage).
       persistent: false,
+      // G2 (ADR 0058): i bundle-läget extraheras preview-tarballen direkt i
+      // sandboxen vid create — samma source-mönster som build-kontext-
+      // tarballen i hosted-build-runner.ts. Ingen mkdir/writeFiles behövs.
+      ...(bundleSource
+        ? { source: { type: "tarball" as const, url: bundleSource.url } }
+        : {}),
     });
     createMs = Date.now() - t0;
-    logs.push(`Sandbox skapad (${sandbox.name}) på ${createMs} ms.`);
-
-    // Skapa kataloger innan writeFiles (writeFiles auto-skapar inte dirs).
-    const tUpload = Date.now();
-    if (collected.dirs.length > 0) {
-      await sandbox.runCommand({
-        cmd: "mkdir",
-        args: ["-p", ...collected.dirs],
-      });
-    }
-    await sandbox.writeFiles(
-      collected.files.map((f) => ({ path: f.relPath, content: f.content })),
+    logs.push(
+      `Sandbox skapad (${sandbox.name}) på ${createMs} ms` +
+        `${bundleSource ? " (inkl. preview-bundle-extraktion)" : ""}.`,
     );
-    uploadMs = Date.now() - tUpload;
-    logs.push(`Filer uppladdade på ${uploadMs} ms.`);
+
+    if (collected) {
+      // Skapa kataloger innan writeFiles (writeFiles auto-skapar inte dirs).
+      const tUpload = Date.now();
+      if (collected.dirs.length > 0) {
+        await sandbox.runCommand({
+          cmd: "mkdir",
+          args: ["-p", ...collected.dirs],
+        });
+      }
+      await sandbox.writeFiles(
+        collected.files.map((f) => ({ path: f.relPath, content: f.content })),
+      );
+      uploadMs = Date.now() - tUpload;
+      logs.push(`Filer uppladdade på ${uploadMs} ms.`);
+    } else {
+      logs.push(
+        "Ingen fil-upload — källan extraherades ur preview-bundlen vid Sandbox.create (G2).",
+      );
+    }
 
     // ``next start`` behöver node_modules (next/react/react-dom + runtime-
     // deps — ett node_modules-träd går inte att ladda upp, det spränger
@@ -1038,15 +1116,22 @@ async function createSandboxPreviewAttempt(
         sandboxId: sandbox.name,
         ttlMs,
         prebuilt,
+        source: sourceKind,
         // reused: false — fulla vägen skapade en ny sandbox (Tier 2, ADR 0041).
-        timings: { createMs, uploadMs, installMs, buildMs, readyMs, totalMs, reused: false },
+        timings: { sourceMs, createMs, uploadMs, installMs, buildMs, readyMs, totalMs, reused: false },
         cost: {
           runtime: SANDBOX_RUNTIME,
           vcpus: sandbox.vcpus,
           memoryMb: sandbox.memory,
           ttlMs,
-          fileCount: collected.files.length,
-          uploadBytes: collected.totalBytes,
+          // Bundle-läget: antal/byte enligt pekaren (funktionen rörde aldrig
+          // filerna); fil-lägena: exakt det insamlade setet som förr.
+          fileCount: collected
+            ? collected.files.length
+            : (bundleSource?.fileCount ?? undefined),
+          uploadBytes: collected
+            ? collected.totalBytes
+            : (bundleSource?.totalBytes ?? undefined),
         },
         logs,
       },
@@ -1056,7 +1141,11 @@ async function createSandboxPreviewAttempt(
     // Kast FÖRE en lyckad Sandbox.create (sandbox === null, t.ex. auth/nät)
     // är inte pre-built-specifika och skulle faila identiskt på fulla vägen
     // — ingen fallback då. Kast efter create (upload/kommandon) kan vara det.
-    const fallbackEligible = prebuilt && sandbox !== null;
+    // G2-undantag: i bundle-läget kan SJÄLVA create-anropet faila på en
+    // korrupt/oextraherbar tarball — det failar INTE på fil-för-fil-vägen, så
+    // bundle-försöket är alltid fallback-berättigat (EN gång, ingen loop).
+    const fallbackEligible =
+      prebuilt && (sandbox !== null || bundleSource !== null);
     if (sandbox) await safeStop(sandbox);
     return { result: failed(messageFromError(error), logs), fallbackEligible };
   }
@@ -1222,6 +1311,8 @@ async function tryReuseSandboxPreview(
       sandboxId: sandbox.name,
       ttlMs,
       prebuilt,
+      // Reuse-vägen är disk-only (se JSDoc) — källan är alltid disk.
+      source: "disk",
       // reused: true + ingen createMs = den synliga Tier 2-vinsten.
       timings: { uploadMs, installMs, readyMs, totalMs, reused: true },
       cost: {

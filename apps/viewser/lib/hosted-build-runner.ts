@@ -298,11 +298,19 @@ function slug(value: string): string {
  *   - Status-JSON ({ runId, siteId, phase, startedAt, updatedAt, error?,
  *     buildId?, blobPrefix? }) SET:as i KV med TTL 86400 efter varje fas.
  *   - Blob-upload sker fil-för-fil under ``generated/<siteId>/<relPath>``
- *     (ingen tarball: lib/generated-blob-source.ts listar per-fil-blobbar),
- *     med samma skip-kataloger och .env-skydd som snapshot-site-to-blob.mjs.
+ *     (lib/generated-blob-source.ts listar per-fil-blobbar — det är den
+ *     ärliga fallback-källan), med samma skip-kataloger och .env-skydd som
+ *     snapshot-site-to-blob.mjs.
  *   - Sist publiceras ``generated/<siteId>/.manifest.json`` med byggets exakta
  *     fil-set (B195): serveringen visar bara manifest-listade filer, så stale
  *     blobbar från ett tidigare bygge mot samma siteId aldrig syns i previewen.
+ *   - G2 (ADR 0058): efter manifestet paketeras SAMMA fil-set som EN
+ *     preview-bundle-tarball under
+ *     ``preview-bundles/<siteId>/<buildId>/preview-bundle.tar.gz`` så
+ *     preview-sandboxen kan skapas med source { type: "tarball" } (1 fetch +
+ *     extraktion i sandboxen) i stället för hundratals enskilda blob-fetchar.
+ *     Best-effort: ett bundle-fel faller aldrig bygget — pekaren får då inget
+ *     previewBundleUrl-fält och preview-sidan tar fil-för-fil-vägen.
  *   - Vid fel: phase "failed" med feltext, exit != 0.
  */
 function buildOrchestrationScript(): string {
@@ -842,9 +850,101 @@ PY
 upload_file ".manifest.json" || fail "Manifest-upload misslyckades: $(cat /tmp/blob-upload-error.txt 2>/dev/null)"
 echo "hosted-build: manifest publicerat ($uploaded filer)."
 
+# G2 (ADR 0058) — preview-bundle: paketera EXAKT det publicerade fil-setet
+# (served-manifest, .env-skyddet och skip-katalogerna ar redan applicerade i
+# upload-loopen ovan) som EN tar.gz och publicera den versions-scopat under
+# preview-bundles/<siteId>/<buildId>/preview-bundle.tar.gz. Preview-starten
+# skapar da sandboxen direkt fran tarballen (1 blob-fetch + extraktion i
+# sandbox-infran) i stallet for att lista + ladda ner hundratals enskilda
+# blobbar (prod-incidenten 2026-06-12: 6-7 min kallinhamtning).
+#
+# Arlighetsregler:
+#   - Taken speglar MAX_FILES/MAX_TOTAL_BYTES i generated-blob-source.ts
+#     (4000 filer / 64 MB okomprimerat) — samma fil-set, samma tak. En bundle
+#     over taket publiceras ALDRIG (fil-for-fil-vagens nedladdningsvakt
+#     hade stoppat samma trad).
+#   - Bundlen publiceras BARA nar fil-setet bar en komplett next-build
+#     (.next/BUILD_ID) — da kan preview-sidan lita pa att bundle => pre-built.
+#   - Best-effort: ett bundle-fel faller ALDRIG bygget (fil-for-fil-kallan
+#     ar redan publicerad och forblir den arliga fallbacken). Pekaren far
+#     previewBundleUrl ENBART nar uploaden bevisligen lyckades.
+# tarfile (python3 stdlib, 3.9-kompatibel) i stallet for GNU tar-flaggor:
+# hanterar mellanslag/specialtecken i filnamn utan --verbatim-files-from.
+PREVIEW_BUNDLE_PUBLISHED=""
+PB_STATUS="skipped"; PB_REASON="unknown"; PB_FILES="0"; PB_BYTES="0"
+python3 - > /tmp/preview-bundle.env <<'PY'
+import os, tarfile
+MAX_FILES = 4000
+MAX_TOTAL_BYTES = 64 * 1024 * 1024
+status, reason = "skipped", "unknown"
+files = []
+total = 0
+try:
+    with open("/tmp/served-manifest.txt", encoding="utf-8") as fh:
+        files = [line for line in fh.read().splitlines() if line]
+    for rel in files:
+        total += os.path.getsize(rel)
+except OSError:
+    status, reason = "skipped", "unreadable-fileset"
+else:
+    if not files:
+        reason = "empty-fileset"
+    elif ".next/BUILD_ID" not in files:
+        reason = "no-prebuilt-next"
+    elif len(files) > MAX_FILES or total > MAX_TOTAL_BYTES:
+        reason = "size-guard"
+    else:
+        try:
+            with tarfile.open("/tmp/preview-bundle.tar.gz", "w:gz") as tf:
+                for rel in files:
+                    tf.add(rel, arcname=rel, recursive=False)
+            status, reason = "ok", ""
+        except (OSError, tarfile.TarError):
+            status, reason = "skipped", "tar-failed"
+print("PB_STATUS='%s'" % status)
+print("PB_REASON='%s'" % reason)
+print("PB_FILES='%d'" % len(files))
+print("PB_BYTES='%d'" % total)
+PY
+. /tmp/preview-bundle.env 2>/dev/null || true
+
+upload_preview_bundle() {
+  src="$1"
+  attempt=1
+  while [ "$attempt" -le 3 ]; do
+    http_code=$(curl -s -o /tmp/preview-bundle-resp -w "%{http_code}" -X PUT "$BLOB_API/preview-bundles/$SITE_ID/$ACTIVE_BUILD_ID/preview-bundle.tar.gz" \\
+      -H "Authorization: Bearer $BLOB_READ_WRITE_TOKEN" \\
+      -H "x-api-version: 7" \\
+      -H "x-add-random-suffix: 0" \\
+      --data-binary "@$src" || echo "000")
+    case "$http_code" in
+      2*)
+        PREVIEW_BUNDLE_LAST_URL=$(python3 -c 'import json; print(json.load(open("/tmp/preview-bundle-resp")).get("url", ""))' 2>/dev/null)
+        [ -n "$PREVIEW_BUNDLE_LAST_URL" ] && return 0
+        ;;
+    esac
+    sleep "$attempt"
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+
+if [ "$PB_STATUS" = "ok" ]; then
+  if upload_preview_bundle /tmp/preview-bundle.tar.gz; then
+    PREVIEW_BUNDLE_PUBLISHED="$PREVIEW_BUNDLE_LAST_URL"
+    echo "hosted-build: preview-bundle publicerad ($PB_FILES filer, $PB_BYTES byte okomprimerat)."
+  else
+    echo "hosted-build: VARNING — preview-bundlen kunde inte publiceras; preview tar fil-for-fil-vagen." >&2
+  fi
+else
+  echo "hosted-build: preview-bundle hoppades over ($PB_REASON) — preview tar fil-for-fil-vagen." >&2
+fi
+
 # Hostad current.json-motsvarighet: viewser:site:<siteId>:current (ingen TTL —
-# pekaren ar durabel tills nasta lyckade bygge skriver over den).
-CURRENT_PAYLOAD=$(BUILD_ID="$ACTIVE_BUILD_ID" python3 - <<'PY'
+# pekaren ar durabel tills nasta lyckade bygge skriver over den). G2: pekaren
+# bar aven preview-bundlens URL + storlek nar den publicerades (utelamnas
+# annars sa preview-sidan arligt faller tillbaka till fil-for-fil).
+CURRENT_PAYLOAD=$(BUILD_ID="$ACTIVE_BUILD_ID" BUNDLE_URL="$PREVIEW_BUNDLE_PUBLISHED" BUNDLE_BYTES="$PB_BYTES" BUNDLE_FILES="$PB_FILES" python3 - <<'PY'
 import json, os
 from datetime import datetime, timezone
 doc = {
@@ -852,6 +952,13 @@ doc = {
     "blobPrefix": "generated/" + os.environ["SITE_ID"] + "/",
     "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
 }
+bundle_url = os.environ.get("BUNDLE_URL") or ""
+if bundle_url.startswith("https://"):
+    doc["previewBundleUrl"] = bundle_url
+    if (os.environ.get("BUNDLE_BYTES") or "").isdigit():
+        doc["previewBundleBytes"] = int(os.environ["BUNDLE_BYTES"])
+    if (os.environ.get("BUNDLE_FILES") or "").isdigit():
+        doc["previewBundleFileCount"] = int(os.environ["BUNDLE_FILES"])
 key = "viewser:site:" + os.environ["SITE_ID"] + ":current"
 print(json.dumps(["SET", key, json.dumps(doc, ensure_ascii=False)]))
 PY

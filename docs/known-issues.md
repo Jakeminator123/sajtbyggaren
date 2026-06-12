@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 171 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 173 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -753,6 +753,44 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B201` Medel** (stängd 2026-06-12, uppgift G del G1 - bokförd och stängd i samma pass) - hostad
+  REN FRÅGA spinner upp full sandbox-pipeline: prod-E2E-incidenten 2026-06-12
+  (site-3e7d71ad) visade att följdprompten "Vad tycker du om sajten?" — ren
+  fråga utan ändringsintention — hostat drog igång hela sandbox-kedjan
+  (Sandbox.create + pip install + OpenClaw-konduktorbeslut) bara för att nå
+  answer-only-utfallet, vilket sprängde stream-budgeten (504) och fick chatten
+  att hänga. Klient-hotfixen samma dag (`8fed842e`) gjorde submit-gaten ärlig
+  men serversidan spann fortfarande upp sandbox för rena frågor. Fix (G1):
+  lättviktig pre-klassificering i `/api/prompt`:s hostade väg
+  (`lib/hosted-answer-only.ts`) som FÖRE `startHostedBuild` kortsluter till ett
+  grundat answer-only-svar (composition + site-brief via KV/blob) — ENBART vid
+  hög konfidens "ren fråga"; varje tveksamhet (no-key, timeout, låg konfidens,
+  toolIntent/markedSections/baseRunId, saknad kontext) tar byggvägen
+  oförändrat. Konduktorn äger fortsatt alla ändringsbeslut; svaret skriver
+  inga KV-pekare/artefakter, bumpar ingen version och fejkar aldrig ett
+  konduktorbeslut. Källa: operatörens prod-E2E 2026-06-12 + agentutredning
+  (P2 i incidentbeviset). Fix: `bde88828` (uppgift G-passet 2026-06-12).
+  Test: `tests/test_viewser_hosted_answer_only.py`.
+
+- **`B200` Medel** (stängd 2026-06-12, uppgift G del G2 / ADR 0058 - bokförd och stängd i samma pass) - hostad
+  preview-uppstart hämtar hundratals enskilda blobbar: prod-E2E-incidenten
+  2026-06-12 (site-3e7d71ad) visade 6–7 min källinhämtning (12–13 min totalt)
+  eftersom `collectSourceFromBlob` listar + hämtar varje fil under
+  `generated/<siteId>/` (inkl. förbyggd `.next`-output sedan ADR 0055) in i
+  funktionen och skriver dem fil-för-fil i sandboxen. Hotfixen `883aff15`
+  parallelliserade till 16 samtidiga fetchar — bättre men fortfarande långsamt
+  och skört nära `MAX_FILES`/`MAX_TOTAL_BYTES`-vakterna. Fix (G2, ADR 0058):
+  bygget paketerar det publicerade fil-setet som EN preview-bundle-tarball
+  under `preview-bundles/<siteId>/<buildId>/preview-bundle.tar.gz`
+  (best-effort, bara med komplett `.next/BUILD_ID`, inom samma 4000/64MB-tak),
+  current-pekaren bär `previewBundleUrl`, och preview-starten skapar sandboxen
+  direkt från tarballen med ärlig fil-för-fil-fallback för sajter byggda före
+  G2 (vägval + `sourceMs` loggas i `sandbox-preview-start`-raden så vinsten är
+  verifierbar). Källa: operatörens prod-E2E 2026-06-12 + agentutredning (P1 i
+  incidentbeviset). Fix: `bde88828` (uppgift G-passet 2026-06-12). Test:
+  `tests/test_viewser_preview_bundle.py` +
+  `apps/viewser/lib/hosted-preview-bundle.test.ts`.
 
 - **`B199` Låg** (stängd 2026-06-12, B199 v2 - hostad run-historik + artefakt-läsning) - hostade run-artefakter:
   `/api/runs/[runId]/{artifacts,trace,files}` var hostat en MEDVETEN 404 +

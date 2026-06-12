@@ -491,6 +491,19 @@ COMMON_WORDS = {
     # POST:ar in i KV-doken; TS-implementation-detalj (samma allowlist-kategori
     # som HostedBuildRunStatus), inte ett nytt domänbegrepp.
     "HostedFollowupResult",
+    # Uppgift G (G1, hostad answer-only utan sandbox-spinn): lokala TS-
+    # implementation-symboler i apps/viewser/lib/hosted-answer-only.ts —
+    # grindens utfalls-/kontext-typer. Själva mekanismen är dokumenterad i
+    # ADR 0058-passets PR + known-issues (B201); typerna är implementation,
+    # inte domänbegrepp (samma behandling som ConversationMetadata /
+    # HostedFollowupResult ovan). De canonical G2-termerna (Preview Bundle,
+    # HostedSiteCurrentPointer) bor i naming-dictionary v41.
+    "HostedAnswerOnlyOutcome", "HostedFollowupPreclassification",
+    "HostedAnswerContext",
+    # Python stdlib tarfile-undantaget (tarfile.TarError) som refereras i
+    # hosted-build-runner.ts:s python3-heredoc för preview-bundle-skapandet.
+    # Samma kategori som OSError/KeyError ovan — inte ett domänbegrepp.
+    "TarError",
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
     "GameState", "KeyboardEvent", "PacmanGame",
     "Snake", "Tetris", "ThreeCanvasShell",

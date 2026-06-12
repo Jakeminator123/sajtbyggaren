@@ -7,6 +7,10 @@ import { z } from "zod";
 
 import { runBuild } from "@/lib/build-runner";
 import {
+  maybeAnswerHostedFollowupWithoutSandbox,
+  type HostedAnswerOnlyOutcome,
+} from "@/lib/hosted-answer-only";
+import {
   hostedRunKey,
   startHostedBuild,
   type HostedBuildRunStatus,
@@ -1489,6 +1493,44 @@ async function buildHostedFollowupResponse(
 }
 
 /**
+ * G1 (prod-incidenten 2026-06-12): svars-payloaden för en PRE-KLASSIFICERAD
+ * answer-only-kortslutning — en hostad följdprompt som med hög konfidens är
+ * en ren fråga besvaras direkt, utan sandbox. Speglar den hostade
+ * answer-only-kontraktsformen (``buildHostedFollowupResponse``, engine
+ * answer-only): runId:null så klientens answer-only-grenar
+ * (extractConversationAnswer/use-followup-build) renderar svaret som info.
+ *
+ * Ärlighet: ``openClawDecision`` och ``bridge`` är null — konduktorn kördes
+ * ALDRIG på den här vägen (pre-klassificeraren är en grov grind, inte ett
+ * konduktorbeslut), så vi fejkar inget beslut. ``conversation`` bär grindens
+ * egen grova etikett (question + expectsAnswer) som klienten redan förstår.
+ * Inga KV-pekare/artefakter skrivs och ingen version bumpas — sajten och
+ * previewn är orörda per kontrakt.
+ */
+function hostedPreclassifiedAnswerResponse(
+  siteId: string,
+  outcome: HostedAnswerOnlyOutcome,
+): Record<string, unknown> {
+  return {
+    runId: null,
+    siteId,
+    projectId: null,
+    version: null,
+    briefSource: null,
+    buildStatus: null,
+    buildResult: {},
+    appliedCopyDirectives: [],
+    changeSet: null,
+    routerDecision: null,
+    openClawDecision: null,
+    bridge: null,
+    answerText: outcome.answerText,
+    conversation: outcome.conversation,
+    hosted: true,
+  };
+}
+
+/**
  * Hostad prompt-väg (P2): bygget kör detached i en sandbox via
  * ``startHostedBuild``; status landar i KV. Två svarslägen, samma kontrakt
  * som den lokala vägen så prompt-builder.tsx fungerar oförändrad:
@@ -1522,6 +1564,65 @@ async function runHostedPromptFlow(
   // hostat genererar vi det här så sandbox, blob-prefix och KV-pekare delar
   // nyckel från start.
   const siteId = payload.siteId ?? `site-${randomUUID().slice(0, 8)}`;
+
+  // G1 — answer-only utan sandbox-spinn (prod-incidenten 2026-06-12): en
+  // följdprompt som pre-klassificeras som REN FRÅGA med hög konfidens
+  // besvaras här på sekunder, grundat i sajtens hostade kontext (KV + blob),
+  // i stället för att hela sandbox-pipelinen startas bara för att nå
+  // konduktorns answer-only-beslut. Grinden är ärligt konservativ: varje
+  // tveksamhet (byggsignaler i payloaden, no-key, låg konfidens, timeout,
+  // saknad kontext) ger null → exakt dagens byggväg. Konduktorn äger
+  // fortsatt alla ändringsbeslut — se lib/hosted-answer-only.ts.
+  if (payload.mode === "followup" && payload.siteId) {
+    const tGate = Date.now();
+    const shortCircuit = await maybeAnswerHostedFollowupWithoutSandbox({
+      prompt: payload.prompt,
+      siteId: payload.siteId,
+      hasToolIntent: Boolean(payload.toolIntent),
+      hasMarkedSections: Boolean(payload.markedSections?.length),
+      hasBaseRunId: Boolean(payload.baseRunId),
+    });
+    if (shortCircuit) {
+      // Observability: EN strukturerad rad per kortslutning så vinsten
+      // (sekunder i stället för sandbox-minuter) är verifierbar i loggarna.
+      console.log(
+        JSON.stringify({
+          event: "hosted-answer-only-preclassified",
+          siteId: payload.siteId,
+          totalMs: Date.now() - tGate,
+          timings: shortCircuit.timings,
+        }),
+      );
+      const responsePayload = hostedPreclassifiedAnswerResponse(
+        payload.siteId,
+        shortCircuit,
+      );
+      if (!wantsStream) {
+        return NextResponse.json(responsePayload);
+      }
+      // NDJSON-läget: EN ärlig done-rad — inget bygge accepterades eller
+      // startades, så varken accepted- eller building-event emitteras.
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              `${JSON.stringify({ stage: "done", ...responsePayload })}\n`,
+            ),
+          );
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/x-ndjson; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+  }
 
   let runId: string;
   try {
