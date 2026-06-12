@@ -53,15 +53,19 @@ STANDARD för användarpreviews; StackBlitz förblir pausad, ej avvecklad):**
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `8a3ff7b5` (2026-06-12 ~12:55 UTC+2; #309 testfil-only
-squash-merge — deterministisk eval-baseline för conductor-klassificering i
-`tests/test_eval_baseline_conductor.py` — ovanpå #308-checkpointen `3d1c53a0`,
+Last verified state: `3c8e5aa7` (2026-06-12 ~13:00 UTC+2; docs-only focus-bump
+ovanpå #309:s testfil-only squash-merge `8a3ff7b5` — deterministisk
+eval-baseline för conductor-klassificering i
+`tests/test_eval_baseline_conductor.py`, ovanpå #308-checkpointen `3d1c53a0`
 där full svit + ruff + governance-kedjan kördes gröna. På #309: full CI-svit
 grön på PR-head (inkl. eval-baseline-jobbet), ingen rebase behövdes.)
 
 ## Öppna PR att känna till
 
-Inga öppna PR i vår lane just nu. #306, #307, #308 och #309 är squash-mergade
+Öppen just nu: #310 (feat(build): dossier-deklarerade dependencies in i
+genererad package.json, ADR 0056) — draft från en cloud-agent, bas `jakob-be`;
+invänta dess review-lopp innan överlappande builder-/codegen-arbete startas.
+#306, #307, #308 och #309 är squash-mergade
 till `jakob-be` och ff:ade till `main`. (#309 = test(eval) deterministisk
 conductor-classification-baseline, testfil-only, mergad 2026-06-12 ~12:55 —
 Vercel prod-rebuild kan ha cancelats av ignoreCommand, väntat. #308 =
