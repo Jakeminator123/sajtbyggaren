@@ -193,3 +193,34 @@ def test_hosted_followup_result_type_is_exported() -> None:
     assert "type HostedFollowupResult," in route, (
         "route.ts måste importera HostedFollowupResult-typen för det rika svaret."
     )
+
+
+# --- 7. preview-sandbox stoppas vid hostat bygge (paritet med build-runner) ---
+
+
+def test_hosted_build_stops_preview_sandbox_before_create() -> None:
+    """Paritet med lokala build-runner.ts: ett hostat bygge stoppar en ev.
+    aktiv preview-sandbox för samma siteId (annars serverar den stale
+    innehåll under/efter bygget och kostar ören tills TTL). Best-effort:
+    stoppet ligger i try/catch och får ALDRIG falla bygget — och det sker
+    FÖRE Sandbox.create så bygg-sandboxen aldrig hinner samexistera med en
+    stale preview."""
+    runner = _runner()
+    assert (
+        'import { stopSandboxSessionForSite } from "./vercel-sandbox-sessions";'
+        in runner
+    ), "hosted-build-runner måste importera stopSandboxSessionForSite."
+    start_body = runner.split("export async function startHostedBuild", 1)[1]
+    stop_idx = start_body.find("stopSandboxSessionForSite(req.siteId)")
+    create_idx = start_body.find("sdk.Sandbox.create(")
+    assert stop_idx != -1, (
+        "startHostedBuild måste anropa stopSandboxSessionForSite(req.siteId)."
+    )
+    assert create_idx != -1 and stop_idx < create_idx, (
+        "Preview-stoppet måste ske FÖRE Sandbox.create."
+    )
+    guarded = start_body[:stop_idx].rstrip().endswith("await")
+    assert guarded and "try {" in start_body[max(0, stop_idx - 200) : stop_idx], (
+        "Stoppet ska vara awaited och ligga i try/catch (best-effort) — "
+        "ett stopp-fel får aldrig falla bygget."
+    )

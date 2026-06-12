@@ -65,6 +65,7 @@ import {
   ensureFreshOidcTokenBeforeCreate,
   resolveCredentials,
 } from "./vercel-sandbox-runner";
+import { stopSandboxSessionForSite } from "./vercel-sandbox-sessions";
 
 export interface HostedBuildRequest {
   /** siteId för sajten som ska byggas (samma mönster som /api/preview). */
@@ -1185,6 +1186,19 @@ export async function startHostedBuild(
     if (!oidcGuard.ok) {
       return failRun(oidcGuard.error);
     }
+  }
+
+  // Livscykel/kostnad (paritet med lokala build-runner.ts): ett hostat
+  // bygge/följdprompt stoppar en ev. aktiv preview-sandbox för samma siteId
+  // så den inte serverar stale innehåll under/efter bygget (och kostar ören
+  // tills TTL). Detta är den PRIMÄRA livscykelmekanismen; buildId-
+  // invalideringen i tryReuseSandboxPreview (vercel-sandbox-runner.ts) är
+  // backstoppen som fångar previews startade EFTER detta stopp men FÖRE
+  // byggets pekar-swap. Best-effort: ett stopp-fel får ALDRIG falla bygget.
+  try {
+    await stopSandboxSessionForSite(req.siteId);
+  } catch {
+    // Idempotent best-effort — sessionsregistret kan vara tomt/otillgängligt.
   }
 
   // asset_set-forwarding (hostad halva av task A): samma sanering som den
