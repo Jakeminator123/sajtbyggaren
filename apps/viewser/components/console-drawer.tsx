@@ -1,5 +1,6 @@
 "use client";
 
+import { ProjectCompositionPanel } from "@/components/builder/project-composition-panel";
 import {
   ProjectInputPicker,
   type ProjectInputOption,
@@ -104,6 +105,10 @@ export function ConsoleDrawer({
               runSiteId={runSiteId}
               runSiteIdUnknown={runSiteIdUnknown}
             />
+
+            {/* Projektinnehåll: vad sajten består av (sidor, dossiers,
+                komponenter, paket). Följer vald run-sajt, annars pickern. */}
+            <ProjectCompositionPanel siteId={runSiteId ?? selectedSiteId} />
 
             <RunDetailsPanel runId={selectedRunId} />
 
