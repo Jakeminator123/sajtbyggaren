@@ -316,6 +316,9 @@ fetch_run_state() {
 }
 
 post_status "project-input" "" ""
+# OpenClaw apply-grenens flaggor (set -u-sakra defaults; satts i followup-grenen).
+OPENCLAW_APPLIED=0
+RUN_STATE_VERSION_OVERRIDE=""
 if [ "$FOLLOWUP_MODE" = "1" ]; then
   if [ -z "\${RUN_STATE_PI_URL:-}" ] || [ -z "\${RUN_STATE_META_URL:-}" ]; then
     fail "Foljdprompt utan run-state-URL:er — kor forst ett initialt hostat bygge for siteId $SITE_ID."
@@ -345,36 +348,138 @@ if [ "$FOLLOWUP_MODE" = "1" ]; then
       echo "hosted-build: VARNING — run-artefakt-tarballen kunde inte hamtas; apply degraderar till legacy." >&2
     fi
   fi
-  # asset_set-forwarding: TOOL_INTENT_JSON ar redan sanerad TS-side
-  # (sanitizedAssetSetIntent) och nar bash enbart som quotad env-expansion
-  # — aldrig interpolerad i skriptkoden. Tom strang = ingen flagga.
-  TOOL_INTENT_ARGS=()
-  if [ -n "\${TOOL_INTENT_JSON:-}" ]; then
-    TOOL_INTENT_ARGS=(--tool-intent "$TOOL_INTENT_JSON")
+  # Commit 2 — OpenClaw apply-som: kor dirigenten FORST i followup-laget, exakt
+  # som den lokala runPromptBuildOnce-grenordningen (applied -> answer-only ->
+  # legacy). SAJTBYGGAREN_GENERATED_DIR exporteras sa run_followup_chain:s build
+  # (som inte tar --generated-dir via CLI:t) landar i sandboxens generated-dir;
+  # RUNS_DIR ar default = $REPO_DIR/data/runs (= cwd) sa den nya run-katalogen
+  # hamnar dar hydreringen + uploaden vantar den.
+  export SAJTBYGGAREN_GENERATED_DIR="$GENERATED_DIR"
+  # --base-run-id-arrayen fylls i commit 3 (BASE_RUN_ID); tom = ingen flagga
+  # (set -u-saker expansion).
+  BASE_RUN_ID_ARGS=()
+  if [ -n "\${BASE_RUN_ID:-}" ]; then
+    BASE_RUN_ID_ARGS=(--base-run-id "$BASE_RUN_ID")
   fi
-  PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" \${TOOL_INTENT_ARGS[@]+"\${TOOL_INTENT_ARGS[@]}"} 2>&1) \\
-    || fail "prompt_to_project_input (followup) misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
-else
-  PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --site-id "$SITE_ID" 2>&1) \\
-    || fail "prompt_to_project_input misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
-fi
-DOSSIER_PATH=$(printf '%s\\n' "$PI_OUT" | sed -n 's/^dossierPath: //p' | head -n 1)
-if [ -z "$DOSSIER_PATH" ]; then
-  fail "dossierPath saknas i prompt_to_project_input-output."
+  # PROMPT_TEXT nar bash enbart som quotad env-expansion — aldrig interpolerad.
+  APPLY_OUT=$("$PYTHON_BIN" scripts/run_openclaw_followup.py --apply --site-id "$SITE_ID" \${BASE_RUN_ID_ARGS[@]+"\${BASE_RUN_ID_ARGS[@]}"} -- "$PROMPT_TEXT" 2>&1) || true
+  printf '%s' "$APPLY_OUT" > /tmp/openclaw-apply.out
+  # Parsa sista OPENCLAW_BRIDGE_JSON-raden (samma sentinel-kontrakt som
+  # openclaw-runner.ts). Skriver BARA kontrollerade enum/id-falt
+  # (kind/runId/version/buildStatus) till env-filen sa source:n ar saker —
+  # prompt/answerText/decision rors aldrig har.
+  python3 - > /tmp/openclaw-apply.env <<'PY'
+import json, re
+SENT = "OPENCLAW_BRIDGE_JSON:"
+try:
+    text = open("/tmp/openclaw-apply.out", encoding="utf-8", errors="replace").read()
+except OSError:
+    text = ""
+payload = None
+for line in reversed(text.splitlines()):
+    s = line.strip()
+    if not s.startswith(SENT):
+        continue
+    try:
+        obj = json.loads(s[len(SENT):].strip())
+    except ValueError:
+        continue
+    if isinstance(obj, dict) and isinstance(obj.get("decision"), dict):
+        payload = obj
+        break
+ANSWER_KINDS = {"small_talk", "site_opinion", "question"}
+kind, run_id, version, build_status = "fallback", "", "", ""
+if payload is not None:
+    decision = payload.get("decision") or {}
+    bridge = payload.get("bridge") or {}
+    conv = decision.get("conversation") or {}
+    chain = bridge.get("chain") or {}
+    applied = bridge.get("applied") is True
+    conv_kind = conv.get("conversationKind")
+    expects = conv.get("expectsAnswer") is True
+    bs = chain.get("buildStatus")
+    if (not applied) and (conv_kind in ANSWER_KINDS or expects):
+        kind = "answer_only"
+    elif applied and bs in ("ok", "degraded"):
+        kind = "applied"
+        rid = chain.get("runId")
+        run_id = rid if isinstance(rid, str) and re.fullmatch(r"[A-Za-z0-9._-]+", rid) else ""
+        ver = chain.get("version")
+        version = str(ver) if isinstance(ver, int) else ""
+        build_status = bs
+    elif applied:
+        kind = "applied_failed"
+        build_status = bs if isinstance(bs, str) else "failed"
+    # else: fallback (no-op / unmapped edit / ren copy-andring) -> legacy nedan.
+print("APPLY_KIND='%s'" % kind)
+print("APPLY_RUN_ID='%s'" % run_id)
+print("APPLY_VERSION='%s'" % version)
+print("APPLY_BUILD_STATUS='%s'" % build_status)
+PY
+  APPLY_KIND="fallback"; APPLY_RUN_ID=""; APPLY_VERSION=""; APPLY_BUILD_STATUS=""
+  . /tmp/openclaw-apply.env 2>/dev/null || true
+  case "$APPLY_KIND" in
+    answer_only)
+      # Answer-only/conversation: starta INGET bygge. Commit 3 tradar in den
+      # rika answerText:en; har racker en arlig done utan buildId.
+      echo "hosted-build: OpenClaw answer-only — ingen build."
+      post_status "done" "" ""
+      exit 0
+      ;;
+    applied)
+      # OpenClaw byggde en ny version och current.json swappades (ok/degraded).
+      RUN_ARTIFACT_RUN_ID="$APPLY_RUN_ID"
+      RUN_STATE_VERSION_OVERRIDE="$APPLY_VERSION"
+      OPENCLAW_APPLIED=1
+      echo "hosted-build: OpenClaw apply landade v$APPLY_VERSION (runId $APPLY_RUN_ID, status $APPLY_BUILD_STATUS)."
+      ;;
+    applied_failed)
+      # En ny version applicerades men bygget misslyckades — maskera ALDRIG som
+      # lyckat och fall INTE till legacy (skulle dubbel-bygga). Arlig fail.
+      fail "OpenClaw apply skrev en ny version men bygget misslyckades (status $APPLY_BUILD_STATUS)."
+      ;;
+    *)
+      # applied=false icke-conversation (ren copy-andring / omappad edit) ELLER
+      # parse-fel: fall tillbaka till den FUNGERANDE legacy-vagen, exakt som
+      # lokalt. Attributeras arligt nedan (aldrig fejkad bridge.applied=true).
+      echo "hosted-build: OpenClaw gav ingen applicerbar capability-andring — legacy-vagen tar over (arlig fallback)."
+      ;;
+  esac
 fi
 
-# Fas 3: deterministiska byggaren (npm install + next build kors dar inne av
-# build_site.py sjalv — Quality Gate far riktiga build-status-signaler).
-post_status "building" "" ""
-BUILD_OUT=$("$PYTHON_BIN" scripts/build_site.py --dossier "$DOSSIER_PATH" --generated-dir "$GENERATED_DIR" 2>&1) \\
-  || fail "build_site.py misslyckades: $(printf '%s' "$BUILD_OUT" | tail -c 600)"
+if [ "\${OPENCLAW_APPLIED:-0}" != "1" ]; then
+  # Legacy/init-vagen (oforandrad sedan B194): init bygger alltid har; en
+  # followup landar har nar OpenClaw inte applicerade (copy-andring/no-op/
+  # parse-fel). Bevarar dagens fungerande hostade copy-direktivvag.
+  if [ "$FOLLOWUP_MODE" = "1" ]; then
+    # asset_set-forwarding: TOOL_INTENT_JSON ar redan sanerad TS-side
+    # (sanitizedAssetSetIntent) och nar bash enbart som quotad env-expansion
+    # — aldrig interpolerad i skriptkoden. Tom strang = ingen flagga.
+    TOOL_INTENT_ARGS=()
+    if [ -n "\${TOOL_INTENT_JSON:-}" ]; then
+      TOOL_INTENT_ARGS=(--tool-intent "$TOOL_INTENT_JSON")
+    fi
+    PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" \${TOOL_INTENT_ARGS[@]+"\${TOOL_INTENT_ARGS[@]}"} 2>&1) \\
+      || fail "prompt_to_project_input (followup) misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
+  else
+    PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --site-id "$SITE_ID" 2>&1) \\
+      || fail "prompt_to_project_input misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
+  fi
+  DOSSIER_PATH=$(printf '%s\\n' "$PI_OUT" | sed -n 's/^dossierPath: //p' | head -n 1)
+  if [ -z "$DOSSIER_PATH" ]; then
+    fail "dossierPath saknas i prompt_to_project_input-output."
+  fi
 
-# B199 — den kanoniska artefakt-run-iden (data/runs/<runId>/) som build_site.py
-# skrev. SKILD fran orkestreringens KV-UUID ($RUN_ID): det har ar
-# build_site.py-stdout-runId ("runId: <id>") som run-artefakt-persistensen
-# nedan tarballar och nasta followup hydrerar. (Commit 2:s OpenClaw apply-gren
-# satter samma variabel ur bridge.chain.runId i stallet.)
-RUN_ARTIFACT_RUN_ID=$(printf '%s\\n' "$BUILD_OUT" | sed -n 's/^runId: //p' | head -n 1)
+  # Fas 3: deterministiska byggaren (npm install + next build kors dar inne av
+  # build_site.py sjalv — Quality Gate far riktiga build-status-signaler).
+  post_status "building" "" ""
+  BUILD_OUT=$("$PYTHON_BIN" scripts/build_site.py --dossier "$DOSSIER_PATH" --generated-dir "$GENERATED_DIR" 2>&1) \\
+    || fail "build_site.py misslyckades: $(printf '%s' "$BUILD_OUT" | tail -c 600)"
+  # B199 — den kanoniska artefakt-run-iden (data/runs/<runId>/) som build_site.py
+  # skrev. SKILD fran orkestreringens KV-UUID ($RUN_ID): build_site.py-stdout-
+  # runId ("runId: <id>") som run-artefakt-persistensen nedan tarballar.
+  RUN_ARTIFACT_RUN_ID=$(printf '%s\\n' "$BUILD_OUT" | sed -n 's/^runId: //p' | head -n 1)
+fi
 
 # Aktiv immutable build via current.json — samma pekar-kontrakt som lokalt.
 ACTIVE_BUILD_ID=$(GENERATED_DIR="$GENERATED_DIR" python3 - <<'PY'
@@ -496,7 +601,14 @@ fi
 # BADA filerna ar uppe; den gamla pekaren pekar pa ett intakt aldre par).
 # Fel har faller INTE bygget — sajten ar redan publicerad — men pekaren
 # lamnas ororda sa nasta foljdprompt utgar fran senast KONSISTENTA paret.
-RUN_STATE_VERSION=$(printf '%s\\n' "$PI_OUT" | sed -n 's/^version: //p' | head -n 1)
+# Versionen: fran OpenClaw-bridgen (apply-vagen) eller prompt_to_project_input-
+# stdouten (legacy/init-vagen). PI_OUT ar osatt pa apply-vagen (set -u), darfor
+# grenen.
+if [ "$OPENCLAW_APPLIED" = "1" ]; then
+  RUN_STATE_VERSION="$RUN_STATE_VERSION_OVERRIDE"
+else
+  RUN_STATE_VERSION=$(printf '%s\\n' "$PI_OUT" | sed -n 's/^version: //p' | head -n 1)
+fi
 PI_SNAPSHOT="$REPO_DIR/data/prompt-inputs/$SITE_ID.project-input.json"
 META_SNAPSHOT="$REPO_DIR/data/prompt-inputs/$SITE_ID.meta.json"
 

@@ -133,10 +133,12 @@ def test_script_publishes_versioned_pair_and_pointer_after_build() -> None:
     ), "KV-pekaren får bara flyttas när både PI och meta är uppladdade."
     assert '":run-state"' in source
     # Upload-ordningen: run-state publiceras EFTER manifestet (B195) och
-    # current-pekaren men FÖRE done-statusen.
+    # current-pekaren men FÖRE den SLUTGILTIGA done-statusen. OBS: answer-only-
+    # grenen (commit 2) postar en tidigare ``post_status "done"`` + exit, så vi
+    # ankrar på den SISTA (rindex) som är den riktiga bygg-done.
     manifest_at = source.index('upload_file ".manifest.json"')
     run_state_at = source.index("upload_run_state()")
-    done_at = source.index('post_status "done"')
+    done_at = source.rindex('post_status "done"')
     assert manifest_at < run_state_at < done_at
 
 
@@ -146,7 +148,7 @@ def test_run_state_failure_never_fails_a_published_build() -> None:
     warning_at = source.index(
         "run-state-paret kunde inte publiceras"
     )
-    done_at = source.index('post_status "done"')
+    done_at = source.rindex('post_status "done"')
     assert warning_at < done_at, (
         "Run-state-felvägen måste leda vidare till done-status — bygget är "
         "redan publicerat och får inte rapporteras som failed."
@@ -187,7 +189,7 @@ def test_run_artifacts_failure_never_fails_a_published_build() -> None:
     """B199: artefakt-upload-fel faller aldrig ett redan publicerat bygge."""
     source = _runner_source()
     warning_at = source.index("run-artefakt-tarballen kunde inte publiceras")
-    done_at = source.index('post_status "done"')
+    done_at = source.rindex('post_status "done"')
     assert warning_at < done_at
     segment = source[warning_at - 200 : warning_at + 200]
     assert "fail " not in segment and 'fail "' not in segment, (
