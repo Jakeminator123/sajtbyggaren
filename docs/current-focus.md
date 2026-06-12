@@ -67,28 +67,27 @@ object" + deploy-ERROR på första hotfix-pushen).
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `9671de59` (2026-06-12 ~13:20 UTC+2; squash-merge av #310
-— feat(build) dossier-deklarerade dependencies in i genererad package.json,
-ADR 0056 — ovanpå focus-bumpen `3c8e5aa7`. Full CI-svit grön på PR-head,
-MERGEABLE/CLEAN, `main` ff:ad till samma SHA. **Tarball-omladdningen är GJORD**
-direkt efter mergen (#310 rörde `scripts/` + `governance/`): build-kontexten
+Last verified state: `f642b1a5` (2026-06-12 ~14:10 UTC+2; squash-merge av #311
+— feat(viewser) Projektinnehåll-panel, deriverad sammansättningsbild av
+sajt-projektet i ConsoleDrawer — ovanpå hotfix-passets `3150b471`. Review-dom
+GO, alla 6 checkar gröna på PR-head efter ready-flippen, MERGEABLE/CLEAN,
+`main` ff:ad till samma SHA. **Tarball-omladdningen är GJORD** direkt efter
+mergen (#311 rörde `scripts/check_term_coverage.py`): build-kontexten
 ompaketerad från merge-commiten och uppladdad till blob
 `build-context/current.tar.gz`, KV-nyckeln `viewser:build-context:url`
-uppdaterad — hostade byggen kör nu rätt Python-kod. Hotfix-passet ovan
-(~13:30) rebasades ovanpå denna SHA — #310-mergen landade mitt under passet,
-ytorna var disjunkta precis som förutsett. Hela grindkedjan — ruff,
-governance_validate, rules_sync --check, term-coverage --strict, full
-pytest-svit (-n auto), tsc --noEmit, eslint och blob-source-testerna — körd
-grön lokalt på hotfix-ändringarna efter rebasen, och kodcommits pushas DIREKT
-efter den här docs-commiten så prod-rebuild inte cancelas av ignoreCommand.)
+uppdaterad. Föregående checkpoint `9671de59` (#310-mergen + hotfix-passet
+~13:30) är historik — detaljerna står kvar i statusblocket ovan.)
 
 ## Öppna PR att känna till
 
-Inga öppna just nu. #306, #307, #308, #309 och #310 är squash-mergade
-till `jakob-be` och ff:ade till `main`. (#310 = feat(build)
-dossier-deklarerade dependencies in i genererad package.json, ADR 0056,
-mergad 2026-06-12 ~13:20 — tarball-omladdning gjord direkt efter, se
-Last verified state. #309 = test(eval) deterministisk
+Inga öppna just nu. #306, #307, #308, #309, #310 och #311 är squash-mergade
+till `jakob-be` och ff:ade till `main`. (#311 = feat(viewser)
+Projektinnehåll-panel i ConsoleDrawer — sidor/dossiers/komponenter/paket
+deriverat ur befintliga run-artefakter, mergad 2026-06-12 ~14:10 —
+tarball-omladdning gjord direkt efter, se Last verified state. #310 =
+feat(build) dossier-deklarerade dependencies in i genererad package.json,
+ADR 0056, mergad 2026-06-12 ~13:20 — tarball-omladdning gjord direkt efter.
+#309 = test(eval) deterministisk
 conductor-classification-baseline, testfil-only, mergad 2026-06-12 ~12:55 —
 Vercel prod-rebuild kan ha cancelats av ignoreCommand, väntat. #308 =
 docs(heavy-llm-flow) ärlighetspass, mergad ~12:45 efter rebase + fyra

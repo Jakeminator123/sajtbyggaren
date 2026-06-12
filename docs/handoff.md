@@ -34,6 +34,16 @@ deploy ~12 commits bak som saknades i Vercels grunda klon, och exit 128 ≠
 `git cat-file -e "$BASE" || exit 1` före diffen, så saknad bas → bygg i
 stället för ERROR (verifierat i riktig bash).
 
+**Tillägg ~14:10:** PR #311 (feat(viewser) Projektinnehåll-panel) squash-
+mergad till `jakob-be` (`f642b1a5`) + ff till `main`. Ny panel i
+konsol-lådan på `/studio` (ConsoleDrawer, mellan run-väljaren och
+RunDetailsPanel) som visar vad sajt-projektet består av: sidor (routes),
+funktioner (dossiers), monterade komponenter och npm-paket — med
+dossier-tillagda paket (ADR 0056) som egen kategori. Deriveras via
+`GET /api/site/[siteId]/composition` ur befintliga run-artefakter (lokalt
+disk, hostat B199-kedjan), ingen ny lagring. Tarball-omladdning gjord
+direkt efter mergen (#311 rörde `scripts/check_term_coverage.py`).
+
 ## PASS 2026-06-12 ~12:00 — HOSTAD PREVIEW-STANDARDISERING: ADR 0055 (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
