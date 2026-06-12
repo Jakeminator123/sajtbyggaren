@@ -1,14 +1,73 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-12 ~00:30 UTC+2, midnattsstängning: main-sync KLAR,
-#305/#292/#304 mergade, B194 live + E2E-bevisad hostat, CI-actions v6,
-obligatorisk lane-grind införd. `main = jakob-be` (tom diff, rent träd).
-Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
+**Datum:** 2026-06-12 ~03:30 UTC+2, nattpass: hostad builder-paritet shippad
++ live-bevisad, hostat 404-brus tystat (B199 dokumenterad), readiness-poll
+härdad, canvas-fakta rättade, två cloud-prompter köade. `main = jakob-be`
+(rent träd, local == origin). Detaljerad köplan:
+[`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-12 ~00:30 — MIDNATTSSTÄNGNING: B194 LIVE + MAIN-SYNK KLAR (AUKTORITATIVT BLOCK)
+## PASS 2026-06-12 ~03:30 — NATTPASS: HOSTAD BUILDER-PARITET SHIPPAD + TVÅ CLOUD-PROMPTER KÖADE (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Git:** `main = jakob-be` (rent träd, local == origin). Nattens
+> commit-kedja ovanpå midnattens `5109cc1f`-checkpoint: `4162a14a`
+> (banner-ärlighet) → `74dc9218` (`ignoreCommand` mot
+> `VERCEL_GIT_PREVIOUS_SHA`, fallback `HEAD^`) → `60319439` (ruleset-notis)
+> → `bc074edb` (flagg-medveten hostad notis) → `cdd6785d` + `b4f6e2d2`
+> (hostad builder-paritet) → `691bd835` (404-tystnad + B199) → `15ea0fda`
+> (readiness-poll) → `ed0a2039` + `42a54945` + `575af63b`
+> (canvas-rättningar). Senaste icke-docs-commit `575af63b`; detta docs-pass
+> ligger ovanpå. Production (`sajtbyggaren-viewser.vercel.app`) kör senaste
+> app-bygget; rena docs-pushar skippar prod-rebuild med flit, så prod kan
+> peka på senaste app-ändringen snarare än main-HEAD (väntat
+> monorepo-beteende).
+>
+> **Nattens fixar (alla på jakob-be):** banner-/notis-ärlighet (`4162a14a`,
+> `bc074edb`) — "lokalt" = operatörens lokala miljö, och med
+> `VIEWSER_ENABLE_HOSTED_BUILD=1` säger bannern att byggen kör i Vercel
+> Sandbox. Hostad builder-paritet (`cdd6785d`, `b4f6e2d2`): FloatingChat
+> tänds när ett bygge slutförts i sessionen även med tom `/api/runs`, och
+> följdprompt-byggen registreras i sessionskartan via selectedSiteId-fallback
+> så FloatingChat överlever rebuild hostat. Hostade
+> `/api/runs/[runId]`-artefakt-404:or (artifacts/trace/files) tystade i UI:t
+> (lugn notis + session-latch i stället för rött fel och meningslös polling)
+> + B199 dokumenterar blob-utredningen (`691bd835`). Härdad preview
+> readiness-poll (`15ea0fda`): 502/503/429 räknas inte som "klar", så hostad
+> preview inte visar sandbox-uppstart som fel. Canvas-rättningar (`ed0a2039`,
+> `42a54945`, `575af63b`): `OPENAI_MODEL` är `gpt-5.4` i prod, autogen-facts
+> regenererad (llmModelsVersion 12, hard-dossier 1) och env/fallback-callout
+> rättad.
+>
+> **E2E-bevis för hostad paritet:** hostade följdprompter aktiverar nu
+> builder-läget och FloatingChat live på `sajtbyggaren-viewser.vercel.app` —
+> ett bygge slutfört i sessionen tänder builder-UI:t och en följdprompt
+> överlever en hostad rebuild. Återställning av builder-läget efter en hård
+> omladdning är kvar (kräver hostad artefakt-hydrering, B199).
+>
+> **Env-domar (lämna osatta på Vercel):** `OPENCLAW_ROUTER_LLM_FALLBACK` är
+> no-op i den hostade vägen och `VIEWSER_SANDBOX_REUSE` är disk-only (ingen
+> effekt hostat). Avlivade sammanblandningar: pipen är hybrid (`gpt-5.4` för
+> brief/plan/copy, deterministisk codegen — inte "rent mekaniskt"); det finns
+> ingen automatisk `gpt-5.4` → `gpt-5.5`-modellfallback (kod-fallbacken
+> `gpt-5.5` träffar bara när env-nyckeln saknas). Extern review verifierad:
+> hostat KÖR-7-paritetsgapet är PARTIELLT, inte total avsaknad — legacy-vägen
+> kör copy-directives.
+>
+> **Två köade cloud-prompter (PR:as mot jakob-be):** (1) hostad
+> follow-up-paritet i tre ordnade commits — B199-hydrering → sandbox
+> apply-seam → request/response-paritet, root-cause-ledd, körs först;
+> (2) B198 del b contact-form-render, oberoende spår. Vår action: reviewa
+> inkommande cloud-PR:ar snabbt (lane review-SLA).
+>
+> **Tre öppna issues:** B199 (hostad artefakt-hydrering — förutsättning för
+> hostad KÖR-7), B197 (discovery-paritet hostat), B198 del b
+> (contact-form-render; fungerar redan hostat via legacy-vägen). ADR-liggare:
+> nästa lediga **0055** (0054 reserverad). naming-dictionary **v38**,
+> llm-models **v12**.
+
+## PASS 2026-06-12 ~00:30 — MIDNATTSSTÄNGNING: B194 LIVE + MAIN-SYNK KLAR (HISTORIK)
 >
 > **Git:** `main = jakob-be = origin/main = origin/jakob-be` (tom diff, rent
 > träd). Sista kodcommit `5109cc1f` (CI-actions v6); detta docs-pass ligger
