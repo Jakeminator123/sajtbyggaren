@@ -220,6 +220,9 @@ const CONVERSATION_ROLE_LABELS: Record<string, string> = {
   section_builder: "sektionsbyggare",
   stylist: "stylist",
   copy: "text/copy",
+  // ADR 0057 (deferred från #312): femte konduktör-rollen som äger
+  // component_add. Stavningen speglar roles.py/action-registry.json exakt.
+  component_builder: "komponenter",
 };
 
 const CONVERSATION_KIND_LABELS: Record<string, string> = {
@@ -906,6 +909,21 @@ function summarizeBuildResult(
           content:
             honestAnswer ||
             `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter på startsidan (företagsnamn, rubrik, tagline) — rubriker på undersidor och större layout-/strukturändringar (centrera hero, lägga till sektion) stöds inte än.${unappliedNote}`,
+        };
+      }
+      // Uppgift H (deferred från #313): ``intent_not_executable`` = ingen
+      // utförare ägde följdpromptens intent ("ta bort sidan Kontakt", "gör
+      // badges responsiva") — byte-diffen var bara brief-parafras, aldrig
+      // operatörens önskan. Catch-all-rådet nedan ("ange exakt rubrik/text")
+      // vore vilseledande: problemet är saknad byggförmåga, inte otydlighet.
+      // LLM-raden ovan ersätter fortsatt content när den finns; den här raden
+      // är den deterministiska no-key-fallbacken.
+      if (effect.reason === "intent_not_executable") {
+        return {
+          variant: "info",
+          content:
+            honestAnswer ||
+            `Jag kunde inte koppla önskemålet till någon byggförmåga jag har än, så den begärda ändringen gjordes inte.${versionText}${unappliedNote}`,
         };
       }
       return {
@@ -2648,9 +2666,9 @@ function MessageBubble({
         )}
       </span>
       {/* F1 slice 3 — ärlig roll-rad: vilken conductor-roll som agerade
-          (dirigent/sektionsbyggare/stylist/text) + conversationKind, härlett ur
-          payload.conversation. Bara på assistent-bubblor som inte är pending;
-          dekorativ metadata, styr aldrig build/preview. */}
+          (dirigent/sektionsbyggare/stylist/text/komponenter) + conversationKind,
+          härlett ur payload.conversation. Bara på assistent-bubblor som inte är
+          pending; dekorativ metadata, styr aldrig build/preview. */}
       {!isUser &&
       !message.isPending &&
       formatRoleRow(message.conversationRole, message.conversationKind) ? (

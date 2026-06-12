@@ -220,6 +220,52 @@ def test_floating_chat_differentiates_layout_no_op_honestly() -> None:
 
 
 @pytest.mark.tooling
+def test_floating_chat_dedicated_intent_not_executable_row() -> None:
+    """Uppgift H (deferred från #313): reason ``intent_not_executable`` (en
+    followup vars intent ingen utförare äger — "ta bort sidan Kontakt", "gör
+    badges responsiva") föll i den generiska catch-all-raden ("ange exakt
+    rubrik/text"), vars råd är vilseledande: problemet är att önskemålet
+    saknar byggförmåga, inte att operatören var otydlig. Lås att FloatingChat
+    har en DEDIKERAD deterministisk gren för reason intent_not_executable
+    (no-key-fallbacken; #313:s ärliga LLM-answerText ersätter fortsatt content
+    när den finns) med variant info, utvärderad FÖRE den generiska raden.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"intent_not_executable"' in text, (
+        "FloatingChat måste gren-skilja på reason ``intent_not_executable`` "
+        "(intent utan utförare — byte-diffen var bara brief-parafras) från "
+        "``intent_no_semantic_change`` (be om konkret text)."
+    )
+    assert "Jag kunde inte koppla önskemålet till någon byggförmåga" in text, (
+        "Den dedikerade intent_not_executable-raden måste ha en igenkännbar "
+        "text-anchor som ärligt säger att önskemålet inte kunde kopplas till "
+        "någon känd byggförmåga (aldrig 'var mer specifik'-rådet)."
+    )
+    # Grenen måste vara info (aldrig success) och behålla honestAnswer-
+    # ersättningen + unapplied-svansen — samma mönster som övriga no-op-grenar.
+    branch_pattern = re.compile(
+        r'effect\.reason\s*===\s*"intent_not_executable"[\s\S]{0,120}?'
+        r'variant:\s*"info"[\s\S]{0,260}?\$\{unappliedNote\}',
+        re.MULTILINE,
+    )
+    assert branch_pattern.search(text), (
+        "intent_not_executable-grenen måste sätta variant ``\"info\"`` och "
+        "appenda ``${unappliedNote}`` (oapplicerade följd-asks förblir synliga)."
+    )
+    # Den dedikerade grenen måste utvärderas FÖRE den generiska raden så det
+    # ärliga skälet vinner över 'ange exakt rubrik/text'-rådet.
+    branch_idx = text.index('effect.reason === "intent_not_executable"')
+    generic_idx = text.index("Jag kunde inte fånga någon synlig ändring")
+    assert branch_idx < generic_idx, (
+        "intent_not_executable-grenen måste ligga före den generiska "
+        "'ange exakt rubrik/text'-raden i summarizeBuildResult."
+    )
+
+
+@pytest.mark.tooling
 def test_floating_chat_router_decision_readiness() -> None:
     """KÖR-6a readiness: FloatingChat måste kunna ge en ärlig rad per
     ``RouterDecision.messageKind`` OM/NÄR ``/api/prompt`` börjar skicka
