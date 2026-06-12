@@ -252,7 +252,7 @@ export default function RollerVsAgenterModeller() {
           rows={GPT4O_USAGE}
         />
         <Callout tone="info" title="Viktig nyans om env">
-          Env vinner alltid: på Vercel-deploy sätts <Text weight="semibold">OPENAI_MODEL=gpt-5.5</Text>{" "}
+          Env vinner alltid: på Vercel-deploy sätts <Text weight="semibold">OPENAI_MODEL=gpt-5.4</Text>{" "}
           i miljön. Sedan 2026-06-11 är även kod-fallbacken i `lib/openai.ts` / `vision.ts`{" "}
           <Text weight="semibold">gpt-5.5</Text>, så env och fallback pekar på samma generation.
           Viewser läser process.env först och faller annars tillbaka på repo-rotens `.env`.
