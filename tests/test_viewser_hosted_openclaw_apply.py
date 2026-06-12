@@ -23,8 +23,8 @@ Commit 2 ger hostat samma grindordning i sandbox-skriptet:
      INTE till legacy -> ingen dubbel-build).
    - annars -> legacy-vägen tar över (ärlig fallback; bevarar dagens
      fungerande hostade copy-direktivväg).
-4. ``MASKERA ALDRIG`` legacy-success som OpenClaw: legacy-grenen sätter aldrig
-   ``OPENCLAW_APPLIED=1``.
+4. Maskerar aldrig legacy-success som OpenClaw: legacy-grenen sätter aldrig
+   OPENCLAW_APPLIED=1.
 
 Skyddar B198 del b: apply-vägen delegerar till oförändrade
 ``run_followup_chain`` — inga contact-form/section-render-vägar rörs.

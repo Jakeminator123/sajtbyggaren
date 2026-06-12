@@ -463,6 +463,10 @@ COMMON_WORDS = {
     # inte domänbegrepp — samma behandling som PreviewStartOk/SandboxSession.
     "KvSetOptions", "KvRestResponse", "MemoryEntry",
     "HostedBuildRequest", "HostedBuildPhase", "HostedBuildRunStatus",
+    # B199/hostad follow-up-paritet: det rika followup-resultatet sandboxen
+    # POST:ar in i KV-doken; TS-implementation-detalj (samma allowlist-kategori
+    # som HostedBuildRunStatus), inte ett nytt domänbegrepp.
+    "HostedFollowupResult",
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
     "GameState", "KeyboardEvent", "PacmanGame",
     "Snake", "Tetris", "ThreeCanvasShell",
