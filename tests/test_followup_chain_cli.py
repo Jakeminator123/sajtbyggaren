@@ -741,6 +741,107 @@ def test_followup_chain_section_add_gallery_moves_on_ecommerce_lite(
     assert home_markup.count("Ett urval från projekten") == 1
 
 
+def test_followup_chain_section_add_resend_contact_form_visible_on_ecommerce(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """B198 del b E2E: a "skapa en sektion för mitt resend-mejlformulär" follow-up
+    on the ecommerce-lite scaffold mounts the resend-contact-form hard dossier AND
+    surfaces it VISIBLY on the EXISTING /kontakt route (no new page). The honest
+    file-diff reports appliedVisibleEffect=true with affectedRoutes=["contact"],
+    and the generated kontakt/page.tsx renders <ResendContactForm>.
+
+    Uses atelje-bird because it is ecommerce-lite and ships /kontakt as a
+    scaffold-default route, so the surfacing reuses the existing route rather
+    than creating a deduped wizard-extra page."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "atelje-bird"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_init_build(
+        tmp_path, "atelje-bird.project-input.json", site_id
+    )
+    base_pages = _newest_build_app_pages(generated_dir, site_id)
+
+    result = run_followup_chain(
+        site_id,
+        "skapa en sektion för mitt resend-mejlformulär",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "section_add"
+    assert "contact-form" in [c["capability"] for c in result["appliedCapabilities"]]
+    # Visible on the existing contact route - no new dedicated page is created.
+    assert result["appliedVisibleEffect"] is True, result
+    assert result["affectedRoutes"] == ["contact"]
+    assert _newest_build_app_pages(generated_dir, site_id) == base_pages, (
+        "contact-form surfaces on the EXISTING /kontakt route, so the page LIST "
+        "must be unchanged (no duplicate wizard-extra contact page)."
+    )
+
+    # The resend hard dossier is the mounted one (not the mailto default).
+    v2_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    required = (v2_pi.get("selectedDossiers") or {}).get("required") or []
+    assert "resend-contact-form" in required
+    assert "mailto-contact-form" not in required
+
+    # The contact page actually renders the resend form (the visible effect).
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    contact_markup = (builds[-1] / "app" / "kontakt" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "<ResendContactForm" in contact_markup
+
+
+def test_followup_chain_section_add_mailto_contact_form_stays_mount_only_on_ecommerce(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """B198 del b negative E2E: a plain "lägg till en kontaktformulär-sektion"
+    (no resend cue) on ecommerce-lite mounts the mailto default, which has no
+    visible component, so it stays honestly mount-only - appliedVisibleEffect
+    false, no new contact form rendered, no preview refresh."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "atelje-bird"
+    prompt_inputs, runs_dir, generated_dir = _seed_example_init_build(
+        tmp_path, "atelje-bird.project-input.json", site_id
+    )
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en kontaktformulär-sektion",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "section_add"
+    assert "contact-form" in [c["capability"] for c in result["appliedCapabilities"]]
+    # Mailto default: mounted but no visible component -> honest mount-only.
+    assert result["appliedVisibleEffect"] is False, result
+    assert result["previewShouldRefresh"] is False
+
+    v2_pi = json.loads(
+        (prompt_inputs / f"{site_id}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    required = (v2_pi.get("selectedDossiers") or {}).get("required") or []
+    assert "mailto-contact-form" in required
+    builds = sorted((generated_dir / site_id / "builds").glob("*"))
+    contact_markup = (builds[-1] / "app" / "kontakt" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "<ResendContactForm" not in contact_markup
+
+
 def test_followup_chain_section_add_unsupported_type_is_honest_no_op(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

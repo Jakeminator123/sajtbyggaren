@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 24 öppna), 6 unknown, 168 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (av 23 öppna), 6 unknown, 169 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -758,9 +758,20 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   404-brus-uppdraget). Fix: open (UI-tystnaden landad i denna commit).
   Test: open.
 
-## Operatörsfynd 2026-06-11 (kvällspasset, kottbulle v5→v6)
+## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
-- **`B198` Medel** - följdprompt kan inte aktivera en NAMNGIVEN dossier:
+Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna
+granskningsagenter verifierade dem mot kod (jakob-be @ 2dbe3f9). Sex
+fixades direkt i bug-sweep round 1 (`65e5cec`, se Stängda). Fyra
+bekräftade men ofixade registrerades här (B164/B166/B169/B172); resten var
+redan kända (B119/B155/B89), avsiktliga (recommendedPages-halvwire,
+msg-0058) eller medvetna fallbacks (change-set-baseline). **Alla fyra är nu
+stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
+round 2); se Stängda-sektionen.
+
+## Stängda - regression-test säkrar fixet
+
+- **`B198` Medel** (stängd 2026-06-12, del b #306 - contact-form synlig på ecommerce-lite) - följdprompt kan inte aktivera en NAMNGIVEN dossier:
   kedjan följdprompt → hard-dossier-montering är inte trådad. Konkret
   operatörsfall (kottbulle-ab-efadae v5→v6): "Skapa en badge eller sektion
   för min resend-funktion för mejl" gick tekniskt igenom (bygge ok) men
@@ -779,27 +790,23 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   + validerad dossier-preferens i section_add→apply — OBS att bara ordet
   "resend" väljer resend-dossiern ("mejlformulär" namnger typen, inte
   dossiern); preferensen är exklusiv per capability (ersätter monterad
-  mailto) och negeras av "inte/utan/ej resend". **Kvar (del b):** synlig
-  render för contact-form på ecommerce-lite (samma dedikerad-route-mönster
-  som faq/team) — tills dess är monteringen ärligt mount-only. Passar efter
-  B194 i prioritetslistan. Källa: operatörsfynd 2026-06-11 (orkestratorpass)
-  + kodverifiering (`section_directives`, action-registry, kottbulle-PI-
-  snapshots v5/v6). Fix: open (del a `05e62911`+; del b kvar). Test:
+  mailto) och negeras av "inte/utan/ej resend". **Del b LEVERERAD
+  (2026-06-12):** contact-form surfas nu VISIBELT på ecommerce-lite genom
+  den BEFINTLIGA `/kontakt`-routen (routeId `contact`, ingen ny wizard-extra-
+  sida som skulle dedupliceras bort) när `resend-contact-form`-dossiern
+  faktiskt är monterad — `render_contact` injicerar `<ResendContactForm>`, så
+  targeted rebuild diffar `app/kontakt/page.tsx` och kedjan rapporterar ärligt
+  `appliedVisibleEffect=true` med `affectedRoutes=["contact"]`. Smal gate:
+  `CONTACT_FORM_VISIBLE_SCAFFOLDS={ecommerce-lite}` (speglar
+  `INLINE_SECTION_SCAFFOLDS`, breddar INTE `_WIZARD_ROUTE_SCAFFOLDS`) + grundat
+  på monterad resend-dossier. mailto-defaulten saknar synlig komponent och
+  förblir ärligt mount-only, liksom contact-form på alla andra scaffolds.
+  Källa: operatörsfynd 2026-06-11 (orkestratorpass) + kodverifiering
+  (`section_directives`, action-registry, kottbulle-PI-snapshots v5/v6).
+  Fix: `05e62911` (del a #301; del b #306, 2026-06-12). Test:
   `tests/test_section_directives.py`, `tests/test_patch_apply.py`,
-  `tests/test_router_classify.py` (del a); del b open.
-
-## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
-
-Fyra externa read-only-agenter rapporterade ~16 fynd; tre interna
-granskningsagenter verifierade dem mot kod (jakob-be @ 2dbe3f9). Sex
-fixades direkt i bug-sweep round 1 (`65e5cec`, se Stängda). Fyra
-bekräftade men ofixade registrerades här (B164/B166/B169/B172); resten var
-redan kända (B119/B155/B89), avsiktliga (recommendedPages-halvwire,
-msg-0058) eller medvetna fallbacks (change-set-baseline). **Alla fyra är nu
-stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
-round 2); se Stängda-sektionen.
-
-## Stängda - regression-test säkrar fixet
+  `tests/test_router_classify.py` (del a); `tests/test_section_directives.py`
+  + `tests/test_followup_chain_cli.py` (del b).
 
 - **`B194` Låg** (stängd 2026-06-11, P3-spårets första slice) - hostade
   följdpromptar (`startHostedBuild(... followup: true)`) kunde inte härleda

@@ -37,6 +37,7 @@ Conventions: identifiers + comments in English (governance/rules/code-in-english
 from __future__ import annotations
 
 __all__ = [
+    "CONTACT_FORM_VISIBLE_SCAFFOLDS",
     "DOSSIER_PREFERENCE_CUES",
     "INLINE_SECTION_PLACEMENTS",
     "INLINE_SECTION_ROUTES",
@@ -95,10 +96,29 @@ _SANCTIONED = (
 # stays honestly mount-only. Kept narrow on purpose (faq + team first); the
 # remaining route-capable types (gallery/pricing/location) can follow the same
 # pattern once proven.
+#
+# B198 del b: ``contact-form`` surfaces on the EXISTING scaffold-default contact
+# route (``/kontakt``, routeId ``contact``) rather than a wizard-extra route -
+# the contact page already exists on the scaffolds that opt in (no new page, no
+# dedup collision). It runs a NARROWER gate than faq/team: it surfaces only on
+# the scaffolds in ``CONTACT_FORM_VISIBLE_SCAFFOLDS`` (today just ecommerce-lite)
+# AND only when the implementing hard Dossier ``resend-contact-form`` is actually
+# mounted (the grounded-content gate below). The mailto default has no visible
+# component yet, so contact-form stays honestly mount-only there.
 VISIBLE_SECTION_ROUTES: dict[str, dict[str, str]] = {
     "faq-section": {"wizardLabel": "FAQ", "routeId": "faq"},
     "team-section": {"wizardLabel": "Vårt team", "routeId": "team"},
+    "contact-form": {"wizardLabel": "Kontaktformulär", "routeId": "contact"},
 }
+
+# Scaffolds that surface ``contact-form`` visibly on their existing contact
+# route. Narrow allowlist mirroring ``INLINE_SECTION_SCAFFOLDS`` (B198 del b):
+# a scaffold opts in deliberately rather than inheriting contact-form surfacing
+# from the broad ``_WIZARD_ROUTE_SCAFFOLDS`` faq/team gate. ecommerce-lite
+# qualifies because it ships ``/kontakt`` as a scaffold-default route and its
+# ``render_contact`` injects ``<ResendContactForm>`` when the hard Dossier is
+# mounted, so the targeted render diffs ``app/kontakt/page.tsx`` honestly.
+CONTACT_FORM_VISIBLE_SCAFFOLDS: frozenset[str] = frozenset({"ecommerce-lite"})
 
 # Capability slug -> inline section placement (ADR 0038, the section_builder's
 # VISIBLE in-page render path). A mounted section capability listed here is
@@ -169,6 +189,13 @@ def _capability_has_grounded_content(capability: str, project_input: dict) -> bo
     - ``team-section``: grounded only when ``company.team`` lists at least one
       named member. An empty team would render a dashed "vi fyller på snart"
       placeholder, which is NOT grounded content, so it stays mount-only.
+    - ``contact-form`` (B198 del b): grounded only when the implementing hard
+      Dossier ``resend-contact-form`` is actually mounted
+      (``selectedDossiers.required``). That is the ONLY contact-form variant
+      with a visible component today (``render_contact`` injects
+      ``<ResendContactForm>`` from the hard-dossier runtime). The mailto default
+      has no visible component, so a mailto-only contact-form stays honestly
+      mount-only - never a phantom "success with no visible change".
     """
     if capability == "faq-section":
         return True
@@ -179,7 +206,49 @@ def _capability_has_grounded_content(capability: str, project_input: dict) -> bo
             isinstance(member, dict) and str(member.get("name") or "").strip()
             for member in team
         )
+    if capability == "contact-form":
+        return _resend_contact_form_mounted(project_input)
     return False
+
+
+def _resend_contact_form_mounted(project_input: dict) -> bool:
+    """True when the resend-contact-form hard Dossier is mounted (B198 del b).
+
+    The visible contact-form render path only exists for ``resend-contact-form``
+    (``render_contact`` reads it from the hard-dossier runtime). Apply secures a
+    named preference in ``selectedDossiers.required`` before this gate runs (step
+    5 mounts dossiers, step 5c surfaces visible routes), so the merged next-
+    version Project Input already lists ``resend-contact-form`` when the operator
+    asked for it. A mailto-only contact-form is NOT mounted here, so it stays
+    mount-only.
+    """
+    if not isinstance(project_input, dict):
+        return False
+    selected = project_input.get("selectedDossiers")
+    required = selected.get("required") if isinstance(selected, dict) else None
+    return isinstance(required, list) and "resend-contact-form" in required
+
+
+def _scaffold_surfaces_capability(capability: str, project_input: dict) -> bool:
+    """True when this version's scaffold emits a visible route for ``capability``.
+
+    Two narrow gates, never broadened together:
+
+    - ``contact-form`` (B198 del b) uses the dedicated
+      ``CONTACT_FORM_VISIBLE_SCAFFOLDS`` allowlist (today just ecommerce-lite),
+      because it surfaces on the scaffold's EXISTING contact route rather than a
+      wizard-extra route. Other scaffolds keep contact-form mount-only.
+    - every other route-capable capability (faq/team) uses the canonical wizard-
+      route scaffold set (``_scaffold_emits_wizard_routes``), unchanged.
+    """
+    if capability == "contact-form":
+        scaffold_id = (
+            project_input.get("scaffoldId")
+            if isinstance(project_input, dict)
+            else None
+        )
+        return isinstance(scaffold_id, str) and scaffold_id in CONTACT_FORM_VISIBLE_SCAFFOLDS
+    return _scaffold_emits_wizard_routes(project_input)
 
 
 def _scaffold_emits_wizard_routes(project_input: dict) -> bool:
@@ -228,7 +297,6 @@ def resolve_visible_section_pages(
     mount_only: list[dict[str, str]] = []
     seen: set[str] = set()
     surfaced_routes: set[str] = set()
-    scaffold_emits_routes = _scaffold_emits_wizard_routes(project_input)
     for capability in capabilities:
         if not isinstance(capability, str) or not capability.strip():
             continue
@@ -247,7 +315,7 @@ def resolve_visible_section_pages(
                 }
             )
             continue
-        if not scaffold_emits_routes:
+        if not _scaffold_surfaces_capability(capability, project_input):
             scaffold_id = (
                 project_input.get("scaffoldId")
                 if isinstance(project_input, dict)
@@ -257,9 +325,11 @@ def resolve_visible_section_pages(
                 {
                     "capability": capability,
                     "reason": (
-                        f"Scaffold {scaffold_id!r} avger inte dedikerade wizard-"
-                        "routes; sektionen monteras men ingen synlig route surfas "
-                        "(endast local-service-business surfar faq/team idag)."
+                        f"Scaffold {scaffold_id!r} surfar inte capability "
+                        f"{capability!r} som synlig route; sektionen monteras men "
+                        "ingen synlig route surfas (faq/team surfar bara på "
+                        "local-service-business, contact-form bara på "
+                        "ecommerce-lite)."
                     ),
                 }
             )

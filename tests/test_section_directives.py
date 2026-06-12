@@ -24,6 +24,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from packages.generation.followup.section_directives import (  # noqa: E402
+    CONTACT_FORM_VISIBLE_SCAFFOLDS,
     DOSSIER_PREFERENCE_CUES,
     INLINE_SECTION_PLACEMENTS,
     INLINE_SECTION_ROUTES,
@@ -259,6 +260,86 @@ def test_scaffold_gate_matches_canonical_wizard_scaffold_set() -> None:
         ["faq-section"], {"scaffoldId": "definitely-not-a-wizard-scaffold"}
     )
     assert visible_off == []
+
+
+# ---------------------------------------------------------------------------
+# B198 del b: contact-form surfaces VISIBLY on the existing /kontakt route of
+# the ecommerce-lite scaffold, but ONLY when the implementing resend-contact-
+# form hard dossier is mounted (the mailto default has no visible component).
+# A narrow scaffold gate (CONTACT_FORM_VISIBLE_SCAFFOLDS) keeps every other
+# scaffold honestly mount-only.
+# ---------------------------------------------------------------------------
+
+_ECOMMERCE_RESEND_PI = {
+    "scaffoldId": "ecommerce-lite",
+    "selectedDossiers": {"required": ["resend-contact-form"]},
+}
+
+
+def test_contact_form_visible_route_maps_to_existing_contact_route() -> None:
+    """The visible-route map surfaces contact-form on the EXISTING contact
+    route (routeId ``contact``) rather than inventing a wizard-extra page."""
+    assert VISIBLE_SECTION_ROUTES["contact-form"] == {
+        "wizardLabel": "Kontaktformulär",
+        "routeId": "contact",
+    }
+    assert CONTACT_FORM_VISIBLE_SCAFFOLDS == frozenset({"ecommerce-lite"})
+
+
+def test_contact_form_surfaces_on_ecommerce_lite_with_resend() -> None:
+    """contact-form surfaces /kontakt on ecommerce-lite when resend-contact-form
+    is mounted (the only contact-form variant with a visible component)."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["contact-form"], _ECOMMERCE_RESEND_PI
+    )
+    assert visible == [
+        {
+            "capability": "contact-form",
+            "wizardLabel": "Kontaktformulär",
+            "routeId": "contact",
+        }
+    ]
+    assert mount_only == []
+
+
+def test_contact_form_mailto_only_stays_mount_only() -> None:
+    """A mailto-only contact-form has no visible component, so it stays
+    mount-only even on the ecommerce-lite scaffold (no false visible effect)."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["contact-form"],
+        {
+            "scaffoldId": "ecommerce-lite",
+            "selectedDossiers": {"required": ["mailto-contact-form"]},
+        },
+    )
+    assert visible == []
+    assert [entry["capability"] for entry in mount_only] == ["contact-form"]
+    assert mount_only[0]["reason"]
+
+
+def test_contact_form_mount_only_on_non_ecommerce_scaffold_even_with_resend() -> None:
+    """Even WITH resend mounted, contact-form stays mount-only off the narrow
+    allowlist: local-service-business is not in CONTACT_FORM_VISIBLE_SCAFFOLDS."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["contact-form"],
+        {
+            "scaffoldId": "local-service-business",
+            "selectedDossiers": {"required": ["resend-contact-form"]},
+        },
+    )
+    assert visible == []
+    assert [entry["capability"] for entry in mount_only] == ["contact-form"]
+
+
+def test_contact_form_scaffold_gate_is_narrower_than_wizard_route_gate() -> None:
+    """The contact-form gate must NOT ride the broad faq/team wizard-route
+    scaffold set: a wizard-route scaffold (local-service-business) surfaces
+    faq but NOT contact-form, and ecommerce-lite surfaces contact-form but is
+    not a wizard-route scaffold."""
+    from packages.generation.planning.plan import get_wizard_route_scaffolds
+
+    assert "ecommerce-lite" not in get_wizard_route_scaffolds()
+    assert "local-service-business" not in CONTACT_FORM_VISIBLE_SCAFFOLDS
 
 
 # ---------------------------------------------------------------------------
