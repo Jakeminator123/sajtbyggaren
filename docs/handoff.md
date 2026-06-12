@@ -1,15 +1,104 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-12 ~07:30 UTC+2, morgonpass: B199 v2 — hostad
-run-historik/artefakter/inspector läses från KV/blob, builder-läget
-överlever omladdning, historisk baseRunId hydreras. Direkt på `jakob-be`
-på operatörsmandat, synkad till `main`. Detaljerad köplan:
-[`docs/current-focus.md`](current-focus.md).
+**Datum:** 2026-06-12 ~12:00 UTC+2, förmiddagspass: hostad
+preview-standardisering (ADR 0055) — Vercel Sandbox + Blob är STANDARD för
+användarpreviews: pre-built `.next` i blob, default-flip till
+`vercel-sandbox`, sessions-reuse med buildId-invalidering, preview-refresh-
+gate. Direkt på `jakob-be` på operatörsmandat, synkad till `main`.
+Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-12 ~07:30 — B199 V2: HOSTAD RUN-HISTORIK + ARTEFAKT-LÄSNING + OMLADDNINGS-ÅTERSTÄLLNING (AUKTORITATIVT BLOCK)
+## PASS 2026-06-12 ~12:00 — HOSTAD PREVIEW-STANDARDISERING: ADR 0055 (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Mandat:** operatörsbeslut (Jakob, bekräftat 2026-06-12 ~11:00): Vercel
+> Sandbox + Blob ska vara standardlösningen för previews av användarsajter,
+> streamade in i Viewser-iframen genom OpenClaw-flödet. StackBlitz-adaptern
+> AVVECKLAS INTE — pausad (ADR 0033), orörd. B197/discovery är fortsatt
+> Christophers — `hosted-build-runner.ts` + `vercel-sandbox-runner.ts` är
+> ändrade IGEN, tidig rebase begärd (msg-0085).
+>
+> **Vad som landade (commit-kedja på jakob-be → main, i stegordning):**
+>
+> 1. **Docs-sanering** (`6fe80cb3`): B194-/run-historik-texterna rättade i
+>    deploy-guiden, prompt-routens JSDoc, `.env.example`,
+>    `preview-runtime.md` (+ färsk last_verified_commit) och en
+>    rättelsenot i ADR 0033 (SDK:n bor i app-lagret, parentes-tillåtet).
+> 2. **Preview-refresh-gate** (`890afba9`): lyckad follow-up utan synlig
+>    effekt (visibleEffect `none`/`registered` per FollowupVisibleEffect-
+>    semantiken) river INTE preview-sandboxen. Mekanism: separat
+>    `previewRunId`-state i studio-sidan driver ViewerPanel;
+>    `selectedRunId` (historik/builder) flyttas alltid. FloatingChat trådar
+>    signalen som tredje `onBuildDone`-arg via EXPORTERADE
+>    `readFollowupVisibleEffect` (delad med dialogerna). Osäker/saknad
+>    signal = refresh. Init-byggen oförändrade. Lås:
+>    `tests/test_viewser_preview_refresh_gate.py` (7 st). Dessutom
+>    `2236621c`: pre-existerande eslint-fel i `industry-search.tsx` lagat
+>    (microtask-defer, react-hooks/set-state-in-effect).
+> 3. **byggstart stoppar previewn** (`8b1573fe`): `startHostedBuild`
+>    anropar `stopSandboxSessionForSite` efter preflights, före
+>    `Sandbox.create` — best-effort i try/catch, kan aldrig falla bygget.
+>    Paritet med lokala `build-runner.ts`. Primärmekanismen i
+>    livscykelvalet (se punkt 6).
+> 4. **Pre-built hostat** (`d6cd2c74`, ADR 0055 §1): orkestrerings-skriptets
+>    find-upload inkluderar rot-`.next/` minus `cache`/`trace` (+ nästlade
+>    `.next` prunas som förr; find-uttrycket verifierat i riktig bash).
+>    `generated-blob-source.ts` fick `filterPrebuiltRelPaths` +
+>    `hasPrebuiltNextRelPath` (BUILD_ID-kontraktet); runnern tar
+>    pre-built-grenen (`npm install --omit=dev` + `next start`) när
+>    blob-källan bär komplett `.next`, ärlig en-gångs-fallback annars —
+>    fallbacken laddar inte ner `.next` alls. Storleksvakterna (4000/64MB)
+>    MEDVETET kvar = disk-vägens (dokumenterat i koden).
+> 5. **Default-flippen** (`3515bf59`): tomt/osatt `VIEWSER_PREVIEW_MODE` →
+>    `vercel-sandbox` i `registry.currentKind`, policy v4
+>    (`default: vercel-sandbox`), `next.config.ts`, `dev.mjs`
+>    (DEFAULT_MODE), viewer-panel-descriptorn. `.env.example`-mallen sätter
+>    `local-next` EXPLICIT (lokala utvecklar-rekommendationen). OBS
+>    AVVIKELSE från uppdragspremissen: Jakobs `apps/viewser/.env.local`
+>    hade redan EXPLICIT `vercel-sandbox` (inte local-next som uppdraget
+>    antog) — den lämnades ORÖRD (flippen ändrar inget för honom; att
+>    skriva local-next hade ÄNDRAT hans nuvarande beteende). Lås
+>    uppdaterade: cross-policy (default==vercel-sandbox), viewer-panel
+>    (?? "vercel-sandbox"). Docs: preview-runtime.md, viewser.md, glossary,
+>    B125-notens status, ADR 0033-uppdateringsnot.
+> 6. **Reuse i prod med invalidering** (`6b6d6627`, ADR 0055 §2):
+>    `SandboxSession` bär `buildId` (läst FÖRE källinsamling);
+>    `tryReuseSessionPreview` återanvänder bara vid buildId-match + levande
+>    URL (probe), annars stoppas sessionen (invalidering) → full väg.
+>    Mekanismval (EN koherent livscykel): byggstart-stoppet är primärt,
+>    invalideringen är backstopp för previews startade under bygget.
+>    Hostade sandboxar får alltid tidsstämplade namn (reconnect-by-name är
+>    disk-only) — ingen create-krock mot asynkront raderad sandbox.
+>    `VIEWSER_SANDBOX_REUSE=1` SATT i Vercel-projektet för Production +
+>    Development via CLI; **Preview-miljön gick INTE att sätta
+>    non-interaktivt** (CLI-bugg: `env add ... preview --value 1 --yes`
+>    svarar git_branch_required trots sin egen hint) — sätt den manuellt i
+>    dashboarden om branch-previews ska ha reuse. Lås: 4 nya i
+>    `tests/test_viewser_sandbox_reuse.py`.
+>
+> **Effekt:** hostad preview-kallstart minuter → `npm install --omit=dev` +
+> `next start`; oförändrad sajt med varm session svarar på sekunder
+> (sessions-snabbvägen, ingen SDK-rundtur); no-op-followups behåller
+> iframen. ADR 0055 skriven (0054 fortsatt reserverad).
+>
+> **Kvarvarande ärliga gap:** Preview-miljöns reuse-flagga (ovan);
+> Safari/Firefox-E2E för B125-stängning; blob-prune ännu mer angeläget
+> (`.next` växer `generated/`-prefixet); `changeSet` hostat; filträd per
+> run hostat.
+>
+> **Nästa pass börjar här:** (1) E2E i produktion på `/studio`: init →
+> pre-built-preview (kolla `timings.prebuilt`) → no-op-följdprompt (iframe
+> kvar) → edit-följdprompt (invalidering → ny sandbox) → re-POST
+> (`reused:true`). (2) B197-review med tidig rebase (msg-0085). (3)
+> Blob-/KV-prune-beslutet. ADR-liggare: nästa lediga **0056** (0054
+> reserverad). naming-dictionary **v39** (ingen bump detta pass),
+> llm-models **v12**.
+
+## PASS 2026-06-12 ~07:30 — B199 V2: HOSTAD RUN-HISTORIK + ARTEFAKT-LÄSNING + OMLADDNINGS-ÅTERSTÄLLNING (HISTORIK)
+
+> Historiskt block (ersatt av ADR 0055-passet ovan) — verifiera alltid mot
+> git/koden.
 >
 > **Mandat:** operatören beordrade explicit (efter bannerfrågan på
 > `/studio`) att hela hostade gapet fixas nu, inklusive omladdnings-delen

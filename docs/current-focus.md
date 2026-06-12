@@ -6,55 +6,69 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-12 ~07:30 — B199 v2: hostad run-historik + artefakt-läsning + omladdnings-återställning)
+## Status nu (2026-06-12 ~12:00 — hostad preview-standardisering, ADR 0055)
 
-**Git:** `main = jakob-be` (rent träd, local == origin). B199 v2-passet är
-landat direkt på `jakob-be` på operatörsmandat och synkat till `main`.
-Production deployar från `main`. Ingen tarball-omladdning behövs — passet
-rör bara `apps/viewser/` + tester/docs (orkestrerings-skriptet genereras av
-TS-koden, inte av build-context-tarballen).
+**Git:** `main = jakob-be` (rent träd, local == origin). Förmiddagspasset är
+landat direkt på `jakob-be` på operatörsmandat (Jakob ~11:00) och synkat till
+`main`. Production deployar från `main`. **Tarball-omladdning KRÄVS efter
+main-mergen** (passet rör `packages/preview-runtime/` + `governance/`) —
+gjord i avslutningen, verifiera KV-URL:en vid tvivel.
 
-**Landat i morgonpasset (B199 v2, operatörsmandat efter bannerfrågan):**
+**Landat i förmiddagspasset (operatörsbeslut: Vercel Sandbox + Blob är
+STANDARD för användarpreviews; StackBlitz förblir pausad, ej avvecklad):**
 
-- **Hostad run-historik/artefakter/inspector:** orkestrerings-skriptet
-  publicerar durabelt KV-index (`HostedRunIndexEntry`, naming-dictionary
-  v39) per lyckat bygge; ny `lib/hosted-run-history.ts` läser indexet +
-  artefakt-tarballen från blob; `/api/runs?siteId=` (siteId =
-  capability-nyckel, ingen global listning) + artifacts/trace serveras
-  hostat. B199 STÄNGD i known-issues.
-- **Omladdnings-återställning:** builder-valet persisteras i
-  sessionStorage och återställs efter hård reload (lokalt + hostat).
-  Bannern är eget fält (`hostedBanner`) och armar aldrig 404-latchen;
-  banner-texten omskriven till nya läget.
-- **Init-paritet + historisk baseRunId:** init-svar bär kanonisk
-  build_site-runId; historisk `baseRunId` hydrerar sin egen versions
-  artefakter via runId-indexet (siteId-bundet).
-- 14 nya källkods-lås i `tests/test_viewser_hosted_run_history.py`.
+- **Docs-sanering:** föråldrade B194-/run-historik-påståenden rättade
+  (deploy-guide, prompt-JSDoc, `.env.example`, `preview-runtime.md`,
+  rättelsenot i ADR 0033).
+- **Preview-refresh-gate:** followups med visibleEffect `none`/`registered`
+  river inte preview-sandboxen — `previewRunId` skiljs från `selectedRunId`
+  i studio-sidan; FloatingChat trådar signalen via delade
+  `readFollowupVisibleEffect`. Lås: `tests/test_viewser_preview_refresh_gate.py`.
+- **Byggstart stoppar previewn:** `startHostedBuild` stoppar
+  preview-sessionen före `Sandbox.create` (paritet med lokala build-runner;
+  best-effort).
+- **Pre-built hostat (ADR 0055):** bygget laddar upp `.next` (minus
+  cache/trace) till blob; preview-sandboxen kör `npm install --omit=dev` +
+  `next start`, ärlig fallback utan komplett `.next`.
+- **Default-flippen:** tomt `VIEWSER_PREVIEW_MODE` = `vercel-sandbox`
+  (registry, policy v4, next.config, dev.mjs, viewer-panel; `.env.example`-
+  mallen sätter `local-next` explicit för lokal dev).
+- **Reuse i prod:** sessions-snabbväg med buildId-invalidering mot
+  `viewser:site:<siteId>:current` + liveness-probe; `VIEWSER_SANDBOX_REUSE=1`
+  satt i Vercel (Production+Development; Preview-miljön blockerades av en
+  CLI-bugg — sätt manuellt i dashboarden vid behov).
 
 **Nästa 3 prioriteringar:**
 
-1. **E2E-verifiera B199 v2 + #307 i produktion** på `/studio`: init →
-   historik/inspector → omladdning (builder-läget kvar) → edit-följdprompt
-   (OpenClaw apply) → ren fråga (answer-only), kolla `engine`-attribution.
-2. **B197 (Christophers, pågår):** snabb review när PR kommer. OBS:
-   `hosted-build-runner.ts` är ändrad av BÅDE #307 och B199 v2 — be honom
-   rebasa tidigt.
-3. **Uppföljningar:** blob-/KV-prune-strategi (`generated/` +
-   run-index-nycklarna), `changeSet` hostat, operatörsbesluten (Token
-   Meter-priser, Christophers lokala blob-store `3xqg…`).
+1. **E2E-verifiera hela standardvägen i produktion** på `/studio`: init →
+   preview (pre-built, kolla `timings`) → no-op-följdprompt (previewn ska
+   INTE rivas) → edit-följdprompt (ny version → invalidering → ny sandbox)
+   → re-POST (reused:true). Även B199 v2/#307-flödet från morgonpasset.
+2. **B197 (Christophers, pågår):** `hosted-build-runner.ts` +
+   `vercel-sandbox-runner.ts` ändrade IGEN — tidig rebase krävs
+   (msg-0085).
+3. **Uppföljningar:** blob-/KV-prune (mer angeläget nu — `.next` i
+   `generated/`), `changeSet` hostat, Preview-miljöns reuse-flagga,
+   Safari/Firefox-E2E för B125-stängning.
 
-**Öppna blockers:** inga hårda. B197 och `changeSet`-hostat är spår, inte
-blockers.
+**Öppna blockers:** inga hårda.
 
-Last verified state: `261f0c63` (2026-06-12 ~09:10 UTC+2; B199 v2-kodcommiten
-på `jakob-be`, synkas till `main` i samma push — rent träd, full svit
-(`pytest -n auto`) + ruff + governance + term-coverage + tsc + eslint gröna
-lokalt).
+Last verified state: `6b6d6627` (2026-06-12 ~12:00 UTC+2; förmiddagspassets
+sista kodcommit på `jakob-be` — kedjan `6fe80cb3` → `2236621c` → `890afba9`
+→ `8b1573fe` → `d6cd2c74` → `3515bf59` → `6b6d6627`, docs-/ADR-toppen ovanpå.
+Full svit (`pytest -n auto`) + ruff + governance + rules-sync + term-coverage
++ tsc + eslint körda gröna på sluttoppen före push.)
 
 ## Öppna PR att känna till
 
-Inga öppna PR:ar (2026-06-12 ~05:45). #306 och #307 är squash-mergade till
-`jakob-be` och ff:ade till `main`.
+- **#308** (DRAFT, `cursor/llm-fl-desdokumentation-rlighet-0a19`):
+  docs(heavy-llm-flow) ärlighetspass mot verifierad kod. Skapad
+  2026-06-12 ~10:09 av en parallell agent — docs-only; review när den
+  markeras redo. OBS: förmiddagspasset rättade en rad i
+  `docs/heavy-llm-flow/handoff-orchestration.md` (local-next-defaulten) —
+  liten konfliktrisk.
+
+#306 och #307 är squash-mergade till `jakob-be` och ff:ade till `main`.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
@@ -91,6 +105,9 @@ dev-uttryck med korta parenteser första gången per konversation. Mönstret i
 
 Historiska statusblock + checkpoint-kedjan ligger i arkivet:
 
+- [`docs/archive/current-focus-2026-06-12-morgon.md`](archive/current-focus-2026-06-12-morgon.md)
+  (morgonblocket per `261f0c63`: B199 v2 — hostad run-historik/artefakter
+  live, omladdnings-återställning).
 - [`docs/archive/current-focus-2026-06-12-gryning.md`](archive/current-focus-2026-06-12-gryning.md)
   (nattpassblocket per `575af63b`: hostad builder-paritet shippad, 404-tystnad,
   readiness-poll, canvas-rättningar, två cloud-prompter köade).
