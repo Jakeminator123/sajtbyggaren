@@ -693,6 +693,32 @@ async function waitForPublicUrl(url: string): Promise<boolean> {
 export async function createSandboxPreview(
   request: SandboxPreviewRequest,
 ): Promise<SandboxPreviewResult> {
+  const result = await createSandboxPreviewInner(request);
+  if (result.status === "ready") {
+    // Observability (incident 2026-06-12): fas-timings returnerades bara till
+    // klienten och syntes aldrig server-side. EN strukturerad JSON-rad per
+    // lyckad preview-start så runtime-loggarna kan besvara "var tog tiden
+    // vägen" utan klient. Ingen payload-ändring — bara en loggrad.
+    console.log(
+      JSON.stringify({
+        event: "sandbox-preview-start",
+        siteId: request.siteId,
+        ...(request.runId ? { runId: request.runId } : {}),
+        prebuilt: result.prebuilt === true,
+        reused: result.timings?.reused === true,
+        timings: result.timings ?? null,
+      }),
+    );
+  }
+  return result;
+}
+
+/** Själva preview-skapandet — utbruten ur ``createSandboxPreview`` så
+ * timing-loggen ovan har EN chokepoint över alla lyckade vägar (reuse +
+ * fulla vägen + pre-built-fallbacken). Oförändrad logik. */
+async function createSandboxPreviewInner(
+  request: SandboxPreviewRequest,
+): Promise<SandboxPreviewResult> {
   // Tier 2 (ADR 0041): opt-in återanvändning. Försök återansluta till en redan
   // varm, namngiven sandbox för samma sajt och ladda bara upp de nya filerna +
   // starta om servern (hoppar Sandbox.create + kall install). Vid miss/utgången
