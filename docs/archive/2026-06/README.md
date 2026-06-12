@@ -40,6 +40,17 @@ versionshistoriken inklusive innan flytten.
   auktoritativa toppblocket + länk hit. Superseded av `docs/handoff.md` toppblock +
   `docs/current-focus.md`. `git log --follow docs/handoff.md` visar hela historiken.
 
+## Heavy-llm-flow honesty-pass 2026-06-12
+
+- `handoff-orchestration-heavy-llm-flow-2026-06-03.md` — historisk
+  orchestrerings-handoff. Flyttad från `docs/heavy-llm-flow/` eftersom den
+  aktiva texten påstod att follow-up-bryggan inte var inkopplad i någon
+  användarväg; `/api/prompt` använder nu OpenClaw apply-bryggan.
+- `post-build-plan-heavy-llm-flow-2026-06-04.md` — historisk post-build-plan.
+  Flyttad från `docs/heavy-llm-flow/` eftersom statusen om `/api/prompt`,
+  kor-5 repair och hostad 501 är förbi-sprungen av dagens kod. Stubben i
+  `docs/heavy-llm-flow/post-build-plan.md` pekar till aktuell README-status.
+
 ## Markerade historical *på plats* (ej flyttade)
 
 Vissa historiska docs behölls på sin ursprungssökväg och fick bara

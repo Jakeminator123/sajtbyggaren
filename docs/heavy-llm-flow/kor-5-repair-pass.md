@@ -1,5 +1,12 @@
 # KÖR 5 — Repair Pass v1 (repairModel, blueprint-only)
 
+> **Status 2026-06-12:** Kortet är historiskt implementerat. `repairModel`-
+> passet finns i `packages/generation/repair/blueprint_repair.py` och
+> `scripts/build_site.py` injicerar `_rerender_after_repair` i
+> `run_phase3_quality_and_repair`, så build-vägen kan materialisera
+> blueprint-repairs. Villkoret nedan om `rerender` beskriver fortfarande den
+> generella grinden för callers som inte kan rendera om.
+
 **Profil:** [`04-builder-profil.md`](04-builder-profil.md).
 **Läs först:** [`kor-4a-deterministic-critic.md`](kor-4a-deterministic-critic.md),
 [`01-artefakt-kontrakt-blueprint.md`](01-artefakt-kontrakt-blueprint.md).
@@ -31,10 +38,9 @@ det förblir testbart och reproducerbart.
 
 ## Hur det knyter an till befintlig repair-pipeline
 
-Repair-pipelinen finns redan central (`packages/generation/repair/`) med en
-sandwich-loop och mekaniska fixes (`ensure-default-export`). LLM-fix/`repairModel` är
-**inte** wirad ännu (`llmFixesApplied` alltid `[]`). Denna skiva lägger till **ett**
-nytt repair-steg: **blueprint-repair** — och håller principen "en central repair-gate"
+Repair-pipelinen finns central (`packages/generation/repair/`) med en sandwich-loop
+och mekaniska fixes (`ensure-default-export`). Den här skivan lade till **ett**
+nytt repair-steg: **blueprint-repair** — och höll principen "en central repair-gate"
 (undvik sajtmaskins spridda call-sites).
 
 ## Loop (bunden)

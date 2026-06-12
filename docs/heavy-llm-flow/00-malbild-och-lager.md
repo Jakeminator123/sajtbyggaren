@@ -51,7 +51,7 @@ data/runs/<runId>/
   trace.ndjson             (Engine Events, append-only)
 ```
 
-### Var LLM:en är tunn idag
+### Var LLM:en är tunn respektive aktiv idag
 
 | Roll | Vad den får göra idag | Vad som är deterministiskt |
 |------|------------------------|-----------------------------|
@@ -59,12 +59,15 @@ data/runs/<runId>/
 | `planningModel` | **Medel:** väljer `scaffoldId`/`variantId`/`selectedDossiers` inom registry (`PlanningChoice`) | routes, `starterId`, `buildSpec`. Builder-vägen är dessutom oftast **pinned** → inget planning-anrop |
 | `codegenModel` | **Extremt tunt:** bara `rationale` + `riskNotes`, och bara för `marketing-base`. Får inte injicera filer | **alla** filer renderas deterministiskt |
 | `copyDirectiveModel` | follow-up copyDirectives (company-name/tagline/about-text/services) | resten av follow-up är heuristik/whitelist |
-| `verifierModel`, `repairModel`, `rerankModel` | **roller finns i `llm-models.v1.json` men anropas inte** | — |
+| `verifierModel` | Aktiv read-only smak-critic ovanpå den deterministiska critic:n (`packages/generation/quality_gate/verifier.py`), aktiverad i `llm-models.v1.json` v8. | status för Quality Gate; verifiern är warning-lane och faller tillbaka till deterministiska fynd utan nyckel |
+| `repairModel` | Aktivt blueprint-repair-pass när critic + `generation_package` + rerender-callback finns (`packages/generation/repair/blueprint_repair.py`, `scripts/build_site.py`). | renderer och Quality Gate avgör om patchen faktiskt materialiseras |
+| `rerankModel` | Registrerad roll för framtida Scaffold/Dossier-rerank, men inget runtime-anrop hittat mot HEAD. | dagens selection går fortfarande via befintliga rails/fallbacks tills rerank-tråden byggs |
 
-> Det är därför upplevelsen är "LLM hjälper till runt kanterna, men den kreativa
-> hemsidebyggaren är inte inkopplad". Golden-path-eval på disk säger ~7,7/10 men mäter
-> struktur/nyckelord — upplevd finish ligger närmare coachens 4–5/10. Svagast:
-> `copySpecificity`, kontakt-äkthet, generisk story/tagline/FAQ.
+> Tidigare var upplevelsen "LLM hjälper till runt kanterna, men den kreativa
+> hemsidebyggaren är inte inkopplad". Det stämmer inte längre som nulägesstatus:
+> follow-up, verifiering och repair är delvis inkopplade. Det öppna beviset är
+> i stället kvaliteten i riktig baseline-preview: visar den svagast utslag på
+> `copySpecificity`, kontakt-äkthet, story/tagline/FAQ eller visuell finish?
 
 ---
 
@@ -143,11 +146,11 @@ får resonera över **deklarativa JSON-artefakter** den inte kan förstöra.
   (8 till i policy utan `scaffold.json` ännu).
 - **Variants (27):** t.ex. `nordic-trust`, `warm-craft`, `clean-store`,
   `legal-classic`, `studio-monochrome`, `warm-bistro`.
-- **Dossiers (11 soft, 0 hard):** `mailto-contact-form`, `menu-display`,
+- **Dossiers (13 soft, 1 hard):** soft: `mailto-contact-form`, `menu-display`,
   `booking-cta`, `image-gallery`, `opening-hours`, `reviews-display`, `map-embed`,
-  `pricing-table`, `faq-accordion`, `video-hero`, `interactive-game-loop`. Alla är
-  `instructions-only` (`files: []`, `codeFidelity: rewritable`). Hard dossiers
-  (t.ex. `stripe-checkout`) är planerade men inte byggda.
+  `pricing-table`, `faq-accordion`, `video-hero`, `interactive-game-loop`,
+  `team-roster`, `trust-guarantees`. Hard: `resend-contact-form`, som exponerar
+  `ResendContactForm` för contact-form-render på `ecommerce-lite`.
 - **Starters:** `marketing-base` (5 scaffolds), `commerce-base` (`ecommerce-lite`),
   `portfolio-base`/`docs-base`/`saas-base` (inte runtime-mappade ännu).
 
