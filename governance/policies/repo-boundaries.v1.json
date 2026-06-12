@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/repo-boundaries.schema.json",
   "policyId": "repo-boundaries.v1",
-  "version": 12,
+  "version": 13,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 12 (governance scout 2026-06-08) explicitierar docs/archive/ och docs/openclaw-workspace/ under docs/-ägarskap. Version 11 (referens/-borttagning) tar bort den raderade referens/-mappen ur backoffice.py- och backoffice/-mayImportFrom samt read-only-mustNotDo (mappen var externt inspirationsmaterial, inte produktkod; borttagen i chore/remove-referens, finns kvar i git-historiken). Version 10 (kor-3a boundary-fix) lägger till packages/generation/orchestration i packages/generation/build:s mayImportFrom så build kan läsa den delade section-treatments-loadern som flyttades till orchestration (planning importerar den därifrån i stället för från build, så fas 2 inte importerar fas 3). Version 9 (Starter/Dossier Hygiene 1A) synkar packages/generation/orchestration/dossiers/-ägarskapet med dossier-contract.v1.json v3: Dossier-mappar har manifest.json + instructions.md (obligatoriska) plus optional components/, code-contract.json, env-contract.json, integration-contract.json, examples.md, evals.json. Stryker referens till hybrid/-klassen som ADR 0012 tog bort (soft/hard är de enda kvarvarande klasserna). Inga andra ägar-paths påverkas. Version 8 (Sprint 3A) lägger till packages/generation/codegen/ som ägare av codegenModel-anrop och file-spec-emission, byter packages/generation/quality-gate/ till packages/generation/quality_gate/ (Python-import kräver underscore, ADR 0015), och utökar scripts/ mayImportFrom med codegen/quality_gate/repair för tunn wiring av fas 3. Version 7 förtydligar apps/viewser/ som strikt localhost-only operator-prototype och förbjuder canonical-runtime-funktioner (Project DNA, follow-up, Repair Pipeline, Quality Gate, Dossier-edit). Version 6 lade till apps/viewser/. Version 5 lade till data/starters/ som ägare av körbara basprojekt (5 starters för 14 scaffolds enligt reviewer-modellen).",
+  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 13 (Komponentintag v1, ADR 0054) lägger till data/component-candidates/ som ägare av kandidat-utflödet från det kurerade shadcn-komponentintaget (committbart men icke-kanoniskt; promotering in i en Starter sker enbart via granskad operatörs-PR, aldrig automatiskt). Version 12 (governance scout 2026-06-08) explicitierar docs/archive/ och docs/openclaw-workspace/ under docs/-ägarskap. Version 11 (referens/-borttagning) tar bort den raderade referens/-mappen ur backoffice.py- och backoffice/-mayImportFrom samt read-only-mustNotDo (mappen var externt inspirationsmaterial, inte produktkod; borttagen i chore/remove-referens, finns kvar i git-historiken). Version 10 (kor-3a boundary-fix) lägger till packages/generation/orchestration i packages/generation/build:s mayImportFrom så build kan läsa den delade section-treatments-loadern som flyttades till orchestration (planning importerar den därifrån i stället för från build, så fas 2 inte importerar fas 3). Version 9 (Starter/Dossier Hygiene 1A) synkar packages/generation/orchestration/dossiers/-ägarskapet med dossier-contract.v1.json v3: Dossier-mappar har manifest.json + instructions.md (obligatoriska) plus optional components/, code-contract.json, env-contract.json, integration-contract.json, examples.md, evals.json. Stryker referens till hybrid/-klassen som ADR 0012 tog bort (soft/hard är de enda kvarvarande klasserna). Inga andra ägar-paths påverkas. Version 8 (Sprint 3A) lägger till packages/generation/codegen/ som ägare av codegenModel-anrop och file-spec-emission, byter packages/generation/quality-gate/ till packages/generation/quality_gate/ (Python-import kräver underscore, ADR 0015), och utökar scripts/ mayImportFrom med codegen/quality_gate/repair för tunn wiring av fas 3. Version 7 förtydligar apps/viewser/ som strikt localhost-only operator-prototype och förbjuder canonical-runtime-funktioner (Project DNA, follow-up, Repair Pipeline, Quality Gate, Dossier-edit). Version 6 lade till apps/viewser/. Version 5 lade till data/starters/ som ägare av körbara basprojekt (5 starters för 14 scaffolds enligt reviewer-modellen).",
   "ownership": [
     {
       "path": "governance/",
@@ -368,6 +368,19 @@
         "innehålla nästlad git-historik (.git/) från ursprungs-fork",
         "läsa från eller skriva till andra paket - en Starter är passiv kod, ingen runtime",
         "ha pnpm-lock.yaml eller yarn.lock - bara package-lock.json"
+      ]
+    },
+    {
+      "path": "data/component-candidates/",
+      "owns": [
+        "kandidat-utflöde från det kurerade shadcn-komponentintaget (scripts/component_intake.py, ADR 0054)",
+        "data/component-candidates/<slug>/ med component.tsx + intake-info.json + README.md"
+      ],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "vara kanonisk - en Component Candidate promoteras in i en Starters components/ui/ ENBART via granskad operatörs-PR (aldrig automatiskt)",
+        "skrivas av intaget in i data/starters/ eller packages/generation/orchestration/ (guarden vägrar de pathar)",
+        "innehålla körbar produktlogik eller hemligheter"
       ]
     },
     {
