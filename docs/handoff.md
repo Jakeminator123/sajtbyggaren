@@ -14,6 +14,20 @@ känt-gap-förbehåll i README + kor-o1-noten; vinkelparentes-platshållarna
 visade sig redan vara intakta i råfilerna). Docs-only — Vercel avbryter
 prod-rebuild via ignoreCommand, väntat.
 
+**Tillägg ~13:30 (hotfix-pass):** prod-E2E-incidentutredningen 2026-06-12
+ledde till tre fixar direkt på `jakob-be` + ff `main` (operatörsmandat):
+(1) `collectSourceFromBlob` laddar nu blob-filerna med begränsad samtidighet
+(16 parallella via nya `downloadBlobEntries`; MAX_FILES-/byte-vakter och
+fel-semantik bevarade, enhetstester utökade i `generated-blob-source.test.ts`)
+— den seriella en-fetch-per-fil-loopen var rotorsaken till långsam hostad
+preview-POST; (2) FloatingChat:s submit-vakter är inte längre tysta:
+`console.warn` per vakt, statusrads-hint "Vänta — ett bygge/svar pågår
+redan." vid upptagen, ärligt fel i chatten vid saknad siteId (vakterna
+oförändrade i styrka, summarizeBuildResult-regionen orörd); (3) lyckad
+sandbox-preview-start loggar EN server-side JSON-rad (fas-timings + siteId +
+prebuilt/reused) via chokepoint-wrapper i `vercel-sandbox-runner.ts` —
+runtime-loggarna kan nu besvara "var tog tiden vägen" utan klient.
+
 ## PASS 2026-06-12 ~12:00 — HOSTAD PREVIEW-STANDARDISERING: ADR 0055 (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —

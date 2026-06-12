@@ -38,6 +38,17 @@ STANDARD för användarpreviews; StackBlitz förblir pausad, ej avvecklad):**
   satt i Vercel (Production+Development; Preview-miljön blockerades av en
   CLI-bugg — sätt manuellt i dashboarden vid behov).
 
+**Tillägg ~13:30 (hotfix-pass efter prod-E2E-incidentutredningen):** tre
+fixar direkt på `jakob-be` + ff `main` (operatörsmandat): (1) hostad
+preview-POST snabbare — blob-filerna laddas nu ner med begränsad samtidighet
+(16 parallella, `downloadBlobEntries` i `generated-blob-source.ts`; vakter
+och fel-semantik oförändrade, enhetstester utökade); (2) ärlig submit-gate i
+FloatingChat — de tysta early-returns loggar nu `console.warn` med vilken
+vakt som stoppade, upptagen-läget visar statusrads-hint och saknad siteId ger
+ärligt fel i chatten (vakterna är oförändrade i styrka); (3) lyckad
+sandbox-preview-start loggar EN server-side JSON-rad med fas-timings +
+prebuilt/reused-flaggor i `vercel-sandbox-runner.ts`.
+
 **Nästa 3 prioriteringar:**
 
 1. **E2E-verifiera hela standardvägen i produktion** på `/studio`: init →
@@ -60,7 +71,13 @@ MERGEABLE/CLEAN, `main` ff:ad till samma SHA. **Tarball-omladdningen är GJORD**
 direkt efter mergen (#310 rörde `scripts/` + `governance/`): build-kontexten
 ompaketerad från merge-commiten och uppladdad till blob
 `build-context/current.tar.gz`, KV-nyckeln `viewser:build-context:url`
-uppdaterad — hostade byggen kör nu rätt Python-kod.)
+uppdaterad — hostade byggen kör nu rätt Python-kod. Hotfix-passet ovan
+(~13:30) rebasades ovanpå denna SHA — #310-mergen landade mitt under passet,
+ytorna var disjunkta precis som förutsett. Hela grindkedjan — ruff,
+governance_validate, rules_sync --check, term-coverage --strict, full
+pytest-svit (-n auto), tsc --noEmit, eslint och blob-source-testerna — körd
+grön lokalt på hotfix-ändringarna efter rebasen, och kodcommits pushas DIREKT
+efter den här docs-commiten så prod-rebuild inte cancelas av ignoreCommand.)
 
 ## Öppna PR att känna till
 
