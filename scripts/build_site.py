@@ -48,10 +48,13 @@ import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 from jsonschema import Draft202012Validator
+
+if TYPE_CHECKING:
+    from packages.generation.build.dossier_dependencies import DependencyMerge
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -1194,11 +1197,34 @@ def patch_globals_css(
     return warnings
 
 
-def patch_package_json(target: Path, dossier: dict) -> None:
+def patch_package_json(
+    target: Path,
+    dossier: dict,
+    selected_dossiers: list[dict] | None = None,
+) -> DependencyMerge:
+    """Rewrite the generated ``package.json``: set ``name`` to the siteId and
+    merge any pinned dependencies declared by the mounted dossiers (ADR 0056).
+
+    Returns the :class:`DependencyMerge` so the caller knows whether the
+    dependency set changed versus the starter lockfile (drives the
+    ``npm ci`` -> ``npm install`` fallback below). When no dossier adds a
+    dependency the ``dependencies`` block is left untouched, so the emitted
+    ``package.json`` stays byte-identical to the name-only rewrite.
+    """
+    from packages.generation.build.dossier_dependencies import (
+        merge_dossier_dependencies,
+    )
+
     pkg_path = target / "package.json"
     pkg = load_json(pkg_path)
     pkg["name"] = dossier["siteId"]
+    merge = merge_dossier_dependencies(
+        pkg.get("dependencies", {}), selected_dossiers or []
+    )
+    if merge.changed:
+        pkg["dependencies"] = merge.dependencies
     write(pkg_path, json.dumps(pkg, ensure_ascii=False, indent=2) + "\n")
+    return merge
 
 
 # ---------------------------------------------------------------------------
@@ -2959,15 +2985,21 @@ def build(
     mood_assets_copied = copy_mood_assets(site_id, dossier)
     print(f"  -> {mood_assets_copied} mood asset(s) copied to data/uploads/{site_id}/__mood/")
 
+    # Load the mounted dossier manifests before patching package.json so the
+    # patch step can merge their operator-curated pinned dependencies (ADR
+    # 0056). ``dep_merge`` records whether the dependency set changed versus
+    # the starter lockfile, which drives the npm ci -> npm install fallback
+    # in the install branch below.
+    selected_dossiers = load_selected_dossier_manifests(dossier)
+
     print("Patching package.json")
-    patch_package_json(target, dossier)
+    dep_merge = patch_package_json(target, dossier, selected_dossiers)
 
     print("Injecting variant tokens into app/globals.css")
     token_warnings = patch_globals_css(target, variant, dossier)
     for warning in token_warnings:
         trace.event("build", "variant_tokens.warning", "warning", warning)
 
-    selected_dossiers = load_selected_dossier_manifests(dossier)
     for info in selected_dossiers:
         hard_runtime = info.get("hardRuntime")
         if not isinstance(hard_runtime, dict):
@@ -3087,13 +3119,32 @@ def build(
             # (which ships a committed, in-sync lockfile), so ``npm ci`` is
             # the right tool. Fall back to ``npm install`` only when no
             # lockfile was copied (e.g. minimal test starters) so those
-            # builds still work. ``patch_package_json`` only rewrites the
-            # root ``name`` (not the dependency set), which ``npm ci`` does
-            # not treat as drift.
-            if (target / "package-lock.json").is_file():
+            # builds still work. ``patch_package_json`` rewrites the root
+            # ``name`` (which ``npm ci`` does not treat as drift) and, per
+            # ADR 0056, may also merge pinned dependencies from the mounted
+            # dossiers. When that merge added a package the committed lockfile
+            # no longer matches package.json, so ``npm ci`` would (correctly)
+            # refuse — we then fall back to ``npm install`` honestly and record
+            # the deviation in the trace so it is visible in the run history.
+            lockfile_present = (target / "package-lock.json").is_file()
+            if lockfile_present and not dep_merge.changed:
                 install_cmd = ["npm", "ci"]
             else:
                 install_cmd = ["npm", "install"]
+                if lockfile_present and dep_merge.changed:
+                    trace.event(
+                        "build",
+                        "npm.install.dependency_drift",
+                        "warning",
+                        "Mounted dossier dependencies changed the dependency set "
+                        "versus the starter lockfile; using npm install instead "
+                        "of npm ci.",
+                        reason="added: "
+                        + ", ".join(
+                            f"{name}@{version}"
+                            for name, version in sorted(dep_merge.added.items())
+                        ),
+                    )
             install_label = " ".join(install_cmd)
             print(f"Running {install_label} (timeout {NPM_INSTALL_TIMEOUT_SECONDS}s)...")
             ok, secs, last = run_npm(
