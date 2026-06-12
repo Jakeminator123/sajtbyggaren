@@ -1,7 +1,5 @@
-import type {
-  PromptBuildOutcome,
-  PromptStage,
-} from "@/components/prompt-builder";
+import type { OnFollowupBuildDone } from "@/components/builder/use-followup-build";
+import type { PromptStage } from "@/components/prompt-builder";
 import type { BuildChange } from "@/lib/build-changes";
 
 /**
@@ -88,8 +86,13 @@ export type QuickPromptCategory = {
 export type FloatingChatProps = {
   /** Sajten vi gör follow-ups på (måste vara prompt-genererad). */
   siteId: string;
-  /** Anropas när en follow-up-build är klar — page.tsx väljer den nya runen. */
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /**
+   * Anropas när en follow-up-build är klar — page.tsx väljer den nya runen.
+   * Delar OnFollowupBuildDone med dialog-vägen: tredje argumentet bär
+   * visible-effect-signalen (preview-refresh-gaten 2026-06-12) så studio-
+   * sidan kan hoppa över en onödig preview-rebuild vid none/registered.
+   */
+  onBuildDone: OnFollowupBuildDone;
   /** Sätts under hela /api/prompt-cykeln av builder-shell så UI:t kan blockera dubbel-submit. */
   isBuilding: boolean;
   onBuildStart: () => void;

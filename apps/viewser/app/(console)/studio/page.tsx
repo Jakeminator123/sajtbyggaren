@@ -110,6 +110,16 @@ export default function Home() {
   const [projectInputs, setProjectInputs] = useState<ProjectInputOption[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState("painter-palma");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  // Preview-refresh-gaten (2026-06-12): runId:t som PREVIEW-iframen följer.
+  // Skiljer sig från selectedRunId efter en follow-up UTAN synlig effekt
+  // (visibleEffect "none"/"registered" — t.ex. mount-only section_add eller
+  // ärlig no-op): historik/versions-valet flyttas till nya runen, men
+  // previewRunId hålls kvar så ViewerPanel-effekten (deps: runId/siteId/
+  // retryNonce) INTE river och kallstartar preview-sandboxen i onödan.
+  // Explicita val (ConsoleDrawer, sessionStorage-återställning, init-byggen
+  // och byggen med synlig/okänd effekt) uppdaterar båda — osäker signal =
+  // refresh (ärligt default).
+  const [previewRunId, setPreviewRunId] = useState<string | null>(null);
   const [statusText, setStatusText] = useState(
     "Laddar runs och project inputs…",
   );
@@ -254,6 +264,8 @@ export default function Home() {
     // den färdig-payloaden får inte rycka tillbaka selectedRunId.
     if (building) userNavigatedAwayRef.current = true;
     setSelectedRunId(runId);
+    // Explicit operatörsval → previewn ska alltid följa med.
+    setPreviewRunId(runId);
     const run = runs.find((item) => item.runId === runId);
     if (run && run.siteId && run.siteId !== "unknown") {
       setSelectedSiteId(run.siteId);
@@ -309,6 +321,7 @@ export default function Home() {
             data.nextRuns.some((run) => run.runId === saved.runId)
           ) {
             setSelectedRunId(saved.runId);
+            setPreviewRunId(saved.runId);
             setSelectedSiteId(saved.siteId);
           }
         }
@@ -561,6 +574,18 @@ export default function Home() {
     }
 
     setSelectedRunId(runId);
+    // Preview-refresh-gaten: en follow-up som kedjan EXPLICIT rapporterade
+    // utan synlig effekt ("none" = ärlig no-op, "registered" = monterad men
+    // renderas inte, per FollowupVisibleEffect-semantiken) ska inte riva och
+    // kallstarta preview-sandboxen — iframen visar redan rätt innehåll.
+    // Gaten kräver en redan aktiv preview (previewRunId satt); init-byggen,
+    // synliga ändringar och saknad/okänd signal refreshar EXAKT som förr.
+    const skipPreviewRefresh =
+      previewRunId !== null &&
+      (visibleEffect === "none" || visibleEffect === "registered");
+    if (!skipPreviewRefresh) {
+      setPreviewRunId(runId);
+    }
     const effectiveSiteId =
       siteId && siteId !== "unknown" ? siteId : selectedSiteId;
     if (siteId && siteId !== "unknown") {
@@ -614,8 +639,11 @@ export default function Home() {
             så vi låter den vinna när en run är aktiv och faller tillbaka på
             picker-sajten i hero/pre-build-läget. I normalfallet (run vald via
             selectRunAndSyncSiteId/handleBuildDone) är de redan identiska. */}
+            {/* previewRunId (inte selectedRunId): preview-refresh-gaten ovan
+            håller kvar iframen på den redan-servade builden när en follow-up
+            ärligt rapporterade ingen synlig ändring. */}
             <ViewerPanel
-              runId={selectedRunId}
+              runId={previewRunId}
               siteId={runSiteId ?? selectedSiteId}
               isBuilding={building}
               buildStage={buildStage}
@@ -723,6 +751,7 @@ export default function Home() {
                   // så handleBuildDone inte rycker tillbaka selectedRunId.
                   if (building) userNavigatedAwayRef.current = true;
                   setSelectedRunId(null);
+                  setPreviewRunId(null);
                   setBuildStage("idle");
                   setStatusText(
                     "Beskriv en ny sajt nedan så bygger vi den åt dig.",

@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { useBuildTracePolling } from "@/components/builder/use-build-trace-polling";
+import { readFollowupVisibleEffect } from "@/components/builder/use-followup-build";
 import {
   DEVICE_PRESET_OPTIONS,
   useDevicePreset,
@@ -1656,7 +1657,12 @@ export function FloatingChat({
         // → "degraded" (inte "success"), annars visade progress-cardet grönt
         // medan chatten samtidigt rapporterade en varning.
         onStageChange?.(outcomeToStage(outcome));
-        onBuildDone(payload.runId, outcome);
+        // Preview-refresh-gaten (2026-06-12): tråda samma granulära
+        // visible-effect-signal som dialogerna (delad readFollowupVisibleEffect)
+        // så studio-sidan kan hoppa över preview-rebuilden när bygget ärligt
+        // rapporterade ingen synlig ändring (none/registered). visible/unknown
+        // beter sig EXAKT som förr (refresh).
+        onBuildDone(payload.runId, outcome, readFollowupVisibleEffect(payload));
       } catch (caught) {
         const errorText =
           caught instanceof Error ? caught.message : "Okänt fel.";

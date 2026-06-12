@@ -231,10 +231,18 @@ export type RunFollowupResult =
  * signal (``appliedVisibleEffect===true`` ELLER ``previewShouldRefresh===true``)
  * vinner; därefter "monterad men ej synlig" (bryggan applied men ingen
  * refresh); därefter ärlig no-op; annars "unknown".
+ *
+ * Exporterad (preview-refresh-gaten 2026-06-12) så FloatingChat delar EXAKT
+ * samma läsning i stället för en egen kopia som kan driva isär: signalen
+ * trådas via ``onBuildDone`` upp till studio-sidan, som hoppar över
+ * preview-rebuilden för ``none``/``registered`` (ingen synlig ändring) och
+ * behåller iframen. Parametern är strukturell (bara ``bridge``/``buildResult``)
+ * eftersom FloatingChat har en egen, bredare PromptApiResponse-typ.
  */
-function readFollowupVisibleEffect(
-  payload: PromptApiResponse,
-): FollowupVisibleEffect {
+export function readFollowupVisibleEffect(payload: {
+  bridge?: Record<string, unknown>;
+  buildResult?: Record<string, unknown>;
+}): FollowupVisibleEffect {
   let bridgeApplied: boolean | null = null;
   let bridgeRefresh: boolean | null = null;
   const bridge = payload.bridge;
