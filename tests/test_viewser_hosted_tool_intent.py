@@ -44,9 +44,10 @@ def test_sanitizer_is_exported_and_shared() -> None:
         "kan återanvända EXAKT samma sanering som den lokala spawn-vägen."
     )
     runner = RUNNER.read_text(encoding="utf-8")
-    assert (
-        'import { sanitizedAssetSetIntent } from "./prompt-runner";' in runner
-    ), (
+    # Importeras från prompt-runner.ts (samma modul; ev. tillsammans med
+    # sanitizedMarkedSections efter commit 3) — ingen egen kopia som kan drifta.
+    assert "sanitizedAssetSetIntent" in runner
+    assert 'from "./prompt-runner";' in runner, (
         "hosted-build-runner.ts måste importera saneringen från "
         "prompt-runner.ts — ingen egen kopia som kan drifta."
     )
@@ -85,13 +86,18 @@ def test_orchestration_script_forwards_flag_only_when_set() -> None:
         "Array-expansionen måste vara set -u-säker (idiomet "
         '${arr[@]+"${arr[@]}"}) så ett bygge utan intent inte kraschar.'
     )
-    # Flaggan hör hemma i followup-anropet, inte i init-anropet.
+    # Flaggan hör hemma i den LEGACY followup-grenen (prompt_to_project_input
+    # --followup-site-id), inte i init-anropet. OBS: efter commit 2 använder
+    # OpenClaw apply-anropet också `--site-id "$SITE_ID"`, så vi ankrar på det
+    # specifika init-PI-anropet i stället för bara `--site-id`.
     followup_call = runner.index("--followup-site-id")
-    init_call = runner.index('--site-id "$SITE_ID"')
+    init_pi_call = runner.index(
+        'prompt_to_project_input.py "$PROMPT_TEXT" --site-id "$SITE_ID"'
+    )
     expansion_at = runner.index(set_u_safe_expansion)
-    assert followup_call < expansion_at < init_call, (
-        "--tool-intent-expansionen måste ligga i followup-grenen av "
-        "orkestrerings-skriptet."
+    assert followup_call < expansion_at < init_pi_call, (
+        "--tool-intent-expansionen måste ligga i den legacy followup-grenen "
+        "av orkestrerings-skriptet."
     )
 
 

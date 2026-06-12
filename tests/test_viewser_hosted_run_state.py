@@ -49,12 +49,19 @@ def test_run_state_key_and_pointer_shape_are_exported() -> None:
         "viewser:site:<siteId>:current — en sajt, en pekarfamilj."
     )
     assert "export interface HostedRunStatePointer" in source
-    interface_body = source.split("export interface HostedRunStatePointer", 1)[1][
-        :600
-    ]
+    interface_body = source.split("export interface HostedRunStatePointer", 1)[1].split(
+        "\n}", 1
+    )[0]
     for field in ("version", "projectInputUrl", "metaUrl", "updatedAt"):
         assert field in interface_body, (
             f"HostedRunStatePointer måste deklarera fältet {field!r}."
+        )
+    # B199: de valfria artefakt-fälten ligger på SAMMA pekare (en sajt, en
+    # pekarfamilj) — build_site-runId + tarball-URL för hydreringen.
+    for field in ("runId?", "runArtifactsUrl?"):
+        assert field in interface_body, (
+            f"HostedRunStatePointer måste deklarera det valfria B199-fältet "
+            f"{field!r}."
         )
 
 
@@ -126,10 +133,12 @@ def test_script_publishes_versioned_pair_and_pointer_after_build() -> None:
     ), "KV-pekaren får bara flyttas när både PI och meta är uppladdade."
     assert '":run-state"' in source
     # Upload-ordningen: run-state publiceras EFTER manifestet (B195) och
-    # current-pekaren men FÖRE done-statusen.
+    # current-pekaren men FÖRE den SLUTGILTIGA done-statusen. OBS: answer-only-
+    # grenen (commit 2) postar en tidigare ``post_status "done"`` + exit, så vi
+    # ankrar på den SISTA (rindex) som är den riktiga bygg-done.
     manifest_at = source.index('upload_file ".manifest.json"')
     run_state_at = source.index("upload_run_state()")
-    done_at = source.index('post_status "done"')
+    done_at = source.rindex('post_status "done"')
     assert manifest_at < run_state_at < done_at
 
 
@@ -139,7 +148,7 @@ def test_run_state_failure_never_fails_a_published_build() -> None:
     warning_at = source.index(
         "run-state-paret kunde inte publiceras"
     )
-    done_at = source.index('post_status "done"')
+    done_at = source.rindex('post_status "done"')
     assert warning_at < done_at, (
         "Run-state-felvägen måste leda vidare till done-status — bygget är "
         "redan publicerat och får inte rapporteras som failed."
@@ -149,4 +158,40 @@ def test_run_state_failure_never_fails_a_published_build() -> None:
     assert "fail " not in segment and 'fail "' not in segment, (
         "Run-state-upload-fel får inte trigga fail() — bara varning + orörd "
         "pekare."
+    )
+
+
+def test_run_artifacts_tarball_published_and_threaded_into_pointer() -> None:
+    """B199: de kanoniska run-artefakterna tarballas och pekaren bär URL:en."""
+    source = _runner_source()
+    # build_site-stdout-runId fångas SKILT från orkestreringens KV-UUID.
+    assert "RUN_ARTIFACT_RUN_ID=$(printf" in source, (
+        "build_site.py-stdout-runId måste fångas (skild från KV-UUID $RUN_ID) "
+        "så artefakt-tarballen och nästa followups hydrering hittar rätt "
+        "data/runs/<runId>/."
+    )
+    # En tarball (1 PUT), versions-scopad under run-artifacts/<siteId>/v<N>/.
+    assert "run-artifacts/$SITE_ID/v$RUN_STATE_VERSION/run-artifacts.tar.gz" in source
+    assert (
+        'tar -czf /tmp/run-artifacts.tar.gz -C "$REPO_DIR/data/runs" "$RUN_ARTIFACT_RUN_ID"'
+        in source
+    ), "Tarballens topp-katalog måste vara runId så extraktionen återställer data/runs/<runId>/."
+    # Pekaren bär runId + runArtifactsUrl ENBART när tarballen publicerades.
+    assert 'doc["runId"] = artifact_run_id' in source
+    assert 'doc["runArtifactsUrl"] = artifacts_url' in source
+    assert "if artifacts_url and artifact_run_id:" in source, (
+        "Artefakt-fälten får bara skrivas till pekaren när tarballen faktiskt "
+        "publicerades — annars tom URL = ingen hydrering (ärligt)."
+    )
+
+
+def test_run_artifacts_failure_never_fails_a_published_build() -> None:
+    """B199: artefakt-upload-fel faller aldrig ett redan publicerat bygge."""
+    source = _runner_source()
+    warning_at = source.index("run-artefakt-tarballen kunde inte publiceras")
+    done_at = source.rindex('post_status "done"')
+    assert warning_at < done_at
+    segment = source[warning_at - 200 : warning_at + 200]
+    assert "fail " not in segment and 'fail "' not in segment, (
+        "Artefakt-upload-fel får bara varna — bygget är redan publicerat."
     )
