@@ -17,10 +17,12 @@ import pytest
 from scripts.build_site import (
     _detect_followup_applied_visible_effect,
     _find_previous_page_snapshot,
+    _prompt_meta_applied_followup_directive_kinds,
     _prompt_meta_unapplied_followup_intents,
     build,
 )
 from scripts.prompt_to_project_input import (
+    compute_applied_followup_directive_kinds,
     compute_unapplied_followup_intents,
     generate,
     generate_followup,
@@ -386,18 +388,44 @@ def test_compute_unapplied_skips_capability_that_is_mounted() -> None:
 
 
 @pytest.mark.tooling
-def test_compute_unapplied_skips_unknown_capability_slug() -> None:
-    """A newly requested slug absent from capability-map.v1.json is not claimed."""
+def test_compute_unapplied_flags_newly_added_unknown_capability_slug() -> None:
+    """1b (site-3e7d71ad): a NEWLY requested slug absent from capability-map is
+    an honest miss - briefModel can invent a slug ("responsive-badges") that
+    codegen v1 cannot mount and Phase 2 rejects, so it must be named in
+    unappliedFollowupIntents instead of silently dropped."""
     previous = _bryggans_v1_project_input()
     merged = copy.deepcopy(previous)
-    merged["requestedCapabilities"] = ["map", "totally-unknown-capability"]
+    merged["requestedCapabilities"] = ["map", "responsive-badges"]
 
     posts = compute_unapplied_followup_intents(
         previous,
         merged,
-        follow_up_prompt="Lagg till stod for totally-unknown-capability.",
+        follow_up_prompt="Gor badges responsiva.",
     )
-    assert posts == []
+    targets = {post["target"] for post in posts}
+    assert "responsive-badges" in targets
+    # ``map`` was a v1 capability (not this follow-up's delta) and stays silent.
+    assert "map" not in targets
+    for post in posts:
+        assert isinstance(post["target"], str) and post["target"].strip()
+        assert isinstance(post["reason"], str) and post["reason"].strip()
+
+
+@pytest.mark.tooling
+def test_compute_unapplied_ignores_unknown_slug_already_in_previous() -> None:
+    """An unknown slug that was ALREADY requested in the previous version is not
+    this follow-up's delta, so it must not be re-flagged on every later build."""
+    previous = _bryggans_v1_project_input()
+    previous["requestedCapabilities"] = ["map", "responsive-badges"]
+    merged = copy.deepcopy(previous)
+
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt="Lagg till mer info om brod.",
+    )
+    targets = {post["target"] for post in posts}
+    assert "responsive-badges" not in targets
 
 
 @pytest.mark.tooling
@@ -644,3 +672,164 @@ def test_additive_section_add_with_quote_reports_visible_change(
         tmp_path / "runs", run_dir, prompt_meta, dossier
     )
     assert effect == {"applied": True, "reason": "visible_files_changed"}
+
+
+# --- 1a (site-3e7d71ad, 2026-06-12): intent_not_executable honesty -----------
+#
+# A follow-up whose intent no executor owns ("ta bort sidan Kontakt",
+# "gör badges responsiva") still produced a byte diff (brief paraphrase) and
+# reported applied=true. The legacy resolver now records exactly which
+# executor-owned edits it applied in appliedFollowupDirectiveKinds; an empty
+# list over a byte diff is an honest intent_not_executable no-op.
+
+
+def _bryggans_v1_with_theme() -> dict[str, object]:
+    data = _bryggans_v1_project_input()
+    data["brand"] = {"primaryColorHex": "#111111"}
+    data["tone"] = {"primary": "trustworthy"}
+    return data
+
+
+@pytest.mark.tooling
+def test_compute_applied_kinds_copy_directive() -> None:
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+    merged["directives"] = {
+        "copyDirectives": [
+            {"target": "tagline", "operation": "replace-text", "payload": "Ny tagline"}
+        ]
+    }
+    assert "copy" in compute_applied_followup_directive_kinds(previous, merged)
+
+
+@pytest.mark.tooling
+def test_compute_applied_kinds_theme_change() -> None:
+    previous = _bryggans_v1_with_theme()
+    merged = copy.deepcopy(previous)
+    merged["brand"]["primaryColorHex"] = "#ff4488"
+    assert "theme" in compute_applied_followup_directive_kinds(previous, merged)
+
+
+@pytest.mark.tooling
+def test_compute_applied_kinds_products_add() -> None:
+    previous = _bryggans_v1_project_input()
+    merged = _bryggans_v2_project_input()  # adds two services (new ids)
+    assert "services" in compute_applied_followup_directive_kinds(previous, merged)
+
+
+@pytest.mark.tooling
+def test_compute_applied_kinds_service_summary_paraphrase_is_not_a_change() -> None:
+    """A brief-regenerated summary on the SAME service (id+label stable) is not
+    an executor-owned edit - it must not flip the honesty signal to applied."""
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+    merged["services"][0]["summary"] = "En helt omformulerad sammanfattning."
+    assert compute_applied_followup_directive_kinds(previous, merged) == []
+
+
+@pytest.mark.tooling
+def test_compute_applied_kinds_section_style() -> None:
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+    merged["directives"] = {
+        "sectionStyleOverrides": [
+            {"routeId": "home", "sectionId": "hero", "backgroundColorHex": "#eeeeee"}
+        ]
+    }
+    assert "section-style" in compute_applied_followup_directive_kinds(previous, merged)
+
+
+@pytest.mark.tooling
+def test_compute_applied_kinds_no_op_is_empty() -> None:
+    """The prod no-op shape: an invented unmounted slug + paraphrase only - no
+    executor-owned edit, so the honest signal is an EMPTY list."""
+    previous = _bryggans_v1_project_input()
+    merged = copy.deepcopy(previous)
+    merged["requestedCapabilities"] = ["map", "responsive-badges"]
+    assert compute_applied_followup_directive_kinds(previous, merged) == []
+
+
+@pytest.mark.tooling
+def test_detect_flip_to_intent_not_executable_when_kinds_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An empty appliedFollowupDirectiveKinds over a byte diff is an honest
+    intent_not_executable no-op (the route-removal / restyle trust bug)."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {
+        "mode": "followup",
+        "followUpPrompt": "ta bort sidan Kontakt",
+        "appliedFollowupDirectiveKinds": [],
+    }
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, {"company": {"name": "X"}}
+    )
+    assert effect == {"applied": False, "reason": "intent_not_executable"}
+
+
+@pytest.mark.tooling
+def test_detect_keeps_visible_change_when_kinds_present(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A genuine theme follow-up (kinds=["theme"]) keeps the honest
+    visible_files_changed applied=True even though no copyDirective applied."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {
+        "mode": "followup",
+        "followUpPrompt": "gör tonen mörkare och mer premium",
+        "appliedFollowupDirectiveKinds": ["theme"],
+    }
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, {"company": {"name": "X"}}
+    )
+    assert effect == {"applied": True, "reason": "visible_files_changed"}
+
+
+@pytest.mark.tooling
+def test_detect_absent_kinds_key_preserves_legacy_behaviour(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """No appliedFollowupDirectiveKinds key (targeted path / pre-signal meta) ->
+    the pre-signal visible_files_changed behaviour is preserved."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    prompt_meta = {"mode": "followup", "followUpPrompt": "gör tonen mörkare"}
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, {"company": {"name": "X"}}
+    )
+    assert effect == {"applied": True, "reason": "visible_files_changed"}
+
+
+@pytest.mark.tooling
+def test_applied_directive_kinds_reader_none_when_absent_and_bounded() -> None:
+    assert _prompt_meta_applied_followup_directive_kinds(None) is None
+    assert _prompt_meta_applied_followup_directive_kinds({}) is None
+    assert _prompt_meta_applied_followup_directive_kinds(
+        {"appliedFollowupDirectiveKinds": "nope"}
+    ) is None
+    # Present-but-empty stays an empty list (the honest no-op signal).
+    assert _prompt_meta_applied_followup_directive_kinds(
+        {"appliedFollowupDirectiveKinds": []}
+    ) == []
+    # Malformed entries dropped, duplicates deduped, strings bounded.
+    kinds = _prompt_meta_applied_followup_directive_kinds(
+        {
+            "appliedFollowupDirectiveKinds": [
+                "theme",
+                "theme",
+                "  ",
+                123,
+                "x" * 100,
+            ]
+        }
+    )
+    assert kinds.count("theme") == 1
+    assert all(len(kind) <= 40 for kind in kinds)
