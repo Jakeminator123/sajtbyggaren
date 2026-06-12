@@ -135,6 +135,13 @@ def test_floating_chat_renders_honest_role_row() -> None:
     assert "section_builder" in text and "sektionsbyggare" in text, (
         "Roll-etiketterna måste mappa section_builder (slice 3:s dispatch-roll)."
     )
+    # Uppgift H (deferred från #312): femte rollen component_builder (ADR 0057)
+    # måste ha en svensk operatörsetikett — annars ekar roll-raden det råa
+    # rollnamnet. Stavningen speglar roles.py/action-registry.json exakt.
+    assert 'component_builder: "komponenter"' in text, (
+        "Roll-etiketterna måste mappa component_builder till 'komponenter' "
+        "(ADR 0057; rollnamnet stavas exakt som i roles.py/action-registry.json)."
+    )
     assert "function formatRoleRow(" in text, (
         "FloatingChat måste bygga roll-raden via formatRoleRow."
     )
