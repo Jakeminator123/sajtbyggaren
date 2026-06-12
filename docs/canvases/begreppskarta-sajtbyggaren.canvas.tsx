@@ -32,11 +32,11 @@ import {
 
 // AUTOGEN_REPO_FACTS_START -- skrivs av scripts/update_canvas_facts.py, redigera inte for hand
 const REPO_FACTS = {
-  generatedAt: "2026-06-10",
+  generatedAt: "2026-06-12",
   scaffoldsOnDisk: 6,
   scaffoldsInRegistry: 14,
   softDossiers: 13,
-  hardDossiers: 0,
+  hardDossiers: 1,
   qualityTargetScore: 9.0,
   qualityGateScore: 8.6,
   qualityBlockBelow: 7.5,
