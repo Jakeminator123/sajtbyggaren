@@ -1,15 +1,81 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-12 ~03:30 UTC+2, nattpass: hostad builder-paritet shippad
-+ live-bevisad, hostat 404-brus tystat (B199 dokumenterad), readiness-poll
-härdad, canvas-fakta rättade, två cloud-prompter köade. `main = jakob-be`
-(rent träd, local == origin). Detaljerad köplan:
-[`docs/current-focus.md`](current-focus.md).
+**Datum:** 2026-06-12 ~05:45 UTC+2, gryningsstängning: #306 (B198 del b) +
+#307 (hostad follow-up-paritet) reviewade, squash-mergade och i produktion;
+lane grön; build-context-tarball omladdad efter mergen. `main = jakob-be =
+a67a25b0`. Detaljerad köplan: [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-12 ~03:30 — NATTPASS: HOSTAD BUILDER-PARITET SHIPPAD + TVÅ CLOUD-PROMPTER KÖADE (AUKTORITATIVT BLOCK)
+## PASS 2026-06-12 ~05:45 — GRYNINGSSTÄNGNING: #306 + #307 MERGADE OCH LIVE (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Git:** `main = jakob-be = origin/main = origin/jakob-be = a67a25b0`
+> (rent träd, CI grön på båda grenarna, produktionsdeploy READY).
+> Kedjan ovanpå nattpassets `575af63b`: docs-checkpoint (`a06ba1dc`-serien)
+> → `64aaeea4` (lagade två röda källkods-lås: run-details-panel
+> clear-before-fetch + versions-tab 1313→1278 rader, regression från
+> `691bd835`; CI var RÖD på lane i ~1,5 h innan detta) → `d1a1b98d`
+> (**#306** squash: B198 del b) → `a67a25b0` (**#307** squash: hostad
+> follow-up-paritet). Build-context-tarballen omladdad EFTER `a67a25b0`
+> (1,4 MB → `build-context/current.tar.gz`, KV-URL uppdaterad) — hostade
+> sandbox-byggen kör samma kod som `main`.
+>
+> **#306 — B198 del b** (`d1a1b98d`): contact-form surfas som synlig
+> section-route mot BEFINTLIGA kontakt-routen på ecommerce-lite, gated på
+> att `resend-contact-form` är monterad i `selectedDossiers.required`
+> (mailto förblir ärligt mount-only). `appliedVisibleEffect=true` +
+> `affectedRoutes=["contact"]` E2E-bevisat i PR:ens tester. known-issues:
+> B198 flyttad till Stängda (17 aktiva, 169 stängda).
+>
+> **#307 — hostad follow-up-paritet** (`a67a25b0`), tre ordnade delar:
+> (1) **B199-hydrering** — efter lyckat hostat bygge tarballas
+> `data/runs/<runId>/` (input/site-brief/site-plan/generation-package/
+> build-result/quality-result) till blob `run-artifacts/<siteId>/v<N>/`;
+> pekaren får `runId` + `runArtifactsUrl`; vid followup curlas + extraheras
+> tarballen i sandboxen FÖRE apply/PI. (2) **OpenClaw apply-söm** —
+> `run_openclaw_followup.py --apply` körs i sandboxen som grind framför
+> legacy (samma grenordning som lokala `runPromptBuildOnce`: applied →
+> answer-only → legacy); answer-only startar INGET bygge; ärlig
+> `engine`-attribution ("openclaw"/"legacy"/"answer-only"), aldrig fejkad
+> apply-success. (3) **Request/response-paritet** — `baseRunId` +
+> `markedSections` forwardas (sanerade TS-side; markedSections enbart till
+> legacy-PI, exakt som lokalt), och sandboxen POST:ar ett rikt result-block
+> till KV som TS-sidan bygger lokala svarskontraktet av
+> (version/buildResult/appliedCopyDirectives/openClawDecision/bridge/
+> conversation/answerText). Sex nya regressionstester
+> (`tests/test_viewser_hosted_followup_parity.py` m.fl.).
+> **v1-begränsningar (ärligt dokumenterade):** artefakt-pekaren spårar
+> SENASTE versionen (historisk `baseRunId` hydreras inte), `changeSet` är
+> `null` hostat.
+>
+> **Process-lärdom (inskriven efter CI-incidenten):** riktade tester räckte
+> inte — `691bd835` mergades med två trasiga källkods-lås som full svit
+> hade fångat. Full svit (`python -m pytest tests/ -q -n auto`) före
+> lane-push är nu praxis, och cloud-prompter ska kräva det explicit.
+>
+> **Env-läget för hostad testning:** INGET nytt behövs på Vercel. Flaggorna
+> (`VIEWSER_ENABLE_HOSTED_BUILD=1`, `VIEWSER_ENABLE_HOSTED_SANDBOX=1`) är
+> redan på, `OPENAI_API_KEY` forwardas till sandboxen, och
+> `OPENCLAW_ROUTER_LLM_FALLBACK` är osatt = default PÅ (LLM-routing aktiv i
+> sandboxens apply-söm — önskat läge). `VIEWSER_SANDBOX_REUSE` lämnas osatt
+> (disk-only, ingen effekt hostat).
+>
+> **Nästa pass börjar här:** (1) E2E-verifiera #307 i produktion på
+> `/studio` — init-bygge, edit-följdprompt (förvänta OpenClaw apply när
+> artefakter finns), ren fråga (förvänta answer-only utan bygge), kolla
+> `engine`-attribution. (2) B197-review när Christophers PR kommer — OBS
+> `hosted-build-runner.ts` kraftigt omskriven av #307, be om tidig rebase.
+> (3) B199 v2 (per-run-historik + `changeSet` hostat), blob-prune för
+> `generated/`, operatörsbesluten (Token Meter-priser, Christophers lokala
+> store `3xqg…`). Inbox: msg-0081 till christopher med synk-uppmaning.
+> ADR-liggare: nästa lediga **0055** (0054 reserverad). naming-dictionary
+> **v38**, llm-models **v12**.
+
+## PASS 2026-06-12 ~03:30 — NATTPASS: HOSTAD BUILDER-PARITET SHIPPAD + TVÅ CLOUD-PROMPTER KÖADE (HISTORIK)
+
+> Historiskt block (ersatt av gryningsstängningen ovan) — verifiera alltid
+> mot git/koden.
 >
 > **Git:** `main = jakob-be` (rent träd, local == origin). Nattens
 > commit-kedja ovanpå midnattens `5109cc1f`-checkpoint: `4162a14a`

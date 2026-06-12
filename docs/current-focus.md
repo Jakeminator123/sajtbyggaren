@@ -6,75 +6,53 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-12 ~03:30 — nattpass: hostad paritet-fixar shippade, två cloud-prompter köade)
+## Status nu (2026-06-12 ~05:45 — gryningsstängning: #306 + #307 mergade och i produktion, lane grön)
 
-**Git:** `main = jakob-be` (rent träd, local == origin). Senaste
-kod/canvas-commit `575af63b`; detta docs-pass ligger ovanpå. Production
-(`sajtbyggaren-viewser.vercel.app`) kör senaste app-bygget; rena docs-pushar
-skippar prod-rebuild med flit (`ignoreCommand` jämför mot
-`VERCEL_GIT_PREVIOUS_SHA`, fallback `HEAD^`), så prod kan peka på senaste
-app-ändringen snarare än main-HEAD — väntat monorepo-beteende.
+**Git:** `main = jakob-be = a67a25b0` (rent träd, local == origin, CI grön).
+Production (`sajtbyggaren-viewser.vercel.app`) deployar från `main` och kör
+`a67a25b0`-kedjan. Build-context-tarballen omladdad EFTER #307-mergen, så
+hostade sandbox-byggen kör samma kod som `main`.
 
-**Shippat i natt (efter midnattsblocket):**
+**Mergat i gryningen (båda via cloud-PR → vår lane-review → squash):**
 
-- Banner-ärlighet: "lokalt" = operatörens lokala miljö, inte den hostade
-  vyn (`4162a14a`).
-- Flagg-medveten hostad notis: med `VIEWSER_ENABLE_HOSTED_BUILD=1` säger
-  bannern att byggen kör i Vercel Sandbox, bara historik/artefakter är
-  lokala (`bc074edb`).
-- Hostad builder-paritet, live-bevisad: FloatingChat tänds när ett bygge
-  slutförts i sessionen även med tom `/api/runs`, och följdprompt-byggen
-  överlever rebuild hostat via selectedSiteId-fallback (`cdd6785d`,
-  `b4f6e2d2`).
-- Hostade artifacts/trace/files-404:or tystade i UI:t (lugn notis + latch i
-  stället för rött fel och meningslös polling) + B199 dokumenterar
-  blob-utredningen (`691bd835`).
-- Härdad preview readiness-poll: 502/503/429 räknas inte som "klar", så
-  hostad preview inte visar sandbox-uppstart som fel (`15ea0fda`).
-- Canvas-rättningar: `OPENAI_MODEL` är `gpt-5.4` i prod (`ed0a2039`),
-  autogen-facts regenererad (llmModelsVersion 12, hard-dossier 1)
-  (`42a54945`), env/fallback-callout rättad (`575af63b`).
-- Sedan midnattspasset: `main` låst med ruleset "protect-main-production-lane"
-  och `ignoreCommand`-fällan fixad (`74dc9218`).
+- **#306 — B198 del b** (`d1a1b98d`): synlig contact-form-render på
+  ecommerce-lite. Surfas mot befintliga kontakt-routen, ENBART när
+  `resend-contact-form` är monterad (mailto förblir ärligt mount-only).
+- **#307 — hostad follow-up-paritet** (`a67a25b0`): B199-hydrering (kanoniska
+  run-artefakter tarballas till blob + hydreras i sandboxen), OpenClaw
+  apply-söm i sandbox med answer-only-gate och ärlig legacy-fallback
+  (`engine`-attribution, aldrig fejkad apply-success), `baseRunId`/
+  `markedSections` forwardas, rikt hostat svar via KV-result. Sex nya
+  regressionstester. v1-begränsning: artefakt-pekaren spårar senaste
+  versionen; `changeSet` är `null` hostat.
+- Före merge lagades två röda källkods-lås på basen (`64aaeea4`):
+  run-details-panel clear-before-fetch + versions-tab under 1300 rader
+  (regression från `691bd835`). Lärdom inskriven: full svit före lane-push,
+  inte bara riktade tester.
 
-**Verifierat/avlivat i natt:**
+**Nästa 3 prioriteringar:**
 
-- Pipen är hybrid (`gpt-5.4` för brief/plan/copy, deterministisk codegen) —
-  inte "rent mekaniskt".
-- Ingen automatisk `gpt-5.4` → `gpt-5.5`-modellfallback finns (det var en
-  sammanblandning); kod-fallbacken `gpt-5.5` träffar bara när env-nyckeln
-  saknas.
-- Env-domar (lämna osatta på Vercel): `OPENCLAW_ROUTER_LLM_FALLBACK` är
-  no-op i hostad väg och `VIEWSER_SANDBOX_REUSE` är disk-only (ingen effekt
-  hostat).
-- Extern review verifierad: hostat KÖR-7-paritetsgapet är PARTIELLT, inte
-  total avsaknad — legacy-vägen kör copy-directives.
+1. **E2E-verifiera #307 i produktion:** hostat init-bygge → följdprompt
+   (edit via OpenClaw apply) → ren fråga (answer-only utan bygge) på
+   `/studio`, och bekräfta `engine`-attribution + rikt svar i UI:t.
+2. **B197 (Christophers, pågår):** snabb review när PR kommer. OBS:
+   `hosted-build-runner.ts` är kraftigt omskriven av #307 — be honom rebasa
+   tidigt om hans gren rör den.
+3. **Uppföljningar i prioritetsordning:** per-run artefakt-historik
+   (historisk `baseRunId` + `changeSet` hostat, B199 v2), blob-prune-strategi
+   för `generated/`-prefixet, operatörsbesluten (Token Meter-priser,
+   Christophers lokala blob-store `3xqg…`).
 
-**Öppna issues:** B199 (hostad artefakt-hydrering — förutsättning för hostad
-KÖR-7), B197 (discovery-paritet hostat), B198 del b (contact-form-render;
-fungerar redan hostat via legacy-vägen).
+**Öppna blockers:** inga hårda. B197/B199-v2 är spår, inte blockers.
 
-**Köade cloud-prompter (PR:as mot jakob-be):**
-
-1. Hostad follow-up-paritet — tre ordnade commits (B199-hydrering → sandbox
-   apply-seam → request/response-paritet), root-cause-ledd, körs först.
-2. B198 del b contact-form-render — oberoende spår.
-
-Vår action: reviewa inkommande cloud-PR:ar snabbt (lane review-SLA).
-
-Last verified state: `84d4facf` (2026-06-12 ~03:30 UTC+2; `main = jakob-be`,
-rent träd, local == origin. Nattpassets kod/canvas-checkpoint `575af63b` +
-docs-pass ovanpå. Hostad paritet-fixar `4162a14a`/`bc074edb`/`cdd6785d`/
-`b4f6e2d2`/`691bd835`/`15ea0fda` + canvas-rättningar `ed0a2039`/`42a54945`/
-`575af63b`. Öppen draft-PR: #306 (B198 del b).)
+Last verified state: `a67a25b0` (2026-06-12 ~05:45 UTC+2; `main = jakob-be`,
+rent träd, CI grön på båda, prod READY, tarball == main. #306 + #307 mergade;
+inga öppna PR:ar.)
 
 ## Öppna PR att känna till
 
-**#306** (cloud-lane, draft mot `jakob-be`): B198 del b — synlig
-contact-form-render på ecommerce-lite. Det är köad cloud-prompt 2; reviewa
-snabbt enligt lane-grindens review-SLA när den lämnar draft. Fortfarande
-väntad: köad cloud-prompt 1 (hostad follow-up-paritet — B199-hydrering →
-sandbox apply-seam → request/response-paritet).
+Inga öppna PR:ar (2026-06-12 ~05:45). #306 och #307 är squash-mergade till
+`jakob-be` och ff:ade till `main`.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
@@ -111,6 +89,9 @@ dev-uttryck med korta parenteser första gången per konversation. Mönstret i
 
 Historiska statusblock + checkpoint-kedjan ligger i arkivet:
 
+- [`docs/archive/current-focus-2026-06-12-gryning.md`](archive/current-focus-2026-06-12-gryning.md)
+  (nattpassblocket per `575af63b`: hostad builder-paritet shippad, 404-tystnad,
+  readiness-poll, canvas-rättningar, två cloud-prompter köade).
 - [`docs/archive/current-focus-2026-06-12-natt.md`](archive/current-focus-2026-06-12-natt.md)
   (midnattsblocket per `5109cc1f`: B194 live/E2E-bevisad, main-sync klar,
   lane-grind i regel 04, CI-actions v6).
