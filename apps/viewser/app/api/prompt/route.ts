@@ -261,6 +261,71 @@ function extractAppliedVisibleEffect(
   return typeof value === "boolean" ? value : null;
 }
 
+// 1a honesty signal (site-3e7d71ad): the executor-owned edit kinds the legacy
+// resolver ACTUALLY applied for this follow-up (copy/theme/section-style/...).
+// build_site.py writes it on follow-up builds (even empty). The honesty gate
+// reads it to require CONCRETE applied directives before suppressing the
+// router/OpenClaw decision — never just appliedVisibleEffect=true (which a
+// brief paraphrase could flip via the byte diff). Field-drift / init builds ->
+// empty list.
+function extractAppliedFollowupDirectiveKinds(
+  buildResult: Record<string, unknown>,
+): string[] {
+  const value = buildResult.appliedFollowupDirectiveKinds;
+  if (!Array.isArray(value)) return [];
+  return value.filter((kind): kind is string => typeof kind === "string");
+}
+
+// Read build-result.json's appliedVisibleEffectReason without trusting its type.
+function extractAppliedVisibleEffectReason(
+  buildResult: Record<string, unknown>,
+): string | null {
+  const value = buildResult.appliedVisibleEffectReason;
+  return typeof value === "string" ? value : null;
+}
+
+// The B155 unappliedFollowupIntents the deterministic pipeline recognised but
+// could not apply ({target, reason}). Defensive parsing mirrors the client
+// reader; field-drift / init builds -> empty list. Used to ground the honest
+// follow-up outcome summary (Del D).
+function extractUnappliedFollowupIntents(
+  buildResult: Record<string, unknown>,
+): { target: string; reason: string }[] {
+  const raw = buildResult.unappliedFollowupIntents;
+  if (!Array.isArray(raw)) return [];
+  const posts: { target: string; reason: string }[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const obj = entry as Record<string, unknown>;
+    const target = typeof obj.target === "string" ? obj.target : "";
+    const reason = typeof obj.reason === "string" ? obj.reason : "";
+    if (!target && !reason) continue;
+    posts.push({ target, reason });
+    if (posts.length >= 20) break;
+  }
+  return posts;
+}
+
+// Routes whose rendered output changed this follow-up. build_site writes
+// ``changedRoutes`` on the targeted path; the legacy path may expose it via the
+// run change-set instead. Read defensively from both; field-drift -> empty.
+function extractChangedRoutes(
+  buildResult: Record<string, unknown>,
+  changeSet: unknown,
+): string[] {
+  const fromBuild = buildResult.changedRoutes;
+  if (Array.isArray(fromBuild)) {
+    return fromBuild.filter((r): r is string => typeof r === "string");
+  }
+  if (changeSet && typeof changeSet === "object") {
+    const fromChangeSet = (changeSet as Record<string, unknown>).changedRoutes;
+    if (Array.isArray(fromChangeSet)) {
+      return fromChangeSet.filter((r): r is string => typeof r === "string");
+    }
+  }
+  return [];
+}
+
 // F1 slice 2 (conductor wiring): the conductor conversation kinds the
 // dispatcher answers in chat WITHOUT a build. Mirrors
 // _ANSWER_ONLY_CONVERSATION_KINDS in scripts/run_openclaw_followup.py.
@@ -1015,10 +1080,17 @@ async function runPromptBuildOnce(
   // the existing authoritative build summary stands alone ("Ingen påhittad
   // effekt"). Init builds and genuine no-op follow-ups carry the full decision.
   const routerDecisionRaw = await routerDecisionPromise;
+  // 1c (site-3e7d71ad): require CONCRETE applied directives before suppressing
+  // the honest router/OpenClaw decision — appliedCopyDirectives OR a non-empty
+  // appliedFollowupDirectiveKinds. Never just appliedVisibleEffect=true: a
+  // brief-paraphrase byte diff used to flip that boolean and silence OpenClaw's
+  // honest "no executor owns this"-decision over an edit that never landed.
+  const appliedDirectiveKinds = extractAppliedFollowupDirectiveKinds(
+    build.buildResult,
+  );
   const legacyPathAppliedVisibleChange =
     payload.mode === "followup" &&
-    (appliedCopyDirectives.length > 0 ||
-      extractAppliedVisibleEffect(build.buildResult) === true);
+    (appliedCopyDirectives.length > 0 || appliedDirectiveKinds.length > 0);
   const routerDecision = legacyPathAppliedVisibleChange
     ? null
     : routerDecisionRaw;

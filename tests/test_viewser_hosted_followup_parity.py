@@ -161,6 +161,33 @@ def test_legacy_fallback_is_honest_engine_attribution() -> None:
     assert "generateAppliedConfirmation" in route
 
 
+def test_legacy_honesty_gate_requires_concrete_directives() -> None:
+    """1c (site-3e7d71ad): den hostade legacy-gaten får INTE nolla det ärliga
+    OpenClaw-beslutet enbart på appliedVisibleEffect — den måste kräva konkreta
+    direktiv (copy_directives ELLER appliedFollowupDirectiveKinds)."""
+    runner = _runner()
+    assert "appliedFollowupDirectiveKinds" in runner, (
+        "Hostade write_hosted_result måste läsa appliedFollowupDirectiveKinds "
+        "ur build-result.json."
+    )
+    assert "legacy_visible = bool(copy_directives) or bool(applied_directive_kinds)" in runner, (
+        "Legacy-gaten måste kräva konkreta direktiv, aldrig enbart "
+        "appliedVisibleEffect."
+    )
+    route = _route()
+    assert "extractAppliedFollowupDirectiveKinds" in route, (
+        "route.ts legacyPathAppliedVisibleChange måste läsa konkreta "
+        "applied-direktiv via extractAppliedFollowupDirectiveKinds."
+    )
+    # Gaten får inte längre lita på appliedVisibleEffect===true för att nolla
+    # beslutet — den raden ska bara använda appliedCopyDirectives + kinds.
+    gate = route.split("const legacyPathAppliedVisibleChange", 1)[1].split(";", 1)[0]
+    assert "appliedDirectiveKinds.length > 0" in gate
+    assert "extractAppliedVisibleEffect" not in gate, (
+        "Honesty-gaten får inte nolla beslutet enbart på appliedVisibleEffect."
+    )
+
+
 # --- 6. hostad response-payload speglar lokala kontraktsformen ----------------
 
 
