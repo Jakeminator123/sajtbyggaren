@@ -108,6 +108,15 @@ till `vercel-sandbox` i kod. Det är ett separat operatörsbeslut, INTE en
 Bite C-verifiering - Bite C (wiringen) är klar. Fältet `default` i
 `preview-runtime-policy.v1.json` förblir `local` tills (och om) det bytet görs.
 
+## Uppdatering (2026-06-12): default-flippen är genomförd
+
+Det kvarvarande default-värde-bytet ovan är nu gjort på operatörsbeslut
+(2026-06-12): tomt/osatt `VIEWSER_PREVIEW_MODE` resolvas till `vercel-sandbox`
+i `packages/preview-runtime/src/registry.ts:currentKind`, och samma default
+speglas i `next.config.ts`, `scripts/dev.mjs`, viewer-panel-descriptorn och
+`preview-runtime-policy.v1.json:default` (v4). Lokal dev väljer `local-next`
+explicit via `.env.local` (mallen `.env.example` sätter raden åt utvecklaren).
+
 **Rättelsenot (2026-06-12):** den konkreta `@vercel/sandbox`-körningen landade
 i app-lagrets server-only DI-spår (`apps/viewser/lib/vercel-sandbox-runner.ts`
 m.fl., injicerat via `configurePreviewRuntimeHandlers`), inte i

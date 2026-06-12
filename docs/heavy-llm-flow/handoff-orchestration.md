@@ -116,7 +116,7 @@ samtidiga floppar (Windows-orphan-issue, se AGENTS.md). Pausa builder-dispatch u
 ## Visible-value-läget + öppen produktfråga
 
 - hero/CTA/trust + story/faq/tjänster är nu branschnära för de fyra baselines (mät via
-  dev-sajt: `cd apps/viewser && npm run dev`, svensk prompt per bransch, default `local-next`).
+  dev-sajt: `cd apps/viewser && npm run dev`, svensk prompt per bransch, `local-next` via `.env.local`).
 - **Öppen fråga (ej beslutad):** planningModel *författar* inte contentBlocks-copy som
   structured output — copy härleds deterministiskt ur briefen (det dokumenterade
   kor-1c-kontraktet, det som gör mock = real). Att låta modellen skriva copyn direkt =

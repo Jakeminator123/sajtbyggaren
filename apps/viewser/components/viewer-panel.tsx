@@ -241,9 +241,12 @@ function unavailableForPreviewError(
  * StackBlitz-fallback (descriptor.prefersCoep / canFallbackToStackblitz
  * är ``true`` för ``auto``/``stackblitz``, ``false`` för local-next).
  *
- * ``?? "local-next"`` behålls medvetet (descriptorns egna tomma default är
- * ``"local"``) så en osatt env beter sig EXAKT som förr: local-next, dvs
- * COEP av och ingen StackBlitz-fallback.
+ * ``?? "vercel-sandbox"`` sedan default-flippen (operatörsbeslut 2026-06-12):
+ * en osatt env beter sig som den nya kod-defaulten (vercel-sandbox — COEP av,
+ * ingen StackBlitz-fallback, samma isolationsutfall som gamla local-next-
+ * defaulten), i synk med registry.currentKind, next.config.ts och
+ * preview-runtime-policy.v1.json:default. Lokal dev sätter local-next
+ * explicit i .env.local.
  *
  * Avgör om StackBlitz-fallback överhuvudtaget är ett giltigt nästa steg när
  * LocalRuntime failar:
@@ -258,7 +261,7 @@ function unavailableForPreviewError(
  *   - ``auto``        → Som ``stackblitz`` på header-nivå idag.
  */
 const PREVIEW_RUNTIME = resolvePreviewRuntimeDescriptor(
-  process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? "local-next",
+  process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? "vercel-sandbox",
 );
 // ``rawMode`` (inte ``kind``): ``kind`` kollapsar local-next/auto/local till
 // ``"local"`` och skulle därför göra ``auto`` till local-next. ``rawMode``

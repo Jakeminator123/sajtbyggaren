@@ -11,11 +11,13 @@ last_verified_commit: f56ac30
 PromptBuilder, discovery-wizard, build-triggning, follow-up, run history och
 preview av senaste build. Den driver hela kärnloopen `prompt → företagshemsida
 → preview → följdprompt → ny version`. Preview körs via en `Preview Runtime`:
-**`local-next` är faktisk default** och Vercel Sandbox är primärt opt-in-val
+**Vercel Sandbox är default + primär** sedan default-flippen 2026-06-12 och
+`local-next` väljs explicit för lokal dev
 (se [`preview-runtime.md`](preview-runtime.md) + ADR 0033). Den tidigare
-`StackBlitz`-embedden är **pausad** (ADR 0033). Hosted Vercel-deploys får visa
-UI/read-only diagnostik, men prompt/build/scrape-actions blockas med 501 eftersom
-de shellar repo-lokala Python-skript.
+`StackBlitz`-embedden är **pausad** (ADR 0033). Hostat på Vercel kör
+`/api/prompt` Python-pipen i en Vercel Sandbox (P2, ADR 0048) och previewn
+läser blob-källan; `/api/build`/`/api/scrape-site` blockas fortsatt med 501
+(repo-lokala Python-skript). Se `docs/hosted-viewser-deploy.md`.
 
 ## Avgränsning
 
@@ -35,7 +37,7 @@ Viewser är ett dev-verktyg, inte en produkt. Den får inte:
 |---|---|
 | Project Input          | Konkret kundprojekt (t.ex. `painter-palma`). Filer: `examples/<siteId>.project-input.json`. |
 | PromptBuilder          | Fri init-prompt och follow-up prompt versions ovanpå Builder MVP |
-| Viewer / Preview       | Förhandsvisning av senaste build via `Preview Runtime` (`local-next` default; Vercel Sandbox opt-in primär; StackBlitz-embed pausad, ADR 0033). |
+| Viewer / Preview       | Förhandsvisning av senaste build via `Preview Runtime` (Vercel Sandbox default + primär sedan 2026-06-12; `local-next` explicit för lokal dev; StackBlitz-embed pausad, ADR 0033). |
 | Token Meter            | Lokal aggregering av OpenAI usage + buildResult |
 
 `painter-palma` är ett **Project Input**, **inte** en Dossier. En Dossier är

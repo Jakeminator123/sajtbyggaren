@@ -74,13 +74,16 @@ const REPO_ROOT = path.resolve(
 // samma fel även med headers korrekt satta — StackBlitz egen browser-
 // support-tabell säger detta uttryckligen.
 //
-// Default-värdet är `local-next` eftersom 99% av anropen kommer från en
-// utvecklarmaskin där LocalRuntime är snabbaste vägen till en levande
-// preview. Hosted/CI-deploys promotas automatiskt till StackBlitz-
-// headerläget av production-gaten nedan — så defaulten är säker även
-// om operatören glömt att sätta variabeln i en hosted miljö.
+// Default-värdet är `vercel-sandbox` sedan default-flippen (operatörsbeslut
+// 2026-06-12, ADR 0033): den primära användarpreview-runtimen är nu också
+// faktisk default, i synk med packages/preview-runtime:currentKind och
+// preview-runtime-policy.v1.json:default. vercel-sandbox kör COEP off
+// (publik https-iframe behöver ingen cross-origin isolation), så en osatt
+// env i en hosted deploy ger rätt headers direkt. Lokal dev väljer
+// `local-next` EXPLICIT via .env.local (mallen .env.example sätter raden) —
+// production-gaten nedan skyddar fortfarande det fallet.
 const PREVIEW_MODE = (
-  process.env.VIEWSER_PREVIEW_MODE ?? "local-next"
+  process.env.VIEWSER_PREVIEW_MODE ?? "vercel-sandbox"
 ).toLowerCase();
 
 // Production safety gate.

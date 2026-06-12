@@ -11,11 +11,15 @@
 //   stackblitz     →  npx next dev --experimental-https  (https, COEP on)
 //   auto           →  npx next dev --experimental-https  (https, COEP on)
 //
-// `local-next` är default. http krävs för att den lokala preview-iframen
-// (port 4100-4199, http) inte ska blockas som mixed content av en https-
-// host. `vercel-sandbox` (ADR 0033) kör samma transport: dess preview är en
-// publik `…vercel.run`-https-iframe som bäddas utan cross-origin-isolation,
-// så viewser-hosten behöver varken https eller COEP. `stackblitz` och `auto`
+// `vercel-sandbox` är default sedan default-flippen (operatörsbeslut
+// 2026-06-12, ADR 0033) — i synk med packages/preview-runtime:currentKind,
+// next.config.ts och preview-runtime-policy.v1.json. Lokal dev väljer
+// `local-next` EXPLICIT i .env.local (mallen .env.example sätter raden).
+// http krävs i local-next för att den lokala preview-iframen (port
+// 4100-4199, http) inte ska blockas som mixed content av en https-host.
+// `vercel-sandbox` kör samma transport: dess preview är en publik
+// `…vercel.run`-https-iframe som bäddas utan cross-origin-isolation, så
+// viewser-hosten behöver varken https eller COEP. `stackblitz` och `auto`
 // betalar https-/COEP-kostnaden up-front så StackBlitz-embeddet (eller
 // runtime-fallbacken till det) fungerar.
 //
@@ -56,7 +60,7 @@ const VALID_MODES = new Set([
   "stackblitz",
   "auto",
 ]);
-const DEFAULT_MODE = "local-next";
+const DEFAULT_MODE = "vercel-sandbox";
 // Lägen som kör vanlig `next dev` (http, COEP off). `vercel-sandbox` ligger
 // här tillsammans med `local-next`: sandbox-URL:en är en publik https-iframe
 // som bäddas utan cross-origin-isolation, så viewser-hosten behöver ingen

@@ -21,8 +21,8 @@ def test_viewer_panel_drives_preview_mode_through_descriptor() -> None:
       1. ``resolvePreviewRuntimeDescriptor`` importeras från
          ``@preview-runtime``.
       2. Descriptorn drivs av ``process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE``
-         (med behållen ``?? "local-next"``-default så en osatt env beter
-         sig EXAKT som förr).
+         (med ``?? "vercel-sandbox"``-default sedan default-flippen
+         2026-06-12, i synk med registry.currentKind/next.config.ts/policyn).
       3. KRITISKT — ``auto`` ≠ ``local-next``: ``IS_LOCAL_NEXT_MODE`` måste
          härledas ur ``PREVIEW_RUNTIME.rawMode`` (som bevarar distinktionen),
          ALDRIG ur ``.kind`` (som kollapsar local-next/auto/local till
@@ -45,18 +45,19 @@ def test_viewer_panel_drives_preview_mode_through_descriptor() -> None:
     )
 
     # Lock 2: descriptorn drivs av NEXT_PUBLIC_VIEWSER_PREVIEW_MODE med
-    # behållen local-next-default.
+    # vercel-sandbox-default (default-flippen 2026-06-12).
     assert re.search(
         r"resolvePreviewRuntimeDescriptor\(\s*process\.env\."
-        r'NEXT_PUBLIC_VIEWSER_PREVIEW_MODE\s*\?\?\s*["\']local-next["\']',
+        r'NEXT_PUBLIC_VIEWSER_PREVIEW_MODE\s*\?\?\s*["\']vercel-sandbox["\']',
         text,
     ), (
         "viewer-panel.tsx måste driva descriptorn med "
         "``resolvePreviewRuntimeDescriptor(process.env."
-        "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? 'local-next')``. ``?? 'local-next'`` "
-        "är beteende-bevarande: descriptorns egna tomma default är ``'local'``, "
-        "men en osatt env ska fortsätta bete sig som local-next (COEP av, "
-        "ingen StackBlitz-fallback)."
+        "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? 'vercel-sandbox')`` sedan "
+        "default-flippen (operatörsbeslut 2026-06-12): en osatt env ska bete "
+        "sig som kod-defaulten vercel-sandbox (COEP av, ingen StackBlitz-"
+        "fallback — samma isolationsutfall som gamla local-next-defaulten), "
+        "i synk med registry.currentKind/next.config.ts/policyn."
     )
 
     # Lock 3: auto ≠ local-next — IS_LOCAL_NEXT_MODE härleds ur rawMode.

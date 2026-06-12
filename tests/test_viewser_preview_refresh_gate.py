@@ -1,6 +1,6 @@
 """Source-level locks för preview-refresh-gaten (2026-06-12).
 
-Före gaten nollade studio-sidan ALLTID ViewerPanels runId-prop på varje
+Före gaten nollade studio-sidan ALLTID ViewerPanel-runId-propen på varje
 lyckad follow-up — ViewerPanel-effekten (deps: runId/siteId/retryNonce)
 rev då preview-state och POST:ade /api/preview/<siteId> igen ÄVEN när
 kedjan ärligt rapporterat att ingen synlig ändring landade
@@ -123,7 +123,7 @@ def test_viewer_panel_is_driven_by_preview_run_id() -> None:
         "<ViewerPanel runId={selectedRunId}> har gaten kopplats ur."
     )
     assert not re.search(r"<ViewerPanel\s+runId=\{selectedRunId\}", source), (
-        "selectedRunId får inte driva ViewerPanels runId-prop — det är "
+        "selectedRunId får inte driva ViewerPanel-runId-propen — det är "
         "exakt den koppling gaten bröt upp. (BuilderShell får däremot "
         "fortsatt följa selectedRunId.)"
     )

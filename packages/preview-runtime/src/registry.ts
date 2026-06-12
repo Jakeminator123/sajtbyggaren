@@ -10,19 +10,20 @@
  *   - "local-next"     → "local"          (canonical-kind per naming-dictionary)
  *   - "local"          → "local"
  *   - "stackblitz"     → "stackblitz"
- *   - "vercel-sandbox" → "vercel-sandbox" (primärt förstahandsval, ADR 0033)
+ *   - "vercel-sandbox" → "vercel-sandbox" (default + primärt, ADR 0033)
  *   - "fly"            → "fly"
- *   - "auto"           → "local"          (auto resolveras till local som default)
+ *   - "auto"           → "local"          (auto är fortsatt local-familjens token)
  *
- * OBS: default-mode flippas INTE till `vercel-sandbox` här — `auto`/tomt env
- * faller fortfarande tillbaka till `local`. Att göra `vercel-sandbox` till
- * faktisk default kräver att route/UI är redo (separat slice).
+ * Default-flippen (operatörsbeslut 2026-06-12): TOMT/osatt env resolvas till
+ * `vercel-sandbox` — den primära runtimen per ADR 0033 är nu också faktisk
+ * default. Ett EXPLICIT `local-next`/`local`/`auto` ger fortfarande `local`
+ * (utvecklarmaskinens snabba väg; Jakobs `.env.local` sätter local-next).
  *
  * Env-värdet `local-next` finns kvar i `apps/viewser/.env.example`,
  * `apps/viewser/scripts/dev.mjs:VALID_MODES` och
  * `apps/viewser/components/viewer-panel.tsx:IS_LOCAL_NEXT_MODE`. Vi byter
- * INTE namnet i Bite A — det är onödig churn. Adapter-typunionen är
- * canonical (`local`); env-värdet är input som normaliseras hit.
+ * INTE namnet — det är onödig churn. Adapter-typunionen är canonical
+ * (`local`); env-värdet är input som normaliseras hit.
  */
 
 import type { PreviewRuntime, PreviewRuntimeKind } from "./types";
@@ -84,9 +85,13 @@ export function normalizePreviewMode(raw: string | undefined): PreviewRuntimeKin
  * Hämta nuvarande `PreviewRuntimeKind` från `VIEWSER_PREVIEW_MODE`.
  *
  * Failure-modell:
- *   - Tomt eller osatt env → `"local"` (default per `apps/viewser/.env.example`).
+ *   - Tomt eller osatt env → `"vercel-sandbox"` (default-flippen, operatörs-
+ *     beslut 2026-06-12: den primära runtimen per ADR 0033 är nu faktisk
+ *     default; `preview-runtime-policy.v1.json:default` speglar samma värde).
+ *     Lokal dev väljer `local-next` EXPLICIT via `.env.local` (mallen
+ *     `apps/viewser/.env.example` sätter den raden åt utvecklaren).
  *   - Explicit men okänt värde (typo som `stackblitzz`) → kastar `Error` med
- *     vägledning. Tyst fallback till `local` skulle dölja misskonfiguration —
+ *     vägledning. Tyst fallback skulle dölja misskonfiguration —
  *     adapter-abstraktionen ska göra preview-mode mer explicit, inte
  *     enklare att gissa fel på.
  *
@@ -96,7 +101,7 @@ export function normalizePreviewMode(raw: string | undefined): PreviewRuntimeKin
 export function currentKind(env: NodeJS.ProcessEnv = process.env): PreviewRuntimeKind {
   const raw = env.VIEWSER_PREVIEW_MODE?.trim();
   if (!raw) {
-    return "local";
+    return "vercel-sandbox";
   }
   const normalized = normalizePreviewMode(raw);
   if (normalized === null) {

@@ -316,14 +316,16 @@ def test_preview_runtime_forbidden_terms_are_in_globally_forbidden(
 
 @pytest.mark.governance
 def test_preview_runtime_aligns_with_adr_0033(preview_runtime_policy: dict):
-    """ADR 0033: vercel-sandbox is the *intended primary* preview runtime, but
-    the *actual* runtime default stays local/local-next until the default-flip
-    (Bite C) is verified. local is the guaranteed fallback/dev runtime and
-    stackblitz is paused (non-default, must not block).
+    """ADR 0033 + default-flippen (operatörsbeslut 2026-06-12): vercel-sandbox
+    is BOTH the primary preview runtime AND the actual default — an empty/unset
+    ``VIEWSER_PREVIEW_MODE`` resolves to vercel-sandbox in
+    ``packages/preview-runtime/src/registry.ts:currentKind`` and the policy
+    ``default`` field mirrors that. local is the guaranteed fallback/dev
+    runtime (chosen explicitly via .env.local) and stackblitz is paused
+    (non-default, must not block).
 
-    This guard stops the policy from drifting back to the pre-ADR-0033 state
-    where stackblitz was both ``default`` and ``primary`` AND from over-flipping
-    ``default`` to vercel-sandbox before the runtime/env default actually moves.
+    This guard stops the policy from drifting back to the pre-flip state
+    (default=local) or the pre-ADR-0033 state (stackblitz default+primary).
     The kinds must match the canonical PreviewRuntimeKind union (vercel-sandbox
     | local | stackblitz | fly, naming-dictionary v19).
     """
@@ -335,22 +337,21 @@ def test_preview_runtime_aligns_with_adr_0033(preview_runtime_policy: dict):
         "preview-runtime default must not be stackblitz after ADR 0033"
     )
 
-    # b) vercel-sandbox is registered and is the intended primary.
+    # b) vercel-sandbox is registered and is the primary.
     assert "vercel-sandbox" in runtimes, (
-        "vercel-sandbox must be a registered runtime (ADR 0033 intended primary)"
+        "vercel-sandbox must be a registered runtime (ADR 0033 primary)"
     )
     assert runtimes["vercel-sandbox"]["status"] == "primary", (
         "vercel-sandbox must have status 'primary' per ADR 0033"
     )
 
-    # c) Actual default stays local until the default-flip slice (Bite C).
-    #    ADR 0033 is explicit: VIEWSER_PREVIEW_MODE default does not flip until
-    #    the adapter is verified, so the policy must not claim vercel-sandbox is
-    #    the actual default yet.
-    assert default == "local", (
-        "ADR 0033 keeps the actual runtime default at local/local-next until the "
-        "default-flip (Bite C) is verified; vercel-sandbox is intended primary, "
-        f"not yet the actual default. Got default='{default}'."
+    # c) Default-flippen (2026-06-12): the policy default IS vercel-sandbox,
+    #    mirroring registry.currentKind's empty-env fallback. Drifting back to
+    #    'local' would silently undo the operator decision.
+    assert default == "vercel-sandbox", (
+        "Default-flippen (operatörsbeslut 2026-06-12) gör vercel-sandbox till "
+        "faktisk default (registry.currentKind: tomt env → vercel-sandbox); "
+        f"policyfältet måste spegla det. Got default='{default}'."
     )
 
     # d) stackblitz is paused/degraded - never primary, never default.
@@ -360,7 +361,7 @@ def test_preview_runtime_aligns_with_adr_0033(preview_runtime_policy: dict):
             f"'{runtimes['stackblitz']['status']}'"
         )
 
-    # local stays registered as the dev/fallback runtime (now also the default).
+    # local stays registered as the guaranteed dev/fallback runtime.
     assert "local" in runtimes, (
         "local must stay registered as the guaranteed fallback (ADR 0033)"
     )

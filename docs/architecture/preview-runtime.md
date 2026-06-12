@@ -9,12 +9,15 @@ last_verified_commit: d2349414
 
 Sanningskälla: [`preview-runtime-policy.v1.json`](../../governance/policies/preview-runtime-policy.v1.json). Interface skissas i `packages/preview-runtime/` när den fasen börjar (utkast i kommentarerna nedan).
 
-> **Status 2026-06 (ADR 0033):** `LocalRuntime` (`local-next`) är den **faktiska
-> default-runtimen** idag (policyfältet `default: local`). Vercel Sandbox-adaptern
-> är **primärt förstahandsval/intended primary** (`status: primary`) men väljs
-> explicit via `VIEWSER_PREVIEW_MODE` (Vercel Sandbox-läget) tills default-flippen
-> (Bite C) är verifierad. `StackBlitzRuntime` är **pausad** (`status: paused`) —
-> inte default, blockerar inte. `FlyRuntime` är en framtida slot.
+> **Status 2026-06-12 (ADR 0033 + default-flippen):** Vercel Sandbox-adaptern
+> är **både default och primär** (policyfältet `default: vercel-sandbox`,
+> `status: primary`) — tomt/osatt `VIEWSER_PREVIEW_MODE` resolvas till
+> `vercel-sandbox` (operatörsbeslut 2026-06-12). Hostad drift kör den vägen
+> med blob-källa + pre-built `.next`. `LocalRuntime` (`local-next`) väljs
+> **explicit** för lokal dev (`apps/viewser/.env.local`; mallen `.env.example`
+> sätter raden) och är garanterad fallback. `StackBlitzRuntime` är **pausad**
+> (`status: paused`) — inte default, blockerar inte. `FlyRuntime` är en
+> framtida slot.
 
 ## Princip
 
@@ -36,13 +39,14 @@ flowchart LR
     iface --> sb
 ```
 
-Statusvärdena nedan speglar `preview-runtime-policy.v1.json` (`default: local`;
-Vercel Sandbox = `primary`; `fly` = `secondary`; `stackblitz` = `paused`).
+Statusvärdena nedan speglar `preview-runtime-policy.v1.json`
+(`default: vercel-sandbox`; Vercel Sandbox = `primary`; `fly` = `secondary`;
+`stackblitz` = `paused`).
 
 | Implementation | Status (policy) | Använd när |
 |----------------|--------|-----------|
-| `LocalRuntime` (`local-next`) | default + developer-only | **faktisk default idag**; lokal dev/felsökning och garanterad fallback när Vercel-auth saknas |
-| Vercel Sandbox-adapter | primary (intended, ADR 0033) | användarvänd preview med publik HTTPS-URL (fungerar i alla browsers); kärnflödet prompt → företagshemsida → preview → följdprompt → ny version; väljs via `VIEWSER_PREVIEW_MODE` (Vercel Sandbox-läget) tills default-flippen verifierats |
+| Vercel Sandbox-adapter | **default + primary** (ADR 0033, flippen 2026-06-12) | användarvänd preview med publik HTTPS-URL (fungerar i alla browsers); kärnflödet prompt → företagshemsida → preview → följdprompt → ny version; tomt/osatt `VIEWSER_PREVIEW_MODE` resolvas hit |
+| `LocalRuntime` (`local-next`) | developer-only | lokal dev/felsökning (väljs explicit i `.env.local`) och garanterad fallback när Vercel-auth saknas |
 | `FlyRuntime` | secondary (framtida) | sajten kräver riktig build (Stripe, DB, eller andra `hard`-Dossier-SDK:er); produktnära smoke-test |
 | `StackBlitzRuntime` | paused (ADR 0033) | ingen idag — pausad referens; kräver Chromium-isolation + lång init (Safari/Firefox kan inte ladda embeddet, B125) |
 

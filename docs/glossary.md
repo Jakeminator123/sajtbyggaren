@@ -112,7 +112,7 @@ ska uppfinnas:
 
 | Term | Vad det är |
 |------|------------|
-| `Preview Runtime` | Abstraktion för var en genererad sajt körs. Implementationer: `LocalRuntime` (nuvarande default `local-next`), `vercel-sandbox`-adapter (opt-in primär, ADR 0033), `StackBlitzRuntime` (pausad), `FlyRuntime` (framtida). Produktkoden talar bara om `Preview Runtime`. |
+| `Preview Runtime` | Abstraktion för var en genererad sajt körs. Implementationer: `vercel-sandbox`-adapter (default + primär sedan flippen 2026-06-12, ADR 0033), `LocalRuntime` (`local-next`, explicit för lokal dev), `StackBlitzRuntime` (pausad), `FlyRuntime` (framtida). Produktkoden talar bara om `Preview Runtime`. |
 | `LocalRuntime` | Implementation som kör genererade filer på utvecklarens egen Node. Implementationsordning: byggs först (lättast att felsöka). |
 | `StackBlitzRuntime` | Implementation som kör genererade Next.js-sajter via `WebContainer` i browserfliken. Pausad (ADR 0033) - INTE default. Nuvarande default är `local-next` (`LocalRuntime`); `vercel-sandbox` är opt-in primär adapter. |
 | `FlyRuntime` | Implementation som kör genererade sajter på Fly.io VM. Används bara när `StackBlitz` inte räcker (hard-Dossiers, Stripe, DB). |

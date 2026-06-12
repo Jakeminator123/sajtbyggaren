@@ -309,9 +309,10 @@ integrate christopher-ui discovery and asset workflow`, merge
   **Status 2026-06-08 (nedgraderad Hög->Låg-Medel):** vercel-sandbox (ADR 0033)
   serverar en publik https-`vercel.run`-iframe UTAN cross-origin-isolation, så
   den laddar i Safari/Firefox och löser i praktiken Chromium-only-begränsningen
-  utan egen infra-park (kandidat 4 ovan, fast via Vercel Sandbox). Den är dock
-  opt-in (default-mode är fortf. `local-next`), så B125 hålls öppen tills
-  default-flippen (ADR 0033) är gjord och fallbacken verifierad i icke-Chromium.
+  utan egen infra-park (kandidat 4 ovan, fast via Vercel Sandbox).
+  **Status 2026-06-12:** default-flippen (ADR 0033) är GJORD — vercel-sandbox
+  är kod-default (tomt env) och prod-default. B125 hålls öppen tills
+  sandbox-previewen är E2E-verifierad i icke-Chromium (Safari/Firefox).
   Fix: open.
   Test: open.
 
