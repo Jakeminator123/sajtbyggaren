@@ -82,6 +82,14 @@ export interface PreviewSession {
  * (t.ex. `buildMs` på pre-built-vägen) utelämnas individuellt.
  */
 export interface PreviewTimings {
+  /**
+   * Källinhämtningstid (G2, ADR 0058): tiden adaptern lade på att lösa
+   * upp/ladda ner sajt-källan — fil-för-fil-vägens blob-listning+nedladdning
+   * respektive preview-bundle-vägens pekarläsning+HEAD-probe (tarballen
+   * extraheras då i `createMs`). Additivt fält; adaptrar utan mätning
+   * utelämnar det.
+   */
+  sourceMs?: number;
   createMs?: number;
   uploadMs?: number;
   installMs?: number;
