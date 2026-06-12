@@ -611,19 +611,6 @@ async function generateAppliedConfirmation(
   }
 }
 
-type FollowupOutcomeFacts = {
-  engine: string;
-  version: number | null;
-  buildStatus: string | null;
-  appliedVisibleEffect: boolean | null;
-  appliedVisibleEffectReason: string | null;
-  appliedCopyDirectives: { target: string; operation: string; payload: string }[];
-  changedRoutes: string[];
-  unappliedFollowupIntents: { target: string; reason: string }[];
-  openClawDecisionAction: string | null;
-  role: string | null;
-};
-
 /**
  * Del D (site-3e7d71ad, 2026-06-12): an honest, build-grounded chat line for
  * EVERY follow-up answer — including the ones that used to fall through to a
@@ -641,7 +628,18 @@ type FollowupOutcomeFacts = {
  */
 async function generateFollowupOutcomeSummary(
   prompt: string,
-  facts: FollowupOutcomeFacts,
+  facts: {
+    engine: string;
+    version: number | null;
+    buildStatus: string | null;
+    appliedVisibleEffect: boolean | null;
+    appliedVisibleEffectReason: string | null;
+    appliedCopyDirectives: { target: string; operation: string; payload: string }[];
+    changedRoutes: string[];
+    unappliedFollowupIntents: { target: string; reason: string }[];
+    openClawDecisionAction: string | null;
+    role: string | null;
+  },
 ): Promise<string | null> {
   if (!openaiEnv("OPENAI_API_KEY")) return null;
   const lines: string[] = [];
