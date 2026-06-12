@@ -965,6 +965,15 @@ function summarizeBuildResult(
   };
 }
 
+/**
+ * Inline-hint i composer-statusraden när skicka stoppas för att ett bygge/
+ * svar/uppladdning redan pågår (ärlig submit-gate, incident 2026-06-12).
+ * Konstanten delas mellan vakten och clear-effekten så hinten plockas bort
+ * exakt när upptaget-läget släpper — utan att röra riktiga upload-fel som
+ * visas i samma yta.
+ */
+const BUSY_SUBMIT_HINT = "Vänta — ett bygge/svar pågår redan.";
+
 export function FloatingChat({
   siteId,
   onBuildDone,
@@ -1458,6 +1467,24 @@ export function FloatingChat({
     setAttachments((prev) => prev.filter((ref) => ref.assetId !== assetId));
   }, []);
 
+  // Plocka bort upptagen-hinten (ärliga submit-gaten) exakt när upptaget-
+  // läget släpper. Villkorad på hint-texten så riktiga upload-fel i samma
+  // statusrad aldrig raderas av effekten. Microtask-defer (React 19-
+  // lintregeln react-hooks/set-state-in-effect) — samma mönster som
+  // industry-search/viewer-panel, med cancelled-guard mot state-byten
+  // under microtasken.
+  useEffect(() => {
+    if (isSending || isBuilding || isUploading) return;
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setUploadError((prev) => (prev === BUSY_SUBMIT_HINT ? null : prev));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSending, isBuilding, isUploading]);
+
   const sendFollowupPrompt = useCallback(
     async (raw: string) => {
       const trimmed = raw.trim();
@@ -1466,9 +1493,42 @@ export function FloatingChat({
       // bara laddat upp en bild och klickar skicka tolkar vi det
       // som "använd den här bilden i sajten på lämpligt sätt".
       const hasAttachments = attachments.length > 0;
-      if (!trimmed && !hasAttachments) return;
-      if (isSending || isBuilding || isUploading) return;
-      if (!siteId) return;
+      // Ärlig submit-gate (incident 2026-06-12): vakterna är OFÖRÄNDRADE i
+      // styrka, men inte längre tysta. Varje stopp loggas med console.warn
+      // (gör en E2E-körning diagnostiserbar) och upptagen/!siteId ger ärlig
+      // feedback i UI:t i stället för att klicket försvinner spårlöst.
+      if (!trimmed && !hasAttachments) {
+        // Tom prompt utan bilagor är väntat UX (skicka-knappen är redan
+        // disabled då) — ingen UI-ändring, bara diagnos-spåret.
+        console.warn("[floating-chat] Skicka stoppad: tom prompt utan bilagor.");
+        return;
+      }
+      if (isSending || isBuilding || isUploading) {
+        console.warn(
+          "[floating-chat] Skicka stoppad: pågående arbete (isSending=" +
+            `${isSending}, isBuilding=${isBuilding}, isUploading=${isUploading}).`,
+        );
+        // Återanvänd composer-statusraden (samma yta som upload-fel) —
+        // ingen ny UI-yta. Hinten rensas av effekten nedan när upptaget-
+        // läget släpper.
+        setUploadError(BUSY_SUBMIT_HINT);
+        return;
+      }
+      if (!siteId) {
+        console.warn("[floating-chat] Skicka stoppad: siteId saknas.");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `gate-no-site-${Date.now()}`,
+            role: "assistant",
+            content:
+              "Ingen aktiv sajt — bygg först. Skapa en sajt från startsidan " +
+              "innan du skickar följdändringar.",
+            variant: "error",
+          },
+        ]);
+        return;
+      }
 
       // Bygg prompt-text med bilage-block sist så LLM:n får
       // strukturerad metadata utan att operatörens egna ord
