@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 
-import { MANIFEST_RELPATH, selectServedRelPaths } from "./generated-blob-source";
+import {
+  filterPrebuiltRelPaths,
+  hasPrebuiltNextRelPath,
+  MANIFEST_RELPATH,
+  selectServedRelPaths,
+} from "./generated-blob-source";
 
 declare const describe: (name: string, fn: () => void) => void;
 declare const it: (name: string, fn: () => void | Promise<void>) => void;
@@ -67,5 +72,54 @@ describe("selectServedRelPaths (B195 stale-blob-cleanup)", () => {
     const served = selectServedRelPaths(listed, []);
 
     assert.deepEqual(served, []);
+  });
+});
+
+// Hostad pre-built (2026-06-12): hostade byggen laddar upp .next (minus
+// cache/trace) så preview-sandboxen kan köra next start utan eget bygge.
+// filterPrebuiltRelPaths avgör om .next-filerna ska dras ner ur blob.
+describe("filterPrebuiltRelPaths (hostad pre-built)", () => {
+  const relPaths = [
+    "package.json",
+    "app/page.tsx",
+    ".next/BUILD_ID",
+    ".next/server/app/page.js",
+    ".next/cache/webpack/0.pack",
+    ".next/trace",
+    ".next/trace/events.json",
+  ];
+
+  it("utan pre-built: allt under .next/ utelämnas (gamla beteendet)", () => {
+    const filtered = filterPrebuiltRelPaths(relPaths, false);
+
+    assert.deepEqual(filtered, ["package.json", "app/page.tsx"]);
+  });
+
+  it("med pre-built: .next/** följer med, men aldrig cache/trace", () => {
+    const filtered = filterPrebuiltRelPaths(relPaths, true);
+
+    assert.deepEqual(filtered, [
+      "package.json",
+      "app/page.tsx",
+      ".next/BUILD_ID",
+      ".next/server/app/page.js",
+    ]);
+  });
+
+  it("rör aldrig vanliga källfiler vars namn råkar likna .next", () => {
+    const filtered = filterPrebuiltRelPaths(
+      ["app/.nextish/file.ts", "docs/.next.md"],
+      false,
+    );
+
+    assert.deepEqual(filtered, ["app/.nextish/file.ts", "docs/.next.md"]);
+  });
+});
+
+describe("hasPrebuiltNextRelPath (BUILD_ID-readiness)", () => {
+  it("kräver exakt .next/BUILD_ID — samma kontrakt som disk-vägen", () => {
+    assert.equal(hasPrebuiltNextRelPath([".next/BUILD_ID", "a.js"]), true);
+    assert.equal(hasPrebuiltNextRelPath([".next/server/x.js"]), false);
+    assert.equal(hasPrebuiltNextRelPath([]), false);
   });
 });

@@ -783,7 +783,20 @@ upload_file() {
 # (rotorsaken till site-a7cd97e7: done-status men 0 blobbar). Varje led
 # verifieras nu hart: listningen, att listan inte ar tom, och att minst en
 # fil faktiskt laddades upp.
-find . \\( -name node_modules -o -name .next -o -name .git -o -name .turbo -o -name .vercel -o -name .cache -o -name out \\) -prune -o -type f -print | sed 's|^\\./||' > /tmp/upload-manifest.txt \\
+#
+# Pre-built preview (2026-06-12): rot-nivans fardiga .next/ INKLUDERAS i
+# uploaden sa preview-sandboxen kan kora npm install --omit=dev + next start
+# utan eget next build (kallstart minuter -> sekunder). Skip-logiken speglar
+# exakt collectSource(includeBuiltNext) i vercel-sandbox-runner.ts:
+#   - .next/cache prunas (webpack-cache, ~95 % av .next-bytes, aldrig last
+#     av next start),
+#   - .next/trace prunas (build-telemetri; har Linux-paths men behovs aldrig),
+#   - NASTLADE .next (i undermappar) prunas som forr — bara rot-nivans slapps.
+# Bygget sker Linux->Linux sa Windows-path-portabilitetsfallan (B3-noten i
+# collectSource) ar inte relevant har. B195-manifestet listar fortsatt exakt
+# det uppladdade fil-setet (upload-loopen nedan ar oforandrad), och
+# generated-blob-source.ts filtrerar .next nar pre-built inte ska anvandas.
+find . \\( -name node_modules -o -name .git -o -name .turbo -o -name .vercel -o -name .cache -o -name out \\) -prune -o -path ./.next/cache -prune -o -path ./.next/trace -prune -o \\( -name .next ! -path ./.next \\) -prune -o -type f -print | sed 's|^\\./||' > /tmp/upload-manifest.txt \\
   || fail "Kunde inte lista build-filerna for blob-upload."
 [ -s /tmp/upload-manifest.txt ] || fail "Fil-listan for blob-upload ar tom — build-katalogen ser tom ut."
 

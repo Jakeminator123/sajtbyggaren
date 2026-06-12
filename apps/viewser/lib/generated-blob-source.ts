@@ -32,7 +32,14 @@ const BLOB_PREFIX_ROOT = "generated";
  */
 export const MANIFEST_RELPATH = ".manifest.json";
 
-/** Skydd så vi aldrig drar ner ett orimligt stort blob-träd (spegel av runnern). */
+/**
+ * Skydd så vi aldrig drar ner ett orimligt stort blob-träd. Speglar MEDVETET
+ * disk-vägens tak i vercel-sandbox-runner.ts (samma 4 000 filer / 64 MB):
+ * sedan pre-built-vägen hostades (2026-06-12) innehåller blob-källan även
+ * byggets ``.next/`` (minus ``cache``/``trace``), precis som disk-vägens
+ * Tier 1-upload gjort sedan #263 — och den har skeppat inom samma tak.
+ * Behöver taket höjas ska det ske PÅ BÅDA ställena, medvetet och samtidigt.
+ */
 const MAX_FILES = 4_000;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 
@@ -106,6 +113,45 @@ export function selectServedRelPaths(
 }
 
 /**
+ * Pre-built-filtret (hostad Tier 1, 2026-06-12). Hostade byggen laddar numera
+ * upp byggets ``.next/`` (minus ``cache``/``trace``) till blob så
+ * preview-sandboxen kan köra ``npm install --omit=dev`` + ``next start`` utan
+ * eget ``next build``. Den här rena funktionen avgör vilka relPaths som ska
+ * dras ner givet om callern vill ha pre-built-artefakterna:
+ *
+ *   - ``includeBuiltNext=false`` → allt under ``.next/`` utelämnas (gamla
+ *     beteendet — t.ex. den ärliga fallbacken till fulla bygg-vägen, där en
+ *     upload av en ev. trasig ``.next`` bara vore bortkastade bytes).
+ *   - ``includeBuiltNext=true``  → ``.next/**`` följer med, men aldrig
+ *     ``.next/cache/**`` eller ``.next/trace``/``.next/trace/**`` (defensiv
+ *     spegel av ``collectSource``-skip-logiken — bygget ska aldrig ha laddat
+ *     upp dem, men en äldre/främmande blobb får inte smita igenom).
+ *
+ * Ren funktion utan I/O — enhetstestad i ``generated-blob-source.test.ts``.
+ */
+export function filterPrebuiltRelPaths(
+  servedRelPaths: readonly string[],
+  includeBuiltNext: boolean,
+): string[] {
+  return servedRelPaths.filter((rel) => {
+    if (rel !== ".next" && !rel.startsWith(".next/")) return true;
+    if (!includeBuiltNext) return false;
+    if (rel.startsWith(".next/cache/") || rel === ".next/cache") return false;
+    if (rel === ".next/trace" || rel.startsWith(".next/trace/")) return false;
+    return true;
+  });
+}
+
+/**
+ * True om ett blob-fil-set bär en KOMPLETT ``next build``-output.
+ * ``BUILD_ID`` skrivs sist i en lyckad build — samma readiness-kontrakt som
+ * disk-vägens ``hasCompletedNextBuild`` (vercel-sandbox-runner.ts).
+ */
+export function hasPrebuiltNextRelPath(relPaths: readonly string[]): boolean {
+  return relPaths.includes(".next/BUILD_ID");
+}
+
+/**
  * Hämta och tolka publicerings-manifestet (``.manifest.json``). Accepterar
  * antingen en ren array av relPaths eller ``{ files: string[] }``. Vid nät-
  * eller parse-fel returneras ``null`` så serveringen ärligt faller tillbaka
@@ -141,6 +187,14 @@ async function fetchManifestRelPaths(url: string): Promise<string[] | null> {
  */
 export async function collectSourceFromBlob(
   siteId: string,
+  options?: {
+    /**
+     * Ta med byggets ``.next/`` (minus ``cache``/``trace``) så sandboxen kan
+     * köra pre-built-vägen (``npm install --omit=dev`` + ``next start``).
+     * Default ``false`` = gamla beteendet (källfiler utan ``.next``).
+     */
+    includeBuiltNext?: boolean;
+  },
 ): Promise<CollectedBlobSource | null> {
   if (!siteId || !SITE_ID_PATTERN.test(siteId)) return null;
   if (!hasBlobToken()) return null;
@@ -183,7 +237,10 @@ export async function collectSourceFromBlob(
   const manifestRelPaths = manifestItem
     ? await fetchManifestRelPaths(manifestItem.url)
     : null;
-  const servedRelPaths = selectServedRelPaths([...byRel.keys()], manifestRelPaths);
+  const servedRelPaths = filterPrebuiltRelPaths(
+    selectServedRelPaths([...byRel.keys()], manifestRelPaths),
+    options?.includeBuiltNext === true,
+  );
 
   const files: { relPath: string; content: Buffer }[] = [];
   const dirSet = new Set<string>();

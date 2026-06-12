@@ -41,6 +41,7 @@ import { resolveGeneratedDir } from "./generated-dir";
 import {
   blobPrefixForSite,
   collectSourceFromBlob,
+  hasPrebuiltNextRelPath,
   type CollectedBlobSource,
 } from "./generated-blob-source";
 import {
@@ -763,8 +764,10 @@ async function createSandboxPreviewAttempt(
   // generated-files till blob lokalt via scripts/snapshot-site-to-blob.mjs
   // (icke-publik operatör-CLI, #156).
   const sourceDir = resolveSourceDir(request.siteId);
-  // Pre-built-vägen (B3) är disk-only: blob-snapshots innehåller ingen .next.
-  const prebuilt =
+  // Pre-built-vägen (B3 disk; hostad blob 2026-06-12): disk-grenen läser
+  // BUILD_ID på disk; blob-grenen avgörs nedan av om blob-källan bär en
+  // komplett .next (hostade byggen laddar upp den sedan pre-built-passet).
+  let prebuilt =
     allowPrebuilt &&
     prebuiltUploadEnabled() &&
     sourceDir !== null &&
@@ -786,11 +789,19 @@ async function createSandboxPreviewAttempt(
       return { result: failed(messageFromError(error), logs), fallbackEligible: prebuilt };
     }
   } else {
+    // Hostad pre-built (2026-06-12): be blob-källan om .next bara när
+    // pre-built-vägen får användas — den ärliga fallbacken (allowPrebuilt
+    // false) laddar aldrig ner/upp en .next som ändå byggs om.
+    const wantPrebuilt = allowPrebuilt && prebuiltUploadEnabled();
     let fromBlob: CollectedBlobSource | null;
     try {
-      fromBlob = await collectSourceFromBlob(request.siteId);
+      fromBlob = await collectSourceFromBlob(request.siteId, {
+        includeBuiltNext: wantPrebuilt,
+      });
     } catch (error) {
-      return { result: failed(messageFromError(error), logs), fallbackEligible: false };
+      // T.ex. fil-/byte-taket nått PGA .next-innehållet — kan lyckas utan
+      // .next på fulla vägen → fallback-berättigat när pre-built valdes.
+      return { result: failed(messageFromError(error), logs), fallbackEligible: wantPrebuilt };
     }
     if (!fromBlob) {
       return {
@@ -805,10 +816,21 @@ async function createSandboxPreviewAttempt(
       };
     }
     collected = fromBlob;
+    // Saknad/inkomplett .next i blob (bygge före pre-built-passet, eller
+    // trasig upload utan BUILD_ID) → ärlig fallback till fulla bygg-vägen.
+    prebuilt =
+      wantPrebuilt &&
+      hasPrebuiltNextRelPath(collected.files.map((f) => f.relPath));
     logs.push(
       `Käll: blob-snapshot ${blobPrefixForSite(request.siteId)} ` +
-        `(${collected.files.length} filer).`,
+        `(${collected.files.length} filer${prebuilt ? ", pre-built .next" : ""}).`,
     );
+    if (prebuilt) {
+      logs.push(
+        "Pre-built .next i blob-källan (BUILD_ID) — hoppar över next build " +
+          `i sandboxen (${UPLOAD_BUILT_ENV}=0 stänger av).`,
+      );
+    }
   }
 
   const sdk = await loadSandboxSdk();

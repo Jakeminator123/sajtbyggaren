@@ -112,8 +112,12 @@ operatörsbeslutet 2026-06-11 är publik drift med dessa skydd (se
 
 ## Kallstart och kostnad (ärlig caveat)
 
-- Kallstart för preview är ~28 s eller mer: sandboxen kör `npm install` plus
-  `next build` plus `next start` innan den publika URL:en svarar.
+- Kallstart för preview: sedan pre-built-passet (2026-06-12) laddar hostade
+  byggen upp byggets `.next/` (minus cache/trace) till blob, så
+  preview-sandboxen kör bara `npm install --omit=dev` plus `next start` —
+  inget eget `next build`. Saknas en komplett `.next` i blob (bygge före
+  passet) tar previewen ärligt fulla vägen (`npm install` + `next build` +
+  `next start`, ~28 s eller mer, ofta minuter).
 - Ett hostat BYGGE tar typiskt flera minuter (pip + npm install + next build).
   `/api/prompt` har `maxDuration = 300` (kräver Pro-plan); tar bygget längre
   än svarsbudgeten (~280 s) avslutas svaret ärligt med en hänvisning till
