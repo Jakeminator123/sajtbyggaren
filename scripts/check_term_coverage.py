@@ -407,6 +407,21 @@ COMMON_WORDS = {
     # helpers around read-only file scanning, not canonical domain terms.
     "DossierIntakeError", "DossierIntakeModelResolutionError",
     "DossierIntakeReviewModel", "IntakeScanCaps",
+    # Component intake CLI implementation symbols (scripts/component_intake.py,
+    # ADR 0054). Component Builder / Component Candidate are registered domain
+    # terms in naming-dictionary.v1; these are local Python containers around
+    # the shadcn MCP session seam and the structured-output IO - same treatment
+    # as the Dossier*/Variant* generator families above. MCPServerStdio /
+    # CallToolResult are openai-agents / mcp SDK symbols, not Sajtbyggaren terms.
+    "ComponentCandidate", "ComponentIntakeError", "ComponentIntakeResult",
+    "ComponentModelResolutionError", "ShadcnGathered", "ShadcnMcpSession",
+    "MCPServerStdio", "CallToolResult",
+    # shadcn accordion primitive component identifiers (the faq-section ->
+    # accordion pilot, ADR 0040 lager 3). Vendored shadcn UI primitive names,
+    # not Sajtbyggaren domain terms - same category as the lucide icon names
+    # allowlisted elsewhere. Referenced by name in renderers.py (emitted JSX)
+    # and tests.
+    "Accordion", "AccordionItem", "AccordionTrigger", "AccordionContent",
     # Industry scaffold candidate generator implementation symbols
     # (scripts/generate_scaffold_candidate.py). Scaffold and Industry Profile
     # are already registered domain terms; these are local Python containers

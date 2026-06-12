@@ -109,9 +109,12 @@ _CONDUCTOR_BASELINE: tuple[tuple[str, str, str, str | None], ...] = (
     ("lägg till en faq-sektion", "edit_instruction", "edit", "section_builder"),
     ("kan du lägga till en team-sektion?", "edit_instruction", "edit", "section_builder"),
     ("skriv om rubriken till något kortare", "edit_instruction", "edit", "copy"),
-    # component_add / layout etc. stay edits but no role owns them in this slice.
-    ("lägg till öppettider överst", "edit_instruction", "edit", None),
-    ("lägg en klocka i andra sektionen till vänster", "edit_instruction", "edit", None),
+    # ADR 0057: component_add is now owned by component_builder (partial role).
+    ("lägg till öppettider överst", "edit_instruction", "edit", "component_builder"),
+    ("lägg en klocka i andra sektionen till vänster", "edit_instruction", "edit", "component_builder"),
+    # A genuinely unowned edit kind still maps to role None (honest surface):
+    # component_remove has no owning role in this slice.
+    ("ta bort kontaktformuläret", "edit_instruction", "edit", None),
     # -- 'other' (own downstream handling) + B181 greeting/?-invariance --
     ("hej, vad tycker du om sajten?", "site_review", "site_opinion", "router"),
     ("hallå, sidan funkar inte", "bug_report", "other", "router"),
@@ -128,9 +131,12 @@ def test_baseline_has_at_least_fifteen_fixtures_and_full_coverage() -> None:
     assert {"small_talk", "site_opinion", "question", "edit", "other"}.issubset(
         conversation_kinds
     )
-    # Every owned editing role appears at least once.
+    # Every owned editing role appears at least once (ADR 0057 adds
+    # component_builder); the unowned-edit honest surface (None) is also covered.
     roles = {role for _p, _mk, _ck, role in _CONDUCTOR_BASELINE}
-    assert {"section_builder", "stylist", "copy", "router", None}.issubset(roles)
+    assert {
+        "section_builder", "stylist", "copy", "component_builder", "router", None
+    }.issubset(roles)
 
 
 @pytest.mark.parametrize(
@@ -187,8 +193,9 @@ def test_router_messagekind_enum_still_has_exactly_eight_values() -> None:
         ("section_add", "section_builder"),
         ("visual_style", "stylist"),
         ("copy_change", "copy"),
+        # ADR 0057: component_add is now owned by component_builder.
+        ("component_add", "component_builder"),
         # Unowned-in-this-slice edit kinds map to None (honest surface).
-        ("component_add", None),
         ("component_remove", None),
         ("layout_change", None),
         ("route_add", None),

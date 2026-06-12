@@ -2428,11 +2428,30 @@ def _faq_pairs(
     return pairs
 
 
+def _faq_uses_accordion_component(dossier: dict) -> bool:
+    """Per-build Component Catalog gate for the /faq accordion (ADR 0040 l3).
+
+    True only when capability-map ``faq-section.components`` lists ``accordion``
+    AND the build's resolved Starter vendors the accordion component (resolved
+    per-build from ``scaffoldId``/``starterId`` via the in-bounds
+    ``packages/policies/component_catalog`` helper - build may import policies,
+    never planning). Any other case (no scaffold, a Starter that does not vendor
+    accordion) is False -> exactly today's native ``<details>``-free fallback.
+    """
+    from packages.policies.component_catalog import faq_accordion_component_available
+
+    return faq_accordion_component_available(
+        scaffold_id=dossier.get("scaffoldId"),
+        starter_id=dossier.get("starterId"),
+    )
+
+
 def render_faq(
     dossier: dict,
     *,
     contact_path: str = "/kontakt",
     blueprint: RenderBlueprint | None = None,
+    accordion_component: bool | None = None,
 ) -> str:
     """Render the wizard-driven /faq route.
 
@@ -2442,8 +2461,53 @@ def render_faq(
     operator-specific answers belong on the operator's wishlist, not in v1
     codegen. kor-2 lets a grounded blueprint FAQ replace the generic
     template questions (see ``_faq_pairs``).
+
+    Component Catalog lager 3 (ADR 0040): when ``accordion_component`` resolves
+    True, the route emits the vendored ``Accordion`` component
+    (``@/components/ui/accordion``) instead of the native ``<article>`` cards.
+    ``accordion_component=None`` (the default) derives the flag per-build from
+    the dossier's scaffold/starter via the Component Catalog gate; an explicit
+    bool overrides it (used by tests). When False the markup is byte-identical to
+    the historical native fallback - the grounded questions/answers are the same
+    in both modes, only the wrapper differs.
     """
+    use_accordion = (
+        _faq_uses_accordion_component(dossier)
+        if accordion_component is None
+        else accordion_component
+    )
     pairs = _faq_pairs(dossier, blueprint)
+    heading = _wizard_section_heading(
+        "Vanliga frågor",
+        "Det vi får höra ofta",
+        "Korta svar på de frågor våra kunder ställer oftast. "
+        "Saknas något du undrar över? Hör av dig så svarar vi.",
+        section_id="faq",
+    )
+
+    if use_accordion:
+        items = "\n".join(
+            f'            <AccordionItem key={_jsx_safe_string(f"faq-{i}")}>\n'
+            f'              <AccordionTrigger>{_jsx_safe_string(question)}</AccordionTrigger>\n'
+            f'              <AccordionContent>{_jsx_safe_string(answer)}</AccordionContent>\n'
+            "            </AccordionItem>"
+            for i, (question, answer) in enumerate(pairs)
+        )
+        return (
+            'import { ArrowRight } from "lucide-react";\n'
+            'import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";\n'
+            "\n"
+            "export default function FaqPage() {\n"
+            "  return (\n"
+            '    <main className="flex flex-1 flex-col">\n'
+            + heading
+            + '          <Accordion className="mx-auto w-full max-w-3xl">\n'
+            + items
+            + "\n          </Accordion>\n"
+            + _wizard_contact_cta(dossier, contact_path)
+            + _wizard_page_footer()
+        )
+
     items = "\n".join(
         f'            <article key={_jsx_safe_string(f"faq-{i}")} className="rounded-xl border border-[color:var(--border)] p-6">\n'
         f'              <h2 className="text-lg font-semibold">{_jsx_safe_string(question)}</h2>\n'
@@ -2457,13 +2521,7 @@ def render_faq(
         "export default function FaqPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        + _wizard_section_heading(
-            "Vanliga frågor",
-            "Det vi får höra ofta",
-            "Korta svar på de frågor våra kunder ställer oftast. "
-            "Saknas något du undrar över? Hör av dig så svarar vi.",
-            section_id="faq",
-        )
+        + heading
         + '          <div className="grid gap-3 md:grid-cols-2">\n'
         + items
         + "\n          </div>\n"

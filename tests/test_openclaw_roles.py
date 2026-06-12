@@ -76,9 +76,15 @@ _CONVERSATION_KINDS = {"small_talk", "site_opinion", "question", "edit", "other"
 # ---------------------------------------------------------------------------
 
 
-def test_exactly_the_four_named_roles_exist():
-    """The registry holds exactly the four conductor roles the plan names."""
-    assert set(ROLE_CONTRACTS) == {"router", "section_builder", "stylist", "copy"}
+def test_exactly_the_named_roles_exist():
+    """The registry holds exactly the conductor roles the plan names.
+
+    Updated DELIBERATELY for ADR 0057: component_builder joins the four original
+    roles as the partial/mount-only owner of component_add.
+    """
+    assert set(ROLE_CONTRACTS) == {
+        "router", "section_builder", "stylist", "copy", "component_builder"
+    }
 
 
 @pytest.mark.parametrize(
@@ -87,6 +93,7 @@ def test_exactly_the_four_named_roles_exist():
         ("section_builder", ("section_add",), ("section_add",)),
         ("stylist", ("visual_style",), ("visual_style",)),
         ("copy", ("copy_change",), ("copy_change",)),
+        ("component_builder", ("component_add",), ("component_add",)),
     ],
 )
 def test_editing_role_input_output_contract(
@@ -115,8 +122,9 @@ def test_router_role_dispatches_and_produces_no_directive():
         ("section_add", "section_builder"),
         ("visual_style", "stylist"),
         ("copy_change", "copy"),
+        # ADR 0057: component_add is now owned by component_builder.
+        ("component_add", "component_builder"),
         # Edit kinds no role owns in this slice -> None (honest surface).
-        ("component_add", None),
         ("component_remove", None),
         ("layout_change", None),
         ("route_add", None),
@@ -161,8 +169,9 @@ def test_section_add_skill_constant_matches_contract():
         ("section_add", "skills/section-add/SKILL.md"),
         ("visual_style", "skills/restyle/SKILL.md"),
         ("copy_change", "skills/copy-change/SKILL.md"),
+        # ADR 0057: component_add resolves to the component_builder skill.
+        ("component_add", "skills/component-add/SKILL.md"),
         # Edit kinds no role owns in this slice -> None (honest surface).
-        ("component_add", None),
         ("component_remove", None),
         ("layout_change", None),
         ("route_add", None),
@@ -292,9 +301,9 @@ _EDIT_EXAMPLES: list[tuple[str, str | None]] = [
     ("lägg till en sektion om garantier", "section_builder"),
     ("skriv om rubriken till något kortare", "copy"),
     ("ändra texten i hero-sektionen", "copy"),
-    # component_add / layout etc. are still edits, just not owned by a role here
-    ("lägg till öppettider överst", None),
-    ("lägg en klocka i andra sektionen till vänster", None),
+    # ADR 0057: component_add is now owned by component_builder (partial role).
+    ("lägg till öppettider överst", "component_builder"),
+    ("lägg en klocka i andra sektionen till vänster", "component_builder"),
 ]
 
 
