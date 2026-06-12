@@ -9,6 +9,15 @@ pydantic>=2.9
 openai>=2.41,<3
 pillow>=10.0
 
+# Operator-only tool: scripts/component_intake.py spawns its OWN
+# `npx shadcn@latest mcp` stdio server via the OpenAI Agents SDK pattern
+# (agents.mcp.MCPServerStdio) for curated component intake. PINNED exactly per
+# operator decision (2026-06-12): this is the operator Python layer, not a
+# user-site npm dep (the TOOLS.md npm ban does not apply). The import is lazy in
+# the CLI (fast start + honest error outside the venv); CI tests mock the MCP
+# session and never import or call it.
+openai-agents==0.17.5
+
 # discovery wizard URL-scrape (scripts/scrape_site.py)
 requests>=2.32
 beautifulsoup4>=4.12

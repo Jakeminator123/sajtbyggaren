@@ -23,14 +23,14 @@ korsvalideras mot rollkontraktet i
 `tests/test_openclaw_registry_consistency.py`.
 
 ## Component Catalog (förhandsinfo)
-Komponentmedvetenheten är låst i ADR 0040:
+Komponentmedvetenheten är låst i ADR 0040, i tre lager:
 
-- **Lager 1** — per-Starter `component-manifest.json` (genererad inventering av
+- lager 1 — per-Starter `component-manifest.json` (genererad inventering av
   `components/ui/`, `scripts/generate_component_manifests.py`).
-- **Lager 2** — capability-map `components`-nyckel (vilken komponent en
-  capability får använda), korskontrollerad mot starter-manifesten i
+- lager 2 — capability-map `components`-nyckel (vilken komponent en capability
+  får använda), korskontrollerad mot starter-manifesten i
   `scripts/governance_validate.py`.
-- **Lager 3** — denna roll-dispatch + den synliga render-vägen (faq-section →
+- lager 3 — denna roll-dispatch + den synliga render-vägen (faq-section →
   accordion-piloten) + intaget nedan.
 
 ## Intag av ny komponent (operatörsväg, aldrig runtime)
