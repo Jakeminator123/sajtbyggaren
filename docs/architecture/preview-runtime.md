@@ -2,7 +2,7 @@
 status: active
 owner: backend
 truth_level: summary
-last_verified_commit: f56ac30
+last_verified_commit: d2349414
 ---
 
 # Preview Runtime
@@ -69,8 +69,8 @@ Det vi inte tar med - exakta förbjudna termer står i [`naming-dictionary.v1.js
 
 > `StackBlitzRuntime` är **pausad** (ADR 0033) och är inte default. Avsnittet
 > nedan bevaras som teknisk referens om/när embeddet återupptas; det beskriver
-> inte dagens preview-väg (som är `local-next`, med Vercel Sandbox som primärt
-> opt-in-val).
+> inte dagens preview-väg (Vercel Sandbox i hostad drift, `local-next` på
+> utvecklarmaskinen).
 
 `StackBlitzRuntime` bygger på `@webcontainer/api`. Implementationsdetaljer (boot/mount/spawn/server-ready, COOP/COEP-headers, vanliga fel) ligger i [`docs/integrations/webcontainers-notes.md`](../integrations/webcontainers-notes.md). Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline lever i [`docs/integrations/stackblitz-research.md`](../integrations/stackblitz-research.md). Det ursprungliga underlaget låg i `referens/preview-runtime/konversation.txt` (borttaget i referens-städningen, finns kvar i git-historiken).
 

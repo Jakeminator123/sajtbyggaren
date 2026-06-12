@@ -108,6 +108,14 @@ till `vercel-sandbox` i kod. Det är ett separat operatörsbeslut, INTE en
 Bite C-verifiering - Bite C (wiringen) är klar. Fältet `default` i
 `preview-runtime-policy.v1.json` förblir `local` tills (och om) det bytet görs.
 
+**Rättelsenot (2026-06-12):** den konkreta `@vercel/sandbox`-körningen landade
+i app-lagrets server-only DI-spår (`apps/viewser/lib/vercel-sandbox-runner.ts`
+m.fl., injicerat via `configurePreviewRuntimeHandlers`), inte i
+`packages/preview-runtime/`. Det är det parentes-tillåtna alternativet i
+punkt 4 under "Detta ändrar INTE ADR 0030:s hårda regler" — adaptern i
+`packages/preview-runtime/src/adapters/vercel-sandbox.ts` är SDK-fri och
+delegerar dit. Beslutets innehåll är oförändrat.
+
 ## Konsekvenser
 
 Positiva:

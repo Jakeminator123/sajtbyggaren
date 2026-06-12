@@ -1268,8 +1268,10 @@ async function buildHostedFollowupResponse(
  *     medan sandboxen fortfarande byggde (eller var på väg att faila, B194).
  *     Vid budget-slut: ärligt fel (504) med status-route-hänvisning.
  *
- * Följdprompter hostat failar ärligt i sandboxen tills run-historiken
- * persisteras (P3, B194) — statusen i KV förklarar varför.
+ * Följdprompter hostat FUNGERAR (B194 stängd via #307 + B199 v2):
+ * run-artefakterna från föregående bygge hydreras från blob i sandboxen
+ * före apply (OpenClaw-grind → answer-only → legacy, samma grenordning som
+ * lokala vägen), och run-historiken persisteras till KV-index + blob.
  */
 async function runHostedPromptFlow(
   payload: z.infer<typeof PromptPayloadSchema>,

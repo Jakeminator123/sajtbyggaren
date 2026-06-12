@@ -9,7 +9,7 @@ för migrationsplanen, G1–G8 och prompterna P0–P5). Drift-fusklappen (env-ke
 redis-nycklar, felsökning) finns i `docs/operations/hosted-viewser-manual.md` —
 läs den vid drift, den här guiden vid arkitektur-/deployfrågor.
 
-## Läget (uppdaterat 2026-06-11)
+## Läget (uppdaterat 2026-06-12)
 
 Den hostade deployen är en **publik v1** efter operatörens spärr-hävning
 2026-06-11: hostat bygge är PÅ (`VIEWSER_ENABLE_HOSTED_BUILD=1` +
@@ -52,11 +52,15 @@ av en "auth-gatad P1-skiva" där bygge bara kördes lokalt gäller inte längre.
 
 ## Kvarvarande begränsningar hostat (ärliga, trackade)
 
+Hostade följdpromptar FUNGERAR sedan 2026-06-11/12 (B194 stängd via #307 +
+B199 v2): run-artefakterna tarballas till blob efter varje lyckat bygge,
+hydreras i sandboxen före apply, och run-historiken/inspektorn läses ur
+KV-index + blob via `/api/runs?siteId=`. Det som återstår:
+
 | Begränsning | Tracking | Innebörd |
 | --- | --- | --- |
-| Hostade följdpromptar | B194 (P3) | `followup: true` failar ärligt i sandboxen — run-historiken (`data/runs/`, `data/prompt-inputs/`) persisteras inte hostat ännu, så föregående version kan inte härledas |
 | Discovery-paritet | B197 (P3) | den hostade vägen skickar bara prompt-texten in i sandboxen — wizardens strukturerade `discovery`-block når inte `prompt_to_project_input.py` hostat (lokalt gör det det) |
-| Run-historik i UI:t | — | `/api/runs` med flera läser lokal disk; hostat ger de tom lista plus notis |
+| `changeSet` hostat | — | hostade followup-svar bär `changeSet: null` (lokalt beräknas diffen); filträdet per run (StackBlitz-fallbacken) serveras inte heller hostat |
 | App-auth och tenant-isolering | ADR 0035 (parkerad) | publik v1 skyddas av rate-limit per IP, inte auth |
 
 ## Vad som är ärligt gatat hostat (och varför)
@@ -66,7 +70,7 @@ av en "auth-gatad P1-skiva" där bygge bara kördes lokalt gäller inte längre.
 | `/api/prompt` | Hostat bygge i sandbox när `VIEWSER_ENABLE_HOSTED_BUILD=1` (PÅ i drift); utan flaggan 501 | P2/ADR 0048 — utan flaggan (eller utan blob/kv-env) degraderar routen ärligt |
 | `/api/build`, `/api/scrape-site` | 501 med svensk text | Ingen Python eller `.venv` hostat — dessa är fortsatt lokala |
 | `/api/preview/[siteId]` POST | sandbox-preview när `VIEWSER_ENABLE_HOSTED_SANDBOX=1` (PÅ i drift); annars 501 | Kostsam sandbox-spawn — opt-in, kvoterad av rate-limit (ADR 0050) |
-| `/api/runs` plus run-detaljer | tom lista / 404 plus notis | Ingen beständig repo-disk hostat (`data/runs/` finns inte) |
+| `/api/runs` plus run-detaljer | listas/serveras ur KV-index + blob-tarball (B199 v2) — kräver `siteId` som capability-nyckel, utan den listas inget | Ingen beständig repo-disk hostat; artefakterna persisteras i stället till blob per lyckat bygge |
 | App-auth och tenant-isolering | byggs inte | Auth/billing är parkerat (ADR 0035) — publik v1 skyddas av rate-limit i stället |
 
 ## Env-variabler (sätts i Vercel-projektet — committa ALDRIG värden)
@@ -136,7 +140,6 @@ Den hostade sandbox-runnern läser sedan filerna från blob i stället för disk
 
 ## Nästa arkitektursteg (separat beslut)
 
-- Persistens av run-historik hostat så följdpromptar fungerar (P3, B194) och
-  discovery-payloaden når sandboxen (B197).
-- Durabelt sessionsregister plus sandbox-snapshots för snabb uppstart (P3).
+- Discovery-payloaden når sandboxen (B197, Christophers spår).
+- `changeSet` beräknat hostat + filträd per run.
 - App-auth och tenant-isolering (P4 / ADR 0035).
