@@ -1,5 +1,13 @@
 # KÖR O1 — OpenClaw Core Contract (design + spike, ingen runtime-kod)
 
+> **Status 2026-06-12:** Detta är fortfarande designbakgrund, inte aktuell
+> handoff. Den ursprungliga V0-formen har följts upp i kod: OpenClaw Core finns
+> i `packages/generation/orchestration/openclaw/`, action-bryggan körs via
+> `scripts/run_openclaw_followup.py --apply`, `/api/prompt` använder bryggan,
+> och F1-rollmetadata/rollkontrakt finns i `roles.py`. Läs
+> [`README.md`](README.md) för nulägesstatus innan du använder detta kort som
+> arbetsunderlag.
+
 **Profil:** [`04-builder-profil.md`](04-builder-profil.md).
 **Läs först:** [`02-orchestrator-och-intent.md`](02-orchestrator-och-intent.md),
 [`kor-6a-router-deterministisk.md`](kor-6a-router-deterministisk.md),
@@ -34,9 +42,11 @@ Definiera den **transienta** beslutsstrukturen `OpenClawDecision`, dess
 - och **markera** att en ändring kräver patch-planner som ännu saknas
   (`patch_plan_request`).
 
-V0 **bygger aldrig**, **skriver aldrig filer**, **startar aldrig preview**,
+I den ursprungliga V0-designen **bygger V0 aldrig**, **skriver aldrig filer**, **startar aldrig preview**,
 **installerar aldrig dependencies**, **kör aldrig shell** och **rör aldrig**
 `current.json`. Den är lika read-only som `kor-7a` — den föreslår, den utför inte.
+Detta var rätt för V0-kontraktet; dagens apply-brygga ligger ovanpå detta och
+rapporterar sitt faktiska utfall separat under `bridge`.
 
 ## Icke-mål (hårda gränser, från `04` §3–4 + `open_claw.txt`)
 
@@ -72,9 +82,9 @@ OpenClaw Core komponerar de befintliga typerna — den uppfinner inga nya enums:
   "answer": "…",            // satt bara för answer_only / component-discovery-svar
   "clarifyingQuestion": "…",// satt bara för clarification
   "plan": ["steg 1", "…"],  // satt bara för plan_only / reference
-  "patchPlanRequest": {      // satt bara för edit_instruction i V0:
+  "patchPlanRequest": {      // satt bara för edit_instruction i historisk V0:
     "targetSummary": "contentBlocks.home.<section>.<field>",
-    "status": "action_bridge_missing", // kor-7b/7c/7d finns; OpenClaw-action-bryggan saknas
+    "status": "action_bridge_missing", // historisk V0-etikett innan action-bryggan landade
     "blockedBy": "openclaw-action-bridge"
   },
   "toolCalls": [             // FÖRESLAGNA verktyg — aldrig auto-körda i V0:
@@ -111,13 +121,19 @@ V0 har en **liten, read-only** verktygslåda. Inga skriv-/build-verktyg finns i 
 | `assemble_context(level, …)` | `kor-7a` `context/` | hämta exakt den `contextLevel` routern satte, inom budget | skriva, bygga, boota preview |
 | `decide(router, context)` | **nytt, V0** | välja `OpenClawAction` + formulera svar/plan/fråga | applicera patch, skriva fil, bygga |
 
-Tillägg **senare**: `plan_patches` (dry-run, `kor-7b`), `apply_patch → ny version`
-(`kor-7c`) och targeted rebuild (`kor-7d`) finns alla redan (mergade). Det som saknas är
-**OpenClaw-action-bryggan** som kör den kedjan *från ett OpenClaw-beslut*. V0 stannar
-**före** den bryggan och returnerar `patch_plan_request{status:"action_bridge_missing",
+Historisk V0-not: `plan_patches` (dry-run, `kor-7b`), `apply_patch → ny version`
+(`kor-7c`) och targeted rebuild (`kor-7d`) fanns redan (mergade). Det som då
+saknades var **OpenClaw-action-bryggan** som kör kedjan *från ett
+OpenClaw-beslut*. V0 stannade **före** den bryggan och returnerade
+`patch_plan_request{status:"action_bridge_missing",
 blockedBy:"openclaw-action-bridge"}` på en ändringsorder — ärligt, inte en falsk success.
 (V0 binder bara router + context; den anropar inte själv patch-planeraren — den wiringen är
 patch-flow/`kor-o3`.)
+
+Mot dagens kod är action-bryggan byggd: `scripts/run_openclaw_followup.py --apply`
+delegerar till `run_followup_chain`, och `/api/prompt` försöker bryggan före
+legacy-builden. Behåll V0-kontraktet som designgräns, men bygg inte om
+action-bryggan som om den saknades.
 
 ## Capability-plan (meddelande → kontext → handling, V0)
 
@@ -127,7 +143,7 @@ patch-flow/`kor-o3`.)
 | `component_discovery` | `component_registry` | `answer_only` (lista tillgängliga val) |
 | `reference_analysis` | `external_reference` (gated) | `plan_only` (föreslå egen variant, kopiera aldrig) |
 | `site_review` | `artifacts` / `artifacts_plus_sections` / `preview_dom` | `answer_only` eller `plan_only` |
-| `edit_instruction` | `artifacts_plus_sections` | `patch_plan_request` (V0: planner saknas → ärlig flagga) |
+| `edit_instruction` | `artifacts_plus_sections` | `patch_plan_request` (historisk V0: planner/brygga stannar ärligt före apply) |
 | `edit_instruction` + `capability_request` (t.ex. three.js) | `component_registry` + `artifacts_plus_sections` | `plan_only` + föreslagen `check_dependency_policy` (kräver godkännande) |
 | `bug_report` | `manifest` / `selected_files` | `plan_only` |
 | `multi_intent` | per subtask (kor-6a `subtasks[]`) | en handling per subtask, aggregerad |
@@ -185,11 +201,15 @@ ocommittad/lokal tills beslutet är taget (ingen mappgräns låses i förväg).
   krävd (transient objekt).
 - Slottar in i `README.md`-sekvensen som en **påbyggnad** (LLM/orchestration
   ovanpå grön bas).
-- Detta är ett **designkort**, inte en nuläges-handoff. Aktuellt läge / öppna PR:er /
-  nästa steg för en ny orchestrator lever i `handoff-orchestration.md` +
-  `docs/current-focus.md` — peka dit, duplicera inte hit.
+- Detta är ett **designkort**, inte en nuläges-handoff. Aktuellt läge för
+  heavy-llm-flow-mappen sammanfattas i `README.md`; den gamla
+  `handoff-orchestration.md` är nu bara en arkiverad pekare.
 
-## Prompt till builder-agenten (för den senare V0-implementationen, ~`kor-o2`)
+## Historisk prompt till builder-agenten (ska inte dispatchas idag)
+
+Prompten nedan beskriver hur V0 kunde byggas innan den faktiska OpenClaw Core-
+och action-bryggan landade. Den bevaras som historik; använd den inte som
+aktuell arbetsorder.
 
 ```text
 Du ar builder-agent i Sajtbyggaren. Folj docs/heavy-llm-flow/04-builder-profil.md.
@@ -205,8 +225,8 @@ Krav:
 - Handlingar i V0: answer_only / clarification / plan_only / patch_plan_request.
   V0 bygger ALDRIG, skriver ALDRIG fil, startar ALDRIG preview.
 - En edit_instruction i V0 ger patch_plan_request{status:"action_bridge_missing",
-  blockedBy:"openclaw-action-bridge"} (kor-7b/7c/7d finns; OpenClaw-action-bryggan som kor
-  dem fran ett beslut saknas) - arligt, ingen falsk success.
+  blockedBy:"openclaw-action-bridge"} (historisk V0 stannar före apply-bryggan) -
+  ärligt, ingen falsk success.
 - Mock-safe (ingen OPENAI_API_KEY behovs; deterministiskt over router+context).
 
 Definition of done: capability-planens rader (answer/clarify/plan/patch_plan_request)

@@ -1,37 +1,35 @@
 # Heavy LLM Flow — kördokument för agenter
 
-> ## ✅ Status 2026-06-04: hela kör-sekvensen är implementerad
+> ## ✅ Status 2026-06-12: kör-sekvensen är implementerad, wiring är ikapp
 >
 > Alla kördokument nedan har landat som mergad kod i `jakob-be`
 > (HEAD `54055fc`): kör 0/1a/1b/1c/2/3a/3b/4a/4b/5/6a/6b/7a/7b/7c/7d/STAB/o1/o2.
 > **Dispatcha alltså inte en agent på "bygg ett nytt kör-kort" — den fasen är klar.**
 >
-> Det som återstår är **inkoppling + eval**, inte fler kort:
+> Det gamla statusblocket från 2026-06-04 listade fyra återstående punkter. Mot
+> `jakob-be` HEAD `d234941` är läget:
 >
-> 1. **rerender-wiring** — gör `kor-5` repair verklig (passet finns men är dormant
->    tills en rerender-callback injiceras).
-> 2. **`/api/prompt` + `routerDecision`** — gör follow-up-kedjan (router → context →
->    patch → apply → targeted render) verklig i Viewser-UI:t. Idag kör `/api/prompt`
->    fortfarande bara `runPromptToProjectInput` → `runBuild`. Låser upp #177.
-> 3. **baseline-eval** — 4 prompter i riktig preview, för att avgöra om nästa
->    investering är copy/trust/kontakt eller designsystem.
-> 4. **hostad körning** — `/api/prompt` ger `501` på Vercel: den lokala Python-kedjan
->    saknar en riktig backend-runtime i den hostade vyn (separat hosting-spår).
+> | Punkt | Verifierad status |
+> |---|---|
+> | `rerender-wiring` | Klar. `scripts/build_site.py` injicerar `_rerender_after_repair` i `run_phase3_quality_and_repair` (runt raderna 3172–3199); levererat i `cc7ddc8`. |
+> | `/api/prompt` + `routerDecision` | Klar lokalt och hostat. `apps/viewser/app/api/prompt/route.ts` kör `runOpenClawFollowupApply` före legacy-bygget; `scripts/run_openclaw_followup.py --apply` kör `run_followup_chain`. Huvudbevis: `3373206`, `7391a28`, `597c2ce`, `a67a25b`. |
+> | baseline-eval | Fortfarande öppen: kör de fyra baseline-prompterna i riktig preview och använd resultatet för nästa copy/trust/kontakt- eller designsystembeslut. |
+> | hostad körning / 501-gap | I praktiken stängd för bygg, följdprompt och run-historik: `apps/viewser/lib/hosted-build-runner.ts` kör Python-kedjan i Vercel Sandbox, persisterar run-state/artefakter i blob och KV; `apps/viewser/lib/hosted-run-history.ts` och `/api/runs`-routes läser historik, artefakter och trace tillbaka. Huvudbevis: `1258e8d`, `a67a25b`, `261f0c6`. |
 >
-> Innan wiringen: kör en **post-merge-härdning** av router/OpenClaw-sömmarna
-> (follow-up-classifier → LLM-fallback, RouterDecision cross-field-validering,
-> `orchestrate()` ska skicka `reference.url` + respektera reference-gating i
-> multi-intent, byt stale `blockedBy="kor-7c"`). Detaljer i `docs/current-focus.md`
-> och den externa reviewen. **Princip: ingen ny LLM-slice utan inkopplingsplan.**
+> Router-LLM-fallbacken från `kor-6b` är också live: `scripts/run_openclaw_followup.py`
+> har den på som default och `OPENCLAW_ROUTER_LLM_FALLBACK=0` som kill-switch.
+> Det kvarvarande arbetet är alltså inte fler kör-kort, utan ärlig eval och
+> fortsatt breddning där evalen visar störst produktgap.
 
 Den här mappen är en **byggplan** för att lyfta Sajtbyggaren från en kontrollerad
 mall-/scaffold-generator med LLM-hjälp till en **riktig AI-hemsidebyggare** i v0-/
 Lovable-/sajtmaskin-klass — utan att kasta den bra deterministiska grund som redan
 finns.
 
-Den är skriven så att en **Cursor-agent med builderprofil** kan plocka **ett**
+Den skrevs så att en **Cursor-agent med builderprofil** kunde plocka **ett**
 kördokument (`kor-*.md`), läsa de få referensdokumenten det pekar på, och bygga en
-avgränsad, testbar skiva av det tunga LLM-flödet.
+avgränsad, testbar skiva av det tunga LLM-flödet. Den rollen är nu historisk:
+använd filerna som spec-/spårbarhetsunderlag, inte som en ny dispatch-kö.
 
 > **Källa:** Destillerad från coach-konversationen i
 > [`references/raw/real_llm-flow.txt`](references/raw/real_llm-flow.txt) (+ review-
@@ -57,17 +55,18 @@ generiskt. Det ändrar inte målet; det fyller grunden med intelligenta beslut.
 
 ## Den enda meningen som förklarar hela mappen
 
-> Det som saknas är **inte** mer UI och **inte** fler mallar. Det som saknas är ett
+> Det som saknades var **inte** mer UI och **inte** fler mallar, utan ett
 > **blueprint-baserat LLM-orchestrator-lager** mellan prompten och den deterministiska
 > generatorn — och en **OpenClaw-orchestrator** ovanpå som vet när den ska svara,
-> planera, patcha, bygga, verifiera eller fråga vidare.
+> planera, patcha, bygga, verifiera eller fråga vidare. Det lagret är nu delvis
+> inkopplat; baseline-eval avgör var nästa kvalitetslyft behövs.
 
 ## Två lager (mental modell)
 
 | Lager | Äger | Får aldrig |
 |-------|------|------------|
 | **Deterministic Foundation** (finns) | Scaffolds, variants, dossiers, starters, routes, renderers, Quality Gate, versioner, preview | — |
-| **LLM Orchestrator** (byggs här) | Förståelse, positionering, copy, struktur-intent, designriktning, intent-routing, reparation | Skriva fria filer, hitta på claims, mounta dossiers som inte finns, byta starter utan resolver |
+| **LLM Orchestrator** (byggs ut här) | Förståelse, positionering, copy, struktur-intent, designriktning, intent-routing, reparation | Skriva fria filer, hitta på claims, mounta dossiers som inte finns, byta starter utan resolver |
 
 ```text
 Deterministisk grund:  "Jag vet hur man bygger en giltig sajt utan att krascha."
@@ -95,17 +94,19 @@ LLM-orchestrator:      "Jag vet vilken sajt just den här användaren borde få.
    builder-agent följer. **Scope-baserade checks** (inte alla grindar varje gång),
    ordregel (förbjud canonicalisering, inte ord), när ADR faktiskt krävs.
 
-Sedan kördokumenten: börja med `kor-0` (preflight), sedan `kor-6a` + `kor-1a` … `kor-7d`.
+Kördokumenten nedan är nu främst historik/spec-bas. Dispatcha inte en ny agent
+för att bygga dem igen; använd dem när du behöver förstå varför dagens kod ser
+ut som den gör.
 Råmaterial (coach-transkript, **icke-canonical**) ligger i
 [`references/raw/`](references/raw/README.md) — läs det inte som instruktioner.
 
 ---
 
-## Sprintsekvens (kördokumenten)
+## Sprintsekvens (kördokumenten, historisk byggordning)
 
-Stora kort är uppdelade i mindre, dispatchbara skivor. **Huvudsekvensen** nedan är den
-rekommenderade ordningen; den ger snabbast produktkänsla med minst risk. Varje rad =
-**ett** kördokument = **en** agentuppgift.
+Stora kort delades upp i mindre, dispatchbara skivor. **Huvudsekvensen** nedan är den
+historiska byggordningen, inte dagens aktiva kö. Varje rad var **ett** kördokument =
+**en** agentuppgift.
 
 | # | Kördokument | Levererar | Beror på |
 |---|-------------|-----------|----------|
@@ -124,19 +125,17 @@ rekommenderade ordningen; den ger snabbast produktkänsla med minst risk. Varje 
 | 12 | [`kor-7c-artifact-apply-version.md`](kor-7c-artifact-apply-version.md) | Applicera validerad patch → ny Project Input-version. | 7b |
 | 13 | [`kor-7d-targeted-rebuild.md`](kor-7d-targeted-rebuild.md) | Bygg om bara påverkad route + uppdatera preview. | 7c, 2 |
 
-**Påbyggnader (LLM ovanpå deterministisk bas — kör när basen är grön):**
+**Påbyggnader (LLM ovanpå deterministisk bas — historisk planstatus):**
 
 | Kördokument | Levererar | Beror på |
 |-------------|-----------|----------|
-| [`kor-4b-verifier-model-critic.md`](kor-4b-verifier-model-critic.md) | `verifierModel` smak-critic ovanpå den deterministiska. | 4a |
-| [`kor-6b-router-llm-fallback.md`](kor-6b-router-llm-fallback.md) | LLM-fallback för tvetydiga router-meddelanden. | 6a |
-| [`kor-o1-openclaw-core-contract.md`](kor-o1-openclaw-core-contract.md) | OpenClaw Core-kontrakt (design, ingen kod): `OpenClawDecision` + tool-yta + capability-plan. | 6a, 7a |
+| [`kor-4b-verifier-model-critic.md`](kor-4b-verifier-model-critic.md) | `verifierModel` smak-critic ovanpå den deterministiska. | Klar i kod via `packages/generation/quality_gate/verifier.py` (`029f652`). |
+| [`kor-6b-router-llm-fallback.md`](kor-6b-router-llm-fallback.md) | LLM-fallback för tvetydiga router-meddelanden. | Klar och default på i `scripts/run_openclaw_followup.py` (`2b1805d`, `729b7bd`). |
+| [`kor-o1-openclaw-core-contract.md`](kor-o1-openclaw-core-contract.md) | OpenClaw Core-kontrakt (design): `OpenClawDecision` + tool-yta + capability-plan. | V0/action bridge/F1-rollmetadata har följt upp kontraktet i kod; se statusnot i filen. |
 
-> **Var börja?** Kör **`kor-0`** (preflight) först — verifiera preview/`current.json`-
-> status och att current-focus/handoff inte lurar agenten. Sedan **`kor-6a`**
-> (deterministisk router, snabb produktvinst utan att röra generatorn) parallellt med
-> **`kor-1a`** (schema skeleton). Sedan `kor-1b → 1c → 2`. Bygg **inte** fri kodagent,
-> fler overlays eller auth/billing först.
+> **Var börja idag?** Läs statusblocket högst upp och kör inte om kör-korten.
+> Nästa produktbevis är baseline-eval i riktig preview, följt av den smalaste
+> kvalitetsinvestering som evalen pekar ut.
 
 ---
 

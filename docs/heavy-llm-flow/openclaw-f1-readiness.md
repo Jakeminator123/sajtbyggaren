@@ -2,16 +2,18 @@
 status: active-plan
 owner: backend
 truth_level: summary
-last_verified_commit: 76b5ae4
+last_verified_commit: d234941
 ---
 
 # OpenClaw F1-readiness — install-grundning + registry-runtime-plan
 
-> Status: plan/scout-only (2026-06-09). Detta dokument **minskar osäkerhet**
-> inför nästa builder-lane (F1). Det är **inte** F1-implementationen och
-> innehåller **ingen runtime-kod**. Allt nedan är antingen "finns idag"
-> (verifierat mot git/koden) eller "föreslås (gated)". De två hålls isär med
-> flit.
+> Status: historisk readiness med uppdaterad nulägesnot (verifierad mot
+> `d234941`, 2026-06-12). Dokumentet skrevs 2026-06-09 inför F1; F1 slice
+> 1–3 är nu levererade i annan form än planen antog: rollkontrakten bor i
+> `packages/generation/orchestration/openclaw/roles.py`, registry-konsistensen
+> låses av `tests/test_openclaw_registry_consistency.py`, och
+> `scripts/build_site.py:run_followup_chain` dispatchar `section_add` via
+> `skill_for_edit_kind`.
 >
 > Läs först: `docs/current-focus.md` (köplan), toppblocket i `docs/handoff.md`,
 > `docs/openclaw-workspace/` (dirigent-konstitutionen) och
@@ -24,20 +26,19 @@ Placering: filen ligger i `docs/heavy-llm-flow/` bredvid
 steg i exakt den fasplanen (Fas 1 = roll-registry som explicit modul). Ingen
 ny mappkonvention införs.
 
-## 0. Stopp-före-kod-grind (sammanfattning)
+## 0. Historisk stopp-före-kod-grind (sammanfattning)
 
-Implementation av F1-runtime börjar FÖRST efter operatörens uttryckliga
-go-ahead OCH när dessa tre prerequisites är klara:
+Det här var grinden innan F1-runtime. Mot dagens kod är den passerad för
+rollkontrakt + dispatch, men synlig render är bara delvis breddad:
 
-| # | Prerequisite | Status idag (2026-06-09) |
+| # | Prerequisite | Status 2026-06-12 |
 |---|---|---|
-| a | Synlig render-path för section_add (idag mount-only) | öppen — section_add är mount-only (`applied=true`, `appliedVisibleEffect=false`); synlig render återstår |
+| a | Synlig render-path för section_add | delvis stängd — faq/team renderas synligt på `local-service-business`; contact-form renderas synligt på `ecommerce-lite` när `resend-contact-form` är monterad. Övriga section_add-typer är fortsatt mount-only eller inline-gated enligt `docs/openclaw-workspace/action-registry.json`. |
 | b | Lane A docs/governance-cleanup landad på `jakob-be` | **klar** — mergad via `76b5ae4` (`merge(lane-a): docs honesty-cleanup + frontmatter + archive`) |
 | c | Megafil-refaktorplanen (#215) beslutad | **klar som plan** — `2dadf09` ([`docs/refactor/megafiles-plan.md`](../refactor/megafiles-plan.md)); själva refaktor-koden väntar |
 
-Tills allt tre + go-ahead är på plats: planera, vänta, stoppa. Skriv ingen
-runtime-kod ens om vägen är tydlig. Denna fil flyttar inte gränsen — den
-beskriver bara vad som ska göras när grinden öppnas.
+Den ursprungliga stoppregeln ska därför inte läsas som dagens byggkö. Den visar
+vilka risker som fanns innan F1 landade.
 
 ## 1. Riktningen (icke förhandlingsbar)
 
@@ -86,9 +87,8 @@ section → `patch_plan_request`/`section_add`).
 | memory | per-sajt Project Input + run/version (ingen global minnesbank i git) |
 | plugins / daemon / multi-channel | byggs INTE nu |
 
-Slutsats: för F1 finns **ingen installationsfråga**. F1 lägger till en
-registry-modul i samma `.venv`-paket. Ingen ny process, ingen Docker, ingen
-gateway.
+Slutsats: för F1 fanns och finns **ingen installationsfråga**. Den levererade
+lösningen lade inte till någon ny process, Docker eller gateway.
 
 ### Vad ett eventuellt externt Docker/Gateway-läge (Fas 2) skulle KRÄVA
 
@@ -149,34 +149,38 @@ dem som "byggt".
 
 ---
 
-## 3.2 F1-designen: gör action-registret körbart (SOM PLAN)
+## 3.2 F1-designen: gör action-registret körbart (historisk plan, levererad form)
 
-Mål: gör `docs/openclaw-workspace/action-registry.json` **körbar** — kod läser
-registret och väljer roll — i stället för att vara enbart dokumentation. Detta
-är Fas 1 i conductor-planen ("roll-registry som explicit modul + dirigent väljer
-roll"). Inget byggs här; nedan är ritningen.
+Målet var att göra `docs/openclaw-workspace/action-registry.json` körbar — kod
+ska välja roll i stället för att bara dokumentera roller. Den levererade formen
+blev smalare och mer driftlåst än skissen: `ROLE_CONTRACTS` i `roles.py` är
+kodens frysta rollkontrakt, och testet `test_openclaw_registry_consistency.py`
+korsvaliderar skill/status/mountOnly/visibleTypes mot action-registryt.
 
-### Planerad modul: `registry.py`
+### Levererad modulform: `roles.py`
 
-En ny modul `packages/generation/orchestration/openclaw/registry.py` som:
+I stället för en separat `registry.py` finns nu
+`packages/generation/orchestration/openclaw/roles.py`, som:
 
-- läser `docs/openclaw-workspace/action-registry.json` (fälten `id`, `skill`,
-  `routerEditKind`, `status`, `mountOnly`),
-- exponerar en mappning från routerns `editKind` → roll
-  (`copy_change`→`copy_editor`, `visual_style`→`stylist`,
-  `section_add`→`section_builder`, `site_review`→`site_review`/reviewer),
-- är ren och deterministisk (ren JSON-läsning, ingen LLM, inget nätverk),
-  samma anda som `core.py`.
+- exponerar `ROLE_CONTRACTS` med `router`, `section_builder`, `stylist` och
+  `copy`,
+- exponerar mappningen från routerns `editKind` → roll
+  (`copy_change`→`copy`, `visual_style`→`stylist`,
+  `section_add`→`section_builder`),
+- exponerar `skill_for_edit_kind`, som läser `RoleContract.skill` och därmed
+  gör den klassade rollen styrande för dispatch,
+- är ren och deterministisk (ingen LLM, inget nätverk), samma anda som `core.py`.
 
-### Hur `run_openclaw_followup.py` skulle läsa registret
+### Hur kedjan läser rollen
 
 `run_openclaw_followup.py` har redan två lägen: read-only beslut, och
 `--apply`-bryggan som för ett `edit_instruction` kör den BEFINTLIGA apply-kedjan
-`run_followup_chain` (router → context → patch → apply → targeted render). F1
-lägger till ETT steg: när Core V0 returnerar `patch_plan_request` slår bryggan
-upp rollen i `registry.py` (via routerns `editKind`) innan den ropar på
-`run_followup_chain`. Ingen ny motor, ingen fri filpatch — rollen *förstår och
-föreslår*, kedjan *validerar och applicerar*.
+`run_followup_chain` (router → context → patch → apply → targeted render).
+Den rolldrivna dispatchen sker inne i `run_followup_chain`: runt raderna
+4017–4036 jämför kedjan `skill_for_edit_kind(editKind)` med
+`SECTION_ADD_SKILL`, i stället för att bara hårdkoda rått `editKind`.
+Ingen ny motor, ingen fri filpatch — rollen väljer skill, kedjan validerar
+och applicerar.
 
 Kontraktet behålls oförändrat:
 
@@ -185,26 +189,28 @@ Kontraktet behålls oförändrat:
 - `applied` / `appliedVisibleEffect` / `previewShouldRefresh` kommer ALLTID från
   `run_followup_chain` (det separata `bridge`-objektet), aldrig påhittat.
 - Okänd/ostödd action → ärlig no-op med anledning (aldrig fejkad "klart").
-- En monterad section_add förblir mount-only (`appliedVisibleEffect=false`) tills
-  den separata render-path-uppgiften landar; F1 gör den inte synlig.
+- En monterad section_add kan vara synlig när en smal render-path finns:
+  faq/team på `local-service-business`, contact-form på `ecommerce-lite` med
+  `resend-contact-form`. I övriga fall stannar mount-only-ärligheten.
 
-### Fil-touch-points (planerade, EJ rörda i denna lane)
+### Fil-touch-points (planerade då, leveransstatus nu)
 
-| Fil | Planerad ändring | Rörd nu? |
+| Fil | Planerad ändring | Leveransstatus |
 |---|---|---|
-| `packages/generation/orchestration/openclaw/registry.py` | ny modul (läser registret, mappar editKind→roll) | nej (ny) |
-| `scripts/run_openclaw_followup.py` | läser registret för att välja roll före `run_followup_chain` | nej |
-| `scripts/verify_openclaw.py` | ev. ny check: registret laddar + varje skill-path finns + status-värden giltiga | nej |
-| `packages/generation/orchestration/openclaw/core.py` / `models.py` | oförändrat (kontraktet rörs inte) | nej |
-| `docs/openclaw-workspace/action-registry.json` | oförändrat (läses, inte ändras) | nej |
+| `packages/generation/orchestration/openclaw/registry.py` | ny modul (läser registret, mappar editKind→roll) | byggdes inte separat; motsvarande kontrakt finns i `roles.py` |
+| `scripts/run_openclaw_followup.py` | läser registret för att välja roll före `run_followup_chain` | bridge-seam bär conversation/rollmetadata; själva section-dispatchen sker i `run_followup_chain` |
+| `scripts/verify_openclaw.py` | ev. ny check: registret laddar + varje skill-path finns + status-värden giltiga | oförändrad huvudlampa; registry-drift låses i pytest |
+| `packages/generation/orchestration/openclaw/core.py` / `models.py` | oförändrat (kontraktet rörs inte) | Core-kontraktet behölls |
+| `docs/openclaw-workspace/action-registry.json` | oförändrat (läses, inte ändras) | blev driftlåst mot `ROLE_CONTRACTS` via test |
 
-### Tester att lägga till (beskrivs, skapas INTE här)
+### Tester (levererade)
 
-- registry-laddning: filen parsas, schemat (id/skill/routerEditKind/status) är giltigt.
-- editKind→roll: varje stödd `editKind` mappar till förväntad roll; okänd editKind → ärlig no-op-väg.
-- ogiltig/saknad skill-path → tydligt fel (inte tyst pass).
-- status-enum-validering: bara `supported` | `partial` | `planned` accepteras.
-- `verify_openclaw.py` förblir grön (oförändrad PASS-uppsättning + ev. en ny registry-check).
+- `tests/test_openclaw_roles.py` låser `ROLE_CONTRACTS`, `role_for_edit_kind`,
+  `skill_for_edit_kind` och answer-only-signalen.
+- `tests/test_openclaw_registry_consistency.py` jämför action-registryt med
+  rollkontrakten: skill, status, mountOnly och visibleTypes får inte drifta.
+- `tests/test_run_openclaw_followup.py` låser bridge-seam, conversation gate och
+  att edits fortsätter till kedjan.
 
 ### Status-realism (överdriv inte mognaden)
 
@@ -214,7 +220,7 @@ Från `action-registry.json` + skills idag:
 |---|---|---|---|
 | restyle | `visual_style` | supported | färg/typsnitt/tema via theme_directives + stylist/color_lexicon |
 | copy_change | `copy_change` | supported | namn/tagline/om/tjänster; LLM-förstådd, deterministisk validator |
-| section_add | `section_add` | supported (mount-only) | monterar capability+dossier; renderas **ännu inte** synligt (`appliedVisibleEffect=false`) — synlig render återstår |
+| section_add | `section_add` | supported (delvis synlig) | monterar capability+dossier; faq/team renderas synligt på `local-service-business`, contact-form på `ecommerce-lite` när `resend-contact-form` är monterad. Övriga typer är fortsatt mount-only eller inline-gated enligt action-registryt. |
 | layout_change | `layout_change` | planned | kräver apply-kapabilitet, inte fri CSS |
 | site_review | `site_review` | partial | read-only svar/kritik; bygger aldrig |
 
@@ -237,12 +243,9 @@ Prerequisite (b) i stopp-grinden är därmed uppfylld. Lane A:s arbete låg helt
 docs (frontmatter, arkivflytt, architecture/glossary-honesty) plus en ny opt-in
 `scripts/docs_check.py` (ej inkopplad i CI). Den rörde **ingen** av F1-källfilerna
 (openclaw-paketet, `run_openclaw_followup.py`, `verify_openclaw.py`,
-`build_site.py`, `prompt_to_project_input.py`), så denna plans grundning står
-kvar. Konsekvens för ordval: tidigare utkast skulle markerat Lane A som "öppen
-gate" — det är nu en **stängd** gate. F1-honesty-språket (mount-only, ärlig
-no-op, "syns inte än") ska följa Lane A:s checker-regler (se `docs_check.py`):
-en rad som påstår synlig section_add måste bära en negation/mål-/mount-only-
-markör.
+`build_site.py`, `prompt_to_project_input.py`), så planens grundning stod kvar.
+Konsekvens för ordval: tidigare utkast skulle markerat Lane A som "öppen gate"
+— det är nu en **stängd** gate.
 
 ### Megafil-refaktorn (#215) flyttar entrypoints F1 läser
 
@@ -257,50 +260,41 @@ säger dock att refaktorn inte startar förrän kärnloopen är produktbevisad �
 praktiken landar F1-runtime troligen **före** själva refaktorkoden, och F1 bör
 importera `run_followup_chain` via dess symbolnamn (inte via radnummer).
 
-### Glue 1 + mount-only som gating för en meningsfull F1-demo
+### Glue 1 + synlig render-bredd som gating för nästa demo
 
-- Glue 1 (osäker på en färsk sajt): en följdprompt måste hitta Project Input på
-  disk (`data/prompt-inputs/<siteId>.project-input.json`). Utan det kan
-  section_add inte ens köra på en nybyggd sajt — dvs F1:s roll-val har inget att
-  applicera på. Gating för en trovärdig demo.
-- Mount-only: även när rollen väljs och kedjan kör, är section_add mount-only
-  idag — resultatet skrivs som ny version men syns **inte** i preview ännu. En
-  F1-demo som "lägg till en FAQ-sektion" blir därför ärligt "registrerad men syns
-  inte än", inte "klart". Synlig render återstår (prerequisite a).
+- Glue 1 är inte längre den generella blockeraren för F1: `/api/prompt` kör
+  OpenClaw apply-bryggan och hostad follow-up hydreras från blob/KV.
+- Synlig render är fortfarande selektiv. En demo med "lägg till FAQ" eller
+  "lägg till team" kan vara synlig på `local-service-business` när content-gaten
+  är uppfylld; contact-form kan vara synlig på `ecommerce-lite` med
+  `resend-contact-form`. Andra typer ska fortfarande rapporteras ärligt som
+  mount-only eller no-op.
 
 ### Explicita öppna frågor till operatören
 
-1. F1-scope: ska F1 enbart göra registret körbart för de roller som redan finns
-   (copy_editor/stylist/section_builder + read-only site_review), och lämna
-   layout_change/route_add till senare? (Förslag: ja.)
-2. Ska `verify_openclaw.py` få en ny registry-check redan i F1, eller hålls den
-   oförändrad tills registret bevisats? (Påverkar baslinjen för guarden.)
-3. Demo-definition: räcker mount-only-demo (ärlig "registrerad, syns inte än")
-   som F1-acceptans, eller kräver F1 att prerequisite (a) synlig render landat
-   först? (Bestämmer om F1 och render-path-spåret måste sekvenseras.)
+1. F1-scope för rollerna är i praktiken valt: router, section_builder, stylist
+   och copy är låsta i `ROLE_CONTRACTS`; layout/route ligger senare.
+2. Registry-checken landade som pytest-konsistensguard snarare än som ny
+   `verify_openclaw.py`-lampa.
+3. Demo-definitionen bör nu skilja synliga typer från mount-only-typer i stället
+   för att kalla hela `section_add` osynlig.
 4. Provider-/hosting-väg för en eventuell Fas 2: ska den utredas separat, eller
    förblir den parkerad tills F1 + produktbevis är klara? (Alla provider-val är
    öppna; ingen väg vald här.)
-5. Ordning F1 vs megafil-refaktor: ska F1-koden landa före refaktorn (som
-   megafilplanens ordningsregel antyder), så att F1 importerar `run_followup_chain`
-   via symbolnamn och refaktorn anpassar sig efter?
+5. Ordning F1 vs megafil-refaktor: F1 landade före refaktorkoden och läser
+   `run_followup_chain` via symbolnamn.
 
 ---
 
 ## Sammanfattning
 
 - Installation för F1: **ingen** — in-process Python i `.venv`, ingen Docker,
-  ingen gateway. Extern Fas 2 är **beskriven** (krav + prerequisites, grundat i
-  `openclaw-docs/` och sajtmaskin-blueprinten) men **inte byggd**, och alla
-  provider-val är öppna.
-- F1-design: en ren `registry.py` som gör `action-registry.json` körbar +
-  ett rollval i `run_openclaw_followup.py` före den befintliga `run_followup_chain`.
-  Kontraktet (OpenClawDecision oförändrad; applied-signaler från kedjan; ärlig
-  no-op; mount-only förblir osynlig) behålls. Fil-touch-points och tester är
-  listade, **inte implementerade**.
-- Risker: Lane A är nu landad (gate b klar); #215 är en beslutad plan men koden
-  väntar och kan flytta `run_followup_chain`; Glue 1 + mount-only gatar en
-  meningsfull demo.
-- Grind: implementation väntar på (a) synlig render av section_add (mount-only
-  idag, återstår), (b) Lane A (klar), (c) megafil-refaktor-beslut (klart som
-  plan) + operatörens go-ahead.
+  ingen gateway. Extern Fas 2 är fortfarande bara beskriven; provider-val är
+  öppna.
+- F1-designen är levererad som `ROLE_CONTRACTS` + rolldriven skill-dispatch +
+  registry-konsistensguard. Den separata `registry.py`-formen byggdes inte.
+- Synlig render för section_add är delvis stängd, inte helt öppen: faq/team på
+  `local-service-business`, contact-form på `ecommerce-lite`; andra typer kräver
+  fortsatt render-breddning eller ska rapporteras mount-only.
+- Kvar som framtida beslut: extern dirigent/HTTP-adapter och bredare
+  layout-/route-mutationer.

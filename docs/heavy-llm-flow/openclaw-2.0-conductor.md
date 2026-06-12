@@ -1,6 +1,13 @@
 # OpenClaw 2.0 — extern dirigent + roll-registry (plan)
 
-> Status: plan (2026-06-08). Kontrollerad riktning, inte fri kod-agent.
+> Status: plan med levererad in-repo-F1 (verifierad mot `d234941`,
+> 2026-06-12). Den externa Docker-dirigenten är fortfarande framtida, men
+> F1 slice 1–3 landade i annan form än skissen nedan: `ROLE_CONTRACTS` i
+> `packages/generation/orchestration/openclaw/roles.py`, konsistensguard i
+> `tests/test_openclaw_registry_consistency.py` och rolldriven dispatch i
+> `scripts/build_site.py:run_followup_chain` via `skill_for_edit_kind`.
+>
+> Kontrollerad riktning, inte fri kod-agent.
 > Läs först: `docs/diagnosis-and-handoff-2026-06-08.md`,
 > `openclaw-mvp/docs/ARCHITECTURE.md`,
 > `openclaw-mvp/docs/SAJTBYGGAREN_INTEGRATION.md`,
@@ -55,8 +62,8 @@ kontext) → ut (strukturerad mutation) → genom samma guards.
 | Roll | Status | In → Ut | Guard |
 |---|---|---|---|
 | `copy_editor` | KLAR (A1, commit 109ba60) | fri text → copyDirective {company-name\|tagline\|about\|services, value} | leak/grounding/schema/honesty |
-| `stylist` | nästa (prompt B) | fri text → tema/visual-directive (primär/accent-färg, font, ton) | tema-schema, honesty |
-| `section_builder` | KLAR (mount-only) | fri text → section_add → capability+dossier genom apply-kedjan. Nio typer (4c6ba67): team/faq/trust/reviews + gallery/pricing/hours/map/contact-form | MOUNT-ONLY: monterar capability men renderar inte synligt än (`appliedVisibleEffect=false`); synlig render = render-path-follow-up. Okänd typ (inkl. hero/services/cta-banner) = ärlig no-op |
+| `stylist` | KLAR (`ROLE_CONTRACTS`, `styleDirectiveModel`, router-fallback default på) | fri text → tema/visual-directive (primär/accent-färg, font, ton) | tema-schema, honesty |
+| `section_builder` | KLAR med delvis synlig render | fri text → section_add → capability+dossier genom apply-kedjan. Nio typer (4c6ba67): team/faq/trust/reviews + gallery/pricing/hours/map/contact-form | faq/team renderas synligt på `local-service-business`; contact-form renderas synligt på `ecommerce-lite` när `resend-contact-form` är monterad (B198 del b). Andra typer är fortsatt mount-only eller inline-gated enligt `docs/openclaw-workspace/action-registry.json`. Okänd typ (inkl. hero/services/cta-banner) = ärlig no-op |
 | `reviewer` | planerad | läser artefakter → förbättringsförslag (read-only) | ingen mutation |
 | `layout` / `route_builder` | senare | layout/route-mutation | apply-kapabilitet krävs |
 
@@ -95,10 +102,12 @@ mer. Token-budget per nivå.
 
 ## 8. Faser
 
-- **Fas 0 (klar/pågår):** roll-lyft i befintlig pipeline — `copy_editor` (A1
-  klar), `stylist` (B), `section_builder` (C). Höjer förståelse-taket utan ny
-  infra.
-- **Fas 1:** roll-registry som explicit modul + dirigent väljer roll.
+- **Fas 0 (klar):** roll-lyft i befintlig pipeline — `copy_editor`, `stylist`
+  och `section_builder`. Höjer förståelse-taket utan ny infra.
+- **Fas 1 (klar i annan form än planerad):** roll-registryt landade som frysta
+  rollkontrakt i `roles.py` + konsistensguard mot action-registryt, inte som
+  separat `registry.py`. Dirigenten väljer roll via `role_for_edit_kind` och
+  `skill_for_edit_kind`.
 - **Fas 2:** extern Docker-dirigent (promota openclaw-mvp) + Viewser HTTP-adapter.
 - **Fas 3:** capabilities som recept (t.ex. `three_3d_scene`), layout/route_add
   — höjer apply-taket.
@@ -110,14 +119,16 @@ mer. Token-budget per nivå.
 2. `section_builder` (prompt C): apply-kapabilitet för nya sektioner. KLAR —
    `section_add` router-intent + `run_followup_chain`-väg (typ→capability→dossier
    genom befintliga apply-kedjan) + `team-roster`/`trust-guarantees` dossiers.
-3. Roll-registry-modul (Fas 1) när 2-3 roller finns (copy_editor + stylist +
-   section_builder klara — registryt är nu meningsfullt).
-4. Extern Docker-dirigent (Fas 2) när registryt är stabilt.
+3. Roll-registry-modul (Fas 1): KLAR som `ROLE_CONTRACTS` +
+   `tests/test_openclaw_registry_consistency.py`; `section_add` dispatchas via
+   rollen i `run_followup_chain`.
+4. Extern Docker-dirigent (Fas 2) när in-repo-kontraktet är stabilt nog att bära
+   en HTTP-yta.
 
-### Stylist-scope — slice 3-kandidat (operatörsfynd 2026-06-10)
+### Stylist-scope — historiskt beslutsunderlag (operatörsfynd 2026-06-10)
 
-> Status: beslutsunderlag, plan-only — ingen kod i denna not. Gated på
-> operatörsbeslut inför nästa F1-slice.
+> Status: historiskt beslutsunderlag. Det gäller inte F1-rollkontrakten som
+> redan är levererade, utan ett möjligt senare breddningsspår för helsajt-tema.
 
 Operatörsfynd: prompten "gör sajten mörkblå" applicerade `#1e3a8a` korrekt
 men ENDAST på `--primary`/knappar — operatörens intention var hela sajten.
@@ -136,5 +147,5 @@ Tre optioner att besluta mellan:
 - (c) Variant-/scaffoldbyte som verktyg för helhetsfärg — stylisten väljer
   mörk variant i stället för att mappa enskilda tokens.
 
-Inget av alternativen byggs utan operatörsbeslut; noten är endast underlag
-inför morgondagens F1-beslut.
+Inget av alternativen byggs utan operatörsbeslut; noten är endast underlag för
+ett framtida stylist-breddningsbeslut.
