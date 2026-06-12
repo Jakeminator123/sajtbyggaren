@@ -44,9 +44,10 @@ def test_sanitizer_is_exported_and_shared() -> None:
         "kan återanvända EXAKT samma sanering som den lokala spawn-vägen."
     )
     runner = RUNNER.read_text(encoding="utf-8")
-    assert (
-        'import { sanitizedAssetSetIntent } from "./prompt-runner";' in runner
-    ), (
+    # Importeras från prompt-runner.ts (samma modul; ev. tillsammans med
+    # sanitizedMarkedSections efter commit 3) — ingen egen kopia som kan drifta.
+    assert "sanitizedAssetSetIntent" in runner
+    assert 'from "./prompt-runner";' in runner, (
         "hosted-build-runner.ts måste importera saneringen från "
         "prompt-runner.ts — ingen egen kopia som kan drifta."
     )

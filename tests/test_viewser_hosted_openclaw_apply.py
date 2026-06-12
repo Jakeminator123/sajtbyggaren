@@ -95,8 +95,10 @@ def test_bridge_parsed_via_sentinel_contract() -> None:
 def test_answer_only_starts_no_build() -> None:
     source = _runner_source()
     answer_at = source.index("answer_only)")
-    # answer_only-grenen postar done och exit:ar UTAN att bygga/ladda upp.
-    segment = source[answer_at : answer_at + 320]
+    # answer_only-grenen skriver result, postar done och exit:ar UTAN att
+    # bygga/ladda upp (commit 3 la till write_hosted_result före post_status).
+    segment = source[answer_at : answer_at + 520]
+    assert 'write_hosted_result "answer-only"' in segment
     assert 'post_status "done" "" ""' in segment
     assert "exit 0" in segment, (
         "Answer-only måste exit:a före bygg-/upload-faserna — inget bygge."

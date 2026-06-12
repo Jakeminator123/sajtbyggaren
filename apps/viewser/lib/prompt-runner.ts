@@ -150,6 +150,38 @@ export function sanitizedAssetSetIntent(
 }
 
 /**
+ * Re-validera + kapa preview-markeringarna (ADR 0046) till den sanerade
+ * ``--marked-sections``-formen, eller [] när inget giltigt återstår.
+ * Speglar Python-sidans ``parse_marked_sections`` (slug-grammatik, max 5,
+ * note ≤ 200 tecken) — defense-in-depth eftersom varken spawn() eller env
+ * quotar argument. Ogiltiga poster filtreras bort i stället för att fälla
+ * hela follow-upen (Python-sidan droppar ändå okända markeringar med varning).
+ *
+ * Exporterad så den hostade byggvägen (hosted-build-runner.ts) kör EXAKT
+ * samma sanering före env-injektionen i sandboxen — en saneringskälla, två
+ * spawn-sömmar (samma mönster som ``sanitizedAssetSetIntent``).
+ */
+export function sanitizedMarkedSections(
+  markedSections:
+    | { routeId: string; sectionId: string; note?: string }[]
+    | undefined,
+): { routeId: string; sectionId: string; note?: string }[] {
+  if (!markedSections?.length) return [];
+  return markedSections
+    .filter(
+      (entry) =>
+        SECTION_REF_PATTERN.test(entry.routeId) &&
+        SECTION_REF_PATTERN.test(entry.sectionId),
+    )
+    .slice(0, 5)
+    .map((entry) => ({
+      routeId: entry.routeId,
+      sectionId: entry.sectionId,
+      ...(entry.note ? { note: entry.note.slice(0, 200) } : {}),
+    }));
+}
+
+/**
  * Spawn `scripts/prompt_to_project_input.py` and parse its stdout.
  *
  * Mirrors the spawn pattern in build-runner.ts (we already shell out to
@@ -193,21 +225,9 @@ export async function runPromptToProjectInput(
     }
     if (options.markedSections?.length) {
       // ADR 0046: re-validera id-grammatiken före spawn (zod-laget har
-      // redan validerat, men spawn() quotar inte argument). Ogiltiga
-      // poster filtreras bort i stället för att fälla hela follow-upen —
-      // Python-sidan droppar ändå okända markeringar med varning.
-      const safeMarkings = options.markedSections
-        .filter(
-          (entry) =>
-            SECTION_REF_PATTERN.test(entry.routeId) &&
-            SECTION_REF_PATTERN.test(entry.sectionId),
-        )
-        .slice(0, 5)
-        .map((entry) => ({
-          routeId: entry.routeId,
-          sectionId: entry.sectionId,
-          ...(entry.note ? { note: entry.note.slice(0, 200) } : {}),
-        }));
+      // redan validerat, men spawn() quotar inte argument). En saneringskälla
+      // delad med den hostade vägen (sanitizedMarkedSections).
+      const safeMarkings = sanitizedMarkedSections(options.markedSections);
       if (safeMarkings.length) {
         args.push("--marked-sections", JSON.stringify(safeMarkings));
       }

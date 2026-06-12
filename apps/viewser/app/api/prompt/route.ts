@@ -10,6 +10,7 @@ import {
   hostedRunKey,
   startHostedBuild,
   type HostedBuildRunStatus,
+  type HostedFollowupResult,
 } from "@/lib/hosted-build-runner";
 import {
   hostedPythonRuntimeUnavailable,
@@ -1155,6 +1156,98 @@ function hostedBudgetExhaustedMessage(runId: string, siteId: string): string {
 }
 
 /**
+ * Commit 3 (svars-paritet): bygg det rika hostade followup-svaret ur det
+ * ``result``-block sandboxen POST:ade in i KV-statusdoken. Speglar den lokala
+ * ``runPromptBuildOnce``-kontraktsformen (version/briefSource/buildResult/
+ * appliedCopyDirectives/changeSet/openClawDecision/bridge/conversation/
+ * answerText) så prompt-builder.tsx + use-followup-build.ts + floating-chat.tsx
+ * får samma fält hostat som lokalt. ``answerText`` genereras HÄR (återvinner
+ * generateConversationAnswer/generateAppliedConfirmation) eftersom det kräver
+ * OpenAI-anrop som inte hör hemma i sandboxen. ``changeSet`` är null i v1
+ * (kräver bägge PI-snapshots hydrerade — dokumenterad begränsning, speglar
+ * artefakt-pekarens senaste-version-gräns).
+ */
+async function buildHostedFollowupResponse(
+  result: HostedFollowupResult,
+  prompt: string,
+  siteId: string,
+  fallbackRunId: string,
+  buildId: string | null,
+): Promise<Record<string, unknown>> {
+  // conversation-metadatan coerceas via samma reader som lokalt (läser
+  // ``conversation``-blocket defensivt; fält-drift → null).
+  const conversation = extractConversation({ conversation: result.conversation });
+
+  if (result.engine === "answer-only") {
+    // Answer-only: inget bygge, inget runId. answerText från chat-hjälpen
+    // (ärlig no-key-fallback inuti generateConversationAnswer).
+    const answerText = conversation
+      ? await generateConversationAnswer(
+          prompt,
+          conversation,
+          result.openClawDecision ?? {},
+          siteId,
+        )
+      : null;
+    return {
+      runId: null,
+      siteId,
+      projectId: null,
+      version: null,
+      briefSource: null,
+      buildStatus: null,
+      buildResult: {},
+      appliedCopyDirectives: [],
+      changeSet: null,
+      routerDecision: null,
+      openClawDecision: result.openClawDecision ?? null,
+      bridge: result.bridge ?? null,
+      answerText,
+      conversation,
+      hosted: true,
+    };
+  }
+
+  // applied (openclaw) eller legacy: ett bygge landade.
+  let answerText: string | null = null;
+  const bridge = result.bridge;
+  if (
+    result.engine === "openclaw" &&
+    bridge &&
+    (bridge as Record<string, unknown>).previewShouldRefresh === true
+  ) {
+    // Roll-bekräftelse efter en SYNLIGT applicerad ändring (samma grind som
+    // lokalt). chain-fakta kommer från bridgen; null vid no-key/timeout.
+    const chain =
+      ((bridge as Record<string, unknown>).chain as Record<string, unknown>) ??
+      {};
+    answerText = await generateAppliedConfirmation(
+      prompt,
+      chain,
+      conversation?.role ?? null,
+    );
+  }
+  return {
+    runId: result.runId ?? fallbackRunId,
+    siteId,
+    projectId: null,
+    version: result.version,
+    briefSource: null,
+    buildStatus: result.buildStatus,
+    buildResult: result.buildResult,
+    appliedCopyDirectives: result.appliedCopyDirectives,
+    changeSet: null,
+    routerDecision: null,
+    openClawDecision: result.openClawDecision,
+    bridge: result.bridge,
+    answerText,
+    conversation,
+    hosted: true,
+    buildId,
+  };
+}
+
+/**
  * Hostad prompt-väg (P2): bygget kör detached i en sandbox via
  * ``startHostedBuild``; status landar i KV. Två svarslägen, samma kontrakt
  * som den lokala vägen så prompt-builder.tsx fungerar oförändrad:
@@ -1197,6 +1290,14 @@ async function runHostedPromptFlow(
       // Zod-validerade payload som den lokala vägen; runnern sanerar
       // med samma sanitizedAssetSetIntent före env-injektionen.
       ...(payload.toolIntent ? { toolIntent: payload.toolIntent } : {}),
+      // Commit 3 (request-paritet): baseRunId + markedSections trädas in i
+      // sandboxen (tidigare tappades de trots att schemat validerar dem).
+      // Runnern re-validerar/sanerar dem före env-injektionen (samma
+      // defense-in-depth + delade sanitizedMarkedSections som lokala vägen).
+      ...(payload.baseRunId ? { baseRunId: payload.baseRunId } : {}),
+      ...(payload.markedSections?.length
+        ? { markedSections: payload.markedSections }
+        : {}),
     }));
   } catch (error) {
     const message =
@@ -1213,6 +1314,19 @@ async function runHostedPromptFlow(
     try {
       const settled = await pollHostedRunUntilSettled(runId);
       if (settled?.phase === "done") {
+        // Commit 3: rikt followup-svar när sandboxen POST:ade ett result-block
+        // (followups); annars det tunna init-svaret (oförändrat).
+        if (settled.result) {
+          return NextResponse.json(
+            await buildHostedFollowupResponse(
+              settled.result,
+              payload.prompt,
+              siteId,
+              runId,
+              settled.buildId ?? null,
+            ),
+          );
+        }
         return NextResponse.json({
           runId,
           siteId,
@@ -1268,6 +1382,21 @@ async function runHostedPromptFlow(
           onBuilding: () => enqueueLine({ stage: "building" }),
         });
         if (settled?.phase === "done") {
+          // Commit 3: rikt followup-svar (samma fält som lokala done-payloaden)
+          // när result finns; annars tunt init-svar (oförändrat).
+          if (settled.result) {
+            enqueueLine({
+              stage: "done",
+              ...(await buildHostedFollowupResponse(
+                settled.result,
+                payload.prompt,
+                siteId,
+                runId,
+                settled.buildId ?? null,
+              )),
+            });
+            return;
+          }
           enqueueLine({
             stage: "done",
             runId,

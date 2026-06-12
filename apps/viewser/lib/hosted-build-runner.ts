@@ -60,7 +60,7 @@ import { randomUUID } from "node:crypto";
 import { isHostedVercelRuntime } from "./hosted-python-runtime";
 import { getKvStore, kvGetJson, kvSetJson } from "./kv-store";
 import { upstashRestToken, upstashRestUrl } from "./kv-store/upstash-redis";
-import { sanitizedAssetSetIntent } from "./prompt-runner";
+import { sanitizedAssetSetIntent, sanitizedMarkedSections } from "./prompt-runner";
 import {
   ensureFreshOidcTokenBeforeCreate,
   resolveCredentials,
@@ -84,6 +84,25 @@ export interface HostedBuildRequest {
    * metadatan i params så Python-sidan inte behöver disken.
    */
   toolIntent?: { tool: string; params: Record<string, unknown> };
+  /**
+   * Commit 3 (request-paritet): iterera från en specifik historisk run i
+   * stället för senaste. Redan Zod-validerad i /api/prompt (RUN_ID_PATTERN,
+   * followup-only). Re-valideras defense-in-depth här (env quotar inte) och
+   * når sandboxen som ``BASE_RUN_ID`` → ``--base-run-id`` på BÅDE OpenClaw
+   * apply-anropet och legacy-PI-anropet. v1-begränsning: bara senaste
+   * versionens artefakter hydreras (B199), så en historisk baseRunId vars
+   * version ≠ senaste kör mot senaste artefakter.
+   */
+  baseRunId?: string;
+  /**
+   * Commit 3 (request-paritet): operatörens preview-markeringar (ADR 0046).
+   * Redan Zod-validerad i /api/prompt (max 5, slug-grammatik, followup-only).
+   * Saneras med SAMMA ``sanitizedMarkedSections`` som den lokala spawn-vägen
+   * och når sandboxen som ``MARKED_SECTIONS_JSON`` → ``--marked-sections`` på
+   * legacy-PI-anropet (run_openclaw_followup.py har ingen --marked-sections-
+   * flagga, exakt som lokala apply-vägen inte heller forwardar den).
+   */
+  markedSections?: { routeId: string; sectionId: string; note?: string }[];
 }
 
 /** Faserna som status-nyckeln i KV rör sig genom. "queued" sätts av runnern;
@@ -97,6 +116,33 @@ export type HostedBuildPhase =
   | "done"
   | "failed";
 
+/**
+ * Commit 3 (response-paritet): det rika followup-resultat sandboxen producerar
+ * och POST:ar in i KV-statusdoken (TS-runtimen kan inte läsa sandboxens
+ * data/runs/). ``runHostedPromptFlow`` läser det på ``done`` och bygger ett
+ * svar som speglar den lokala kontraktsformen. Alla fält är valfria/nullbara —
+ * en saknad/äldre sandbox utan ``result`` degraderar ärligt till det gamla
+ * tunna svaret. ``engine`` skiljer OpenClaw-apply från legacy/answer-only så
+ * attributionen aldrig kan maskeras.
+ */
+export interface HostedFollowupResult {
+  engine: "openclaw" | "legacy" | "answer-only";
+  /** build_site-runId (data/runs/<runId>/); null för answer-only. */
+  runId: string | null;
+  version: number | null;
+  buildStatus: string | null;
+  /** Parsad build-result.json (eller {} när den saknas). */
+  buildResult: Record<string, unknown>;
+  /** ``directives.copyDirectives`` ur PI-snapshotet (eller []). */
+  appliedCopyDirectives: unknown[];
+  /** OpenClaw-beslutet (model_dump) eller null på legacy/parse-fel. */
+  openClawDecision: Record<string, unknown> | null;
+  /** Bridge-utfallet {status, applied, previewShouldRefresh} eller null. */
+  bridge: Record<string, unknown> | null;
+  /** conversation-metadata (conversationKind/role/expectsAnswer) eller null. */
+  conversation: Record<string, unknown> | null;
+}
+
 /** JSON-formen under ``viewser:hosted-run:<runId>`` (TTL 24 h). */
 export interface HostedBuildRunStatus {
   runId: string;
@@ -107,6 +153,8 @@ export interface HostedBuildRunStatus {
   error?: string;
   buildId?: string;
   blobPrefix?: string;
+  /** Commit 3: rikt followup-resultat (svars-paritet). Satt av sandboxen. */
+  result?: HostedFollowupResult;
 }
 
 const HOSTED_RUN_KEY_PREFIX = "viewser:hosted-run:";
@@ -244,6 +292,17 @@ if os.environ.get("ERROR_TEXT"):
 if os.environ.get("BUILD_ID"):
     doc["buildId"] = os.environ["BUILD_ID"]
     doc["blobPrefix"] = "generated/" + os.environ["SITE_ID"] + "/"
+# Commit 3 (svars-paritet): baka in det rika followup-resultatet pa done.
+# write_hosted_result() skrev /tmp/hosted-result.json fore den sista
+# post_status done; TS-sidan laser doc["result"] och bygger ett svar som
+# speglar lokala kontraktsformen. Saknas filen (init / aldre sandbox) faller
+# TS arligt tillbaka pa det tunna svaret.
+if os.environ["PHASE"] == "done":
+    try:
+        with open("/tmp/hosted-result.json", encoding="utf-8") as _rf:
+            doc["result"] = json.load(_rf)
+    except (OSError, ValueError):
+        pass
 key = "viewser:hosted-run:" + os.environ["RUN_ID"]
 print(json.dumps(["SET", key, json.dumps(doc, ensure_ascii=False), "EX", "86400"]))
 PY
@@ -260,6 +319,130 @@ fail() {
   post_status "failed" "$1" ""
   echo "hosted-build: FAILED: $1" >&2
   exit 1
+}
+
+# write_hosted_result <engine> — bygg det rika followup-resultatet (commit 3,
+# svars-paritet) och skriv /tmp/hosted-result.json. post_status bakar in det i
+# KV-doken pa done. TS-runtimen kan inte lasa sandboxens data/runs/, sa
+# sandboxen producerar falten: version/buildStatus/buildResult/
+# appliedCopyDirectives ur data/runs/<runId>/ + PI-snapshotet, samt
+# openClawDecision/bridge/conversation ur OPENCLAW_BRIDGE_JSON-outputen.
+# Honesty-gate speglar route.ts (legacyPathAppliedVisibleChange): pa en
+# applicerad andring nollas openClawDecision sa "action bridge saknas" aldrig
+# visas over en landad andring. answerText genereras TS-side (atervinner
+# generateConversationAnswer/generateAppliedConfirmation).
+write_hosted_result() {
+  ENGINE="$1" ART_RUN_ID="\${RUN_ARTIFACT_RUN_ID:-}" ART_VERSION="\${RUN_STATE_VERSION:-}" REPO_DIR="$REPO_DIR" SITE_ID="$SITE_ID" python3 - > /tmp/hosted-result.json <<'PY'
+import json, os
+
+def read_json(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+repo = os.environ.get("REPO_DIR") or "."
+site_id = os.environ.get("SITE_ID", "")
+engine = os.environ.get("ENGINE", "legacy")
+run_id = os.environ.get("ART_RUN_ID") or ""
+version_raw = os.environ.get("ART_VERSION") or ""
+version = int(version_raw) if version_raw.isdigit() else None
+
+build_result = {}
+build_status = None
+applied_visible = False
+if run_id:
+    br = read_json(os.path.join(repo, "data", "runs", run_id, "build-result.json"))
+    if isinstance(br, dict):
+        build_result = br
+        build_status = br.get("status") if isinstance(br.get("status"), str) else None
+        applied_visible = br.get("appliedVisibleEffect") is True
+
+# appliedCopyDirectives ur PI-snapshotet (samma falt readAppliedCopyDirectives
+# laser TS-side; lat validering — schemat har redan validerat pa write-sidan).
+copy_directives = []
+pi = read_json(os.path.join(repo, "data", "prompt-inputs", site_id + ".project-input.json"))
+if isinstance(pi, dict) and isinstance(pi.get("directives"), dict):
+    raw = pi["directives"].get("copyDirectives")
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            t, op, pl = item.get("target"), item.get("operation"), item.get("payload")
+            if not (isinstance(t, str) and isinstance(op, str) and isinstance(pl, str) and pl):
+                continue
+            entry = {"target": t, "operation": op, "payload": pl}
+            if isinstance(item.get("targetRef"), str) and item["targetRef"].strip():
+                entry["targetRef"] = item["targetRef"]
+            if isinstance(item.get("source"), str):
+                entry["source"] = item["source"]
+            copy_directives.append(entry)
+            if len(copy_directives) >= 8:
+                break
+
+# OpenClaw-beslut + bridge ur apply-outputen (sentinel-kontrakt).
+decision = None
+bridge = None
+conversation = None
+SENT = "OPENCLAW_BRIDGE_JSON:"
+try:
+    text = open("/tmp/openclaw-apply.out", encoding="utf-8", errors="replace").read()
+except OSError:
+    text = ""
+for line in reversed(text.splitlines()):
+    s = line.strip()
+    if not s.startswith(SENT):
+        continue
+    try:
+        obj = json.loads(s[len(SENT):].strip())
+    except ValueError:
+        continue
+    if isinstance(obj, dict) and isinstance(obj.get("decision"), dict):
+        decision = obj["decision"]
+        b = obj.get("bridge")
+        if isinstance(b, dict):
+            bridge = {
+                "status": b.get("status"),
+                "applied": b.get("applied") is True,
+                "previewShouldRefresh": b.get("previewShouldRefresh") is True,
+            }
+            chain = b.get("chain")
+            if isinstance(chain, dict):
+                bridge["chain"] = {
+                    "editKind": chain.get("editKind"),
+                    "version": chain.get("version"),
+                    "changedRoutes": chain.get("changedRoutes"),
+                    "runId": chain.get("runId"),
+                }
+        conv = decision.get("conversation")
+        if isinstance(conv, dict):
+            conversation = conv
+        break
+
+# Honesty-gate (speglar route.ts legacyPathAppliedVisibleChange + applied-vagen).
+if engine == "answer-only":
+    open_claw_decision = decision
+    run_id, version, build_status, build_result, copy_directives = "", None, None, {}, []
+elif engine == "openclaw":
+    open_claw_decision = None  # applied -> bridge staller, beslutet nollas (som lokalt)
+else:  # legacy
+    legacy_visible = bool(copy_directives) or applied_visible
+    open_claw_decision = None if legacy_visible else decision
+
+result = {
+    "engine": engine,
+    "runId": run_id or None,
+    "version": version,
+    "buildStatus": build_status,
+    "buildResult": build_result,
+    "appliedCopyDirectives": copy_directives,
+    "openClawDecision": open_claw_decision,
+    "bridge": bridge,
+    "conversation": conversation,
+}
+print(json.dumps(result, ensure_ascii=False))
+PY
 }
 
 # Fas 1: Python-runtime + beroenden. node24-imagens default-python3 ar 3.9,
@@ -420,9 +603,11 @@ PY
   . /tmp/openclaw-apply.env 2>/dev/null || true
   case "$APPLY_KIND" in
     answer_only)
-      # Answer-only/conversation: starta INGET bygge. Commit 3 tradar in den
-      # rika answerText:en; har racker en arlig done utan buildId.
+      # Answer-only/conversation: starta INGET bygge. Det rika resultatet
+      # (engine=answer-only + beslut/conversation) skrivs sa TS-sidan kan
+      # generera answerText och returnera runId:null + bridge.applied:false.
       echo "hosted-build: OpenClaw answer-only — ingen build."
+      write_hosted_result "answer-only"
       post_status "done" "" ""
       exit 0
       ;;
@@ -459,7 +644,19 @@ if [ "\${OPENCLAW_APPLIED:-0}" != "1" ]; then
     if [ -n "\${TOOL_INTENT_JSON:-}" ]; then
       TOOL_INTENT_ARGS=(--tool-intent "$TOOL_INTENT_JSON")
     fi
-    PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" \${TOOL_INTENT_ARGS[@]+"\${TOOL_INTENT_ARGS[@]}"} 2>&1) \\
+    # Commit 3 (request-paritet): --base-run-id + --marked-sections forwardas
+    # till legacy-PI:n (samma flaggor som lokala prompt-runner.ts). Tomma
+    # env-varden = ingen flagga (set -u-saker array-expansion). runId/JSON nar
+    # CLI:t bara som quotad env-expansion — aldrig interpolerade i bash.
+    LEGACY_BASE_RUN_ID_ARGS=()
+    if [ -n "\${BASE_RUN_ID:-}" ]; then
+      LEGACY_BASE_RUN_ID_ARGS=(--base-run-id "$BASE_RUN_ID")
+    fi
+    MARKED_SECTIONS_ARGS=()
+    if [ -n "\${MARKED_SECTIONS_JSON:-}" ]; then
+      MARKED_SECTIONS_ARGS=(--marked-sections "$MARKED_SECTIONS_JSON")
+    fi
+    PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --followup-site-id "$SITE_ID" \${TOOL_INTENT_ARGS[@]+"\${TOOL_INTENT_ARGS[@]}"} \${LEGACY_BASE_RUN_ID_ARGS[@]+"\${LEGACY_BASE_RUN_ID_ARGS[@]}"} \${MARKED_SECTIONS_ARGS[@]+"\${MARKED_SECTIONS_ARGS[@]}"} 2>&1) \\
       || fail "prompt_to_project_input (followup) misslyckades: $(printf '%s' "$PI_OUT" | tail -c 600)"
   else
     PI_OUT=$("$PYTHON_BIN" scripts/prompt_to_project_input.py "$PROMPT_TEXT" --site-id "$SITE_ID" 2>&1) \\
@@ -725,6 +922,17 @@ else
   echo "hosted-build: VARNING — run-state-snapshot saknas pa disk; foljdprompter forblir oforandrade." >&2
 fi
 
+# Commit 3 (svars-paritet): bygg det rika followup-resultatet fore done.
+# Bara i followup-laget — init behaller det tunna svaret (runId/buildStatus).
+# engine=openclaw nar OpenClaw apply landade, annars legacy (arlig attribution).
+if [ "$FOLLOWUP_MODE" = "1" ]; then
+  if [ "$OPENCLAW_APPLIED" = "1" ]; then
+    write_hosted_result "openclaw"
+  else
+    write_hosted_result "legacy"
+  fi
+fi
+
 post_status "done" "" "$ACTIVE_BUILD_ID"
 echo "hosted-build: klar (buildId $ACTIVE_BUILD_ID)."
 `;
@@ -877,6 +1085,19 @@ export async function startHostedBuild(
       ? sanitizedAssetSetIntent(req.toolIntent)
       : null;
 
+  // Commit 3 (request-paritet): baseRunId + markedSections. baseRunId är redan
+  // Zod-validerad i /api/prompt men env quotar inte — re-validera mot run-id-
+  // grammatiken (samma defense-in-depth som prompt-runner.ts). markedSections
+  // saneras med SAMMA delade sanitizedMarkedSections som den lokala vägen.
+  // Bara i followup-läge (init har ingen yta för dem).
+  const safeBaseRunId =
+    req.followup && req.baseRunId && /^[a-zA-Z0-9._-]+$/.test(req.baseRunId)
+      ? req.baseRunId
+      : "";
+  const safeMarkedSections = req.followup
+    ? sanitizedMarkedSections(req.markedSections)
+    : [];
+
   const sandboxEnv: Record<string, string> = {
     RUN_ID: runId,
     SITE_ID: req.siteId,
@@ -894,6 +1115,13 @@ export async function startHostedBuild(
     // PI/meta). Sätts bara när followup-pekaren bär dem.
     RUN_ARTIFACTS_URL: runState?.runArtifactsUrl ?? "",
     RUN_ARTIFACTS_RUN_ID: runState?.runId ?? "",
+    // Commit 3 (request-paritet): tomma strängar = ingen flagga (set -u-säkert).
+    // BASE_RUN_ID → --base-run-id på BÅDE apply- och legacy-PI-anropet;
+    // MARKED_SECTIONS_JSON → --marked-sections på legacy-PI-anropet.
+    BASE_RUN_ID: safeBaseRunId,
+    MARKED_SECTIONS_JSON: safeMarkedSections.length
+      ? JSON.stringify(safeMarkedSections)
+      : "",
     BLOB_READ_WRITE_TOKEN: blobToken,
     // Samma env-upplösning som kv-store/upstash-redis.ts; tomma strängar når
     // skriptet, som då hoppar över status-POST:arna ärligt (set -u-säkert).
