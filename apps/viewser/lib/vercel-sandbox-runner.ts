@@ -660,7 +660,14 @@ async function waitForPublicUrl(url: string): Promise<boolean> {
         signal: AbortSignal.timeout(5_000),
         redirect: "manual",
       });
-      if (res.status > 0) return true;
+      // Spegla lokala waitForReady: bara ett ärligt svar från Next.js räknas
+      // som klart. Medan ``next start`` fortfarande bootar svarar Vercels edge
+      // 502 SANDBOX_NOT_LISTENING (och 503/429) — räknar vi DET som klart
+      // returneras en URL som inte lyssnar och iframen visar 502. Acceptera
+      // därför bara res.ok (servern svarar) eller 404 (servern lyssnar, bara
+      // ingen route på /); fortsätt polla på 5xx/429 och allt annat tills
+      // READY_POLL_TIMEOUT_MS löpt ut.
+      if (res.ok || res.status === 404) return true;
     } catch {
       // Ännu inte uppe — vänta och försök igen.
     }
