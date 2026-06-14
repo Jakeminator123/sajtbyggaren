@@ -852,7 +852,11 @@ function summarizeBuildResult(
   }
   // A3: ärlig svans med följd-asks som motorn kände igen men inte applicerade.
   // Tom sträng på init-builds och follow-ups utan oapplicerade intents → ingen
-  // påverkan på de befintliga grenarna.
+  // påverkan på de befintliga grenarna. No-op-grenarna nedan appendar denna
+  // svans UTANFÖR honestAnswer-fallbacken (``${honestAnswer || …}${unappliedNote}``)
+  // så den itemiserade listan följer med ÄVEN när dirigentens answerText vinner
+  // — hostat-vägen skickar nästan alltid en answerText, och utan detta tappade
+  // operatören den precisa "detta kunde jag inte göra"-listan.
   const unappliedNote = summarizeUnappliedFollowupIntents(payload.buildResult);
   // B3 — version-progression i success-meddelandet. När payload.version
   // är t.ex. 3 visar vi "v2 → v3" så operatören får en känsla av
@@ -906,9 +910,10 @@ function summarizeBuildResult(
       if (effect.reason === "visible_files_unchanged") {
         return {
           variant: "info",
-          content:
+          content: `${
             honestAnswer ||
-            `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter på startsidan (företagsnamn, rubrik, tagline) — rubriker på undersidor och större layout-/strukturändringar (centrera hero, lägga till sektion) stöds inte än.${unappliedNote}`,
+            `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter på startsidan (företagsnamn, rubrik, tagline) — rubriker på undersidor och större layout-/strukturändringar (centrera hero, lägga till sektion) stöds inte än.`
+          }${unappliedNote}`,
         };
       }
       // Uppgift H (deferred från #313): ``intent_not_executable`` = ingen
@@ -921,16 +926,18 @@ function summarizeBuildResult(
       if (effect.reason === "intent_not_executable") {
         return {
           variant: "info",
-          content:
+          content: `${
             honestAnswer ||
-            `Jag kunde inte koppla önskemålet till någon byggförmåga jag har än, så den begärda ändringen gjordes inte.${versionText}${unappliedNote}`,
+            `Jag kunde inte koppla önskemålet till någon byggförmåga jag har än, så den begärda ändringen gjordes inte.${versionText}`
+          }${unappliedNote}`,
         };
       }
       return {
         variant: "info",
-        content:
+        content: `${
           honestAnswer ||
-          `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".${unappliedNote}`,
+          `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`
+        }${unappliedNote}`,
       };
     }
     // ADR 0034 väg B: när path A faktiskt skrev strukturerade copy-
