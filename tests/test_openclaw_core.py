@@ -132,6 +132,41 @@ def test_edit_instruction_is_honest_patch_plan_request():
     assert d.appliedVisibleEffect is False
 
 
+def test_visual_style_target_summary_describes_style_not_contentblocks():
+    """ÄNDRING 2: a visual_style restyle changes the site's STYLE/THEME (colour,
+    tone), NOT a content field - so the patch_plan_request summary must describe
+    stil/tema instead of a contentBlocks.<route>.<section>.<field> path (which
+    mislabelled a restyle in the operator-facing chat row). The action/status
+    stay the honest action_bridge_missing flag - only the summary string is
+    fixed, so #313's no-false-success contract is untouched."""
+    d = _decide_for("gör om designen")
+    assert d.router.messageKind == "edit_instruction"
+    assert d.router.editKind == "visual_style"
+    assert d.action == "patch_plan_request"
+    assert d.patchPlanRequest is not None
+    summary = d.patchPlanRequest.targetSummary
+    assert not summary.startswith("contentBlocks."), summary
+    assert "stil" in summary or "tema" in summary, summary
+    # The honesty flag is unchanged (no faked success).
+    assert d.patchPlanRequest.status == "action_bridge_missing"
+    assert d.appliedVisibleEffect is False
+
+
+def test_content_edit_target_summary_keeps_contentblocks():
+    """Counterpart to the visual_style honesty fix: copy_change / component_add
+    edits still get the contentBlocks path, where it correctly names the targeted
+    content field (the fix is scoped to visual_style only)."""
+    component_add = _decide_for("lägg en klocka i andra sektionen till vänster")
+    assert component_add.router.editKind == "component_add"
+    assert component_add.patchPlanRequest is not None
+    assert component_add.patchPlanRequest.targetSummary.startswith("contentBlocks.")
+
+    copy_change = _decide_for("ändra rubriken till Välkommen hem")
+    assert copy_change.router.editKind == "copy_change"
+    assert copy_change.patchPlanRequest is not None
+    assert copy_change.patchPlanRequest.targetSummary.startswith("contentBlocks.")
+
+
 def test_multi_intent_with_edit_aggregates_to_patch_plan_request():
     """multi_intent containing an edit -> aggregated patch_plan_request."""
     d = _decide_for(
