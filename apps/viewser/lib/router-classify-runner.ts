@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
+import { writeTextArgFile } from "./text-arg-file";
+
 // KÖR-6a bridge: spawn scripts/classify_message.py and parse its stdout into a
 // schema-valid RouterDecision JSON object. Mirrors the spawn pattern in
 // prompt-runner.ts / build-runner.ts so apps/viewser never imports packages/
@@ -72,9 +74,12 @@ export async function classifyMessage(
   if (options.routeSections && Object.keys(options.routeSections).length > 0) {
     args.push("--route-sections", JSON.stringify(options.routeSections));
   }
-  // The `--` separator stops argparse from treating a prompt that starts with
-  // `-`/`--` as a CLI option (same guard as prompt-runner.ts).
-  args.push("--", trimmed);
+  // B204: pass the message through a UTF-8 temp file instead of argv so a
+  // non-ASCII leading char survives the Windows spawn hop intact (same
+  // defensive transport as prompt-runner.ts). The router keys on Swedish
+  // verbs, so a mangled "Ä"→"*" would silently skew this read-only decision.
+  const messageArg = writeTextArgFile(trimmed, "sb-classify-");
+  args.push("--message-file", messageArg.path);
 
   const child = spawn(pythonCommand(), args, {
     cwd: repoRoot(),
@@ -108,9 +113,11 @@ export async function classifyMessage(
     });
   } catch {
     clearTimeout(timeout);
+    messageArg.cleanup();
     return null;
   }
   clearTimeout(timeout);
+  messageArg.cleanup();
 
   if (timedOut || exitCode !== 0) return null;
 
