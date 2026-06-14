@@ -1,17 +1,120 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-14 ~17:00 UTC+2 — takeover-prep-runda inför att en ny
-agent tar över. #316 ("Spår A", färgfixen) mergades efter kvällsrundans
-docs-commit och saknade en egen docs-uppdatering; den noteras nu i ett färskt
-2026-06-14-block. Dagens fulla leverans #310–#316 är sammanfattad nedan,
-konduktör-roadmap tillagd, B202/B203 bokförda. Ingen ny PR mergad (#317 är en
-draft som operatören beslutar om). Detaljerad köplan:
+**Datum:** 2026-06-14 ~22:00 UTC+2 — kvällsrunda: kärnloopen
+`prompt → företagshemsida → preview → följdprompt → ny version` live-validerad
+på hostad prod, preview-arkitekturen klargjord, en deterministisk
+direktiv-läckage-fix för kundkopian ("Om oss"-buggen) shippad via en riktig PR
+(`fix/directive-copy-leak` → `main`), plus docs-städning. Detaljerad köplan:
 [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-14 ~17:00 — TAKEOVER-PREP: #316 NOTERAD, DAGENS LEVERANSER #310–#316, KONDUKTÖR-ROADMAP (AUKTORITATIVT BLOCK)
+## PASS 2026-06-14 ~22:00 — PROD-E2E BEVISAD + DIREKTIV-LÄCKAGE-FIX (KUNDKOPIAN) + DOCS-STÄDNING (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Mandat:** operatören (Jakob) gav full mandat att avsluta och skeppa denna
+> session: validera kärnloopen live på hostad prod, fixa den observerade
+> "Om oss"-buggen, städa docs och leverera via en riktig PR mot `main` med
+> efterföljande synk av alla fyra referenser. Git-mutationer (commit/push/PR/
+> merge mot `main` + `jakob-be`) är uttryckligen godkända.
+>
+> **Git:** alla fyra referenserna stod på `41a24d77` (#319 B204) vid rundans
+> start. Denna runda levererar via PR `fix/directive-copy-leak` → `main`
+> (squash), varefter `jakob-be` ff-synkas så att
+> `main = jakob-be = origin/main = origin/jakob-be`. Production deployar från
+> `main`.
+>
+> **1. Kärnloopen live-validerad på hostad prod** (https://sajtbyggaren-viewser.vercel.app):
+> tre nyligen mergade ändringar bekräftades landa hostat — #316 (restyle/
+> omfärgning via tema-utföraren), #318 (citerad "Om oss"-copy syns ärligt) och
+> B204 (#319, UTF-8-säker prompt/meddelande-transport över viewser→CLI-
+> gränsen, dvs. svenska tecken transporteras rätt). Hostad prod-E2E (Vercel
+> Sandbox-bygge + preview) är därmed bevisad end-to-end, inte bara lokalt.
+>
+> **2. Preview-arkitekturen klargjord (inget felkonfigurerat):**
+> `*.vercel.app` = den långlivade Viewser-appen (operatörs-UI:t på `/studio`).
+> `*.vercel.run` = den efemära per-bygge-previewen i Vercel Sandbox, som
+> **mintas om vid varje bygge** och bäddas in i `/studio` via en cross-origin-
+> iframe. Att preview-URL:en byts per bygge och ligger på en annan origin är
+> alltså by design, inte en bugg.
+>
+> **3. Vercel-env konsekvent:** `VIEWSER_SANDBOX_REUSE` är nu satt (`=1`) på
+> Production, Preview **och** Development. Preview-värdet lades 2026-06-14 via
+> Vercel REST API eftersom CLI:n loopar på `git_branch_required` för
+> alla-Preview-grenar-vägen. Kvarstående (Vercel-sidan, INGEN repo-ändring):
+> Production lagrar varianten som `sensitive` medan Dev/Preview är `encrypted`
+> — värdena matchar, så `vercel env pull production` visar bara raden blank.
+> Se ADR `governance/decisions/0055-hostad-preview-standardisering.md`
+> (daterad uppdatering) + de tidigare ADR-blocken nedan (nu med
+> "Uppdatering 2026-06-14"-noteringar; de gamla "lämna osatt"-domarna är
+> inaktuella).
+>
+> **4. Direktiv-läckage-fix för kundkopian ("Om oss"-buggen) — denna PR:** den
+> riktiga `briefModel` filade ibland META/INSTRUKTIONSTEXT i positioning-/
+> contentStrategy-fälten i stället för kundfärdig vinkel-copy (live på en café-
+> brief: `localAngle` = "Göteborg ... bör synas tydligt i copy och
+> kontaktsektion", `differentiator` = "Lyft Kafé Solrosen som ..."). Den texten
+> renderades sedan ordagrant som synlig "Om oss"-text och hero-copy. Fixen är
+> en deterministisk, hög-precisions-grind `_looks_like_directive` i
+> `packages/generation/planning/blueprint.py` som DROPPAR direktiv-formade
+> strängar (tre signaler: craft-/meta-term som "kontaktsektion"/"subheadline",
+> imperativt ledverb som "Lyft"/"Framhäv", eller "`<modal>` ... `<copy-craft-
+> verb>`"-konstruktion) ur kandidaterna till hero/story/FAQ — den skriver
+> aldrig om och hittar aldrig på (samma ärlighet-genom-konstruktion som
+> `_drop_offer_tagline_services` och offerStrategy-undantaget i `derive_story`).
+> De fyra deterministiska mock-baslinjerna är byte-identiska (grinden är no-op
+> på den ärliga vägen). `packages/generation/brief/extract.py` får dessutom en
+> system-instruktion till `briefModel` att skriva dessa fält som färdig,
+> visningsbar copy — aldrig som en instruktion om copyn. Lås: 6 nya tester i
+> `tests/test_planning_blueprint.py`. Riktad svit grön (35 passed, 1 E2E
+> skip), `ruff check .` = 0.
+>
+> **5. Docs-städning:** inaktuella Preview-påståenden i denna fil korrigerade
+> (de gamla "`VIEWSER_SANDBOX_REUSE` disk-only/lämna osatt"-domarna är märkta
+> som inaktuella) och en daterad uppdatering tillagd i ADR 0055.
+>
+> **Resulterande läge:** PR `fix/directive-copy-leak` squash-mergad till
+> `main`, `jakob-be` ff-synkad, alla fyra referenserna identiska, rent träd.
+> Hostad prod är bevisat fungerande för kärnloopen; nästa hostade bygge kör
+> direktiv-fixen så fort build-context-tarballen speglar den nya `main`-tippen
+> (`node apps/viewser/scripts/upload-build-context-to-blob.mjs` — fixen rörde
+> `packages/generation/`, inte `apps/viewser`-frontend, så ingen ny Vercel-
+> frontend-deploy behövs).
+>
+> **Rekommenderade nästa steg (prioriterat, ärlig bedömning):**
+>
+> 1. **(c) `directive_leak`-check i `packages/generation/quality_gate/critic.py`
+>    (snabb kvalitetsvinst, hög prio):** lyft samma signal som
+>    `_looks_like_directive` till en Quality Gate-kritiker så att direktivtext
+>    som ändå slinker igenom (eller dyker upp i en ny copy-väg) fångas och
+>    rapporteras i stället för att tyst renderas. Försvar på djupet ovanpå
+>    denna PR; litet och välavgränsat.
+> 2. **(a) Fritext övertolkas till påhittade "service"-kort (snabb–medel
+>    kvalitetsvinst, hög prio):** fri prompttext blir ibland stray
+>    tjänste-kort som kunden aldrig bett om. Samma ärlighets-tema som denna
+>    fix (hellre utelämna än hitta på); avgränsa till grundade tjänster.
+> 3. **(b) Tema-trohet — "Casual Café" renderas grått (medel, kundnära):**
+>    #316 landade omfärgning via tema-utföraren, men en namngiven tema-cue som
+>    "Casual Café" mappar i dag till grått. Höj tema-mappningens täckning så
+>    den valda stämningen syns. Kundnära fidelity-glapp.
+> 4. **(e) B197 — hostad discovery-paritet (medelstort roadmap-steg, nu
+>    UPPLÅST):** den hostade byggvägen trådar bara prompttext, inte wizardens
+>    strukturerade discovery-payload. Hölls tidigare tills prod-E2E var grön —
+>    det är den nu, så detta är nästa substantiella byggsteg. Koordinera med
+>    Christophers spår (`hosted-build-runner.ts`, msg-0085).
+> 5. **(e) Konduktör "Steg 1" — montera katalog-komponenter (större roadmap-
+>    program, M):** låt `component_builder` gå partial→supported mount för
+>    komponenter som redan finns i katalogen/capability-map (samma apply/mount-
+>    maskineri som FAQ/contact-form), ärligt mot #313. Kräver ADR-utökning av
+>    0057. Underlag: `docs/heavy-llm-flow/conductor-vision-roadmap.md`.
+> 6. **(d) Normalisera `VIEWSER_SANDBOX_REUSE`-typ på Vercel
+>    (`sensitive`→`encrypted`) (trivialt, lägst prio):** rent kosmetiskt
+>    Vercel-sidan; värdena matchar redan och funktionen påverkas inte. Gör
+>    opportunistiskt.
+
+## PASS 2026-06-14 ~17:00 — TAKEOVER-PREP: #316 NOTERAD, DAGENS LEVERANSER #310–#316, KONDUKTÖR-ROADMAP (HISTORIK)
+
+> **Historik (ersatt av 22:00-blocket ovan).** Verifiera alltid mot git/koden.
 >
 > **Mandat:** operatören (Jakob) gav full mandat för en takeover-prep-runda:
 > verifiera git/PR-läget, hantera ev. öppen PR, och skriv en färsk handoff +
@@ -390,15 +493,21 @@ direkt efter mergen (#311 rörde `scripts/check_term_coverage.py`).
 >    Development via CLI; **Preview-miljön gick INTE att sätta
 >    non-interaktivt** (CLI-bugg: `env add ... preview --value 1 --yes`
 >    svarar git_branch_required trots sin egen hint) — sätt den manuellt i
->    dashboarden om branch-previews ska ha reuse. Lås: 4 nya i
->    `tests/test_viewser_sandbox_reuse.py`.
+>    dashboarden om branch-previews ska ha reuse. **Uppdatering
+>    2026-06-14:** Preview-värdet är nu satt (=1) via Vercel REST API, så
+>    `VIEWSER_SANDBOX_REUSE` är konsekvent över Production/Preview/Development;
+>    den tidigare blockeringen (`git_branch_required` på CLI:n) är löst.
+>    Kvarstår: Production lagras som `sensitive`, Dev/Preview som `encrypted`
+>    — samma värde, därför visar `vercel env pull production` raden blank.
+>    Lås: 4 nya i `tests/test_viewser_sandbox_reuse.py`.
 >
 > **Effekt:** hostad preview-kallstart minuter → `npm install --omit=dev` +
 > `next start`; oförändrad sajt med varm session svarar på sekunder
 > (sessions-snabbvägen, ingen SDK-rundtur); no-op-followups behåller
 > iframen. ADR 0055 skriven (0054 fortsatt reserverad).
 >
-> **Kvarvarande ärliga gap:** Preview-miljöns reuse-flagga (ovan);
+> **Kvarvarande ärliga gap:** Preview-miljöns reuse-flagga (ovan — löst
+> 2026-06-14, se uppdateringen ovan);
 > Safari/Firefox-E2E för B125-stängning; blob-prune ännu mer angeläget
 > (`.next` växer `generated/`-prefixet); `changeSet` hostat; filträd per
 > run hostat.
@@ -525,7 +634,11 @@ direkt efter mergen (#311 rörde `scripts/check_term_coverage.py`).
 > redan på, `OPENAI_API_KEY` forwardas till sandboxen, och
 > `OPENCLAW_ROUTER_LLM_FALLBACK` är osatt = default PÅ (LLM-routing aktiv i
 > sandboxens apply-söm — önskat läge). `VIEWSER_SANDBOX_REUSE` lämnas osatt
-> (disk-only, ingen effekt hostat).
+> (disk-only, ingen effekt hostat). **Uppdatering 2026-06-14:** inaktuellt —
+> reuse är effektivt hostat sedan ADR 0055 (sessions-snabbvägen) och
+> `VIEWSER_SANDBOX_REUSE=1` är nu satt på Production/Preview/Development
+> (Preview via Vercel REST API; CLI blockerad av `git_branch_required`).
+> Kvarstår: Production `sensitive`, Dev/Preview `encrypted`.
 >
 > **Nästa pass börjar här:** (1) E2E-verifiera #307 i produktion på
 > `/studio` — init-bygge, edit-följdprompt (förvänta OpenClaw apply när
@@ -580,7 +693,11 @@ direkt efter mergen (#311 rörde `scripts/check_term_coverage.py`).
 >
 > **Env-domar (lämna osatta på Vercel):** `OPENCLAW_ROUTER_LLM_FALLBACK` är
 > no-op i den hostade vägen och `VIEWSER_SANDBOX_REUSE` är disk-only (ingen
-> effekt hostat). Avlivade sammanblandningar: pipen är hybrid (`gpt-5.4` för
+> effekt hostat). **Uppdatering 2026-06-14:** `VIEWSER_SANDBOX_REUSE`-domen är
+> inaktuell — reuse är effektivt hostat sedan ADR 0055 och flaggan är nu satt
+> (=1) på Production/Preview/Development (Preview via Vercel REST API; CLI
+> blockerad av `git_branch_required`; Production `sensitive`, Dev/Preview
+> `encrypted`). Avlivade sammanblandningar: pipen är hybrid (`gpt-5.4` för
 > brief/plan/copy, deterministisk codegen — inte "rent mekaniskt"); det finns
 > ingen automatisk `gpt-5.4` → `gpt-5.5`-modellfallback (kod-fallbacken
 > `gpt-5.5` träffar bara när env-nyckeln saknas). Extern review verifierad:
