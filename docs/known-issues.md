@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 21 öppna), 5 unknown, 173 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 23 öppna), 5 unknown, 173 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -740,6 +740,34 @@ sandbox-start utan Upstash-env hostat) och det synkrona /api/prompt-kontraktet
   serialiseras in i sandboxen (env/fil) när P3-persistensen läggs.
   Källa: extern granskning #284 (fynd 4), kod-verifierad i review-sweepen
   2026-06-11. Fix: open. Test: open.
+
+### Bygg-logg-observationer 2026-06-14 (hostat bygge, ej blockers — bokförda, ej fixade)
+
+Två icke-blockerande observationer från en bygg-logg, bokförda för
+spårbarhet i takeover-prep-rundan 2026-06-14. Ingen åtgärd nu.
+
+- **`B202` Låg** - Turbopack output-file-tracing över-inkluderar för
+  `/api/discovery-options` ("traced the whole project unintentionally" i
+  bygg-loggen). Karakterisering (kod-läst): `apps/viewser/next.config.ts`
+  breddar medvetet `outputFileTracingRoot` till repo-roten (`REPO_ROOT`, två
+  nivåer upp) och pinnar policy-/variantfiler via `outputFileTracingIncludes`
+  (bl.a. glob `scaffolds/**/variants/*.json`); routen
+  `apps/viewser/app/api/discovery-options/route.ts` gör runtime-`fs`-läsningar
+  (`readdir`/`readFile`) av governance-policyer + scaffold-varianter via en
+  dynamiskt resolvad `repoRoot()` (provar `process.cwd()`, `..`, `../..`).
+  Kombinationen breddad trace-rot + dynamiska fs-läsningar + bred glob gör att
+  tracern inte kan avgränsas statiskt → den drar med stora delar av monorepot
+  → uppblåst funktionsbunt/kallstart. Sannolik fix: snäva
+  `outputFileTracingIncludes` till exakta filer och/eller gör route-läsningen
+  statiskt avgränsbar. Källa: bygg-logg, takeover-prep 2026-06-14. Fix: open.
+  Test: open.
+- **`B203` Låg** - runtime-varning `webpsave_buffer: no property named
+  'smart_deblock'` i bild-/webp-vägen (sharp/libvips-versionsglapp: koden
+  skickar en `smart_deblock`-parameter som den installerade libvips-versionen
+  inte känner till). Kosmetisk — webp-utdata skrivs ändå, bara en
+  brus-varning. Sannolik fix: pinna/uppgradera sharp så libvips-versionen
+  stödjer parametern, eller släpp parametern. Källa: bygg-logg, takeover-prep
+  2026-06-14. Fix: open. Test: open.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 

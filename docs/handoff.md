@@ -1,15 +1,154 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-12 ~18:45 UTC+2, kväll: kvällens avslutningsrunda —
-#314 (uppgift G) + #315 (uppgift H) squash-mergade till `jakob-be`,
-slutlig `jakob-be` → `main`-sync så operatörens produktions-E2E kör på
-dagens fulla leverans. Detaljerad köplan:
+**Datum:** 2026-06-14 ~17:00 UTC+2 — takeover-prep-runda inför att en ny
+agent tar över. #316 ("Spår A", färgfixen) mergades efter kvällsrundans
+docs-commit och saknade en egen docs-uppdatering; den noteras nu i ett färskt
+2026-06-14-block. Dagens fulla leverans #310–#316 är sammanfattad nedan,
+konduktör-roadmap tillagd, B202/B203 bokförda. Ingen ny PR mergad (#317 är en
+draft som operatören beslutar om). Detaljerad köplan:
 [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-12 ~18:45 — KVÄLLSRUNDA: #314 + #315 MERGADE, SLUTLIG MAIN-SYNC (AUKTORITATIVT BLOCK)
+## PASS 2026-06-14 ~17:00 — TAKEOVER-PREP: #316 NOTERAD, DAGENS LEVERANSER #310–#316, KONDUKTÖR-ROADMAP (AUKTORITATIVT BLOCK)
 
 > **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
 > verifiera alltid mot git/koden.**
+>
+> **Mandat:** operatören (Jakob) gav full mandat för en takeover-prep-runda:
+> verifiera git/PR-läget, hantera ev. öppen PR, och skriv en färsk handoff +
+> current-focus så en annan agent kan ta över exakt där vi står. Blockera bara
+> vid verkliga fel.
+>
+> **Git:** `main = jakob-be = origin/main = origin/jakob-be = 8005be92`
+> (#316 färgfixen, rent träd) vid rundans start. Denna runda lägger EN
+> docs-commit ovanpå på `jakob-be` och ff-synkar `main` till samma tip
+> (samma mönster som föregående docs-runda). Production deployar från `main`.
+> Ingen PR mergades denna runda.
+>
+> **#316 (`8005be92`) — internt "Spår A", OBS skilt från uppgift A/#310:**
+> #316 är färgfixen (internt "Spår A"), inte dossier-deps (uppgift A/#310). En
+> restyle-följdprompt ("gör sajten blå", "snyggare typsnitt") var tidigare en
+> tyst no-op och landar nu via tema-utföraren: `run_followup_chain` fick en
+> stylist-LLM-fallback bakom en delad eligibilitetsgrind
+> (`theme_directive_llm_eligible`, identisk för legacy-prompt-vägen
+> `prompt_to_project_input` och OpenClaw-kedjan — ett lockstep-test låser
+> identiteten). Den deterministiska färg-/font-extraktorn
+> (`packages/generation/followup/theme_directives.py`) är primär; stylist-
+> modellen konsulteras bara när extraktorn missar OCH prompten bär en visuell/
+> stil-cue, och varje returnerat fält re-valideras (hex måste vara hex, vibe en
+> känd nyckel). Sätter bara `brand.primaryColorHex`/`brand.accentColorHex` +
+> `tone.primary` (redan i schemat, ingen ny render-väg). Svaret bär en ärlig
+> `visual_style`-target-summary (inte contentBlocks-mislabel), och "effekter"/
+> animationer förblir ärligt oapplicerat. Rörde
+> `packages/generation/followup/` + `scripts/` + tester, INTE
+> `apps/viewser`-frontend.
+>
+> **Dagens leveranser (alla mergade till `jakob-be` + `main`, tip `8005be92`):**
+>
+> 1. **#310 (uppgift A) — dossier-dependencies (ADR 0056):** dossierer
+>    deklarerar pinnade npm-paket som buildern bakar in i genererad
+>    `package.json` (npm ci → install-fallback).
+> 2. **#311 — projektinnehåll/composition-panel:** site-composition-API +
+>    panel i ConsoleDrawer som visar sidor/dossiers/komponenter/paket ur
+>    befintliga run-artefakter (lokalt + hostat).
+> 3. **#312 (uppgift E) — komponentintag v1:** kurerad shadcn-intake-CLI
+>    (`scripts/component_intake.py`, ADR 0054), `component_builder`-
+>    rollkontrakt (ADR 0057, partial/mount-only), zero-dep accordion-pilot,
+>    naming v40, pip-dep `openai-agents==0.17.5`.
+> 4. **#313 (uppgift D+F) — ärlighetsfix:** `appliedFollowupDirectiveKinds`-
+>    signal + `intent_not_executable` (byte-diff bevisar inte längre framgång),
+>    honesty-gates kräver konkreta direktiv, `generateFollowupOutcomeSummary`
+>    (ärlig LLM-`answerText` på följdprompter).
+> 5. **#314 (uppgift G, ADR 0058) — snabb chat + preview-bundle:** answer-only
+>    utan sandbox för rena frågor (`apps/viewser/lib/hosted-answer-only.ts`,
+>    kortslutning före `startHostedBuild`) + preview-bundle-tarball
+>    (`source=preview-bundle`, ärlig fil-för-fil-fallback). Stänger B200/B201.
+> 6. **#315 (uppgift H) — restpost-svep:** dedikerad `intent_not_executable`-
+>    rad (no-key, ärlig "saknar byggförmåga") + rolletiketten
+>    `component_builder` → "komponenter".
+> 7. **#316 (internt "Spår A", `8005be92`) — färgfixen:** se blocket ovan.
+>
+> **Kö framåt (prioriterad):**
+>
+> 1. **Operatörens prod-E2E på `main`** (Jakobs nästa steg — agenter ska INTE
+>    förekomma testet): konkret restyle ("gör sajten blå") ska byta färg
+>    hostat; ren fråga svarar utan sandbox; andra previewn använder
+>    `source=preview-bundle` (lågt `sourceMs`); no-op ger ärlig rad (ingen
+>    falsk "Klart!"). #316 rörde inte `apps/viewser`-frontend → ingen ny
+>    Vercel-frontend-deploy skapas; produktändringen når den hostade pipen via
+>    build-context-tarballen (se nästa stycke).
+> 2. **B197 — discovery-paritet hostat** (HÅLLS tills prod-E2E grön): den
+>    hostade byggvägen trådar bara prompttext, inte wizardens strukturerade
+>    discovery-payload. Nästa byggsteg ("uppgift I"). Koordinera med
+>    Christophers spår (msg-0085 begärde tidig rebase på
+>    `hosted-build-runner.ts`).
+> 3. **Steg 1 mot konduktör-visionen (rekommenderad första byggskiva, M):**
+>    låt `component_builder` gå partial→supported mount för komponenter som
+>    redan finns i katalogen/capability-map (samma apply/mount-maskineri som
+>    faq/contact-form), ärligt mot #313. Kräver ADR-utökning av 0057. Underlag:
+>    `docs/heavy-llm-flow/conductor-vision-roadmap.md`.
+>
+> **Build-context-tarballen + #316 (viktig verifieringspunkt):** #316 rörde
+> `packages/generation/` + `scripts/`, så den hostade sandbox-byggvägen kör
+> #316:s kod FÖRST när build-context-tarballen laddats om
+> (`node apps/viewser/scripts/upload-build-context-to-blob.mjs`). Föregående
+> docs-commit (`a58b3276`) ligger FÖRE #316, så ingen omladdning är bokförd
+> efter `8005be92`. Bekräfta att blob-tarballen speglar `8005be92` innan den
+> hostade restyle-E2E:n litas på; ladda annars om. (#316 rörde inte frontend,
+> så ingen Vercel-frontend-deploy behövs.)
+>
+> **Konduktör-roadmap (operatörens vision, read-only underlag):** en roadmap
+> togs fram denna session för visionen fri kreativ prompt → analys → npm →
+> generativ komponent → montering → ny version (t.ex. "3D-pizza ovanför
+> headern"). Slutsats: visionen är arkitekturellt förankrad (openclaw-2.0-
+> conductor, fas 3 = extern Docker-konduktor) men ej byggd. Dagens konduktor är
+> en ärlig regelbaserad router till fyra begränsade roller (router/
+> section_builder/stylist/copy) + en partial `component_builder`; en
+> pizza-prompt dör i `classify_message` som unclear, eller senare som
+> plan_rejected / apply_unmapped. Stegtrappa: Steg 1 katalog-mount (M) →
+> Steg 2 kuraterat 3D-recept (L) → Steg 3 novel-intent planeringssvar (M) →
+> Steg 4 prompt→dossier-inferens (L) → Steg 5 generativ komponent-agent (XL) →
+> Steg 6 extern Docker-konduktor (L). Full pizza-vision = arkitekturprogram
+> (månader). Kärnpunkter + stegtrappa:
+> `docs/heavy-llm-flow/conductor-vision-roadmap.md`.
+>
+> **Modell-/budget-läge (beslutsunderlag för takeover-agenten):** motor-
+> rollerna (`briefModel`/`planningModel`/`routerModel`/`copyDirectiveModel`/
+> `styleDirectiveModel`/`codegenModel` m.fl.) kör alla `gpt-5.4` i
+> `governance/policies/llm-models.v1.json`; Viewser-chatten kör `gpt-5.5` via
+> `.env` (`OPENAI_MODEL`) och följer inte policyn. reasoningEffort per roll:
+> planning=medium, copy=low, router=low, brief=low, style=none, codegen=medium;
+> maxOutputTokens varierar (brief/plan 6000, övriga 2000–4000; chatt 1500).
+> Öppen operatörsfråga (ej beslutad): höja reasoning på copy+router (+ev.
+> planning) och/eller byta motorn till `gpt-5.5`. Backoffice kan byta modell
+> per roll (Dirigentpulten) + hela policyn via governance-JSON-editorn;
+> kontextbudgetar (tecken-tak i `budgets.py`) kräver kodändring; chattmodellen
+> styrs via `.env`.
+>
+> **Kända punkter bokförda i `docs/known-issues.md` (B202/B203, fixa EJ nu):**
+> B202 (låg) — Turbopack output-file-tracing över-inkluderar för
+> `/api/discovery-options` ("traced the whole project unintentionally"):
+> `next.config.ts` breddar `outputFileTracingRoot` till repo-roten + routens
+> runtime-`fs`-läsningar (dynamisk `repoRoot()` + `readdir` över
+> scaffold-varianter) gör att tracern inte kan avgränsas → uppblåst
+> funktionsbunt/kallstart. B203 (låg) — runtime-varning
+> `webpsave_buffer: no property named 'smart_deblock'` (sharp/libvips-
+> versionsglapp i bild-/webp-vägen), kosmetiskt.
+>
+> **Öppen PR — #317 (draft, MERGAD EJ av agent):** auto-genererad Cloud Agent
+> env-setup-PR (Jakeminator123 + cursoragent), bas `main`, head
+> `cursor/setup-dev-environment-3a91`. Enda kodändring: 6 rader in / 3 rader ut
+> i `AGENTS.md` som dokumenterar att `sudo apt-get update` måste köras före
+> venv-paketet på en färsk VM. CI helt grön (governance/eval-baseline/
+> builder-smoke/ai-bug-review/GitGuardian/Vercel) och mergeable. Avstod ändå
+> för att den är (a) en draft, (b) siktar `main` direkt förbi `jakob-be`, och
+> (c) inte hör till #310–#316-tåget. Operatören beslutar: markera ready + välj
+> bas (sannolikt `jakob-be`) om innehållet ska in — ändringen i sak är ofarlig
+> och korrekt.
+
+## PASS 2026-06-12 ~18:45 — KVÄLLSRUNDA: #314 + #315 MERGADE, SLUTLIG MAIN-SYNC (HISTORIK)
+
+> Historiskt block (ersatt av takeover-prep-rundan ovan) — verifiera alltid
+> mot git/koden.
 >
 > **Mandat:** operatören (Jakob) gav före frånvaro fullt mandat för
 > kvällsrundan: merge av #315 efter granskning, docs-avslutning och den

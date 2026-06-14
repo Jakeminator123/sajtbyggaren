@@ -6,73 +6,68 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-12 ~18:45 — kvällens avslutningsrunda: #314/#315 landade, slutlig main-sync)
+## Status nu (2026-06-14 ~17:00 — takeover-prep: #316 noterad, dagens leveranser #310–#316, konduktör-roadmap)
 
-**Git:** `main = jakob-be` (rent träd, local == origin) efter denna rundas
-slutsynk. Production deployar från `main`. Tarball-omladdningen är GJORD
-efter #314 (verifierad via blob-uploadedAt 17:51:48, 27 s efter mergen) —
-build-kontexten i blob speglar `de04e8f6`. #315 krävde ingen omladdning
-(endast `apps/viewser/` + `tests/`). Alla PR-köer är tomma.
+**Git:** `main = jakob-be = origin/main = origin/jakob-be = 8005be92` (#316,
+rent träd) vid rundans start; denna docs-commit ligger ovanpå på `jakob-be`
+och `main` ff-synkas till samma tip. Production deployar från `main`.
+Föregående focus-block (#314/#315, 2026-06-12 kväll) är arkiverat:
+[`docs/archive/current-focus-2026-06-12-kvall.md`](archive/current-focus-2026-06-12-kvall.md).
 
-**Landat under kvällen (squash-mergat till `jakob-be`):**
+**Nya PRs sedan föregående checkpoint:** #316 (mergad, `8005be92`) och #317
+(öppen draft — se "Öppna PR att känna till"). Ingen PR mergades denna runda.
 
-- **#314 (uppgift G, `de04e8f6` — stänger B200/B201, ADR 0058):**
-  G1 hostad answer-only — ren fråga med hög konfidens besvaras på sekunder
-  utan sandbox-spinn (`apps/viewser/lib/hosted-answer-only.ts`, kortslutning
-  före `startHostedBuild`); G2 preview-bundle-tarball — bygget paketerar
-  publicerade fil-setet som EN tarball i blob, preview-sandboxen skapas
-  direkt från den (`source=preview-bundle` i loggarna) med ärlig
-  fil-för-fil-fallback för äldre sajter. Naming v41.
-- **#315 (uppgift H, restpost-svep, `54de9b9c`):** dedikerad deterministisk
-  `intent_not_executable`-rad i FloatingChat (no-key-fallbacken säger ärligt
-  att önskemålet saknar byggförmåga — aldrig "var mer specifik"-rådet;
-  LLM-answerText från #313 vinner fortsatt); rolletiketten
-  `component_builder` → "komponenter" (ADR 0057). Plus hygientak-split:
-  copy-directive-/change-set-låsen bor nu i
-  `tests/test_viewser_copy_change_set.py`.
-
-Eftermiddagens runda (#310–#313 + första main-synken) är historik:
-[`docs/archive/current-focus-2026-06-12-em.md`](archive/current-focus-2026-06-12-em.md).
+#316 ("Spår A", `8005be92`) är internt kallad färgfixen och är skilt från
+uppgift A/#310 (dossier-deps). En restyle-följdprompt ("gör sajten blå",
+"snyggare typsnitt") landar nu via tema-utföraren: `run_followup_chain` fick
+en LLM-stylist-fallback bakom en delad eligibilitetsgrind
+(`theme_directive_llm_eligible`, identisk för legacy-prompt-vägen och
+OpenClaw-kedjan), ärlig `visual_style`-target-summary (inte contentBlocks-
+mislabel), och "effekter" förblir ärligt oapplicerat. Rörde
+`packages/generation/followup/` + `scripts/`, INTE `apps/viewser`-frontend.
+Full dagsleverans #310–#316 + detaljer: [`docs/handoff.md`](handoff.md).
 
 **Nästa 3 prioriteringar:**
 
-1. **Operatörens produktions-E2E på `main`** (görs av operatören separat —
-   agenter ska INTE förekomma testet). Konkreta verifieringspunkter:
-   (i) ren fråga i chatten ska svara på sekunder utan sandbox;
-   (ii) första hostade bygget efter merge skapar första preview-bundlen —
-   andra previewn därefter ska starta på sekunder (kolla `sourceMs` +
-   `source=preview-bundle` i runtime-loggarna; äldre sajter tar
-   fil-för-fil-fallback tills de byggs om);
-   (iii) no-op-följdprompt ska ge ärlig no-op-rad, aldrig grön "Klart!".
-2. **Uppgift I (nästa byggsteg): B197 discovery-paritet hostat** — idag
-   skickas endast prompttexten in i sandboxen; discovery-svar/
-   konversationskontext trådas inte. (Koordinera med Christophers spår,
-   msg-0085 begärde tidig rebase på `hosted-build-runner.ts`.)
-3. **Backlog/deferred (ej blockers):** dossierfälten componentSource/
-   mountRules/qualityGate från E (kräver design/ADR först — ej specade i
-   ADR 0054/0057); targeted-apply-trådning av
-   `appliedFollowupDirectiveKinds`; blob-prune-skulden + dubbellagring av
-   källan per bygge tills bundle-vägen är prod-bevisad (ADR 0058); G1:s
-   medvetna klassificeringslatens (~1–3 s, 8 s tak) på byggvägen;
-   `changeSet` hostat; Preview-miljöns reuse-flagga; Safari/Firefox-E2E
-   för B125.
+1. **Operatörens produktions-E2E på `main`** (Jakobs nästa steg — agenter
+   ska INTE förekomma testet): konkret restyle ("gör sajten blå") ska byta
+   färg hostat; ren fråga svarar utan sandbox; andra previewn använder
+   `source=preview-bundle` (lågt `sourceMs`); no-op ger ärlig rad (ingen
+   falsk "Klart!"). #316 rörde inte frontend → ingen ny Vercel-frontend-
+   deploy; produktändringen når hostade pipen via build-context-tarballen
+   (bekräfta att den speglar `8005be92` — se handoff).
+2. **Uppgift I — B197 discovery-paritet hostat** (HÅLLS tills prod-E2E
+   grön): hostade byggvägen trådar bara prompttext, inte wizardens
+   strukturerade discovery-payload. (Koordinera med Christophers spår,
+   msg-0085.)
+3. **Steg 1 mot konduktör-visionen (rekommenderad första byggskiva, M):**
+   låt `component_builder` gå partial→supported mount för komponenter som
+   redan finns i katalogen/capability-map (samma apply/mount-maskineri som
+   FAQ/contact-form), ärligt mot #313. Kräver ADR-utökning av 0057. Underlag:
+   [`docs/heavy-llm-flow/conductor-vision-roadmap.md`](heavy-llm-flow/conductor-vision-roadmap.md).
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `54de9b9c` (2026-06-12 ~18:45 UTC+2; squash-merge av
-#315 ovanpå #314. #315-mergen krävde en hygientak-split i CI-rundan
-(`test_viewser_floating_chat.py` 1221 > 1200 rader — copy-directive-/
-change-set-låsen flyttade till `tests/test_viewser_copy_change_set.py`,
-samma mönster som tidigare splittar). Kvällsrundan: handoff + detta block,
-slutlig `jakob-be` → `main`-sync så operatörens produktions-E2E kör på
-dagens fulla leverans.)
+Last verified state: `8005be92` (2026-06-14 ~17:00 UTC+2; #316 "Spår A"
+mergad till `jakob-be` + `main`. Denna takeover-prep-runda: #316 noterad,
+kvällsblocket arkiverat, B202/B203 bokförda i known-issues, konduktör-roadmap
+tillagd. Ingen PR mergad — #317 är en draft som operatören beslutar om. Denna
+docs-commit bumpar SHA:n och `main` ff-synkas till samma tip.)
 
 ## Öppna PR att känna till
 
-Inga öppna just nu. #306–#315 är squash-mergade till `jakob-be` och synkade
-till `main`. (#314 = uppgift G snabb chat + preview-bundle, mergad
-2026-06-12 ~17:51. #315 = uppgift H restpost-svep, mergad 2026-06-12 ~18:26.
-Äldre detaljer: arkivet + `docs/handoff.md`.)
+- **#317 (draft, `cursor/setup-dev-environment-3a91` → `main`) — MERGAS EJ av
+  agent, operatören beslutar.** Auto-genererad Cloud Agent env-setup-PR
+  (Jakeminator123 + cursoragent). Enda kodändring: 6/3 rader i `AGENTS.md`
+  som dokumenterar att `sudo apt-get update` måste köras före venv-paketet
+  på en färsk VM. CI helt grön och mergeable, men den är (a) en draft,
+  (b) siktar `main` direkt förbi `jakob-be`, och (c) hör inte till
+  #310–#316-tåget — därför avstod takeover-prep-rundan. Operatören: markera
+  ready + välj bas (sannolikt `jakob-be`) om innehållet ska in.
+
+#306–#316 är squash-mergade till `jakob-be` och synkade till `main`
+(#316 = "Spår A" färgfix, mergad 2026-06-14, tip `8005be92`). Äldre detaljer:
+arkivet + `docs/handoff.md`.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
@@ -109,6 +104,9 @@ dev-uttryck med korta parenteser första gången per konversation. Mönstret i
 
 Historiska statusblock + checkpoint-kedjan ligger i arkivet:
 
+- [`docs/archive/current-focus-2026-06-12-kvall.md`](archive/current-focus-2026-06-12-kvall.md)
+  (kvällsblocket per `54de9b9c`: #314/#315-mergarna, slutlig main-sync för
+  operatörens produktions-E2E).
 - [`docs/archive/current-focus-2026-06-12-em.md`](archive/current-focus-2026-06-12-em.md)
   (eftermiddagsblocket per `56dc754f`: #310–#313-mergarna, branch-städning,
   första main-synken för produktionstest).
