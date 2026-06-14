@@ -33,18 +33,25 @@ som hindrar `briefModel`-instruktionstext från att renderas som synlig
 `packages/generation/brief/extract.py`, 6 nya tester). Detaljer + full
 nästa-steg-lista: [`docs/handoff.md`](handoff.md).
 
+Landat 2026-06-15 (denna runda): #321/#323 mergade; docs-drift lagad; och
+`directive_leak`-kritikern (`07ed6939`) — `_looks_like_directive` lyft till en
+delad signal (`packages/shared/directive_signal.py`) som både planning
+(prevention, #322) och quality_gate (detektion, försvar på djupet) delar, så de
+aldrig driftar. Single source, ingen dubblering.
+
 **Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
-1. **`directive_leak`-check i `packages/generation/quality_gate/critic.py`**
-   (snabb): lyft `_looks_like_directive`-signalen till en Quality Gate-kritiker
-   som försvar på djupet ovanpå denna fix — fånga/rapportera direktivtext som
-   ändå slinker igenom i stället för att tyst rendera den.
-2. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
+1. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
    prompttext blir ibland stray tjänste-kort kunden aldrig bett om; avgränsa
-   till grundade tjänster (samma ärlighets-tema som denna fix).
-3. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
+   till grundade tjänster (samma ärlighets-tema som directive-fixen).
+2. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
    landade omfärgning via tema-utföraren, men en namngiven tema-cue mappar i
    dag till grått; höj tema-mappningens täckning så vald stämning syns.
+3. **Smalt OpenClaw-steg som krymper specialfall** (medel; coach-beslut
+   2026-06-15): t.ex. katalog-mount (`component_builder` partial→supported för
+   redan kända komponenter) eller novel-intent planeringssvar — flytta
+   intelligens in i konduktorn med rails, inte fri generativ kod. Maskineriet
+   finns redan i `section_directives.py`.
 
 Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
 (nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
@@ -56,11 +63,11 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `a45dc0eb` (2026-06-15 ~00:00 UTC+2; `jakob-be` = HEAD,
-2 commits före `main` = `f4e02756` efter att #321 (`cb5c943c`) + #323
-(`a45dc0eb`) squash-mergades till `jakob-be`; `origin/jakob-be` i synk,
-working tree rent; `main`/`origin/main` orörda på `f4e02756` — synk vid nästa
-officiella version). Föregående: `b4a818c1` (#322 direktiv-läckage-fix).
+Last verified state: `07ed6939` (2026-06-15 ~00:30 UTC+2; `jakob-be` = HEAD,
+4 commits före `main` = `f4e02756`: #321 (`cb5c943c`) + #323 (`a45dc0eb`)
+mergade, docs-drift lagad (`986a75ef`), directive_leak-kritiker + delad signal
+(`07ed6939`); `origin/jakob-be` i synk efter push, working tree rent;
+`main`/`origin/main` orörda på `f4e02756`). Föregående: `b4a818c1` (#322).
 
 ## Öppna PR att känna till
 
