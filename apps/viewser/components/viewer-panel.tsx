@@ -792,11 +792,13 @@ export function ViewerPanel({
       {showBuildCard && !placementBuildActive ? (
         <div className="bg-background/85 pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6 backdrop-blur-sm">
           <div className="pointer-events-auto">
-            {/* key={buildStage} forces a full remount on every stage
-                transition so elapsedSec restarts at 0 via useState(0)
-                without needing a setState call inside the effect
-                body (react-hooks/set-state-in-effect). */}
-            <BuildProgressCard key={buildStage} stage={buildStage} />
+            {/* Inget key={buildStage} längre: kortet ska överleva stage-
+                flipparna (thinking→building→success) så elapsed-timern löper
+                kontinuerligt och den tids-eased baren aldrig fryser/nollas
+                mitt i ett bygge. Kortet mountas en gång per bygge eftersom
+                showBuildCard går false mellan byggen (idle-glappet), vilket
+                ger ett rent timer-/progress-omtag inför nästa bygge. */}
+            <BuildProgressCard stage={buildStage} />
           </div>
         </div>
       ) : null}
@@ -1089,6 +1091,14 @@ const BUILD_STEPS: ReadonlyArray<{
   },
 ];
 
+// Tidskonstant (s) för bygg-kortets eased progress-ramp. Hostade byggen
+// dwellar 110–220 s i "building"-fasen medan stage-markören står still, så en
+// ren steg-baserad bar frös tidigare på 75 %. Med tau≈40 s kryper baren mjukt
+// (~60 % vid 40 s, ~90 % vid 120 s, asymptot 95 %) så väntan aldrig känns
+// hängd. Samma ärlighetsfilosofi som BuildProgressBanner: 100 % nås bara när
+// bygget faktiskt settlat (terminal stage), aldrig på gissning.
+const PROGRESS_RAMP_TAU_SECONDS = 40;
+
 function stageToStepIndex(stage: PromptStage): number {
   switch (stage) {
     case "idle":
@@ -1108,18 +1118,35 @@ function stageToStepIndex(stage: PromptStage): number {
 
 function BuildProgressCard({ stage }: { stage: PromptStage }) {
   const activeIdx = stageToStepIndex(stage);
-  const [elapsedSec, setElapsedSec] = useState(0);
+  const isTerminal =
+    stage === "success" || stage === "degraded" || stage === "failed";
+  // elapsedMs räknar från KORTETS mount. Kortet mountas en gång per bygge
+  // (parenten keyar inte längre på buildStage), så timern löper kontinuerligt
+  // genom alla stage-flippar i stället för att nollställas till 0:00 vid varje
+  // övergång — vilket var vilseledande hostat där thinking→building sker mitt
+  // i bygget.
+  const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
     const start = Date.now();
     const id = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - start) / 1000));
-    }, 1000);
+      setElapsedMs(Date.now() - start);
+    }, 200);
     return () => clearInterval(id);
   }, []);
 
+  const elapsedSec = Math.floor(elapsedMs / 1000);
   const minutes = Math.floor(elapsedSec / 60);
   const seconds = (elapsedSec % 60).toString().padStart(2, "0");
+
+  // Tids-eased progress: ramp:ar mjukt mot 95 % över bygget OCH golvas vid
+  // det aktiva stegets band-start så ett server-drivet stage-byte alltid
+  // syns. Hoppet till 100 % sker bara på en terminal stage — vi påstår
+  // aldrig "klart" innan bygget faktiskt settlat.
+  const timeEased =
+    95 * (1 - Math.exp(-(elapsedMs / 1000) / PROGRESS_RAMP_TAU_SECONDS));
+  const bandStart = (activeIdx / BUILD_STEPS.length) * 100;
+  const progress = isTerminal ? 100 : Math.max(timeEased, bandStart);
 
   return (
     <div className="border-border/60 bg-background/95 w-full max-w-[560px] rounded-3xl border p-9 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] backdrop-blur-xl">
@@ -1192,10 +1219,11 @@ function BuildProgressCard({ stage }: { stage: PromptStage }) {
 
       <div className="bg-border/50 mt-6 h-[2px] w-full overflow-hidden rounded-full">
         <div
-          className="bg-foreground/80 h-full animate-pulse rounded-full transition-[width] duration-500 ease-out"
-          style={{
-            width: `${((activeIdx + 1) / BUILD_STEPS.length) * 100}%`,
-          }}
+          className={cn(
+            "bg-foreground/80 h-full rounded-full transition-[width] duration-500 ease-out",
+            !isTerminal && "animate-pulse",
+          )}
+          style={{ width: `${progress}%` }}
         />
       </div>
     </div>
