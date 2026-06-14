@@ -48,10 +48,10 @@ aldrig driftar. Single source, ingen dubblering.
    landade omfärgning via tema-utföraren, men en namngiven tema-cue mappar i
    dag till grått; höj tema-mappningens täckning så vald stämning syns.
 3. **Smalt OpenClaw-steg som krymper specialfall** (medel; coach-beslut
-   2026-06-15): t.ex. katalog-mount (`component_builder` partial→supported för
-   redan kända komponenter) eller novel-intent planeringssvar — flytta
-   intelligens in i konduktorn med rails, inte fri generativ kod. Maskineriet
-   finns redan i `section_directives.py`.
+   2026-06-15): katalog-mount (`component_builder` partial→supported för redan
+   kända komponenter) — utkast i ADR 0059 — eller novel-intent planeringssvar;
+   flytta intelligens in i konduktorn med rails, inte fri generativ kod.
+   Maskineriet finns redan i `section_directives.py`.
 
 Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
 (nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
@@ -63,11 +63,11 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `07ed6939` (2026-06-15 ~00:30 UTC+2; `jakob-be` = HEAD,
-4 commits före `main` = `f4e02756`: #321 (`cb5c943c`) + #323 (`a45dc0eb`)
-mergade, docs-drift lagad (`986a75ef`), directive_leak-kritiker + delad signal
-(`07ed6939`); `origin/jakob-be` i synk efter push, working tree rent;
-`main`/`origin/main` orörda på `f4e02756`). Föregående: `b4a818c1` (#322).
+Last verified state: `ff65d0bc` (2026-06-15 ~00:50 UTC+2; `jakob-be` = HEAD,
+5+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
+directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059
+(`component_builder` katalog-mount) utkast; `origin/jakob-be` i synk, working
+tree rent; `main`/`origin/main` orörda på `f4e02756`). Föregående: `b4a818c1`.
 
 ## Öppna PR att känna till
 
