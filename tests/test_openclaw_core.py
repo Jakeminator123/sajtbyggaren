@@ -132,6 +132,25 @@ def test_edit_instruction_is_honest_patch_plan_request():
     assert d.appliedVisibleEffect is False
 
 
+def test_edit_instruction_carries_grounded_plan_without_false_success():
+    """Novel-intent planeringssvar (coach-beslut 2026-06-15, ADR 0059-anda): a
+    clear edit V0 cannot auto-apply yet now gets a grounded "så här skulle det
+    kunna byggas" plan instead of a bare missing-bridge dead-end - WHILE staying
+    honest: still patch_plan_request{action_bridge_missing}, no applied effect,
+    and an explicit "no automatic change yet" line (#313 no false success).
+    """
+    d = _decide_for("lägg en klocka i andra sektionen till vänster")
+    assert d.action == "patch_plan_request"
+    # The dead-end is gone: a grounded, non-empty plan that names what it read.
+    assert len(d.plan) >= 2
+    assert any("uppfattar" in step.lower() for step in d.plan)
+    # ...but #313 honesty is intact - the bridge flag, no fake success.
+    assert d.patchPlanRequest is not None
+    assert d.patchPlanRequest.status == "action_bridge_missing"
+    assert d.appliedVisibleEffect is False
+    assert any("ingen automatisk ändring" in step.lower() for step in d.plan)
+
+
 def test_visual_style_target_summary_describes_style_not_contentblocks():
     """ÄNDRING 2: a visual_style restyle changes the site's STYLE/THEME (colour,
     tone), NOT a content field - so the patch_plan_request summary must describe

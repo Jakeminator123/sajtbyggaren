@@ -37,7 +37,11 @@ Landat 2026-06-15 (denna runda): #321/#323 mergade; docs-drift lagad; och
 `directive_leak`-kritikern (`07ed6939`) — `_looks_like_directive` lyft till en
 delad signal (`packages/shared/directive_signal.py`) som både planning
 (prevention, #322) och quality_gate (detektion, försvar på djupet) delar, så de
-aldrig driftar. Single source, ingen dubblering.
+aldrig driftar. Single source, ingen dubblering. Dessutom: konduktorn (OpenClaw
+Core V0 `decide`) ger nu ett grundat novel-intent planeringssvar för en tydlig
+men ännu obyggbar ändring (`_edit_plan_steps` i `core.py`) i stället för en stum
+action_bridge_missing — ärligt (ingen falsk success, #313), deterministiskt,
+ersätter ett specialfall i stället för att lägga ett.
 
 **Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
@@ -47,11 +51,12 @@ aldrig driftar. Single source, ingen dubblering.
 2. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
    landade omfärgning via tema-utföraren, men en namngiven tema-cue mappar i
    dag till grått; höj tema-mappningens täckning så vald stämning syns.
-3. **Smalt OpenClaw-steg som krymper specialfall** (medel; coach-beslut
-   2026-06-15): katalog-mount (`component_builder` partial→supported för redan
-   kända komponenter) — utkast i ADR 0059 — eller novel-intent planeringssvar;
-   flytta intelligens in i konduktorn med rails, inte fri generativ kod.
-   Maskineriet finns redan i `section_directives.py`.
+3. **Katalog-mount mount-kod (ADR 0059)** (medel; coach-beslut 2026-06-15):
+   novel-intent planeringssvaret är nu landat i konduktorn (V0 `decide`); kvar
+   är komponentmonteringen + `componentIntentModel` — `component_builder`
+   partial→supported för redan kända katalog-komponenter via det befintliga
+   `section_directives.py`-maskineriet, med rails (inte fri generativ kod).
+   Kräver ett fokuserat pass + visuell check (som #320).
 
 Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
 (nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
@@ -63,11 +68,12 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `ff65d0bc` (2026-06-15 ~00:50 UTC+2; `jakob-be` = HEAD,
-5+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
-directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059
-(`component_builder` katalog-mount) utkast; `origin/jakob-be` i synk, working
-tree rent; `main`/`origin/main` orörda på `f4e02756`). Föregående: `b4a818c1`.
+Last verified state: `f481d201` (2026-06-15 ~01:10 UTC+2; `jakob-be` = HEAD,
+6+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
+directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 utkast
+(`f481d201`), novel-intent planeringssvar i konduktorn (denna commit);
+`origin/jakob-be` i synk efter push, working tree rent; `main`/`origin/main`
+orörda på `f4e02756`). Föregående: `b4a818c1`.
 
 ## Öppna PR att känna till
 
