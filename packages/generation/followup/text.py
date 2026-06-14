@@ -100,6 +100,34 @@ _PLANNER_IMPERATIVE_PHRASES: tuple[str, ...] = (
     "set up",
 )
 
+# Additive ("add a …") follow-up cues. Shared here (no import cycle) because BOTH
+# the follow-up intent classification in ``scripts.prompt_to_project_input`` AND
+# the stylist eligibility gate in
+# ``packages.generation.followup.theme_directives.theme_directive_llm_eligible``
+# must treat an additive request the same way: an "add a blue button" prompt is
+# never a whole-site restyle even though it carries a colour word. One truth so
+# the two gates can never drift (a lockstep test asserts the gate identity).
+_FOLLOWUP_ADD_ONLY_KEYWORDS: tuple[str, ...] = (
+    "lägg till",
+    "lagg till",
+    "add ",
+    "new service",
+    "new product",
+    "ny produkt",
+    "nytt produkt",
+    "ny tjänst",
+    "ny tjanst",
+    "ny sida",
+    "skapa sida",
+    "personalsida",
+    "faq",
+    "pris",
+    "priser",
+    "price",
+    "gallery",
+    "galleri",
+)
+
 
 def _normalise_followup_text(text: str) -> str:
     """Collapse operator formatting before deterministic intent matching."""

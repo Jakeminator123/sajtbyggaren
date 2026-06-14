@@ -315,11 +315,19 @@ def _multi_intent(
 
 
 def _target_summary(router: RouterDecision) -> str:
-    """A best-effort ``contentBlocks.<route>.<section>`` path from the target.
+    """A best-effort, honest description of what an edit targets.
 
-    Honest about what is unknown: an unresolved section/field is rendered as
-    a ``<section>`` / ``<field>`` placeholder rather than invented.
+    A ``visual_style`` restyle changes the site's STYLE/THEME (colour, tone) -
+    not a content field - so describing it as a
+    ``contentBlocks.<route>.<section>.<field>`` path mislabels the intent (the
+    chat row renders this string verbatim). That kind gets an honest style/theme
+    summary instead. ``copy_change`` / ``component_add`` keep the contentBlocks
+    path, where it correctly names the targeted content field. Honest about what
+    is unknown: an unresolved section/field is rendered as a ``<section>`` /
+    ``<field>`` placeholder rather than invented.
     """
+    if router.editKind == "visual_style":
+        return "stil/tema (färg, ton)"
     target = router.target
     route = (target.routeId if target and target.routeId else None) or "home"
     section = "<section>"

@@ -446,6 +446,42 @@ def test_style_model_fallback_only_runs_when_llm_enabled(
     assert "primaryColorHex" not in (merged.get("brand") or {})
 
 
+@pytest.mark.tooling
+def test_style_model_fallback_resolves_more_colours_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spår A: the operator's exact vague restyle ("gör om så sajten får mer
+    färger") misses the deterministic lexicon (no concrete colour/vibe) but
+    carries a style cue, so the stylist model interprets it into a validated
+    theme mutation - brand.primaryColorHex + tone.primary land and the merged
+    Project Input stays schema-valid. This is the directive the OpenClaw chain
+    now also wires in (the real "land it" fix)."""
+    prompt = "gör om så sajten får mer färger"
+    assert extract_theme_directive(prompt) is None  # deterministic miss
+    assert _theme_directive_llm_eligible(prompt) is True  # carries a style cue
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_style_directive_llm",
+        lambda *a, **k: {"primaryColorHex": "#7c3aed", "toneVibe": "playful"},
+    )
+    merged = _merge_with_llm(prompt)
+    assert merged["brand"]["primaryColorHex"] == "#7c3aed"
+    assert merged["tone"]["primary"] == "playful"
+    _validate_against_schema(merged)
+
+
+@pytest.mark.tooling
+def test_effects_request_resolves_no_theme_and_no_executor() -> None:
+    """ÄNDRING 3: "effekter" (skuggor/gradienter/animationer) has NO executor and
+    MUST stay honestly unapplied - there is no effect token in the lexicon, so a
+    pure-effects request resolves no deterministic theme, and a bare-effects
+    restyle with no other style cue is never even sent to the stylist model
+    (it would be a no-op anyway). Effects are never faked into a theme change."""
+    assert extract_theme_directive("gör sajten med fler effekter") is None
+    assert extract_theme_directive("ge sajten snygga skuggor och animationer") is None
+    # No style cue noun/verb in a bare-effects phrase -> the model is not asked.
+    assert _theme_directive_llm_eligible("ge sajten häftiga effekter") is False
+
+
 # --- stylist eligibility gate (fix-1 honesty mirrored into the prompt path) ---
 
 

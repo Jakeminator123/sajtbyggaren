@@ -56,6 +56,8 @@ from packages.generation.followup.color_lexicon import (
     split_compound_color,
 )
 from packages.generation.followup.text import (
+    _FOLLOWUP_ADD_ONLY_KEYWORDS,
+    _contains_any,
     _contains_word,
     _normalise_followup_text,
 )
@@ -372,6 +374,96 @@ def extract_theme_directive(
         accentWord=accent_word,
         vibeWord=vibe_word,
     )
+
+
+# Visual cues that mark a follow-up as a STYLE/THEME request (the stylist role's
+# honesty gate, mirroring the router's fix-1 "needs style context"). The
+# styleDirectiveModel fallback only fires when the deterministic theme extractor
+# missed AND one of these is present, so a bare colour question ("vad betyder
+# rosa?" - no cue) and an additive request ("lägg till en blå knapp") can never
+# trigger a model-driven restyle. These are visual NOUNS + restyle VERBS, not a
+# bare colour word, so the gate keys on style intent, not on a colour token.
+_THEME_STYLE_CUE_KEYWORDS: tuple[str, ...] = (
+    "färg",
+    "färgen",
+    "färger",
+    "färgerna",
+    "farg",
+    "fargen",
+    "färgschema",
+    "fargschema",
+    "färgskala",
+    "palett",
+    "paletten",
+    "palette",
+    "tema",
+    "temat",
+    "theme",
+    "stil",
+    "stilen",
+    "style",
+    "utseende",
+    "utseendet",
+    "look",
+    "design",
+    "designen",
+    "bakgrund",
+    "bakgrunden",
+    "bakgrundsfärg",
+    "color",
+    "colour",
+    "colors",
+    "colours",
+    "typsnitt",
+    "typsnittet",
+    "font",
+    "fonten",
+    "typografi",
+    "vibe",
+    "känsla",
+    "kansla",
+    "känslan",
+    "kanslan",
+    # restyle verbs / colour-application verbs
+    "snygga",
+    "modernisera",
+    "styla om",
+    "designa om",
+    "piffa",
+    "polera",
+    "restyla",
+    "restyle",
+    "måla",
+    "mala",
+    "färga",
+    "farga",
+)
+
+
+def theme_directive_llm_eligible(follow_up_prompt: str) -> bool:
+    """Decide whether to consult styleDirectiveModel for this follow-up.
+
+    The single source of truth for the stylist LLM eligibility gate, shared by
+    BOTH the legacy prompt path (``scripts.prompt_to_project_input``) AND the
+    OpenClaw follow-up chain (``scripts.build_site.run_followup_chain``) so the
+    two paths can never drift (a lockstep test asserts the identity).
+
+    The stylist model is the PRIMARY understanding layer for free/compound style
+    expressions and the deterministic colour lexicon is the safety net. The
+    model is consulted only when the deterministic ``extract_theme_directive``
+    missed AND the prompt carries a visual/style cue (a colour/theme/style noun
+    or a restyle verb). This preserves the router's fix-1 guard: a bare colour
+    with no style context ("vad betyder rosa?") and an additive request ("lägg
+    till en blå knapp") never trigger a model restyle. Honesty: an empty/invalid
+    model result stays an honest no-op (handled in
+    ``extract_theme_directive_via_llm``); this gate only decides whether to ask.
+    """
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return False
+    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
+        return False
+    return _contains_any(text, _THEME_STYLE_CUE_KEYWORDS)
 
 
 # --- stylist role: model-driven fallback (parallel to the copyDirective A1) ---
