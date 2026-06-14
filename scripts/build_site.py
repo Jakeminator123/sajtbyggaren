@@ -4117,9 +4117,25 @@ def run_followup_chain(
     if is_restyle:
         from packages.generation.followup.theme_directives import (
             extract_theme_directive,
+            extract_theme_directive_via_llm,
+            theme_directive_llm_eligible,
         )
 
         theme_directive = extract_theme_directive(follow_up_prompt)
+        # Stylist LLM fallback (parity with the legacy prompt path in
+        # prompt_to_project_input.merge_followup_project_input): when the
+        # deterministic colour/vibe lexicon misses a free/vague restyle ("gör om
+        # så sajten får mer färger") AND the prompt carries a style cue, ask
+        # styleDirectiveModel to interpret it into the SAME validated
+        # ThemeDirective. The eligibility gate is the shared, single-source
+        # theme_directive_llm_eligible (one truth with legacy; lockstep-tested).
+        # No-key honesty preserved: without OPENAI_API_KEY (or on any model
+        # error) extract_theme_directive_via_llm returns None, so the
+        # plan_empty/is_restyle no-op below still fires - never a false success.
+        if theme_directive is None and theme_directive_llm_eligible(
+            follow_up_prompt
+        ):
+            theme_directive = extract_theme_directive_via_llm(follow_up_prompt)
 
     # 3c. Section add (section_add, section_builder role): the patch planner has
     #     no patchable edit for a whole-section add, but it is a real follow-up.
