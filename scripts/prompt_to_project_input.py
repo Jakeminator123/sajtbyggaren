@@ -76,6 +76,9 @@ from packages.generation.followup.hero_headline_pin import (  # noqa: E402
 from packages.generation.followup.hero_headline_pin import (  # noqa: E402
     pin_previous_hero_headline as _pin_previous_hero_headline,
 )
+from packages.generation.followup.hero_headline_pin import (  # noqa: E402
+    run_blueprint_story as _run_blueprint_story,
+)
 from packages.generation.followup.marked_sections import (  # noqa: E402
     parse_marked_sections,
     validate_marked_sections,
@@ -2667,6 +2670,7 @@ def merge_followup_project_input(
     follow_up_prompt: str,
     enable_llm_fallback: bool = False,
     marked_sections: list[dict[str, str]] | None = None,
+    previous_rendered_story: str | None = None,
 ) -> dict[str, Any]:
     """Preserve prior site context while applying a follow-up prompt.
 
@@ -2682,6 +2686,14 @@ def merge_followup_project_input(
     copyDirective planner's site-state and the styleDirective
     extractor's context. It never changes intent classification and
     never triggers an edit on its own.
+
+    ``previous_rendered_story`` (Track B / ADR 0043 + 0034) is the about/story
+    copy the PREVIOUS build actually rendered (``derive_story``, read from the
+    base run's generation-package). It is passed to the literal-replace
+    extractor as an extra match candidate so an operator who quotes the text
+    they SEE - which is regenerated every build and shadows the stored
+    ``company.story`` - still lands the edit. ``None`` (init, no prior run)
+    reproduces today's stored-field-only matching.
     """
     merged = copy.deepcopy(previous)
     merged["siteId"] = previous["siteId"]
@@ -2758,7 +2770,9 @@ def merge_followup_project_input(
     # no-semantic-change so _apply_semantic_patch leaves copy untouched and the
     # literal directive below is authoritative. No field matches the quoted OLD
     # value -> empty list -> the existing rule/LLM path runs unchanged.
-    literal_directives = _extract_literal_replace_directives(follow_up_prompt, merged)
+    literal_directives = _extract_literal_replace_directives(
+        follow_up_prompt, merged, previous_rendered_story=previous_rendered_story
+    )
     if literal_directives:
         intent = "no-semantic-change"
     _apply_semantic_patch(
@@ -2904,8 +2918,18 @@ _UNAPPLIED_UNKNOWN_CAPABILITY_REASON = (
 )
 _UNAPPLIED_HERO_TARGET = "hero"
 # B155: target label for an ambiguous unquoted literal-replace no-op (the reason
-# string itself lives in copy_directives._UNQUOTED_AMBIGUOUS_REASON).
+# string itself lives in copy_directives._UNQUOTED_AMBIGUOUS_REASON). Reused for
+# the QUOTED literal-miss honesty post below (same operator-facing target).
 _UNAPPLIED_AMBIGUOUS_REPLACE_TARGET = "copy-replace"
+# A QUOTED literal "X -> Y" replace whose OLD matches no editable copy - not a
+# stored field, not the previously rendered/derived about copy - is an honest
+# miss. The reason points the operator at the two reliable ways to make the
+# quote match (the exact visible text, or a preview marking).
+_UNAPPLIED_LITERAL_MISS_REASON = (
+    "Texten du citerade hittades inte i den redigerbara copyn, så ingen ändring "
+    "gjordes. Citera den exakta texten som visas på sidan, eller markera "
+    "sektionen i previewen, och försök igen."
+)
 _UNAPPLIED_HERO_REASON = (
     "Hjältesektionens rubrik kan inte skrivas om via följdprompt ännu – just "
     "nu går det bara att ändra namn, tagline, om-oss-text eller tjänstetext."
@@ -3178,15 +3202,22 @@ def compute_unapplied_followup_intents(
     merged: dict[str, Any],
     *,
     follow_up_prompt: str,
+    previous_rendered_story: str | None = None,
 ) -> list[dict[str, str]]:
     """Report follow-up asks the deterministic v1 pipeline could not apply.
 
     Returns ``[{"target": ..., "reason": ...}]`` for (1) capabilities this
     follow-up newly requested that are recognised in capability-map.v1.json but
-    not mounted by deterministic codegen v1, and (2) a hero/"hjältesektion"
-    heading rewrite that has no deterministic copyDirective target. Pure
-    observer - no mutation, no intent remapping. Empty list = everything the
-    follow-up asked for was either applied or not recognised at all.
+    not mounted by deterministic codegen v1, (2) a hero/"hjältesektion" heading
+    rewrite that has no deterministic copyDirective target, and (3b) a QUOTED
+    literal copy-replace whose OLD matched no editable copy (a genuine miss).
+    Pure observer - no mutation, no intent remapping. Empty list = everything
+    the follow-up asked for was either applied or not recognised at all.
+
+    ``previous_rendered_story`` (Track B) is the about/story copy the base run
+    rendered; it is forwarded to the literal-replace extractor so the rule-3b
+    miss check uses the same expanded match source as the merge (an operator who
+    quotes the VISIBLE om-oss text is a hit, not a miss).
     """
     posts: list[dict[str, str]] = []
     seen_targets: set[str] = set()
@@ -3265,6 +3296,45 @@ def compute_unapplied_followup_intents(
                 {
                     "target": _UNAPPLIED_AMBIGUOUS_REPLACE_TARGET,
                     "reason": str(replace_status["reason"]),
+                }
+            )
+
+    # Rule 3b (#318, encoding-robust honesty): a QUOTED literal "X -> Y" replace
+    # whose OLD matches NO editable copy - not a stored field, not the previously
+    # rendered/derived about copy (the match source Track B expanded), and that
+    # no other deterministic copy extractor can place - is an honest miss. Keyed
+    # on the OLD/NEW PAIR present (verb-independent _extract_literal_old_new) plus
+    # both extractors empty, NEVER on the leading verb, so the no-op is reported
+    # even when the viewser-chat -> CLI boundary mangled "Ändra" to "*ndra"
+    # (encoding root B204). The _followup_requested_copy_replace guard keeps an
+    # ADDITIVE ask that merely quotes two new labels (e.g. 'lägg till en knapp
+    # "A" och en "B"') out of the miss path - it is also pair-based, not verb-
+    # based, so it stays robust to the mangling. A successful replace
+    # (stored/rendered/services/rename hit) leaves a non-empty extractor result
+    # and never reaches here, so this only fires on a genuine miss. Skipped when
+    # Rule 3 already posted the ambiguous copy-replace miss (one post per
+    # follow-up).
+    if not any(
+        post["target"] == _UNAPPLIED_AMBIGUOUS_REPLACE_TARGET for post in posts
+    ) and _copy_directives._followup_requested_copy_replace(follow_up_prompt):
+        miss_old, miss_new = _copy_directives._extract_literal_old_new(follow_up_prompt)
+        if (
+            miss_old
+            and miss_new
+            and not _extract_literal_replace_directives(
+                follow_up_prompt,
+                previous,
+                previous_rendered_story=previous_rendered_story,
+            )
+            and not _extract_copy_directives(
+                follow_up_prompt,
+                language=str(merged.get("language") or previous.get("language") or "sv"),
+            )
+        ):
+            posts.append(
+                {
+                    "target": _UNAPPLIED_AMBIGUOUS_REPLACE_TARGET,
+                    "reason": _UNAPPLIED_LITERAL_MISS_REASON,
                 }
             )
 
@@ -3501,6 +3571,7 @@ def generate(
     enable_copy_directive_llm: bool = False,
     marked_sections: list[dict[str, str]] | None = None,
     tool_intent: dict[str, Any] | None = None,
+    previous_rendered_story: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """End-to-end: prompt -> Site Brief -> Project Input on disk.
 
@@ -3580,6 +3651,7 @@ def generate(
             follow_up_prompt=prompt,
             enable_llm_fallback=enable_copy_directive_llm,
             marked_sections=marked_sections,
+            previous_rendered_story=previous_rendered_story,
         )
     else:
         project_input = candidate_project_input
@@ -3725,6 +3797,7 @@ def generate(
             base_project_input,
             project_input,
             follow_up_prompt=prompt,
+            previous_rendered_story=previous_rendered_story,
         )
         if unapplied_followup_intents:
             meta["unappliedFollowupIntents"] = unapplied_followup_intents
@@ -3892,6 +3965,10 @@ def generate_followup(
         enable_copy_directive_llm=enable_copy_directive_llm,
         marked_sections=applied_focus_sections or None,
         tool_intent=tool_intent,
+        # Track B: the about/story copy the base run rendered (derive_story),
+        # so a follow-up that quotes the VISIBLE om-oss text matches and lands
+        # even though it differs from the stored company.story.
+        previous_rendered_story=_run_blueprint_story(base_run_dir),
     )
 
 

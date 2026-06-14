@@ -888,6 +888,8 @@ def _extract_literal_old_new(
 def _extract_literal_replace_directives(
     follow_up_prompt: str,
     merged: dict[str, Any],
+    *,
+    previous_rendered_story: str | None = None,
 ) -> list[dict[str, Any]]:
     """Literal find-and-replace on the current copy fields.
 
@@ -898,17 +900,34 @@ def _extract_literal_replace_directives(
     the raw instruction can never become customer copy. Needs the merged
     Project Input (the current site state), so it is wired into
     ``merge_followup_project_input``, not the stateless ``_extract_copy_directives``.
+
+    ``previous_rendered_story`` (Track B / ADR 0043 + 0034) is the about/story
+    copy the PREVIOUS build actually rendered. The operator almost always quotes
+    the text they SEE, which for the om-oss/story block is ``derive_story(brief)``
+    (planning blueprint) - regenerated every build and shadowing the stored
+    ``company.story`` at render (``apply_blueprint_to_dossier``), so it is NOT
+    equal to the stored field. Matching it too lets "ändra '<den text jag ser>'
+    till X" land; ``_apply_copy_directives`` then pins the result to
+    ``directives.sectionContentOverrides`` so it wins over the regenerated
+    blueprint copy and survives later rebuilds.
     """
     text = _normalise_followup_text(follow_up_prompt)
     if not text or len(text) < 4:
         return []
+    old_value, new_value = _extract_literal_old_new(follow_up_prompt)
+    # A clear quoted/marker OLD->NEW pair is a literal replace REQUEST on its
+    # own, even when the leading verb never reached us intact: the viewser-chat
+    # -> CLI boundary can mangle a leading "Ä" to "*" ("Ändra" -> "*ndra", B204),
+    # which strips the verb keyword from the normalised text. Keying the gate on
+    # the explicit pair (not only the verb/anchor) keeps the literal edit landing
+    # under that mangling instead of silently dropping to a paraphrase/no-op.
+    has_quoted_pair = bool(old_value and new_value)
     has_replace = _contains_any_word(
         text, _COPY_DIRECTIVE_REPLACE_KEYWORDS
     ) or _contains_any(text, _REPLACE_MARKERS)
     has_text_anchor = _contains_any(text, _LITERAL_TEXT_ANCHOR_KEYWORDS)
-    if not (has_replace or has_text_anchor):
+    if not (has_replace or has_text_anchor or has_quoted_pair):
         return []
-    old_value, new_value = _extract_literal_old_new(follow_up_prompt)
     if not old_value or not new_value:
         # No QUOTED OLD/NEW pair: try the UNQUOTED substring path (B155). A
         # quoted prompt that merely failed to yield a complete pair is bounced
@@ -947,6 +966,29 @@ def _extract_literal_replace_directives(
                     "source": "prompt-rule",
                 }
             ]
+    # Track B: the operator quoted the RENDERED/derived om-oss text (not the
+    # stored company.story). Match it as an about-text replace so the edit lands
+    # and - via the _apply_copy_directives story pin - survives the next build's
+    # derive_story regeneration. Lower priority than an exact stored-field match
+    # above; never fires without a non-empty previous rendered story.
+    if previous_rendered_story and (
+        _normalise_followup_text(previous_rendered_story) == old_norm
+    ):
+        payload = _safe_copy_payload(
+            new_value,
+            follow_up_prompt=follow_up_prompt,
+            max_length=_COPY_DIRECTIVE_ABOUT_MAX_LENGTH,
+        )
+        if payload is None:
+            return []
+        return [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": payload,
+                "source": "prompt-rule",
+            }
+        ]
     for service in merged.get("services") or []:
         if not isinstance(service, dict):
             continue
@@ -1279,9 +1321,19 @@ def _followup_requested_copy_replace(follow_up_prompt: str) -> bool:
     skeleton = _text_outside_quotes(follow_up_prompt) or text
     if _followup_is_additive_request(skeleton):
         return False
-    return _contains_any_word(
+    if _contains_any_word(
         skeleton, _COPY_DIRECTIVE_REPLACE_KEYWORDS
-    ) or _contains_any(skeleton, _REPLACE_MARKERS)
+    ) or _contains_any(skeleton, _REPLACE_MARKERS):
+        return True
+    # Encoding-robust honesty (B204): a clear quoted OLD->NEW pair is a replace
+    # REQUEST even when the leading verb was mangled at the viewser-chat -> CLI
+    # boundary ("Ändra" -> "*ndra" strips the verb keyword from the skeleton).
+    # Key on the explicit pair, never on the verb keyword alone, so the honest
+    # no-op gate (copy_directive_not_applied) still fires under that mangling
+    # instead of letting an unrelated rebuild byte-diff pose as a successful
+    # edit. The additive guard above already excluded section-add phrasings.
+    old_value, new_value = _extract_literal_old_new(follow_up_prompt)
+    return bool(old_value and new_value)
 
 
 def _unquoted_anchor_replace_requested(follow_up_prompt: str) -> bool:
@@ -1778,6 +1830,48 @@ def _plan_copy_directives_via_llm(
     return validated
 
 
+# Section-content override keys an applied about-text/story edit pins so the
+# rendered om-oss/home-story copy actually changes. The renderer matches an
+# override on its ``.<sectionId>.<field>`` suffix
+# (resolve_section_content_override) and requires EXACTLY one match, so we both
+# write a canonical route key and drop any sibling sharing the same suffix (e.g.
+# an "om-oss.about-story.body" left by the apply-bridge path) to keep that
+# single-match rule satisfied. ``home.story`` is the home story teaser body;
+# ``about.about-story`` is the /om-oss story card body - the two surfaces the
+# renderers resolve (render_section_home_story / render_section_about_story).
+_STORY_OVERRIDE_KEYS: tuple[tuple[str, str], ...] = (
+    ("home.story.body", ".story.body"),
+    ("about.about-story.body", ".about-story.body"),
+)
+
+
+def _pin_story_section_overrides(
+    directives_block: dict[str, Any], story_text: str
+) -> None:
+    """Pin an applied about-text/story edit as section-content overrides.
+
+    Mirrors the company.heroHeadline pin: the rendered home-story and /om-oss
+    about-story bodies come from the planning blueprint (``derive_story``),
+    regenerated every build and shadowing the stored ``company.story`` at
+    render. Writing the new copy to ``directives.sectionContentOverrides`` for
+    both story surfaces makes the renderer prefer it over the regenerated
+    blueprint copy and survive later rebuilds (the map is carried forward by the
+    follow-up merge deep-copy). Mutates ``directives_block`` in place; the caller
+    (``_store``) attaches it to ``merged['directives']``.
+    """
+    overrides = directives_block.get("sectionContentOverrides")
+    overrides = dict(overrides) if isinstance(overrides, dict) else {}
+    for canonical_key, suffix in _STORY_OVERRIDE_KEYS:
+        for existing in [
+            key
+            for key in overrides
+            if isinstance(key, str) and key != canonical_key and key.endswith(suffix)
+        ]:
+            overrides.pop(existing, None)
+        overrides[canonical_key] = story_text
+    directives_block["sectionContentOverrides"] = overrides
+
+
 def _apply_copy_directives(
     merged: dict[str, Any],
     directives: list[dict[str, Any]],
@@ -1878,6 +1972,19 @@ def _apply_copy_directives(
             tagline_value = company.get("tagline")
             if isinstance(tagline_value, str) and tagline_value.strip():
                 company["heroHeadline"] = tagline_value.strip()
+        # About-copy decoupling (mirror of the hero pin, ADR 0043 + 0034): the
+        # rendered om-oss/home-story copy comes from the planning blueprint
+        # (derive_story), regenerated every build and shadowing company.story at
+        # render (apply_blueprint_to_dossier). So a company.story edit lands in a
+        # field the renderer overwrites. Pin the new story to
+        # directives.sectionContentOverrides for both story surfaces - the
+        # override the renderer prefers over the regenerated blueprint copy
+        # (resolve_section_content_override) - so the edit actually shows AND
+        # survives later rebuilds (the map rides the follow-up merge deep-copy).
+        if target == "about-text":
+            story_value = company.get("story")
+            if isinstance(story_value, str) and story_value.strip():
+                _pin_story_section_overrides(directives_block, story_value.strip())
         applied.append(
             {
                 key: directive[key]
