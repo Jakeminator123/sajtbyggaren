@@ -2588,3 +2588,228 @@ def test_b178_anchor_led_does_not_hijack_additive_or_target_prompt() -> None:
     additive = "lägg till en sektion med denna text: Hej ska bli Hå"
     assert _followup_requested_copy_replace(additive) is False
     assert unquoted_literal_replace_status(additive, previous)["status"] == "none"
+
+
+# --- Track B (#318): quoting the RENDERED/derived om-oss text lands -----------
+#
+# The operator quotes the about/story text they SEE in the preview. That text is
+# derive_story(brief) (planning blueprint), regenerated every build and shadowing
+# the stored company.story at render - so it is NOT the stored field. The merge
+# now matches the previously rendered story too (previous_rendered_story) and
+# pins the edit to directives.sectionContentOverrides for BOTH story surfaces so
+# it survives the next build's derive_story regeneration (ADR 0043 + 0034).
+
+# A derived om-oss story distinct from the stored company.story so the match can
+# only succeed via the rendered-story candidate, not the stored field.
+_RENDERED_ABOUT_STORY = (
+    "Vi har bakat surdegsbröd i Malmö sedan 1998, för hand varje morgon."
+)
+_RENDERED_ABOUT_PROMPT = (
+    f'ändra "{_RENDERED_ABOUT_STORY}" till "Jakobs ölbryggeri är 20 år gammalt"'
+)
+
+
+def _merge_rendered(prompt: str, *, previous: dict[str, object] | None = None) -> dict:
+    previous = previous or _previous_project_input()
+    return merge_followup_project_input(
+        previous,
+        copy.deepcopy(previous),
+        follow_up_prompt=prompt,
+        previous_rendered_story=_RENDERED_ABOUT_STORY,
+    )
+
+
+@pytest.mark.tooling
+def test_quoted_rendered_story_lands_as_section_overrides() -> None:
+    """Quoting the RENDERED om-oss text (≠ stored company.story) matches via the
+    rendered-story candidate and pins both story surfaces as section-content
+    overrides - the renderer prefers them over the regenerated blueprint copy."""
+    from packages.generation.build.blueprint_render import (
+        resolve_section_content_override,
+    )
+    from scripts.prompt_to_project_input import (
+        compute_applied_followup_directive_kinds,
+    )
+
+    previous = _previous_project_input()
+    # Precondition: the quoted OLD is NOT the stored story (so only the rendered
+    # candidate can match it).
+    assert previous["company"]["story"] != _RENDERED_ABOUT_STORY
+
+    merged = _merge_rendered(_RENDERED_ABOUT_PROMPT, previous=previous)
+    overrides = merged["directives"]["sectionContentOverrides"]
+    assert overrides["home.story.body"] == "Jakobs ölbryggeri är 20 år gammalt"
+    assert overrides["about.about-story.body"] == "Jakobs ölbryggeri är 20 år gammalt"
+    # company.story carries the edit too (the structured field the apply writes).
+    assert merged["company"]["story"] == "Jakobs ölbryggeri är 20 år gammalt"
+    # Honesty signal: the applied-kinds include "section-content".
+    kinds = compute_applied_followup_directive_kinds(previous, merged)
+    assert "section-content" in kinds
+    # The renderer resolves the override for BOTH story sections (it wins over
+    # the company.story / regenerated derive_story copy).
+    assert (
+        resolve_section_content_override(merged, "story", "body")
+        == "Jakobs ölbryggeri är 20 år gammalt"
+    )
+    assert (
+        resolve_section_content_override(merged, "about-story", "body")
+        == "Jakobs ölbryggeri är 20 år gammalt"
+    )
+
+
+@pytest.mark.tooling
+def test_quoted_rendered_story_override_wins_in_rendered_about_page() -> None:
+    """The pinned section-content override wins over a shadowing company.story at
+    render time (derive_story regenerates company.story every build, so the pin
+    is what makes the edit visible)."""
+    from packages.generation.build.renderers import render_section_about_story
+
+    merged = _merge_rendered(_RENDERED_ABOUT_PROMPT)
+    # Simulate the next build: derive_story has shadowed company.story with a
+    # freshly regenerated value. The override must still win.
+    dossier = {
+        "company": {
+            "name": "Surdegsbageriet",
+            "story": "EN HELT REGENERERAD BLUEPRINT-BERÄTTELSE SOM SKUGGAR.",
+        },
+        "directives": merged["directives"],
+    }
+    tsx = render_section_about_story(dossier)
+    assert "Jakobs ölbryggeri är 20 år gammalt" in tsx
+    assert "REGENERERAD BLUEPRINT-BERÄTTELSE" not in tsx
+
+
+@pytest.mark.tooling
+def test_quoted_rendered_story_lands_even_with_mangled_verb() -> None:
+    """Encoding-robustness (B204): the edit still lands when the leading "Ä" was
+    mangled to "*" at the chat -> CLI boundary ("Ändra" -> "*ndra"). The gate
+    keys on the quoted OLD/NEW pair, not the verb keyword."""
+    mangled = (
+        f'*ndra "{_RENDERED_ABOUT_STORY}" till "Jakobs ölbryggeri är 20 år gammalt"'
+    )
+    merged = _merge_rendered(mangled)
+    overrides = merged.get("directives", {}).get("sectionContentOverrides", {})
+    assert overrides.get("home.story.body") == "Jakobs ölbryggeri är 20 år gammalt"
+    assert (
+        overrides.get("about.about-story.body") == "Jakobs ölbryggeri är 20 år gammalt"
+    )
+
+
+@pytest.mark.tooling
+def test_story_pin_carries_forward_and_does_not_clobber_siblings() -> None:
+    """The story pin only updates its own two canonical keys and drops a sibling
+    sharing the same suffix (so the renderer's single-match rule is satisfied);
+    an unrelated override (a hero headline) carries through untouched."""
+    previous = _previous_project_input()
+    previous["directives"] = {
+        "sectionContentOverrides": {
+            "home.hero.headline": "Pinnad rubrik",
+            # A sibling about-story override from another route/path.
+            "om-oss.about-story.body": "Tidigare om-oss-override",
+        }
+    }
+    merged = _merge_rendered(_RENDERED_ABOUT_PROMPT, previous=previous)
+    overrides = merged["directives"]["sectionContentOverrides"]
+    # Unrelated hero override survives.
+    assert overrides["home.hero.headline"] == "Pinnad rubrik"
+    # The sibling about-story key is dropped (single-match), canonical key set.
+    assert "om-oss.about-story.body" not in overrides
+    assert overrides["about.about-story.body"] == "Jakobs ölbryggeri är 20 år gammalt"
+
+
+# --- Track A (#318): encoding-robust honest no-op for an unmatched replace ----
+#
+# A QUOTED copy-replace whose OLD matches nothing editable must ALWAYS surface an
+# honest unapplied post and never an implied success - keyed on the OLD/NEW pair
+# present + a genuine miss, NEVER on the (possibly mangled) leading verb (#313).
+
+_GENUINE_MISS_PROMPT = 'ändra "den här texten finns inte i någon copy alls" till "Ny text"'
+
+
+@pytest.mark.tooling
+def test_quoted_copy_replace_genuine_miss_is_honest_unapplied() -> None:
+    """A quoted replace whose OLD matches no editable copy (stored OR rendered)
+    is an honest no-op: a non-empty copy-replace unapplied post, no override, and
+    the honest-effect helper still flags it as a replace REQUEST."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+    )
+    from scripts.prompt_to_project_input import compute_unapplied_followup_intents
+
+    previous = _previous_project_input()
+    merged = _merge_rendered(_GENUINE_MISS_PROMPT, previous=previous)
+    # Nothing landed: no copyDirectives, no section overrides, story untouched.
+    assert "copyDirectives" not in merged.get("directives", {})
+    assert "sectionContentOverrides" not in merged.get("directives", {})
+    assert merged["company"]["story"] == previous["company"]["story"]
+    # Honest unapplied post.
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt=_GENUINE_MISS_PROMPT,
+        previous_rendered_story=_RENDERED_ABOUT_STORY,
+    )
+    assert {"target": "copy-replace"}.items() <= posts[0].items()
+    assert any(post["target"] == "copy-replace" for post in posts)
+    # The honest-effect signal still recognises the replace REQUEST.
+    assert _followup_requested_copy_replace(_GENUINE_MISS_PROMPT) is True
+
+
+@pytest.mark.tooling
+def test_quoted_copy_replace_miss_is_honest_even_with_mangled_verb() -> None:
+    """The honest miss is reported even when the leading "Ä" was mangled to "*"
+    (B204): the unapplied rule keys on the OLD/NEW pair + miss, not the verb."""
+    from packages.generation.followup.copy_directives import (
+        _followup_requested_copy_replace,
+    )
+    from scripts.prompt_to_project_input import compute_unapplied_followup_intents
+
+    previous = _previous_project_input()
+    mangled_miss = '*ndra "den här texten finns inte i någon copy alls" till "Ny text"'
+    merged = _merge_rendered(mangled_miss, previous=previous)
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt=mangled_miss,
+        previous_rendered_story=_RENDERED_ABOUT_STORY,
+    )
+    assert any(post["target"] == "copy-replace" for post in posts)
+    # The build-side honest-effect gate also still flags the mangled request.
+    assert _followup_requested_copy_replace(mangled_miss) is True
+
+
+@pytest.mark.tooling
+def test_landed_rendered_story_edit_has_no_unapplied_post() -> None:
+    """The successful rendered-story edit (Track B) must NOT also report an
+    unapplied copy-replace miss - the two tracks compose, no double-signal."""
+    from scripts.prompt_to_project_input import compute_unapplied_followup_intents
+
+    previous = _previous_project_input()
+    merged = _merge_rendered(_RENDERED_ABOUT_PROMPT, previous=previous)
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt=_RENDERED_ABOUT_PROMPT,
+        previous_rendered_story=_RENDERED_ABOUT_STORY,
+    )
+    assert not any(post["target"] == "copy-replace" for post in posts)
+
+
+@pytest.mark.tooling
+def test_additive_prompt_with_quoted_labels_is_not_a_copy_replace_miss() -> None:
+    """An ADDITIVE ask that merely quotes two new labels must NOT be reported as
+    a copy-replace miss - the rule is gated on the (verb-independent) replace
+    request, which excludes additive phrasings, so a section/button add is never
+    mistaken for a failed swap."""
+    from scripts.prompt_to_project_input import compute_unapplied_followup_intents
+
+    previous = _previous_project_input()
+    additive = 'lägg till en knapp som säger "Boka nu" och en som säger "Ring oss"'
+    merged = _merge_rendered(additive, previous=previous)
+    posts = compute_unapplied_followup_intents(
+        previous,
+        merged,
+        follow_up_prompt=additive,
+        previous_rendered_story=_RENDERED_ABOUT_STORY,
+    )
+    assert not any(post["target"] == "copy-replace" for post in posts)
