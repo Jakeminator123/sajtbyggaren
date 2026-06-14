@@ -491,6 +491,211 @@ def test_derive_story_falls_back_to_lead_when_only_hero_angles_exist():
     assert derive_story(brief) == "Naprapat i Stockholm."
 
 
+# ---------------------------------------------------------------------------
+# Directive-leak guard: planning/brief instruction text never renders as copy
+# ---------------------------------------------------------------------------
+#
+# Live prod finding (café "Kafé Solrosen, Göteborg"): the real briefModel filed
+# META/INSTRUCTION text into the positioning/contentStrategy fields, which then
+# rendered verbatim as the visible "Om oss" body and hero copy, e.g. localAngle
+# "Göteborg som lokal förankring bör synas tydligt i copy och kontaktsektion"
+# and differentiator "Lyft Kafé Solrosen som ...". _looks_like_directive drops
+# such strings from the customer-copy candidates (honesty-by-construction, same
+# pattern as the offerStrategy exclusion); the deterministic mock positioning is
+# clean angle copy, so the four baselines stay byte-identical.
+
+# Strings observed (or closely modelled) on the live café leak. Each is caught
+# by at least one of the three signals (craft term / lead verb / modal+craft).
+_DIRECTIVE_STRINGS: tuple[str, ...] = (
+    "Göteborg som lokal förankring bör synas tydligt i copy och kontaktsektion.",
+    "Lyft Kafé Solrosen som ett självklart fik för stammisar.",
+    "Lyft fram det hantverksmässiga och lokala.",
+    "Framhäv den varma stämningen i copy.",
+    "Betona den lokala förankringen.",
+    "Visa den lokala förankringen tydligt i hero-sektionen.",
+    "Differentiatorn bör framhävas i subheadline.",
+    "Kvaliteten ska speglas genom hela sajten.",
+)
+
+
+@pytest.mark.tooling
+def test_looks_like_directive_flags_instruction_text():
+    """The guard flags planning/brief directive text (craft term, imperative
+    lead verb, or modal+craft-verb construction)."""
+    from packages.generation.planning.blueprint import _looks_like_directive
+
+    for text in _DIRECTIVE_STRINGS:
+        assert _looks_like_directive(text), f"should flag directive text: {text!r}"
+
+    # Empty / non-string input is never a directive.
+    assert _looks_like_directive("") is False
+    assert _looks_like_directive("   ") is False
+    assert _looks_like_directive(None) is False
+    assert _looks_like_directive(42) is False
+
+
+@pytest.mark.tooling
+def test_looks_like_directive_is_a_no_op_on_baseline_positioning():
+    """Every deterministic baseline positioning/contentStrategy value reads as
+    customer copy, so the guard never fires on the honest mock path - this is
+    what keeps the four baselines byte-identical."""
+    from packages.generation.planning.blueprint import _looks_like_directive
+
+    for branch in BASELINES:
+        brief = _baseline_brief(branch)
+        positioning = brief.get("positioning", {})
+        content_strategy = brief.get("contentStrategy", {})
+        customer_copy_fields = [
+            positioning.get("oneLiner"),
+            positioning.get("differentiator"),
+            positioning.get("audienceNeed"),
+            positioning.get("localAngle"),
+            content_strategy.get("heroAngle"),
+        ]
+        for value in customer_copy_fields:
+            if isinstance(value, str) and value:
+                assert not _looks_like_directive(value), (
+                    f"{branch}: baseline copy wrongly flagged as directive: {value!r}"
+                )
+
+
+@pytest.mark.tooling
+def test_looks_like_directive_keeps_modal_copy_without_a_craft_verb():
+    """A modal ('måste'/'bör') in ordinary copy must NOT trip the guard - only a
+    modal followed by a copy-craft verb is a directive. The electrician mock
+    one-liner '...när elen måste bli rätt' is the canonical keep."""
+    from packages.generation.planning.blueprint import _looks_like_directive
+
+    assert not _looks_like_directive("Trygg elektriker i Malmö när elen måste bli rätt.")
+    assert not _looks_like_directive("Vacker keramik som tål att användas.")
+    assert not _looks_like_directive("Du ska känna dig trygg hos oss.")
+
+
+def _cafe_directive_brief() -> dict[str, Any]:
+    """A café brief whose positioning is entirely directive-shaped (the live
+    Kafé Solrosen leak). Swedish + positioning present, so enrichment runs."""
+    return {
+        "runId": "directive-cafe",
+        "language": "sv",
+        "rawPrompt": "Hemsida för Kafé Solrosen i Göteborg.",
+        "companyName": "Kafé Solrosen",
+        "businessTypeGuess": "cafe",
+        "locationHint": "Göteborg",
+        "servicesMentioned": ["kaffe", "fika", "lunch"],
+        "conversionGoals": ["call"],
+        "positioning": {
+            "oneLiner": "Lyft Kafé Solrosen som ett självklart fik för stammisar.",
+            "differentiator": "Framhäv det hantverksmässiga och lokala i copy.",
+            "localAngle": (
+                "Göteborg som lokal förankring bör synas tydligt i copy och kontaktsektion."
+            ),
+            "audienceNeed": "Betona att det går snabbt att se vad caféet erbjuder.",
+            "tone": "varm, lokal, personlig",
+        },
+        "contentStrategy": {
+            "heroAngle": "Visa den lokala förankringen tydligt i hero-sektionen.",
+            "offerStrategy": "lyft tre konkreta menyalternativ",
+        },
+        "sourceModelRole": "briefModel",
+        "modelUsed": "gpt-5.4",
+        "briefSource": "real",
+        "createdAt": "2026-06-14T12:00:00+00:00",
+    }
+
+
+@pytest.mark.tooling
+def test_directive_positioning_never_leaks_into_story_or_hero():
+    """When every positioning angle is directive-shaped, derive_story / the hero
+    composers drop them all and fall back to the honest company-name lead -
+    none of the instruction text reaches the rendered copy."""
+    from packages.generation.planning.blueprint import (
+        _hero_headline,
+        _hero_subheadline,
+        derive_content_blocks,
+    )
+
+    brief = _cafe_directive_brief()
+
+    # Hero falls back to the company name (oneLiner + heroAngle are directives).
+    assert _hero_headline(brief) == "Kafé Solrosen"
+    # No clean subheadline angle survives -> omitted rather than a directive.
+    assert _hero_subheadline(brief) is None
+
+    # The story never echoes the instruction text; the honest fallback is the
+    # company-name lead.
+    story = derive_story(brief)
+    assert story == "Kafé Solrosen."
+
+    # End-to-end through the package: no directive marker reaches contentBlocks.
+    registry = load_scaffold_registry()
+    scaffold = next(s for s in registry if s["id"] == "local-service-business")
+    route_plan = [{"id": r["id"], "path": r["path"], "purpose": r["purpose"]}
+                  for r in scaffold["routes"]["defaultRoutes"]]
+    blocks = derive_content_blocks(brief, scaffold, route_plan)
+    leaked_markers = (
+        "Lyft", "Framhäv", "Betona", "Visa",
+        "bör synas", "kontaktsektion", "hero-sektion", "i copy",
+    )
+    for text in _iter_strings(blocks):
+        for marker in leaked_markers:
+            assert marker not in text, (
+                f"directive marker {marker!r} leaked into content block: {text!r}"
+            )
+
+
+@pytest.mark.tooling
+def test_directive_guard_keeps_clean_angles_and_drops_only_directives():
+    """The guard is per-candidate, not all-or-nothing: a brief that mixes clean
+    angles with one directive uses the clean angles for hero + story and drops
+    only the directive one."""
+    from packages.generation.planning.blueprint import _hero_headline, _hero_subheadline
+
+    brief = {
+        "language": "sv",
+        "companyName": "Kafé Solrosen",
+        "positioning": {
+            "oneLiner": "Kafé Solrosen i Göteborg - lokalrostat kaffe och nybakat.",
+            "differentiator": "Lyft fram det lokala hantverket i copy.",  # directive
+            "localAngle": "Mitt i Göteborg, nära Haga.",
+            "audienceNeed": "En fikapaus som känns omhändertagen.",
+        },
+        "contentStrategy": {"heroAngle": "varmt lokalt fik med nybakat"},
+    }
+
+    # Clean oneLiner stays the headline; the directive differentiator is skipped
+    # so the subheadline is the next clean angle (audienceNeed).
+    assert _hero_headline(brief) == "Kafé Solrosen i Göteborg - lokalrostat kaffe och nybakat."
+    assert _hero_subheadline(brief) == "En fikapaus som känns omhändertagen."
+
+    story = derive_story(brief)
+    assert story is not None
+    assert "Lyft fram det lokala hantverket" not in story, "directive must be dropped"
+    assert "i copy" not in story
+    # The story is still grounded in a clean complementary angle.
+    assert "Mitt i Göteborg, nära Haga" in story
+
+
+@pytest.mark.tooling
+def test_directive_differentiator_dropped_from_faq():
+    """A directive-shaped differentiator must not become the 'Vad kan jag
+    förvänta mig av er?' FAQ answer."""
+    brief = dict(_baseline_brief("naprapat-stockholm"))
+    brief["positioning"] = {
+        **brief["positioning"],
+        "differentiator": "Framhäv tydligheten och uppföljningen i copy.",
+    }
+    pairs = derive_faq(brief)
+    expectation_answers = [
+        pair["answer"] for pair in pairs
+        if pair["question"] == "Vad kan jag förvänta mig av er?"
+    ]
+    assert expectation_answers == [], (
+        f"directive differentiator must not seed a FAQ answer: {expectation_answers}"
+    )
+    # The other grounded FAQ pairs (services / conversion) still render.
+    assert any(pair["question"] == "Vad kan ni hjälpa till med?" for pair in pairs)
+
+
 @pytest.mark.tooling
 def test_story_and_faq_carry_no_fabricated_contact_or_claims():
     """story + FAQ copy must never leak a placeholder contact, an invented
