@@ -15,9 +15,9 @@ direktiv-fixen + docs; `jakob-be` ff-synkas så att
 `main`. Föregående focus-block (takeover-prep 2026-06-14 ~17:00) ligger som
 historik överst i [`docs/handoff.md`](handoff.md).
 
-**Nya PRs sedan föregående checkpoint:** `fix/directive-copy-leak` (denna
-runda, squash-mergad till `main`). #317 (Cloud Agent env-setup) mergades
-2026-06-14 (`7ba0cd95`); #318/#319 dessförinnan — alla redan i `main`.
+**Nya PRs sedan föregående checkpoint:** #322 `fix/directive-copy-leak` (denna
+runda, squash-mergad till `main` som `be3795ce`). #317 (Cloud Agent env-setup)
+mergades 2026-06-14 (`7ba0cd95`); #318/#319 dessförinnan — alla redan i `main`.
 
 **Denna runda i korthet:** (1) kärnloopen
 `prompt → företagshemsida → preview → följdprompt → ny version` live-validerad
@@ -56,11 +56,11 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `41a24d77` (2026-06-14 ~22:00 UTC+2; baslinje #319 B204
-vid rundans start. Direktiv-läckage-fixen + docs shippas via PR
-`fix/directive-copy-leak` → `main` (squash); denna SHA bumpas till
-squash-merge-commiten i en efterföljande docs-commit på `main`, varefter
-`jakob-be` ff-synkas till samma tip.)
+Last verified state: `be3795ce` (2026-06-14 ~22:00 UTC+2; direktiv-läckage-
+fixen + docs squash-mergade till `main` som PR #322
+(`fix/directive-copy-leak`). `jakob-be` ff-synkad till samma tip — alla fyra
+referenserna identiska. Denna docs-commit bumpar SHA:n till
+squash-merge-commiten.)
 
 ## Öppna PR att känna till
 
