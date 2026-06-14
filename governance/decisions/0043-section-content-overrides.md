@@ -106,3 +106,39 @@ Lokationsval (samma resonemang som ADR 0032 / 0038):
 - Compound-prompter ("gör den coolare och lägg till ett skämt") rapporterar ännu
   inte otillämpade delar via `unappliedFollowupIntents` på apply-vägen.
 - Fler sektioner/routes än hero + story/about-story och fler scaffolds.
+
+## Tillägg 2026-06-14 (#318) — citerad om-oss-text landar och förblir synlig
+
+Operatörsfynd (`olkultur-ab-e9594d`): en följdprompt som citerade den RENDERADE
+om-oss-/story-texten landade inte och chatten antydde ändå framgång. Två
+medvetna beslut, på den **prompt-drivna** följdprompt-vägen
+(`scripts/prompt_to_project_input.py:merge_followup_project_input`), inte bara
+apply-/patch-vägen ovan:
+
+1. **Story-pin på copy-vägen.** När `_apply_copy_directives` applicerar ett
+   `about-text`-direktiv (`company.story`) pinnas samma text nu även till
+   `directives.sectionContentOverrides` för båda story-ytorna
+   (`home.story.body` + `about.about-story.body`) — exakt mönstret denna ADR
+   redan etablerade för apply-vägen, och en spegling av
+   `company.heroHeadline`-pinnen. Skälet är samma render-skuggning som punkt 3
+   ovan: `derive_story(brief)` (planning-blueprinten) regenereras varje bygge
+   och skuggar `company.story` vid render (`apply_blueprint_to_dossier`), så en
+   ren `company.story`-ändring syns inte. Override:n vinner och överlever
+   ombygget.
+
+2. **Utökad matchkälla.** `_extract_literal_replace_directives` matchar nu OLD
+   även mot den FÖREGÅENDE byggets renderade/härledda story
+   (`previous_rendered_story`, läst ur run-direns `generation-package.json`
+   `contentBlocks` via `run_blueprint_story`, samma facit som
+   `RenderBlueprint.story()`), inte bara den lagrade `company.story`. Operatören
+   citerar det hen SER — vilket är den härledda storyn, inte det lagrade fältet
+   — så utan detta fanns ingen träff. En träff blir ett `about-text`-direktiv
+   som punkt 1 pinnar.
+
+Ärlighet (kompletterar punkt 4 ovan): en citerad copy-replace vars OLD inte
+matchar någon redigerbar copy (varken lagrad eller renderad) ger en ärlig
+`unappliedFollowupIntents`-post (`target: copy-replace`), och både den posten
+och `_followup_requested_copy_replace`-grinden nycklar på det citerade
+OLD/NEW-paret i stället för verb-nyckelordet — så #313-kontraktet håller även
+när chatt→CLI-gränsen manglar ett inledande "Ä" till "*" (encoding-roten
+B204, bokförd separat, EJ blind-fixad här).

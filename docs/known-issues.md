@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 23 öppna), 5 unknown, 173 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (av 24 öppna), 5 unknown, 173 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -768,6 +768,43 @@ spårbarhet i takeover-prep-rundan 2026-06-14. Ingen åtgärd nu.
   brus-varning. Sannolik fix: pinna/uppgradera sharp så libvips-versionen
   stödjer parametern, eller släpp parametern. Källa: bygg-logg, takeover-prep
   2026-06-14. Fix: open. Test: open.
+
+### Encoding-rot på följdprompt-gränsen 2026-06-14 (#318, bokförd — ej blind-fixad)
+
+- **`B204` Medel** - inledande "Ä" i en följdprompt manglas till "*" på vägen
+  viewser-chatt → CLI. Symptom (operatörsfynd, site `olkultur-ab-e9594d`): den
+  lagrade `meta.followUpPrompt` blev `*ndra …` (ett manglat `Ändra …`), vilket
+  strippar verb-nyckelordet ur den normaliserade texten.
+  Karakterisering (kod-läst, EJ reproducerad här): följdprompten skickas som
+  ett **process-argv** till Python-helpern — `apps/viewser/lib/prompt-runner.ts`
+  `runPromptToProjectInput` gör `args.push("--", trimmed)` och `spawn(pythonCommand(), args, …)`.
+  På Windows kan icke-ASCII i argv manglas vid Node→OS→Python-överföringen
+  beroende på konsolens code page samt Node-/Python-version (jfr AGENTS.md:s
+  PowerShell-noter om arg-encoding). Samma helper skriver redan
+  `discovery`-payloaden till en **tempfil** (`writeFileSync(..., "utf-8")` +
+  `--discovery <path>`) just för att undvika argv-vägen — så det finns en
+  beprövad, säker mall.
+  Varför ej blind-fixad: en pålitlig repro kräver operatörens exakta
+  Windows/PowerShell/Node/Python-miljö + code page, och en fix (rutta prompten
+  via tempfil/stdin med explicit UTF-8 och lägg en `--prompt-file`/stdin-läsare
+  på Python-sidan) rör det språköverskridande CLI-kontraktet och **alla**
+  spawn-sömmar (`prompt-runner.ts`, `build-runner.ts`, `hosted-build-runner.ts`,
+  `vercel-sandbox-runner.ts`) — den kan inte verifieras utan repro-miljön, så
+  den faller under "riskabelt: blind-fixa INTE".
+  Mildring som redan landat (#318): ärlighetssignalerna är gjorda robusta mot
+  just denna mangling — `_followup_requested_copy_replace` och
+  `compute_unapplied_followup_intents` nycklar på det citerade OLD/NEW-paret,
+  inte på verb-nyckelordet, så en citerad copy-replace som inte landar ALLTID
+  ger ett ärligt no-op (#313-kontraktet håller även manglat), och den citerade
+  copy-replace-vägen (`_extract_literal_replace_directives`-grinden) landar
+  numera även med manglat verb. Kvarstår tills roten fixas: en O-CITERAD
+  verb-ledd redigering ("Ändra namnet till X" → "*ndra namnet till X") tappar
+  fortfarande verbet och blir en tyst no-op. Rekommenderad fix: tempfil/stdin
+  med explicit UTF-8, spegla discovery-payload-mönstret.
+  Källa: operatörsfynd 2026-06-14 (#318). Fix: open. Test: open (roten);
+  manglings-robust ärlighet täckt av
+  `tests/test_followup_copy_directives.py::test_quoted_copy_replace_miss_is_honest_even_with_mangled_verb`
+  + `tests/test_followup_honest_no_op.py::test_copy_replace_no_op_is_honest_under_mangled_verb`.
 
 ## Bug-sweep 2026-06-10 (extern RO-granskning, verifierad av tre subagenter)
 
