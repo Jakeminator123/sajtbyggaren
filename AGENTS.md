@@ -123,9 +123,12 @@ pip install -r requirements.txt
 ```
 
 On Linux (Cloud Agent VMs), the venv package must be installed first.
-On Ubuntu Noble use `sudo apt-get install -y python3-venv` when available;
-if the meta-package is missing, install `python3.12-venv` explicitly before
-the first `python3 -m venv .venv`. When neither apt package is available,
+On Ubuntu Noble run `sudo apt-get update` FIRST (on a fresh VM both
+`python3-venv` and `python3.12-venv` report "no installation candidate"
+until the package lists are refreshed), then `sudo apt-get install -y
+python3-venv`. If the meta-package is still missing, install
+`python3.12-venv` explicitly before the first `python3 -m venv .venv`.
+When neither apt package is available,
 the VM update script falls back to `pip install virtualenv` and
 `~/.local/bin/virtualenv .venv` (same outcome as `python3 -m venv`; user
 installs land in `~/.local/bin`, which may be off the shell search path in
