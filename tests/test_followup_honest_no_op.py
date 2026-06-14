@@ -597,6 +597,30 @@ def test_copy_replace_no_op_is_honest_even_when_bytes_change(
 
 
 @pytest.mark.tooling
+def test_copy_replace_no_op_is_honest_under_mangled_verb(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B204 encoding-robustness: the operator's stored followUpPrompt arrives
+    with the leading "Ä" mangled to "*" ("Ändra" -> "*ndra"). The honest-effect
+    gate keys on the quoted OLD/NEW pair, not the verb keyword, so a quoted
+    copy-replace that produced NO copyDirective is still reported as an honest
+    no-op (copy_directive_not_applied) instead of letting an unrelated rebuild
+    byte-diff pose as a successful edit (#313 contract holds under mangling)."""
+    _force_visible_change(monkeypatch, tmp_path)
+    run_dir = tmp_path / "runs" / "v2"
+    run_dir.mkdir(parents=True)
+    mangled_prompt = '*ndra denna text "Den gamla hjälten" till "Den nya hjälten"'
+    prompt_meta = {"mode": "followup", "followUpPrompt": mangled_prompt}
+    dossier = {"company": {"name": "X"}}  # no directives.copyDirectives
+
+    effect = _detect_followup_applied_visible_effect(
+        tmp_path / "runs", run_dir, prompt_meta, dossier
+    )
+    assert effect == {"applied": False, "reason": "copy_directive_not_applied"}
+
+
+@pytest.mark.tooling
 def test_copy_replace_applied_reports_visible_change(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

@@ -42,7 +42,15 @@ __all__ = [
     "latest_run_dir_for_site",
     "pin_previous_hero_headline",
     "run_blueprint_hero_headline",
+    "run_blueprint_story",
 ]
+
+# Mirrors RenderBlueprint.story() in packages/generation/build/blueprint_render.py:
+# the route x story-section addresses a build's about/home story body lives at in
+# generation-package.json contentBlocks. Kept in lockstep with that reader so the
+# match candidate equals exactly what the previous build rendered.
+_STORY_ROUTE_IDS: tuple[str, ...] = ("home", "about")
+_STORY_SECTION_IDS: tuple[str, ...] = ("story", "about-story", "about-story-block")
 
 # project-input.schema.json caps company.heroHeadline at 200 chars. A longer
 # rendered headline is left unpinned (drift accepted for that pathological
@@ -115,6 +123,43 @@ def run_blueprint_hero_headline(run_dir: Path) -> str | None:
     headline = hero.get("headline") if isinstance(hero, dict) else None
     if isinstance(headline, str) and headline.strip():
         return headline.strip()
+    return None
+
+
+def run_blueprint_story(run_dir: Path | None) -> str | None:
+    """The about/home story body a run rendered, else ``None``.
+
+    Reads ``generation-package.json`` ``contentBlocks`` for the same route x
+    story-section addresses the renderer consumes
+    (``RenderBlueprint.story()`` in ``packages/generation/build``) when no
+    operator override exists. The value is either a plain string block or a
+    dict carrying ``body``/``text``/``story``. Used (Track B) as an extra
+    literal-replace match candidate so an operator who quotes the RENDERED
+    om-oss/story text - ``derive_story(brief)``, regenerated every build and not
+    equal to the stored ``company.story`` - still lands the edit. Defensive at
+    every level: a missing or malformed artefakt yields ``None``.
+    """
+    if run_dir is None:
+        return None
+    try:
+        package = json.loads(
+            (run_dir / "generation-package.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError):
+        return None
+    blocks = package.get("contentBlocks") if isinstance(package, dict) else None
+    if not isinstance(blocks, dict):
+        return None
+    for route_id in _STORY_ROUTE_IDS:
+        for section_id in _STORY_SECTION_IDS:
+            value = blocks.get(f"{route_id}.{section_id}")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+            if isinstance(value, dict):
+                for key in ("body", "text", "story"):
+                    candidate = value.get(key)
+                    if isinstance(candidate, str) and candidate.strip():
+                        return candidate.strip()
     return None
 
 
