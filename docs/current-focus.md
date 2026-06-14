@@ -56,17 +56,29 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `be3795ce` (2026-06-14 ~22:00 UTC+2; direktiv-läckage-
-fixen + docs squash-mergade till `main` som PR #322
-(`fix/directive-copy-leak`). `jakob-be` ff-synkad till samma tip — alla fyra
-referenserna identiska. Denna docs-commit bumpar SHA:n till
-squash-merge-commiten.)
+Last verified state: `b4a818c1` (2026-06-14 ~22:00 UTC+2; direktiv-läckage-
+fixen + docs squash-mergade till `main` som PR #322 (`fix/directive-copy-leak`),
+`jakob-be` ff-synkad — alla fyra referenserna identiska. Denna docs-commit
+dokumenterar dessutom Christophers tre PR (#320/#321/#323) som öppnades mot
+`jakob-be` under rundan.)
 
 ## Öppna PR att känna till
 
-Inga öppna PR just nu. #317 (Cloud Agent env-setup, `7ba0cd95`) mergades
-2026-06-14; rundans egen PR `fix/directive-copy-leak` squash-mergas och
-raderas (lokal + origin) samma runda.
+Rundans egen PR #322 (`fix/directive-copy-leak`) squash-mergades till `main`
+och raderades (lokal + origin). #317 (Cloud Agent env-setup, `7ba0cd95`)
+mergades 2026-06-14.
+
+Tre PR från Christopher (`chgenberg`) öppnades mot `jakob-be` under denna runda
+(viewser-lanen, icke-draft). De ingår INTE i denna finaliseringsrunda och är ej
+bedömda här; läget kan ändras löpande (aktiv lane) — operatören/nästa agent
+triagerar och väljer bas:
+
+- #320 (`feat/build-progress-perceived-latency` → `jakob-be`): feat(viewser),
+  bygg-kortet känns levande under hostat bygge.
+- #321 (`fix/b160-marketing-header-logo-lock` → `jakob-be`): fix(viewser),
+  B160 — komplettera logo-aspect-ratio-låset + stäng.
+- #323 (`fix/honest-no-op-keeps-unapplied-list` → `jakob-be`): fix(viewser),
+  no-op-svaret behåller den itemiserade unapplied-listan.
 
 #306–#319 är squash-mergade till `jakob-be` och synkade till `main`
 (tip vid rundans start `41a24d77` = #319 B204). Äldre detaljer:
