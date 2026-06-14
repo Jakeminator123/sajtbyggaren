@@ -125,3 +125,13 @@ Negativa/medvetna kostnader:
   `tests/test_viewser_sandbox_reuse.py`,
   `tests/test_viewser_preview_refresh_gate.py`,
   `tests/test_viewser_hosted_followup_parity.py`
+
+## Uppdatering (2026-06-14): Preview-värdet är nu satt + typ-nyans
+
+`VIEWSER_SANDBOX_REUSE` är nu satt (=1) även på Preview, så flaggan är
+konsekvent över Production, Preview och Development. Preview-värdet sattes via
+Vercel REST API eftersom Vercel CLI loopar på `git_branch_required` för
+alla-Preview-grenar-vägen — den tidigare blockeringen som §2 noterade är därmed
+löst. Kvarstår en ofarlig typ-nyans: Production lagrar varianten som `sensitive`
+medan Development/Preview är `encrypted` (värdena matchar; det är därför
+`vercel env pull production` visar raden blank).

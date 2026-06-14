@@ -34,6 +34,7 @@ section is rejected, never written.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -499,11 +500,11 @@ def _hero_headline(brief: dict[str, Any]) -> str | None:
     """
     positioning = _obj(brief, "positioning")
     one_liner = _str(positioning.get("oneLiner"))
-    if one_liner:
+    if one_liner and not _looks_like_directive(one_liner):
         return one_liner
     content_strategy = _obj(brief, "contentStrategy")
     hero_angle = _str(content_strategy.get("heroAngle"))
-    if hero_angle:
+    if hero_angle and not _looks_like_directive(hero_angle):
         return _capitalise(hero_angle)
     company = _str(brief.get("companyName"))
     if company:
@@ -515,10 +516,13 @@ def _hero_subheadline(brief: dict[str, Any]) -> str | None:
     positioning = _obj(brief, "positioning")
     for key in ("differentiator", "audienceNeed", "localAngle"):
         value = _str(positioning.get(key))
-        if value:
+        if value and not _looks_like_directive(value):
             return _capitalise(value)
     content_strategy = _obj(brief, "contentStrategy")
-    return _str(content_strategy.get("offerStrategy"))
+    offer_strategy = _str(content_strategy.get("offerStrategy"))
+    if offer_strategy and not _looks_like_directive(offer_strategy):
+        return offer_strategy
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -580,6 +584,109 @@ def _drop_offer_tagline_services(services: list[str], brief: dict[str, Any]) -> 
     if not tagline_phrases:
         return services
     return [service for service in services if _norm_phrase(service) not in tagline_phrases]
+
+
+# ---------------------------------------------------------------------------
+# Directive-leak guard: keep planning/brief directive text out of customer copy
+# ---------------------------------------------------------------------------
+#
+# The real briefModel occasionally files META/INSTRUCTION text into the
+# positioning / contentStrategy fields instead of customer-ready angle copy -
+# observed live on a café brief: localAngle "Göteborg som lokal förankring bör
+# synas tydligt i copy och kontaktsektion" and differentiator "Lyft Kafé
+# Solrosen som ...". derive_story / the hero composers / the FAQ would then
+# render that instruction verbatim as the visible "Om oss" body or hero copy.
+#
+# This guard is the same honesty-by-construction pattern as
+# _drop_offer_tagline_services and the offerStrategy exclusion in derive_story:
+# it only ever DROPS a directive-shaped string from the customer-copy
+# candidates, never rewrites or fabricates. The deterministic mock positioning
+# is hand-authored as angle copy, so this is a no-op there - the four baselines
+# stay byte-identical. It is intentionally high-precision (a few unambiguous
+# directive signals) rather than high-recall: a false drop only costs one
+# candidate sentence (the story falls back to another angle or the company
+# name), while a false keep would re-leak the exact bug.
+
+# Composite craft/meta terms a genuine customer-facing sentence never uses
+# about itself. Their presence means the string is talking ABOUT the page/copy
+# (a builder directive), not to the visitor. Word-boundary matched.
+_DIRECTIVE_CRAFT_TERM_RE = re.compile(
+    r"\b(?:kontaktsektion(?:en)?|hero[-\s]?sektion(?:en)?|subheadline)\b",
+    re.IGNORECASE,
+)
+
+# Imperative directive verbs that, as the FIRST word of a positioning/story
+# string, mark it as an instruction to the builder ("Lyft X som ...",
+# "Framhäv ...", "Betona ..."). Only ever applied to positioning/story/FAQ
+# candidates - never to conversion.primaryCta - so real CTA labels
+# ("Boka tid", "Ring oss") are untouched. Imperative + the bare infinitive
+# both count (a model may write "Lyfta fram ..." too).
+_DIRECTIVE_LEAD_VERBS: frozenset[str] = frozenset(
+    {
+        "lyft", "lyfta",
+        "framhäv", "framhäva", "framhav", "framhava",
+        "betona",
+        "understryk", "understryka",
+        "poängtera", "poangtera",
+        "spegla",
+        "signalera",
+        "förmedla", "formedla",
+        "kommunicera",
+        "undvik", "undvika",
+        "säkerställ", "säkerställa", "sakerstall", "sakerstalla",
+        "tydliggör", "tydliggor",
+        "prioritera",
+    }
+)
+
+_LEAD_TOKEN_RE = re.compile(r"[a-zåäöA-ZÅÄÖ]+")
+
+# "<modal> ... <craft-verb>" inside ONE sentence is a directive ABOUT the copy
+# ("Göteborg ... bör synas tydligt i copy"). The modal alone is NOT enough -
+# the mock oneLiner "...när elen måste bli rätt" must stay - so a copy-craft
+# verb has to follow within the same sentence (no .!? in between).
+_DIRECTIVE_MODAL_CRAFT_RE = re.compile(
+    r"\b(?:b[öo]r|ska|m[åa]ste|beh[öo]ver)\b[^.!?]*?\b(?:"
+    r"synas|syns|lyftas|framh[äa]vas|betonas|speglas|[åa]terspeglas|"
+    r"kommuniceras|genomsyra(?:s)?|po[äa]ngteras|understrykas|framg[åa]"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _starts_with_directive_verb(text: str) -> bool:
+    """True when the first word is an imperative copy-direction verb."""
+    match = _LEAD_TOKEN_RE.match(text)
+    if match is None:
+        return False
+    return match.group(0).casefold() in _DIRECTIVE_LEAD_VERBS
+
+
+def _looks_like_directive(text: Any) -> bool:
+    """True when a positioning/strategy string reads as a builder directive.
+
+    Detects three high-precision signals seen in real briefModel leaks:
+
+    * a composite craft/meta term ("kontaktsektion", "hero-sektion",
+      "subheadline") a customer sentence never uses about itself;
+    * an imperative copy-direction lead verb ("Lyft ...", "Framhäv ...");
+    * a "<modal> ... <copy-craft verb>" construction ("... bör synas tydligt
+      i copy").
+
+    Returns ``False`` for empty / non-string input and for ordinary
+    customer-ready copy (including every deterministic mock positioning value),
+    so applying it is a no-op on the honest baseline path.
+    """
+    if not isinstance(text, str):
+        return False
+    stripped = text.strip()
+    if not stripped:
+        return False
+    if _DIRECTIVE_CRAFT_TERM_RE.search(stripped):
+        return True
+    if _starts_with_directive_verb(stripped):
+        return True
+    return bool(_DIRECTIVE_MODAL_CRAFT_RE.search(stripped))
 
 
 # ---------------------------------------------------------------------------
@@ -691,6 +798,11 @@ def derive_story(brief: dict[str, Any]) -> str | None:
     for candidate in candidates:
         if not candidate:
             continue
+        # Never let planning/brief directive text ("Lyft X som ...", "... bör
+        # synas tydligt i copy och kontaktsektion") render as the visible "Om
+        # oss" body. Same honesty guard as the offerStrategy exclusion above.
+        if _looks_like_directive(candidate):
+            continue
         key = _key(candidate)
         if key in hero_used or key in seen:
             continue
@@ -754,7 +866,7 @@ def derive_faq(brief: dict[str, Any]) -> list[dict[str, str]]:
         pairs.append({"question": convo[0], "answer": convo[1]})
 
     differentiator = _str(_obj(brief, "positioning").get("differentiator"))
-    if differentiator:
+    if differentiator and not _looks_like_directive(differentiator):
         pairs.append(
             {
                 "question": "Vad kan jag förvänta mig av er?",

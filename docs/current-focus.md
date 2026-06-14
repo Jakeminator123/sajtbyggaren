@@ -6,67 +6,70 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-14 ~17:00 — takeover-prep: #316 noterad, dagens leveranser #310–#316, konduktör-roadmap)
+## Status nu (2026-06-14 ~22:00 — prod-E2E bevisad, direktiv-läckage-fix för kundkopian, docs-städning)
 
-**Git:** `main = jakob-be = origin/main = origin/jakob-be = 8005be92` (#316,
-rent träd) vid rundans start; denna docs-commit ligger ovanpå på `jakob-be`
-och `main` ff-synkas till samma tip. Production deployar från `main`.
-Föregående focus-block (#314/#315, 2026-06-12 kväll) är arkiverat:
-[`docs/archive/current-focus-2026-06-12-kvall.md`](archive/current-focus-2026-06-12-kvall.md).
+**Git:** alla fyra referenserna stod på `41a24d77` (#319 B204) vid rundans
+start. Denna runda shippar PR `fix/directive-copy-leak` → `main` (squash) med
+direktiv-fixen + docs; `jakob-be` ff-synkas så att
+`main = jakob-be = origin/main = origin/jakob-be`. Production deployar från
+`main`. Föregående focus-block (takeover-prep 2026-06-14 ~17:00) ligger som
+historik överst i [`docs/handoff.md`](handoff.md).
 
-**Nya PRs sedan föregående checkpoint:** #316 (mergad, `8005be92`) och #317
-(öppen draft — se "Öppna PR att känna till"). Ingen PR mergades denna runda.
+**Nya PRs sedan föregående checkpoint:** `fix/directive-copy-leak` (denna
+runda, squash-mergad till `main`). #317 (Cloud Agent env-setup) mergades
+2026-06-14 (`7ba0cd95`); #318/#319 dessförinnan — alla redan i `main`.
 
-#316 ("Spår A", `8005be92`) är internt kallad färgfixen och är skilt från
-uppgift A/#310 (dossier-deps). En restyle-följdprompt ("gör sajten blå",
-"snyggare typsnitt") landar nu via tema-utföraren: `run_followup_chain` fick
-en LLM-stylist-fallback bakom en delad eligibilitetsgrind
-(`theme_directive_llm_eligible`, identisk för legacy-prompt-vägen och
-OpenClaw-kedjan), ärlig `visual_style`-target-summary (inte contentBlocks-
-mislabel), och "effekter" förblir ärligt oapplicerat. Rörde
-`packages/generation/followup/` + `scripts/`, INTE `apps/viewser`-frontend.
-Full dagsleverans #310–#316 + detaljer: [`docs/handoff.md`](handoff.md).
+**Denna runda i korthet:** (1) kärnloopen
+`prompt → företagshemsida → preview → följdprompt → ny version` live-validerad
+på hostad prod (#316 omfärgning, #318 "Om oss"-copy, B204 svenska tecken — alla
+bekräftade landa); hostad prod-E2E via Vercel Sandbox bevisad. (2) Preview-
+arkitekturen klargjord: `*.vercel.app` = Viewser-appen, `*.vercel.run` = den
+efemära per-bygge-previewen (om-mintas varje bygge, cross-origin-iframe i
+`/studio`) — inget felkonfigurerat. (3) `VIEWSER_SANDBOX_REUSE=1` konsekvent
+över Production/Preview/Development (Preview satt via Vercel REST API).
+(4) Direktiv-läckage-fixen: en deterministisk grind (`_looks_like_directive`)
+som hindrar `briefModel`-instruktionstext från att renderas som synlig
+"Om oss"-/hero-copy (`packages/generation/planning/blueprint.py` +
+`packages/generation/brief/extract.py`, 6 nya tester). Detaljer + full
+nästa-steg-lista: [`docs/handoff.md`](handoff.md).
 
-**Nästa 3 prioriteringar:**
+**Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
-1. **Operatörens produktions-E2E på `main`** (Jakobs nästa steg — agenter
-   ska INTE förekomma testet): konkret restyle ("gör sajten blå") ska byta
-   färg hostat; ren fråga svarar utan sandbox; andra previewn använder
-   `source=preview-bundle` (lågt `sourceMs`); no-op ger ärlig rad (ingen
-   falsk "Klart!"). #316 rörde inte frontend → ingen ny Vercel-frontend-
-   deploy; produktändringen når hostade pipen via build-context-tarballen
-   (bekräfta att den speglar `8005be92` — se handoff).
-2. **Uppgift I — B197 discovery-paritet hostat** (HÅLLS tills prod-E2E
-   grön): hostade byggvägen trådar bara prompttext, inte wizardens
-   strukturerade discovery-payload. (Koordinera med Christophers spår,
-   msg-0085.)
-3. **Steg 1 mot konduktör-visionen (rekommenderad första byggskiva, M):**
-   låt `component_builder` gå partial→supported mount för komponenter som
-   redan finns i katalogen/capability-map (samma apply/mount-maskineri som
-   FAQ/contact-form), ärligt mot #313. Kräver ADR-utökning av 0057. Underlag:
-   [`docs/heavy-llm-flow/conductor-vision-roadmap.md`](heavy-llm-flow/conductor-vision-roadmap.md).
+1. **`directive_leak`-check i `packages/generation/quality_gate/critic.py`**
+   (snabb): lyft `_looks_like_directive`-signalen till en Quality Gate-kritiker
+   som försvar på djupet ovanpå denna fix — fånga/rapportera direktivtext som
+   ändå slinker igenom i stället för att tyst rendera den.
+2. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
+   prompttext blir ibland stray tjänste-kort kunden aldrig bett om; avgränsa
+   till grundade tjänster (samma ärlighets-tema som denna fix).
+3. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
+   landade omfärgning via tema-utföraren, men en namngiven tema-cue mappar i
+   dag till grått; höj tema-mappningens täckning så vald stämning syns.
+
+Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
+(nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
+`hosted-build-runner.ts`, msg-0085) och konduktör "Steg 1" (montera
+katalog-komponenter, kräver ADR-utökning av 0057). Trivialt/opportunistiskt:
+normalisera `VIEWSER_SANDBOX_REUSE`-typ på Vercel (`sensitive`→`encrypted`,
+rent kosmetiskt). Underlag:
+[`docs/heavy-llm-flow/conductor-vision-roadmap.md`](heavy-llm-flow/conductor-vision-roadmap.md).
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `8005be92` (2026-06-14 ~17:00 UTC+2; #316 "Spår A"
-mergad till `jakob-be` + `main`. Denna takeover-prep-runda: #316 noterad,
-kvällsblocket arkiverat, B202/B203 bokförda i known-issues, konduktör-roadmap
-tillagd. Ingen PR mergad — #317 är en draft som operatören beslutar om. Denna
-docs-commit bumpar SHA:n och `main` ff-synkas till samma tip.)
+Last verified state: `41a24d77` (2026-06-14 ~22:00 UTC+2; baslinje #319 B204
+vid rundans start. Direktiv-läckage-fixen + docs shippas via PR
+`fix/directive-copy-leak` → `main` (squash); denna SHA bumpas till
+squash-merge-commiten i en efterföljande docs-commit på `main`, varefter
+`jakob-be` ff-synkas till samma tip.)
 
 ## Öppna PR att känna till
 
-- **#317 (draft, `cursor/setup-dev-environment-3a91` → `main`) — MERGAS EJ av
-  agent, operatören beslutar.** Auto-genererad Cloud Agent env-setup-PR
-  (Jakeminator123 + cursoragent). Enda kodändring: 6/3 rader i `AGENTS.md`
-  som dokumenterar att `sudo apt-get update` måste köras före venv-paketet
-  på en färsk VM. CI helt grön och mergeable, men den är (a) en draft,
-  (b) siktar `main` direkt förbi `jakob-be`, och (c) hör inte till
-  #310–#316-tåget — därför avstod takeover-prep-rundan. Operatören: markera
-  ready + välj bas (sannolikt `jakob-be`) om innehållet ska in.
+Inga öppna PR just nu. #317 (Cloud Agent env-setup, `7ba0cd95`) mergades
+2026-06-14; rundans egen PR `fix/directive-copy-leak` squash-mergas och
+raderas (lokal + origin) samma runda.
 
-#306–#316 är squash-mergade till `jakob-be` och synkade till `main`
-(#316 = "Spår A" färgfix, mergad 2026-06-14, tip `8005be92`). Äldre detaljer:
+#306–#319 är squash-mergade till `jakob-be` och synkade till `main`
+(tip vid rundans start `41a24d77` = #319 B204). Äldre detaljer:
 arkivet + `docs/handoff.md`.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
