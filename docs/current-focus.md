@@ -56,11 +56,11 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `b4a818c1` (2026-06-14 ~22:00 UTC+2; direktiv-läckage-
-fixen + docs squash-mergade till `main` som PR #322 (`fix/directive-copy-leak`),
-`jakob-be` ff-synkad — alla fyra referenserna identiska. Denna docs-commit
-dokumenterar dessutom Christophers tre PR (#320/#321/#323) som öppnades mot
-`jakob-be` under rundan.)
+Last verified state: `a45dc0eb` (2026-06-15 ~00:00 UTC+2; `jakob-be` = HEAD,
+2 commits före `main` = `f4e02756` efter att #321 (`cb5c943c`) + #323
+(`a45dc0eb`) squash-mergades till `jakob-be`; `origin/jakob-be` i synk,
+working tree rent; `main`/`origin/main` orörda på `f4e02756` — synk vid nästa
+officiella version). Föregående: `b4a818c1` (#322 direktiv-läckage-fix).
 
 ## Öppna PR att känna till
 
@@ -68,17 +68,24 @@ Rundans egen PR #322 (`fix/directive-copy-leak`) squash-mergades till `main`
 och raderades (lokal + origin). #317 (Cloud Agent env-setup, `7ba0cd95`)
 mergades 2026-06-14.
 
-Tre PR från Christopher (`chgenberg`) öppnades mot `jakob-be` under denna runda
-(viewser-lanen, icke-draft). De ingår INTE i denna finaliseringsrunda och är ej
-bedömda här; läget kan ändras löpande (aktiv lane) — operatören/nästa agent
-triagerar och väljer bas:
+Christophers tre PR (`chgenberg`, viewser-lanen) triagerades 2026-06-15: två
+mergade till `jakob-be` (gröna, CLEAN, små diffar — jakob-be-lanens review-SLA),
+en hålls för operatörens visuella browser-check.
 
-- #320 (`feat/build-progress-perceived-latency` → `jakob-be`): feat(viewser),
-  bygg-kortet känns levande under hostat bygge.
-- #321 (`fix/b160-marketing-header-logo-lock` → `jakob-be`): fix(viewser),
-  B160 — komplettera logo-aspect-ratio-låset + stäng.
-- #323 (`fix/honest-no-op-keeps-unapplied-list` → `jakob-be`): fix(viewser),
-  no-op-svaret behåller den itemiserade unapplied-listan.
+- #321 (`fix/b160-marketing-header-logo-lock`): mergad till `jakob-be`
+  (`cb5c943c`, squash). fix(viewser) B160 — regressions-lås utökat till tredje
+  logo-renderaren (kod-fixen fanns redan); rena tester + docs.
+- #323 (`fix/honest-no-op-keeps-unapplied-list`): mergad till `jakob-be`
+  (`a45dc0eb`, squash). fix(viewser) — den itemiserade unapplied-listan följer
+  nu med även när dirigentens answerText vinner (#313-ärlighet).
+- #320 (`feat/build-progress-perceived-latency`): öppen, hålls för
+  operatörens visuella check. feat(viewser), bygg-kortet känns levande under
+  hostat bygge — grön CI, 1 fil (`viewer-panel.tsx`), men ren UI-känsla bör
+  ses i browser innan merge.
+
+Konsekvens: `jakob-be` ligger nu **2 commits före `main`** (`main` = `f4e02756`,
+`jakob-be` = `a45dc0eb`), 0 bakom. Synk `main` ← `jakob-be` görs vid nästa
+officiella version (eller direkt om operatören vill ha #321/#323 i prod nu).
 
 #306–#319 är squash-mergade till `jakob-be` och synkade till `main`
 (tip vid rundans start `41a24d77` = #319 B204). Äldre detaljer:
