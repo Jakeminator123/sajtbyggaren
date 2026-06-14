@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (av 24 öppna), 5 unknown, 173 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 23 öppna), 5 unknown, 174 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -428,16 +428,6 @@ integrate christopher-ui discovery and asset workflow`, merge
   `tests/test_followup_honest_no_op.py` +
   `tests/test_viewser_hosted_followup_parity.py`.
 
-- **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
-  renderar företagets logo via Next.js `Image` utan ett komplett aspekt-
-  förhållande (bara `width` eller `height` styrs, inte båda eller en
-  `style={{ height: "auto" }}`), vilket ger console-varningen "Image with src …
-  has either width or height modified, but not the other". Kosmetiskt och
-  icke-blockerande, men brus i devtools + en CLS/a11y-risk. Christopher/UI-lane
-  (apps/viewser presentationslager); Jakob-lanen rör inte `apps/viewser/**` utan
-  handoff (se `docs/agent-inbox.jsonl`). Källa: env-genomgång + live-test
-  2026-06-01. Fix: open. Test: open.
-
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
   cancellation/background-jobb är fortfarande inte implementerat. Det bör tas
@@ -830,6 +820,20 @@ stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B160` Låg** (stängd 2026-06-14, regressions-lås komplett — kod-fixen
+  fanns redan) - Viewser-headern renderade logon via Next.js `Image` med bara
+  `width`/`height` styrt (inte båda eller `style.width: "auto"`), vilket gav
+  console-varningen "Image with src … has either width or height modified, but
+  not the other" + en CLS/a11y-risk. Kod-fixen (`style={{ width: "auto" }}` +
+  `w-auto`) fanns redan i alla tre logo-renderarna (`site-header.tsx`,
+  `discovery-wizard.tsx`, `marketing-header.tsx`); det som höll buggen formellt
+  öppen var att regressions-låset bara täckte två av tre filer. Denna commit
+  utökar låset till `marketing-header.tsx` så ingen header-yta kan tappa
+  aspect-ratio-skyddet igen. Fix: kod redan i presentationslagret; lås
+  komplett 2026-06-14. Test:
+  `tests/test_viewser_marketing.py::test_b160_logo_image_has_explicit_auto_width`
+  (täcker site-header + discovery-wizard + marketing-header).
 
 - **`B201` Medel** (stängd 2026-06-12, uppgift G del G1 - bokförd och stängd i samma pass) - hostad
   REN FRÅGA spinner upp full sandbox-pipeline: prod-E2E-incidenten 2026-06-12
