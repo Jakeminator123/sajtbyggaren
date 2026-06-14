@@ -547,6 +547,14 @@ COMMON_WORDS = {
     "PromptBuildOutcome", "PromptHelperOptions", "PromptHelperResult",
     "PromptMode", "PromptPayloadSchema",
     "PromptStage", "PromptStageIndicator", "ResultMeta",
+    # B204 UTF-8 prompt transport (2026-06-14): TextArgFile is the return
+    # shape of apps/viewser/lib/text-arg-file.ts:writeTextArgFile — the shared
+    # helper that stages operator free text (prompt / classifier + OpenClaw
+    # message) in a UTF-8 temp file so a leading å/ä/ö survives the
+    # viewser→CLI spawn hop instead of being mangled in argv. A local TS
+    # implementation symbol, not a canonical domain term — same treatment as
+    # PromptHelperResult / HostedBuildRequest above.
+    "TextArgFile",
     # ChatPanel-namnet finns kvar i historisk docs (current-focus,
     # handoff) och i tests/test_viewser_files.py som låser borttagningen
     # (se B46). Komponenten själv är raderad, men strängen är fortfarande

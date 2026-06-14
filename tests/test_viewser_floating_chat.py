@@ -388,8 +388,10 @@ def test_openclaw_runner_spawns_followup_seam() -> None:
       1. Exporterar ``runOpenClawFollowup`` + ``OpenClawDecisionPayload``.
       2. Spawnar rätt scripts/-seam (repo-boundaries: viewser importerar aldrig
          packages/ direkt — Python-scriptet äger importen).
-      3. ``--`` -separatorn finns så en prompt som börjar med ``-`` inte tolkas
-         som ett CLI-flagga, och --site-id/--base-run-id skickas vidare.
+      3. Meddelandet trådas via ``--message-file`` (UTF-8-tempfil, B204) i
+         stället för rå argv, så en prompt som börjar med ``-`` inte tolkas som
+         ett CLI-flagga OCH ett inledande å/ä/ö inte manglas på Windows-spawn-
+         hoppet; --site-id/--base-run-id skickas vidare.
       4. En timeout + degradering till ``null`` (read-only metadata får aldrig
          bli en 500 på bygg-routen).
     """
@@ -406,9 +408,12 @@ def test_openclaw_runner_spawns_followup_seam() -> None:
     assert "run_openclaw_followup.py" in text, (
         "Runnern måste spawna scripts/run_openclaw_followup.py (skiva-1b-seamen)."
     )
-    assert 'args.push("--", trimmed)' in text, (
-        "``--``-separatorn måste finnas så en prompt som börjar med - inte "
-        "tolkas som ett argparse-flagga."
+    assert '"--message-file"' in text, (
+        "B204: meddelandet måste trådas via ``--message-file`` (UTF-8-tempfil) "
+        "i stället för rå argv, så en prompt som börjar med ``-`` aldrig tolkas "
+        "som ett argparse-flagga och ett inledande å/ä/ö inte manglas på "
+        "Windows-spawn-hoppet (samma transport som router-classify-runner.ts; "
+        "låst i tests/test_b204_prompt_transport.py)."
     )
     assert '"--site-id"' in text and '"--base-run-id"' in text, (
         "siteId + baseRunId måste skickas till seamen för RouterContext/context-assembly."

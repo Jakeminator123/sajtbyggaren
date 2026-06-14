@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { killProcessTree } from "@/lib/local-preview-server";
+import { writeTextArgFile } from "@/lib/text-arg-file";
 
 // Skiva 1b (UI half): spawn scripts/run_openclaw_followup.py and parse its
 // stdout into a schema-stable OpenClawDecision JSON object. Mirrors
@@ -141,9 +142,11 @@ export async function runOpenClawFollowup(
   const args = [scriptPath];
   if (options.siteId) args.push("--site-id", options.siteId);
   if (options.baseRunId) args.push("--base-run-id", options.baseRunId);
-  // The `--` separator stops argparse from treating a message that starts with
-  // `-`/`--` as a CLI option (same guard as router-classify-runner.ts).
-  args.push("--", trimmed);
+  // B204: pass the message through a UTF-8 temp file instead of argv so a
+  // non-ASCII leading char survives the Windows spawn hop intact (same
+  // defensive transport as router-classify-runner.ts).
+  const messageArg = writeTextArgFile(trimmed, "sb-openclaw-");
+  args.push("--message-file", messageArg.path);
 
   const child = spawn(pythonCommand(), args, {
     cwd: repoRoot(),
@@ -186,9 +189,11 @@ export async function runOpenClawFollowup(
     });
   } catch {
     clearTimeout(timeout);
+    messageArg.cleanup();
     return null;
   }
   clearTimeout(timeout);
+  messageArg.cleanup();
 
   if (timedOut || exitCode !== 0) return null;
 
@@ -294,9 +299,11 @@ export async function runOpenClawFollowupApply(
   );
   const args = [scriptPath, "--apply", "--site-id", siteId];
   if (options.baseRunId) args.push("--base-run-id", options.baseRunId);
-  // The `--` separator stops argparse from treating a message that starts with
-  // `-`/`--` as a CLI option (same guard as runOpenClawFollowup).
-  args.push("--", trimmed);
+  // B204: pass the message through a UTF-8 temp file instead of argv so a
+  // non-ASCII leading char survives the Windows spawn hop intact (same
+  // defensive transport as runOpenClawFollowup).
+  const messageArg = writeTextArgFile(trimmed, "sb-openclaw-apply-");
+  args.push("--message-file", messageArg.path);
 
   const child = spawn(pythonCommand(), args, {
     cwd: repoRoot(),
@@ -341,9 +348,11 @@ export async function runOpenClawFollowupApply(
     });
   } catch {
     clearTimeout(timeout);
+    messageArg.cleanup();
     return null;
   }
   clearTimeout(timeout);
+  messageArg.cleanup();
 
   if (timedOut || exitCode !== 0) return null;
 

@@ -502,25 +502,32 @@ def test_b175_recovery_covers_first_completed_run() -> None:
 
 
 @pytest.mark.tooling
-def test_prompt_runner_uses_double_dash_to_protect_dashed_prompts() -> None:
-    """Audit fynd 3: vanliga prompter börjar med `-` eller `--` (t.ex.
-    en inklistrad punktlista: "- skapa en sajt..."). Utan `--`-separator
-    tolkar argparse i `scripts/prompt_to_project_input.py` prompten som
-    en CLI-option och spawnen fallerar innan Project Input hinner
-    skrivas.
+def test_prompt_runner_routes_prompt_through_utf8_file_not_argv() -> None:
+    """B204: operatörsprompten måste korsa viewser→CLI-gränsen som en
+    UTF-8-tempfil, ALDRIG som ett process-argument.
 
-    Lås att lib/prompt-runner.ts skickar in `--` mellan scriptPath och
-    prompten så argparse stannar option-parsning.
+    På vissa Windows-konsoler manglas ett icke-ASCII INLEDANDE tecken i argv
+    på Node→OS→Python-hoppet (operatörsfynd: "Ändra …" lagrades som "*ndra …").
+    prompt-runner.ts skriver nu prompten med ``writeTextArgFile`` och skickar
+    ``--prompt-file <path>``. Den gamla ``args.push("--", trimmed)``-rå-argv-
+    vägen (som även var dash-guarden) MÅSTE vara borta så ett inledande å/ä/ö
+    aldrig kan manglas igen. Slutverifiering körs på operatörens Windows-maskin
+    (se docs/known-issues.md B204).
     """
     text = (VIEWSER_DIR / "lib" / "prompt-runner.ts").read_text(encoding="utf-8")
-    pattern = re.compile(
-        r"args\.push\(\s*\"--\"\s*,\s*trimmed\s*\)",
-        re.MULTILINE,
+    raw_argv = re.compile(r"args\.push\(\s*\"--\"\s*,\s*trimmed\s*\)", re.MULTILINE)
+    assert not raw_argv.search(text), (
+        'prompt-runner.ts får INTE längre skicka prompten som rå argv '
+        '(args.push("--", trimmed)) — det är B204-roten. Skriv prompten till '
+        "en UTF-8-tempfil och skicka --prompt-file i stället."
     )
-    assert pattern.search(text), (
-        "prompt-runner.ts spawn-args måste lägga `--` direkt före prompten "
-        "så en prompt som börjar med `-` (punktlista) eller `--` inte "
-        "tolkas som CLI-option av argparse i prompt_to_project_input.py."
+    assert "writeTextArgFile(trimmed" in text, (
+        "prompt-runner.ts måste skriva prompten till en UTF-8-tempfil via "
+        "writeTextArgFile (B204-säker transport)."
+    )
+    assert '"--prompt-file"' in text, (
+        "prompt-runner.ts måste skicka prompten som --prompt-file <path> till "
+        "prompt_to_project_input.py."
     )
 
 

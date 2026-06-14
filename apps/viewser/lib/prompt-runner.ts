@@ -3,6 +3,8 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { writeTextArgFile } from "./text-arg-file";
+
 const PROMPT_TIMEOUT_MS = 90_000;
 const TEST_PROMPT_INPUTS_ENV = "VIEWSER_PROMPT_INPUTS_DIR";
 
@@ -256,11 +258,17 @@ export async function runPromptToProjectInput(
     args.push("--discovery", discoveryFile);
   }
 
-  // The `--` separator stops argparse from interpreting a prompt that
-  // happens to start with `-` or `--` (e.g. a pasted bullet list like
-  // "- skapa en sajt...") as a CLI option. Without it the spawn fails
-  // before the helper can write a Project Input.
-  args.push("--", trimmed);
+  // B204: route the operator prompt through a UTF-8 temp file instead of
+  // passing it as a process argument. On some Windows consoles a non-ASCII
+  // LEADING character in argv is mangled on the Node→OS→Python hop (operator
+  // finding: "Ändra …" was stored as "*ndra …"); a UTF-8 file read back with
+  // encoding="utf-8" round-trips every Swedish char intact. Same defensive
+  // transport the discovery payload already uses above. ``--prompt-file`` also
+  // makes the old ``--`` dash-guard unnecessary — a prompt that happens to
+  // start with `-`/`--` (a pasted bullet list) never reaches argv anymore.
+  const promptArg = writeTextArgFile(trimmed, "sb-prompt-");
+  args.push("--prompt-file", promptArg.path);
+
   const child = spawn(pythonCommand(), args, {
     cwd: repoRoot(),
     env: process.env,
@@ -299,17 +307,24 @@ export async function runPromptToProjectInput(
     }, 5_000).unref?.();
   }, PROMPT_TIMEOUT_MS);
 
-  const exitCode = await new Promise<number>((resolve, reject) => {
-    child.once("error", reject);
-    child.once("close", (code) => resolve(code ?? 1));
-  });
-  clearTimeout(timeout);
-
-  if (discoveryTempDir) {
-    try {
-      rmSync(discoveryTempDir, { recursive: true, force: true });
-    } catch {
-      // best-effort cleanup — tmp-dir städas av OS:n vid omstart om vi missar
+  let exitCode: number;
+  try {
+    exitCode = await new Promise<number>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code) => resolve(code ?? 1));
+    });
+  } finally {
+    clearTimeout(timeout);
+    // Drop the operator's prompt + discovery answers from disk regardless of
+    // outcome (success, non-zero exit, or a spawn "error" rejection) so the
+    // free text never lingers longer than the single CLI invocation.
+    promptArg.cleanup();
+    if (discoveryTempDir) {
+      try {
+        rmSync(discoveryTempDir, { recursive: true, force: true });
+      } catch {
+        // best-effort cleanup — tmp-dir städas av OS:n vid omstart om vi missar
+      }
     }
   }
 

@@ -97,6 +97,7 @@ from packages.generation.followup.text import (  # noqa: E402
     _string_value,
     _text_outside_quotes,
 )
+from scripts.cli_text import resolve_cli_text  # noqa: E402
 
 # copyDirective subsystem (ADR 0034 väg A, nivå 1-3a) lives in
 # packages/generation/followup/copy_directives.py after the behavior-preserving
@@ -3976,7 +3977,26 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Generate a minimal Project Input from a free-form prompt."
     )
-    parser.add_argument("prompt", help="The operator prompt to convert.")
+    parser.add_argument(
+        "prompt",
+        nargs="?",
+        default=None,
+        help=(
+            "The operator prompt to convert. Prefer --prompt-file: argv "
+            "mangles a non-ASCII leading character (e.g. 'Ä') on some Windows "
+            "consoles (B204). Mutually exclusive with --prompt-file."
+        ),
+    )
+    parser.add_argument(
+        "--prompt-file",
+        default=None,
+        help=(
+            "Path to a UTF-8 file holding the operator prompt. Preferred over "
+            "the positional arg so Swedish characters survive the viewser→CLI "
+            "boundary intact (B204). Mutually exclusive with the positional "
+            "prompt."
+        ),
+    )
     parser.add_argument(
         "--output-dir",
         default=str(DEFAULT_OUTPUT_DIR),
@@ -4055,6 +4075,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # B204: the prompt arrives via --prompt-file (a UTF-8 temp file written by
+    # apps/viewser) so non-ASCII leading characters survive the viewser→CLI
+    # boundary. The positional arg stays supported for back-compat (tests,
+    # programmatic callers, and the hosted sandbox env path).
+    try:
+        prompt_text = resolve_cli_text(args.prompt, args.prompt_file, label="prompt")
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
     if args.followup_site_id and args.discovery:
         raise SystemExit(
             "--discovery cannot be combined with --followup-site-id. "
@@ -4123,7 +4152,7 @@ def main() -> int:
                 "or --project-id."
             )
         project_input, meta, project_input_path, meta_path = generate_followup(
-            args.prompt,
+            prompt_text,
             output_dir=output_dir,
             site_id=args.followup_site_id,
             base_run_id=args.base_run_id,
@@ -4139,7 +4168,7 @@ def main() -> int:
         )
     else:
         project_input, meta, project_input_path, meta_path = generate(
-            args.prompt,
+            prompt_text,
             output_dir=output_dir,
             site_id=args.site_id,
             project_id=args.project_id,

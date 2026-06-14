@@ -90,11 +90,25 @@ def classify_to_json(
 
 
 def main() -> int:
+    # Deferred import (same philosophy as classify_to_json above) keeps this
+    # module import-light; scripts.cli_text only pulls in pathlib.
+    from scripts.cli_text import resolve_cli_text
+
     parser = argparse.ArgumentParser(
         description=(
             "Classify a single user message into a schema-valid RouterDecision "
             "(deterministic KÖR-6a router; no LLM, no build, read-only)."
         )
+    )
+    parser.add_argument(
+        "--message-file",
+        default=None,
+        help=(
+            "Path to a UTF-8 file holding the message. Preferred over the "
+            "positional arg so a non-ASCII leading character survives the "
+            "viewser→CLI boundary intact (B204). Mutually exclusive with the "
+            "positional message."
+        ),
     )
     parser.add_argument(
         "--site-id",
@@ -117,17 +131,22 @@ def main() -> int:
         "message",
         nargs="?",
         default=None,
-        help="The user message to classify. Prefer passing after `--`.",
+        help="The user message to classify. Prefer --message-file (B204) or `--`.",
     )
     args = parser.parse_args()
 
-    if args.message is None:
-        print("classify_message.py requires a message argument.", file=sys.stderr)
+    # B204: the message arrives via --message-file (a UTF-8 temp file) so a
+    # non-ASCII leading character survives the viewser→CLI boundary. The
+    # positional arg stays supported for back-compat (tests, `--` callers).
+    try:
+        message = resolve_cli_text(args.message, args.message_file, label="message")
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
 
     print(
         classify_to_json(
-            args.message,
+            message,
             site_id=args.site_id,
             route_sections=_parse_route_sections(args.route_sections),
         )

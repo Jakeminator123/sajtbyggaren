@@ -769,7 +769,7 @@ spårbarhet i takeover-prep-rundan 2026-06-14. Ingen åtgärd nu.
   stödjer parametern, eller släpp parametern. Källa: bygg-logg, takeover-prep
   2026-06-14. Fix: open. Test: open.
 
-### Encoding-rot på följdprompt-gränsen 2026-06-14 (#318, bokförd — ej blind-fixad)
+### Encoding-rot på följdprompt-gränsen 2026-06-14 (#318 bokförd; rotfix i PR #319, inväntar Windows-verifiering)
 
 - **`B204` Medel** - inledande "Ä" i en följdprompt manglas till "*" på vägen
   viewser-chatt → CLI. Symptom (operatörsfynd, site `olkultur-ab-e9594d`): den
@@ -801,8 +801,20 @@ spårbarhet i takeover-prep-rundan 2026-06-14. Ingen åtgärd nu.
   verb-ledd redigering ("Ändra namnet till X" → "*ndra namnet till X") tappar
   fortfarande verbet och blir en tyst no-op. Rekommenderad fix: tempfil/stdin
   med explicit UTF-8, spegla discovery-payload-mönstret.
-  Källa: operatörsfynd 2026-06-14 (#318). Fix: open. Test: open (roten);
-  manglings-robust ärlighet täckt av
+  Källa: operatörsfynd 2026-06-14 (#318). Fix: open (rotfix landad i PR #319 men
+  ej mergad/Windows-verifierad än — status open tills PR:en mergas och operatören
+  verifierat). Rotfix: prompten och
+  klassificerings-/OpenClaw-meddelandet trådas via UTF-8-tempfil +
+  `--prompt-file`/`--message-file` i stället för rå argv (ny delad helper
+  `apps/viewser/lib/text-arg-file.ts` + `scripts/cli_text.py`; alla fyra lokala
+  spawn-sömmar — `prompt-runner.ts`, `router-classify-runner.ts`,
+  `openclaw-runner.ts` ×2 — plus mottagarna `prompt_to_project_input.py`,
+  `classify_message.py`, `run_openclaw_followup.py`). Den positionella argan och
+  den hostade sandbox-vägen (säker Linux-env-expansion) är bakåtkompatibla/orörda.
+  Inväntar Windows-verifiering på operatörens maskin (kör "Ändra …", bekräfta att
+  lagrad `meta.followUpPrompt` = "Ändra …", inte "*ndra …"). Test (transport-
+  invariant, Windows-manglingen kan inte reproduceras i CI):
+  `tests/test_b204_prompt_transport.py`; manglings-robust ärlighet täckt av
   `tests/test_followup_copy_directives.py::test_quoted_copy_replace_miss_is_honest_even_with_mangled_verb`
   + `tests/test_followup_honest_no_op.py::test_copy_replace_no_op_is_honest_under_mangled_verb`.
 

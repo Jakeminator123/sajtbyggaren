@@ -468,6 +468,10 @@ def apply_followup_to_json(
 
 
 def main() -> int:
+    # Deferred import keeps this module import-light; scripts.cli_text only
+    # pulls in pathlib.
+    from scripts.cli_text import resolve_cli_text
+
     parser = argparse.ArgumentParser(
         description=(
             "Emit a read-only OpenClaw follow-up decision (answer_only / "
@@ -502,18 +506,31 @@ def main() -> int:
         help="With --apply, skip npm install/build (fast; for testing).",
     )
     parser.add_argument(
+        "--message-file",
+        default=None,
+        help=(
+            "Path to a UTF-8 file holding the follow-up message. Preferred "
+            "over the positional arg so a non-ASCII leading character survives "
+            "the viewser→CLI boundary intact (B204). Mutually exclusive with "
+            "the positional message."
+        ),
+    )
+    parser.add_argument(
         "message",
         nargs="?",
         default=None,
-        help="The follow-up message. Prefer passing after `--`.",
+        help="The follow-up message. Prefer --message-file (B204) or `--`.",
     )
     args = parser.parse_args()
 
-    if args.message is None:
-        print(
-            "run_openclaw_followup.py requires a message argument.",
-            file=sys.stderr,
-        )
+    # B204: the message arrives via --message-file (a UTF-8 temp file) so a
+    # non-ASCII leading character survives the viewser→CLI boundary. The
+    # positional arg stays supported for back-compat (tests, the hosted
+    # sandbox env path, `--` callers).
+    try:
+        message = resolve_cli_text(args.message, args.message_file, label="message")
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
 
     if args.apply:
@@ -521,7 +538,7 @@ def main() -> int:
             print("--apply requires --site-id.", file=sys.stderr)
             return 1
         payload = apply_followup_to_json(
-            args.message,
+            message,
             site_id=args.site_id,
             base_run_id=args.base_run_id,
             do_build=not args.skip_build,
@@ -532,7 +549,7 @@ def main() -> int:
         return 0
 
     payload = decide_to_json(
-        args.message,
+        message,
         site_id=args.site_id,
         base_run_id=args.base_run_id,
     )
