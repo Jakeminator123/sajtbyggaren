@@ -271,14 +271,40 @@ def test_trace_polling_stops_on_banner_without_arming_latch() -> None:
 # --- 6. Banner-texten speglar det nya läget -------------------------------------
 
 
+def _notice_body(source: str, const_name: str) -> str:
+    """Plocka ut värdet (alla strängliteraler) för en ``export const`` notis
+    fram till nästa ``;`` så jargong-låset bara granskar UI-texten — inte
+    tekniska kommentarer/JSDoc på andra ställen i filen."""
+    marker = f"{const_name} =\n"
+    assert marker in source, f"{const_name} ska definieras i hosted-python-runtime.ts"
+    return source.split(marker, 1)[1].split(";", 1)[0]
+
+
 def test_hosted_banner_text_reflects_b199_v2() -> None:
     source = _read(RUNTIME_HELPER)
-    assert "Hostad drift" in source, (
-        "HOSTED_BUILD_ENABLED_NOTICE ska beskriva det nya driftläget."
+    enabled = _notice_body(source, "HOSTED_BUILD_ENABLED_NOTICE")
+    local_only = _notice_body(source, "HOSTED_LOCAL_ONLY_NOTICE")
+    notices = enabled + "\n" + local_only
+    # Kundvänlig ton: notisen ska beskriva att sajter sparas och kan förfinas,
+    # i plain svenska. Den får INTE läcka teknisk jargong till slutanvändaren.
+    assert "sparas automatiskt" in enabled, (
+        "HOSTED_BUILD_ENABLED_NOTICE ska ärligt säga att sajter sparas så att "
+        "användaren kan komma tillbaka och förfina dem."
     )
-    for stale in ("tomma hostat", "försvinner \" +\n  \"vid omladdning"):
-        assert stale not in source, (
+    for jargon in (
+        "Vercel Sandbox",
+        "molnlagring",
+        "run-historik",
+        "Filträdet",
+        "backend-runtime",
+    ):
+        assert jargon not in notices, (
+            f"UI-notisen läcker teknisk jargong {jargon!r} till slutanvändaren "
+            "— håll den hostade banner-texten kundvänlig och jargongfri."
+        )
+    for stale in ("tomma hostat", "försvinner"):
+        assert stale not in notices, (
             f"Banner-texten påstår fortfarande {stale!r} — det är inte "
             "längre sant efter B199 v2."
         )
-    assert "läser dock" not in source
+    assert "läser dock" not in notices

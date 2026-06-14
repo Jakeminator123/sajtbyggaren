@@ -54,9 +54,14 @@ export function CookieBanner() {
         <div
           role="region"
           aria-label="Cookie-samtycke"
-          className="fixed inset-x-3 bottom-3 z-50 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:max-w-md"
+          // Mobil: kompakt kort längst ned. Desktop (sm+): litet kort i NEDRE
+          // HÖGRA hörnet (smalt, max-w-sm) så det håller sig undan startsidans
+          // vänsterställda hero-CTA och bara nuddar hörnet av yrkessidornas
+          // kort-rutnät. Baren är transient — den försvinner när ett val gjorts
+          // — så ett litet hörnkort ger minimal störning på innehållet.
+          className="fixed inset-x-3 bottom-3 z-50 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:max-w-sm"
         >
-          <div className="border-border/60 bg-card/95 flex flex-col gap-3 rounded-2xl border p-4 shadow-lg backdrop-blur-xl sm:p-5">
+          <div className="border-border/60 bg-card/95 flex flex-col gap-3 rounded-2xl border p-4 shadow-lg backdrop-blur-xl">
             <p className="text-muted-foreground text-[13px] leading-relaxed">
               Vi använder nödvändiga cookies för att sajten ska fungera. Övriga
               cookies sätts bara om du accepterar. Läs mer i vår{" "}
