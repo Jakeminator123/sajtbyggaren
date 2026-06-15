@@ -239,6 +239,7 @@ def apply_patch_plan(
     dossier_preferences: dict[str, str] | None = None,
     disabled_routes: list[str] | None = None,
     hidden_nav_routes: list[str] | None = None,
+    generative_components: list[dict] | None = None,
     unapplied_followup_intents: list[dict[str, str]] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
@@ -297,6 +298,20 @@ def apply_patch_plan(
     the page.tsx, route guards and contact-route lookup keep the full route set.
     Like a route-remove-only follow-up, a nav-hide-only follow-up still writes the
     next version.
+
+    ``generative_components`` (optional, the component_add generative path,
+    Generative Component V1 / ADR 0061) carries pre-resolved + validated
+    ``{recipe, count, routeId, id}`` specs (each one already verified to name a
+    WHITELISTED recipe by the caller's
+    ``packages.generation.followup.generative_component_directives``). They are
+    recorded STICKY on ``directives.generativeComponents`` - union of the prior
+    version's list (carried forward by the deep-copy merge) with this call's specs,
+    de-duplicated by ``id`` - so a component materialised in v2 does not vanish on a
+    later unrelated follow-up. ``build_site.py`` reads the directive after
+    ``write_pages`` and materialises each spec as ONE new
+    ``components/generated/<id>.tsx`` spliced into its route's page.tsx. Like a
+    theme-only restyle, a generative-only follow-up (no patch, no theme, no section,
+    no route) still writes the next version.
 
     ``trace_run_dir`` (optional) is the directory of the **new** version's run,
     if one already exists, to append an append-only apply Engine Event to its
@@ -404,14 +419,29 @@ def apply_patch_plan(
         if isinstance(route_id, str) and route_id.strip()
     ]
 
+    # A component_add generative path carries pre-resolved + validated specs (each
+    # already verified to name a WHITELISTED recipe by the caller's
+    # generative_component_directives, ADR 0061). Like a theme-only restyle it
+    # counts as a real change, so a generative-only follow-up still writes the next
+    # version below. Filtered defensively to specs that carry a usable id.
+    generative_component_specs = [
+        spec
+        for spec in (generative_components or [])
+        if isinstance(spec, dict)
+        and isinstance(spec.get("id"), str)
+        and spec.get("id", "").strip()
+    ]
+
     # 2. Empty valid plan AND no theme AND no section capability AND no disabled
-    #    route AND no hidden nav route -> nothing to apply (not an error). No write.
+    #    route AND no hidden nav route AND no generative component -> nothing to
+    #    apply (not an error). No write.
     if (
         not plan.patches
         and not theme_changes
         and not section_capabilities
         and not disabled_route_ids
         and not hidden_nav_route_ids
+        and not generative_component_specs
     ):
         return _trace(
             ApplyResult(
@@ -784,6 +814,40 @@ def apply_patch_plan(
         if union_hidden:
             nav_directives["hiddenNavRoutes"] = union_hidden
 
+    # Generative Component V1 (ADR 0061): record the generative-component specs on
+    # the NEW version's directives. STICKY by design - union the carried-forward
+    # prior list (merge_followup_project_input deep-copies the previous version, so
+    # a component generated in v2 rides along) with THIS call's specs, de-duplicated
+    # by id (first wins, so a re-issued same-id directive never duplicates the
+    # component). build_site.py reads directives.generativeComponents after
+    # write_pages and materialises each spec as one components/generated/<id>.tsx
+    # spliced into its route's page.tsx. generative_component_directives already
+    # dropped non-whitelisted recipes/components before they reached here, so an
+    # honest no-op upstream never persists a phantom component.
+    if generative_component_specs:
+        gen_directives = merged.get("directives")
+        if not isinstance(gen_directives, dict):
+            gen_directives = {}
+            merged["directives"] = gen_directives
+        existing_gen = gen_directives.get("generativeComponents")
+        union_gen: list[dict] = []
+        seen_gen_ids: set[str] = set()
+        for entry in (
+            (existing_gen if isinstance(existing_gen, list) else [])
+            + generative_component_specs
+        ):
+            if not isinstance(entry, dict):
+                continue
+            entry_id = entry.get("id")
+            if not isinstance(entry_id, str) or not entry_id.strip():
+                continue
+            if entry_id in seen_gen_ids:
+                continue
+            seen_gen_ids.add(entry_id)
+            union_gen.append(entry)
+        if union_gen:
+            gen_directives["generativeComponents"] = union_gen
+
     # visual_style restyle: set the named brand/tone fields from the directive's
     # EXPLICIT values (patch-driven; the prompt is never re-parsed here). These
     # are schema-declared Project Input fields rendered by patch_globals_css, so
@@ -991,6 +1055,17 @@ def apply_patch_plan(
             f"Dolde nav-länk(ar) ({', '.join(hidden_nav_route_ids)}) via "
             f"directives.hiddenNavRoutes i v{next_version}; build döljer dem ur "
             "header/footer-navet men behåller sidan (page.tsx + route-guards)."
+        )
+    if generative_component_specs:
+        recipe_summary = ", ".join(
+            f"{spec.get('recipe')}(x{spec.get('count')})"
+            for spec in generative_component_specs
+        )
+        notes.append(
+            f"Genererade komponent(er) ({recipe_summary}) via "
+            f"directives.generativeComponents i v{next_version}; build skriver dem "
+            "som components/generated/<id>.tsx och splice:ar in dem i routens "
+            "page.tsx (deterministiskt recept, inga nya npm-beroenden)."
         )
     result = ApplyResult(
         applied=True,

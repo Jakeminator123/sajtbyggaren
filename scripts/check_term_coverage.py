@@ -1502,6 +1502,22 @@ COMMON_WORDS = {
     # domain terms (no runtime symbol, no ADR) - same bold/backtick prose-
     # emphasis allowlist treatment as the heavy-llm-flow run-plan block above.
     "Safe Mode", "Agent Code Mode", "Publish Mode", "Inbox",
+    # Generative Component V1 (ADR 0061) implementation symbols. The materialised
+    # Server Component names are derived deterministically from a recipe id
+    # (Generated + PascalCase(id)); GeneratedImagePlaceholderGrid is the V1
+    # image-placeholder-grid recipe's component, GeneratedComponent the fallback
+    # name. GenerativeEmitError is the local exception raised by
+    # packages/generation/codegen/followup_emit.py on a write-path/policy
+    # violation - same category as SprintvaktError / DossierIntakeError above.
+    # The canonical field name (directives.generativeComponents) + recipe slug
+    # (image-placeholder-grid) live in the schema; these are code symbols, not
+    # separate domain terms.
+    "GeneratedComponent", "GeneratedImagePlaceholderGrid", "GenerativeEmitError",
+    # Win32/PowerShell API name referenced by scripts/sync_vercel_build_context.py
+    # (build-context sync helper, matris-#1). Same category as the other
+    # PowerShell/Win32 tokens above (TerminateProcess / OwningProcess / ConvertTo)
+    # - a native API name, not a Sajtbyggaren domain term.
+    "CreateProcess",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

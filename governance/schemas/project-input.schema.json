@@ -352,6 +352,43 @@
           "uniqueItems": true,
           "items": {"type": "string", "minLength": 1, "maxLength": 64},
           "description": "Scaffold-routes vars NAV-LÄNK ska döljas, härledda ur en nav_hide-följdprompt (Route/Nav Mutation V1, ADR 0060, route_editor-rollen). Varje post är ett scaffold-routeId (t.ex. 'about') som operatören bett att dölja UR MENYN men BEHÅLLA som sida. Till skillnad från disabledRoutes filtreras dessa INTE ur activeRoutes: page.tsx skrivs fortfarande, route-guards/Quality Gate räknar sidan, och _pick_contact_route hittar fortfarande kontaktsidan; bara header/footer-navets (href,label)-lista hoppar över posten i EN söm (_nav_items_from_scaffold). Listan är STICKY (ackumuleras över versioner, union:as i apply) så en dold länk inte återuppstår vid en senare orelaterad följdprompt; ett routeId som inte finns i scaffolden, eller startsidan, droppas ärligt av route_directives innan den når hit (aldrig en byggkrasch). En post vars route senare tas bort helt (disabledRoutes) blir en ofarlig no-op (sidan finns inte att navigera till)."
+        },
+        "generativeComponents": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "description": "Generativa komponenter som materialiseras deterministiskt ur en component_add-följdprompt (Generative Component V1, ADR 0061, component_builder-rollen). Varje post är ett VITLISTAT, deterministiskt recept (V1 = endast 'image-placeholder-grid', dvs 'lägg till 6 bildplatshållare'/'lägg till en bildgrid') som buildern skriver som EN ny Server Component-.tsx under components/generated/<id>.tsx OCH splice:ar in (import + användning) i målroutens page.tsx — INGEN fri LLM-genererad kod och INGA nya npm-beroenden i V1. Listan är STICKY (ackumuleras över versioner, union:as i apply per id) så en tillagd komponent inte försvinner vid en senare orelaterad följdprompt; ett okänt recept eller en okänd komponentnoun refuseras ärligt av generative_component_directives innan den når hit (honest no-op, aldrig en påhittad komponent och aldrig en fil utanför build-katalogen). Buildern materialiserar idempotent: samma direktiv dubbelinjiceras aldrig.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["recipe", "count", "routeId", "id"],
+            "properties": {
+              "recipe": {
+                "type": "string",
+                "enum": ["image-placeholder-grid"],
+                "description": "Vilket vitlistat, deterministiskt recept komponenten genereras från. V1 har exakt ett: 'image-placeholder-grid' (ett responsivt rutnät av bildplatshållare). Sluten enum så schemavalideringen fångar ett okänt recept innan bygget startar; fler recept tillkommer i senare slices (ADR 0061)."
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12,
+                "description": "Antal platshållarrutor receptet ska rendera. Tolkat ur prompten ('6 bildplatshållare' -> 6) och klampat till 1..12 av generative_component_directives innan det når hit; default 6 när prompten inte anger ett antal."
+              },
+              "routeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Logiskt route-id komponenten splice:as in på, t.ex. 'home'. V1 stödjer 'home' (default); buildern skriver komponenten under components/generated/ och injicerar import + användning i routens page.tsx före den stängande </main>. Ett routeId vars page.tsx inte finns blir en ofarlig no-op (ingen orphan-fil), aldrig en byggkrasch."
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[a-z0-9][a-z0-9-]*$",
+                "description": "Filsäkert id (gemener, bindestreck) som också är komponentfilens slug: components/generated/<id>.tsx. Sticky-union:en i apply dedupar på detta id så samma komponent aldrig dubbleras över versioner. Mönstret hindrar path-traversal (aldrig '..', aldrig snedstreck) — buildern fail-closar dessutom på allt som skulle skriva utanför build-katalogen."
+              }
+            }
+          }
         }
       }
     },
