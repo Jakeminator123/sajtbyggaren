@@ -1,6 +1,6 @@
 # ADR 0021 - StackBlitz preview: payload-workarounds for WebContainer
 
-**Status:** accepted
+**Status:** superseded av 0033 (StackBlitz-vägen pausad — payload-workarounds ligger inte längre på den aktiva preview-vägen; StackBlitz-adaptern rörs inte, se 0055)
 **Datum:** 2026-05-15
 **Beroenden:** ADR 0003 (preview-runtime StackBlitz-first),
 ADR 0011 (Scaffolds som inherited arbetsmaterial).

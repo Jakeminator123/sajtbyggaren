@@ -1,6 +1,6 @@
 # ADR 0003: PreviewRuntime-abstraktion med StackBlitz först
 
-- Status: accepterat
+- Status: superseded av 0033 (StackBlitz-först-valet omkört: vercel-sandbox är nu primär preview, stackblitz pausad). Abstraktionen denna ADR införde lever vidare — 0030/0033 bygger på den.
 - Datum: 2026-05-07
 
 ## Kontext
