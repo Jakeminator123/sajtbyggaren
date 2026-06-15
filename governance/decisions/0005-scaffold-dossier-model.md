@@ -3,6 +3,34 @@
 - Status: accepterat
 - Datum: 2026-05-07
 
+## Uppdatering (2026-06-15) — foundational, men operativ verklighet förfinad
+
+Denna ADR är **foundational** för begreppen Scaffold och Dossier; texten nedan
+bevaras som ursprungsbeslut. Tre punkter i den operativa verkligheten har sedan
+dess förfinats av senare beslut + kod — läs dem så att du inte får fel mental
+modell:
+
+- **Dossier-klasser är `soft`/`hard`, inte soft/hybrid/hard.** ADR 0012 tog bort
+  `hybrid` som klass (en dossier som behöver mock i designläge är `hard` med
+  `mockMode`). `dossier-contract.v1.json` deklarerar idag bara `soft` och `hard`;
+  läs `soft/hybrid/hard` nedan som historik. Hard-kontrakten skärptes av 0053.
+- **Embedding-driven selection är PARKERAD (ADR 0026).** Embeddings är ännu inte
+  byggda i prod-flödet (inga `embeddingModel`-anrop, `data/embedding-index/` är
+  bara förberedd). Beskriv alltså INTE scaffold-/dossier-selection som
+  embeddings-live; val sker idag deterministiskt/manuellt (jfr Discovery Resolver,
+  ADR 0024). Parkeringens triggervillkor bor i 0026.
+- **Operatörsflödet är Starter → Scaffold → Variant → Dossier** (ADR 0012, åtta
+  steg). "14 Scaffolds" nedan är en tidig målbild/primärregister, inte ett
+  live-krav: registret är **ärvt arbetsmaterial** (ADR 0011), och idag finns
+  6 scaffolds med körbart innehåll på disk
+  (`local-service-business`, `restaurant-hospitality`, `clinic-healthcare`,
+  `agency-studio`, `ecommerce-lite`, `professional-services`) som 5 starters
+  täcker.
+
+Förfinas av: ADR 0011 (scaffold-register = ärvt arbetsmaterial), ADR 0012
+(vokabulärkompression + dossier-klasser soft/hard), ADR 0024 (Discovery
+Resolver), ADR 0026 (embeddings parkerade), ADR 0053 (hard-dossier-kontrakt).
+
 ## Kontext
 
 Två centrala begrepp i Sajtbyggaren behövde definieras innan generation-runtime byggs: **Scaffold** (sajtens grammatik) och **Dossier** (capability-modul). I gamla `sajtmaskin` blandades dessa med `template`, `starter`, `pack`, `package`, `plugin`, `feature` om vartannat, och scaffold-val skedde delvis via ordmatchning (`if prompt.includes("restaurant") return "restaurant"`).
