@@ -50,7 +50,10 @@ router/verifier på gpt-5.5 (high reasoning, högre tokentak), rerank på
 gpt-5.4-mini, brief → medium reasoning; centralt + reversibelt via policyn +
 `llm_model_params.py` (inga hårdkodade modeller). OBS: gpt-5.5/gpt-5.4-mini
 behöver real-key-smoke mot prod-nyckeln innan vi förlitar oss på dem (CI/tester
-mockar utan nyckel och fångar inte modell-tillgänglighet).
+mockar utan nyckel och fångar inte modell-tillgänglighet). Slutligen: tre
+review-flaggade buggar fixade — #318 additiv-vakt (`6062928c`: två citat muterar
+aldrig copy), och #322-härdning (`d7dea188`: droppar directive-formade
+tjänste-kort + engelska craft-termer via den delade signalen).
 
 **Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
@@ -79,13 +82,14 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `d3c1a034` (2026-06-15 ~11:40 UTC+2; `jakob-be` = HEAD,
-9+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
+Last verified state: `d7dea188` (2026-06-15 ~12:20 UTC+2; `jakob-be` = HEAD,
+12+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift,
 directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 (`f481d201`) +
 render-utredning (`d3c1a034`), novel-intent + katalog-medveten plan
-(`9d749486`/`64800d12`), model routing v13 (denna commit); `origin/jakob-be`
-i synk efter push, working tree rent; `main`/`origin/main` orörda på
-`f4e02756`). Föregående: `b4a818c1`.
+(`9d749486`/`64800d12`), model routing v13 (`d49d1ab8`), review-fixar #318
+(`6062928c`) + #322-härdning (`d7dea188`); `origin/jakob-be` i synk efter
+push, working tree rent; `main`/`origin/main` orörda på `f4e02756`).
+Föregående: `b4a818c1`.
 
 ## Öppna PR att känna till
 
