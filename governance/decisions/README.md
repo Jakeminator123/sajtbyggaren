@@ -7,7 +7,7 @@ senare ADR som rör samma yta.
 
 ## Aktiva beslut (läs dessa)
 
-De senaste operativa besluten (0040–0060), aktiva om inget annat anges:
+De senaste operativa besluten (0040–0062), aktiva om inget annat anges:
 
 - [0040 komponentkatalog](0040-component-catalog.md)
 - [0041 varm sandbox-reuse](0041-vercel-sandbox-warm-reuse.md)
@@ -30,6 +30,8 @@ De senaste operativa besluten (0040–0060), aktiva om inget annat anges:
 - [0058 preview-bundle-tarball](0058-preview-bundle-tarball.md)
 - [0059 component-builder katalog-mount](0059-component-builder-catalog-mount.md) — utkast/proposed, ej beslutat
 - [0060 route/nav-mutation v1](0060-route-nav-mutation-v1.md)
+- [0061 generative component v1](0061-generative-component-v1.md) — image-placeholder-grid via materialize + Quality Gate (Fas 4, #341)
+- [0062 OpenClaw-dirigent: rollkontrakt + action-brygga](0062-openclaw-conductor-roles-and-action-bridge.md) — aktiv OpenClaw-foundation (de två flödena + bryggan; Fas 1 landad, #338)
 
 Live preview-runtime-beslut (äldre men gällande):
 
@@ -38,6 +40,12 @@ Live preview-runtime-beslut (äldre men gällande):
 
 Fundament (gäller fortfarande): [0001 policies som sanningskälla](0001-policies-as-source-of-truth.md),
 [0006 term-disciplin](0006-term-discipline.md), [0007 språkpolicy](0007-language-policy.md).
+
+Foundational, men med förfinad operativ verklighet (läs uppdateringsnoten överst i ADR:n):
+
+- [0005 scaffold-/dossier-modell](0005-scaffold-dossier-model.md) — foundational för Scaffold/Dossier; förfinad av 0012 (dossier-klasser soft/hard, hybrid borttagen) + 0026 (embeddings parkerade). Embedding-driven selection är INTE live.
+- [0026 embeddings parkerade](0026-embeddings-postponed-until-contract.md) — Accepted, operativ parkering: embeddings ännu inte byggda i prod-flödet; triggervillkoren oförändrade.
+- [0028 runtime ladder](0028-runtime-ladder.md) — ladder-idén lever, men StackBlitz-som-användarnära-nivå är superseded/degraderad av 0033 (vercel-sandbox primär, local-next fallback, stackblitz pausad).
 
 ## Historik / superseded
 

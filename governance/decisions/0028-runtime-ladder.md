@@ -1,8 +1,22 @@
 # ADR 0028 — runtime ladder för PreviewRuntime
 
-**Status:** Accepted
+**Status:** Accepted (ladder-idén lever; StackBlitz-nivån degraderad av 0033)
 **Datum:** 2026-05-24
 **Beroenden:** ADR 0003 (PreviewRuntime-abstraktion med StackBlitz först), `docs/product-operating-context.md`.
+
+## Uppdatering (2026-06-15) — stege-idén gäller, men nivå-ordningen är omkörd
+
+Själva idén — att `PreviewRuntime` är en abstraktion med flera nivåer för olika
+ansvar — gäller fortfarande och bär 0030/0033. MEN den konkreta nivå 2 nedan
+("`StackBlitzRuntime` är den användarnära och editbara previewnivån") är
+**superseded/degraderad av ADR 0033**: `vercel-sandbox` är primär användarnära
+preview, `local-next` är garanterad fallback, och `stackblitz` är **pausad**
+(får finnas kvar men ska inte blockera, inte vara default, inte krävas i tester).
+Läs alltså nivå-listan nedan som ursprunglig ansvarsmodell, inte som dagens
+leverantörsval. De hårda portabilitetsreglerna (0030) bevaras av 0033.
+
+Förfinas/degraderas av: ADR 0030 (providers är adapters), ADR 0033 (vercel-sandbox
+primär, local-next fallback, stackblitz pausad).
 
 ## Kontext
 

@@ -1,9 +1,21 @@
 # ADR 0026 — Embeddings-implementation parkeras tills contract propagation är klar
 
-**Status:** Proposed
-**Datum:** 2026-05-21
+**Status:** Accepted — operativ parkering
+**Datum:** 2026-05-21 (status förtydligad 2026-06-15)
 **Beroenden:** ADR 0005 (scaffold-/dossier-modell med embedding-driven
 selection), ADR 0012 (vocabulary compression), ADR 0024 (Discovery Resolver).
+
+## Uppdatering (2026-06-15) — parkeringen gäller fortfarande
+
+Status flyttad från `Proposed` till **`Accepted — operativ parkering`**: detta är
+inte längre ett förslag utan det gällande, medvetna driftläget. Verifierat mot
+koden 2026-06-15 — embeddings är fortfarande INTE byggda i prod-flödet: inga
+`embeddingModel`-anrop i `packages/` eller `scripts/`, och `embedding-policy.v1.json`
+anropas inte i någon byggväg. Scaffold-/dossier-selection sker deterministiskt
+(jfr Discovery Resolver, ADR 0024). **Triggervillkoren nedan är oförändrade** och
+avgör fortsatt när parkeringen ska lyftas (notera dock att utbudet vuxit till
+6 scaffolds på disk sedan 2026-05-21 — fortfarande långt under 30-enheters-
+triggern). Beslutet i sak ändras inte; bara dess status görs ärlig.
 
 ## Kontext
 

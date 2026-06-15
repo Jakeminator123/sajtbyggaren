@@ -4,6 +4,27 @@
 - Datum: 2026-05-07
 - Förfinar: [ADR 0001](0001-policies-as-source-of-truth.md), [ADR 0005](0005-scaffold-dossier-model.md), [ADR 0008](0008-defer-evals-until-flow-exists.md)
 
+## Uppdatering (2026-06-15) — Engine Run-beslutet gäller; två stale detaljer
+
+Kärnan i denna ADR — **Engine Run** som artefaktkontrakt, centraliserad Repair
+Pipeline + Quality Gate, och Model Roles som enda LLM-ingång — gäller oförändrat.
+Två detaljer i texten nedan är dock föråldrade och får inte vilseleda:
+
+- **Preview-raderna är omkörda.** Sprint-tabellens nivå 4/5 (`LocalRuntime`
+  placeholder, `StackBlitzRuntime` som secondary) och raden "Långsiktig default i
+  policy är fortfarande StackBlitz" speglar en preview-ordning som senare
+  kullkastades av ADR 0028 → 0030 → 0033: `vercel-sandbox` är primär användarnära
+  preview, `local-next` garanterad fallback, `stackblitz` **pausad**. Läs dem som
+  historik, inte som dagens preview-default.
+- **"`gpt-5.4` på alla roller" var en tunn v1.** Den enradiga modellmappningen
+  nedan var medvetet tunn. Aktuell routing bor i `llm-models.v1.json` (per-roll-
+  modeller, v13) + ADR 0052 (per-roll `reasoningEffort`/`maxOutputTokens`). Själva
+  principen — "ingen LLM utan registrerad Model Role" — är just det som lät den
+  routingen växa utan kodändring.
+
+Detta rör INTE Engine Run-beslutet, artefaktkontraktet eller fas-/boundary-
+reglerna. Förfinas av: ADR 0033 (preview-runtime), ADR 0052 (modellparametrar).
+
 ## Kontext
 
 Innan implementationen av fas 1-3 påbörjades fanns två risker:
@@ -75,4 +96,4 @@ Reviewerns förslag: **bygg en scaffold först**, inte alla 14.
 
 - **ADR 0008** (skjut upp baseline-eval) kvarstår: vi bygger motorn först, evals senare.
 - **ADR 0005** (Scaffold-/Dossier-modell) kvarstår: Sprint 2 implementerar **en** scaffold enligt det kontraktet.
-- **ADR 0003** (PreviewRuntime, StackBlitz först) förfinas: implementationsordningen är **LocalRuntime först** (Sprint 4), StackBlitz som secondary (Sprint 5). Långsiktig default i policy är fortfarande StackBlitz.
+- **ADR 0003** (PreviewRuntime, StackBlitz först) förfinas: implementationsordningen är **LocalRuntime först** (Sprint 4), StackBlitz som secondary (Sprint 5). Långsiktig default i policy är fortfarande StackBlitz. *(historiskt — se "Uppdatering" överst; preview-defaulten är superseded av ADR 0033: vercel-sandbox primär, stackblitz pausad.)*
