@@ -1839,6 +1839,39 @@ def _disabled_route_ids_from_dossier(dossier: dict) -> set[str]:
     }
 
 
+def _base_disabled_route_ids(
+    site_id: str,
+    base_run_id: str,
+    *,
+    prompt_inputs_dir: Path,
+    runs_root: Path,
+) -> frozenset[str]:
+    """Return the routeIds the base version already disabled (ADR 0060, finding 7).
+
+    A NON-FATAL optimization for route_remove: it lets the resolver refuse an
+    already-removed page so a repeat removal is an honest no-op instead of a
+    byte-identical version. ``read_base_run_snapshot`` signals EVERY "cannot
+    read" case (a pruned snapshot, a missing/foreign run, a bad id pattern,
+    malformed JSON) by raising ``SystemExit`` - a base exception that does NOT
+    subclass ``Exception`` - so a bare ``except Exception`` would let it crash
+    the build (the #328 review finding). We therefore catch ``SystemExit`` too: a
+    missing/unreadable base snapshot just means "nothing already disabled" and
+    must never crash or block a legitimate removal. Interrupt-style base
+    exceptions (Ctrl+C / generator teardown) are deliberately NOT caught. The
+    authoritative base-run validation still happens downstream in
+    ``apply_patch_plan``.
+    """
+    try:
+        from scripts.prompt_to_project_input import read_base_run_snapshot
+
+        base_pi, _ = read_base_run_snapshot(
+            site_id, base_run_id, output_dir=prompt_inputs_dir, runs_dir=runs_root
+        )
+    except (SystemExit, Exception):  # noqa: BLE001
+        return frozenset()
+    return frozenset(_disabled_route_ids_from_dossier(base_pi))
+
+
 # Route/Nav Mutation V1 Slice B (ADR 0060): the only ``required`` scaffold route
 # that may be removed. ``contact`` is removable because the build/render seam can
 # retarget its site-wide CTAs to mailto:/tel: (or omit them honestly) and the
@@ -4365,25 +4398,15 @@ def run_followup_chain(
                 scaffold_routes_for_remove = load_json(routes_path)
         # Finding 7 (#328 review): refuse a page the base version ALREADY removed
         # so repeating "ta bort sidan Om oss" is an honest no-op instead of a new,
-        # byte-identical version. Read the base Project Input's disabledRoutes from
-        # the SAME authoritative snapshot apply unions against.
-        already_disabled_routes: frozenset[str] = frozenset()
-        try:
-            from scripts.prompt_to_project_input import read_base_run_snapshot
-
-            base_pi_for_remove, _ = read_base_run_snapshot(
-                site_id,
-                base_run_id,
-                output_dir=prompt_inputs_dir,
-                runs_dir=runs_root,
-            )
-            already_disabled_routes = frozenset(
-                _disabled_route_ids_from_dossier(base_pi_for_remove)
-            )
-        except Exception:  # noqa: BLE001
-            # A missing/unreadable base snapshot just means "nothing already
-            # disabled" - never block a legitimate removal on it.
-            already_disabled_routes = frozenset()
+        # byte-identical version. Read the base version's disabledRoutes via the
+        # NON-FATAL helper (it swallows read_base_run_snapshot's SystemExit too;
+        # see its docstring) - this optimization must never crash the build.
+        already_disabled_routes = _base_disabled_route_ids(
+            site_id,
+            base_run_id,
+            prompt_inputs_dir=prompt_inputs_dir,
+            runs_root=runs_root,
+        )
         # Slice B (ADR 0060): contact is removable (allow_required_ids) with a
         # safe CTA fallback; home/services stay protected. The same removable set
         # gates the build's activeRoutes filter (_filter_disabled_routes), so the

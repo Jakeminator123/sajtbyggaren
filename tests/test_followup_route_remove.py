@@ -312,3 +312,29 @@ def test_disabled_route_is_sticky_across_a_later_restyle(
     # The restyle minted a fresh version, and /om-oss is STILL gone (sticky).
     build_dir = _newest_build_dir(generated_dir, site_id)
     assert not (build_dir / "app" / "om-oss" / "page.tsx").exists()
+
+
+def test_base_disabled_route_ids_is_non_fatal_on_systemexit(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """#333 review: read_base_run_snapshot raises SystemExit (a base exception
+    that does NOT subclass Exception) for a pruned/missing base snapshot - a real
+    retention scenario. The already-disabled lookup (finding 7) is a non-fatal
+    optimization, so it must swallow that and return an empty set instead of
+    crashing the route_remove build. Guards the explicit (SystemExit, Exception)
+    catch in _base_disabled_route_ids."""
+    import scripts.prompt_to_project_input as ptpi
+    from scripts.build_site import _base_disabled_route_ids
+
+    def _raise_system_exit(*_args: object, **_kwargs: object) -> None:
+        raise SystemExit("baseRunId Project Input-snapshot saknas (pruned)")
+
+    monkeypatch.setattr(ptpi, "read_base_run_snapshot", _raise_system_exit)
+
+    result = _base_disabled_route_ids(
+        "painter-palma",
+        "some-run-id",
+        prompt_inputs_dir=tmp_path,
+        runs_root=tmp_path,
+    )
+    assert result == frozenset()
