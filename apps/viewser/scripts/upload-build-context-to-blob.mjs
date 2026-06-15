@@ -42,7 +42,10 @@
  * apps/viewser/.env.vercel.local. Den publika URL:en skrivs till stdout
  * (loggar går till stderr så stdout kan pipas). Finns KV-env (samma namn som
  * lib/kv-store/upstash-redis.ts) sparas URL:en även i KV under
- * "viewser:build-context:url" — annars hoppas det steget över med en notis.
+ * "viewser:build-context:url" och aktuell git-SHA i
+ * "viewser:build-context:sha" — annars hoppas det steget över med en notis.
+ * Om arbetsträdet har ocommittade ändringar i build-kontext-ytorna varnar
+ * CLI:t mjukt och sparar även "viewser:build-context:dirty" = true/false i KV.
  */
 
 import { spawnSync } from "node:child_process";
@@ -52,7 +55,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const BLOB_PATHNAME = "build-context/current.tar.gz";
-const KV_KEY = "viewser:build-context:url";
+const KV_URL_KEY = "viewser:build-context:url";
+const KV_SHA_KEY = "viewser:build-context:sha";
+const KV_DIRTY_KEY = "viewser:build-context:dirty";
 
 /** Topp-nivå-poster (relativt repo-roten) som ingår i build-kontexten. */
 const INCLUDE_ENTRIES = [
@@ -178,26 +183,90 @@ function createTarball(root) {
   return tarballPath;
 }
 
-async function saveUrlToKv(url) {
+function runGit(root, args) {
+  const result = spawnSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error) {
+    throw new Error(`Kunde inte starta git (${result.error.message}).`);
+  }
+  if (result.status !== 0) {
+    const stderr = result.stderr.trim();
+    throw new Error(
+      `git ${args.join(" ")} avslutades med exit-kod ${result.status}` +
+        (stderr ? `: ${stderr}` : "."),
+    );
+  }
+  return result.stdout.trim();
+}
+
+function currentGitSha(root) {
+  return runGit(root, ["rev-parse", "HEAD"]);
+}
+
+function dirtyBuildContextPaths(root) {
+  const output = runGit(root, [
+    "status",
+    "--porcelain",
+    "--untracked-files=all",
+    "--",
+    ...INCLUDE_ENTRIES,
+  ]);
+  if (!output) return [];
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.slice(3).trim())
+    .filter(Boolean);
+}
+
+function warnIfDirty(paths) {
+  if (paths.length === 0) return;
+  const shown = paths.slice(0, 20);
+  const extra = paths.length - shown.length;
+  console.error(
+    "VARNING: build-kontexten laddas upp från ett arbetsträd med " +
+      "ocommittade ändringar i ytorna som följer med tarballen. Den sparade " +
+      "git-SHA:n beskriver inte exakt tarballens innehåll.",
+  );
+  for (const filePath of shown) {
+    console.error(`  - ${filePath}`);
+  }
+  if (extra > 0) {
+    console.error(`  ...och ${extra} till.`);
+  }
+}
+
+async function saveMetadataToKv(url, sha, dirty) {
   const kvUrl = resolveKvRestUrl();
   const kvToken = resolveKvRestToken();
   if (!kvUrl || !kvToken) {
     console.error(
       "Notis: KV-env saknas (KV_REST_API_URL/KV_REST_API_TOKEN m.fl.) — " +
-        `hoppar över KV-skrivningen av ${KV_KEY}. Sätt ` +
+        `hoppar över KV-skrivningen av ${KV_URL_KEY}, ${KV_SHA_KEY} och ` +
+        `${KV_DIRTY_KEY}. Sätt ` +
         "VIEWSER_BUILD_CONTEXT_URL i den hostade miljön i stället.",
     );
     return;
   }
   // Samma REST-mönster som lib/kv-store/upstash-redis.ts: rått Redis-kommando
-  // som JSON-array mot Upstash REST-endpointen. Värdet är den råa URL-strängen.
+  // som JSON-array mot Upstash REST-endpointen.
   const response = await fetch(kvUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${kvToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(["SET", KV_KEY, url]),
+    body: JSON.stringify([
+      "MSET",
+      KV_URL_KEY,
+      url,
+      KV_SHA_KEY,
+      sha,
+      KV_DIRTY_KEY,
+      dirty ? "true" : "false",
+    ]),
   });
   if (!response.ok) {
     throw new Error(`KV-skrivning misslyckades (HTTP ${response.status}).`);
@@ -206,7 +275,10 @@ async function saveUrlToKv(url) {
   if (payload?.error) {
     throw new Error(`KV-skrivning misslyckades: ${payload.error}`);
   }
-  console.error(`Build-kontext-URL sparad i KV under ${KV_KEY}.`);
+  console.error(
+    `Build-kontext-metadata sparad i KV under ${KV_URL_KEY}, ` +
+      `${KV_SHA_KEY} och ${KV_DIRTY_KEY}.`,
+  );
 }
 
 async function main() {
@@ -233,6 +305,9 @@ async function main() {
   }
 
   const root = repoRoot();
+  const sha = currentGitSha(root);
+  const dirtyPaths = dirtyBuildContextPaths(root);
+  warnIfDirty(dirtyPaths);
   console.error(`Paketerar build-kontext från ${root} ...`);
   const tarballPath = createTarball(root);
 
@@ -251,7 +326,7 @@ async function main() {
     // Endast URL:en på stdout så den kan pipas vidare.
     console.log(blob.url);
 
-    await saveUrlToKv(blob.url);
+    await saveMetadataToKv(blob.url, sha, dirtyPaths.length > 0);
   } finally {
     try {
       unlinkSync(tarballPath);

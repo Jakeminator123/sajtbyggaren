@@ -55,13 +55,27 @@ node apps/viewser/scripts/upload-build-context-to-blob.mjs
   `*.pyc` (och `.env*` täcks aldrig av inkluderingslistan).
 - Laddar upp till blob-pathname `build-context/current.tar.gz`
   (`access: public`, `allowOverwrite: true`, `addRandomSuffix: false`),
-  skriver den publika URL:en till stdout och sparar den i KV under
-  `viewser:build-context:url` när KV-env finns (annars notis på stderr).
+  skriver den publika URL:en till stdout och sparar URL, git-SHA och
+  dirty-flagga i KV under `viewser:build-context:url`,
+  `viewser:build-context:sha` och `viewser:build-context:dirty` när KV-env
+  finns (annars notis på stderr).
 - Token-upplösning: `process.env.BLOB_READ_WRITE_TOKEN`, annars repo-rotens
   `.env`, sist `apps/viewser/.env.vercel.local`.
 
-Kör om CLI:t varje gång Python-pipen (scripts/packages/governance/starters)
-ändras — bygg-sandboxen ser bara det som ligger i tarballen.
+Kör checken och sedan uploaden varje gång Python-pipen eller OpenClaw-kedjan
+ändras — bygg-sandboxen ser bara det som ligger i tarballen:
+
+```bash
+cd apps/viewser
+npm run build-context:check
+npm run build-context:upload
+```
+
+Checken jämför sparad `viewser:build-context:sha` mot aktuell git-commit för
+`scripts/`, `packages/`, `governance/`, `data/starters/`, `requirements.txt`
+och `pyproject.toml`. Om senaste upload gjordes från ett dirty arbetsträd
+varnar checken också via `viewser:build-context:dirty`. Ingen auto-publish
+sker.
 
 ## Env-krav
 
@@ -90,6 +104,10 @@ In i sandboxen skickas (via `runCommand env`): `RUN_ID`, `SITE_ID`,
   `current.json`-pekaren på disk. Sätts först efter lyckad blob-upload.
 - `viewser:build-context:url` (ingen TTL): rå URL-sträng till senaste
   build-kontext-tarballen (skrivs av operatörs-CLI:t).
+- `viewser:build-context:sha` (ingen TTL): git-SHA som senaste
+  build-kontext-tarballen laddades upp från.
+- `viewser:build-context:dirty` (ingen TTL): `true` när senaste upload
+  gjordes med ocommittade ändringar i build-kontext-ytorna.
 
 Pollning: `GET /api/hosted-build/<runId>?siteId=<siteId>` returnerar
 status-JSON:en när siteId matchar statusens. 404 med samma svenska notis vid

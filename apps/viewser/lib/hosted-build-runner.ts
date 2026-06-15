@@ -160,6 +160,7 @@ export interface HostedBuildRunStatus {
 
 const HOSTED_RUN_KEY_PREFIX = "viewser:hosted-run:";
 const BUILD_CONTEXT_URL_KEY = "viewser:build-context:url";
+const BUILD_CONTEXT_SHA_KEY = "viewser:build-context:sha";
 const BUILD_CONTEXT_URL_ENV = "VIEWSER_BUILD_CONTEXT_URL";
 
 /**
@@ -1276,6 +1277,15 @@ export async function startHostedBuild(
         `"${BUILD_CONTEXT_URL_KEY}") eller sätt env ${BUILD_CONTEXT_URL_ENV}.`,
     );
   }
+  let contextSha = "unknown";
+  try {
+    contextSha =
+      (await store.get(BUILD_CONTEXT_SHA_KEY))?.trim().replace(/^"|"$/g, "") ||
+      "unknown";
+  } catch {
+    contextSha = "unknown";
+  }
+  console.info(`Hosted build uses build-context SHA: ${contextSha}`);
 
   const sdk = await loadSandboxSdk();
   if (!sdk) {

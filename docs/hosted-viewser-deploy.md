@@ -96,9 +96,19 @@ Den konsoliderade faktiska listan per 2026-06-11 finns i
 | `VIEWSER_RATE_LIMIT_<SCOPE>` | Override av per-ip-kvoterna (ADR 0050); 0 stänger av ett scope |
 
 Build-kontexten (Python-pipen som sandboxen kör) laddas upp av operatören
-lokalt med `node apps/viewser/scripts/upload-build-context-to-blob.mjs` —
-kör om den varje gång `scripts/`, `packages/`, `governance/` eller
-`data/starters/` ändras.
+lokalt. Efter merge av Python/generation/OpenClaw-ändringar i `scripts/`,
+`packages/`, `governance/`, `data/starters/`, `requirements.txt` eller
+`pyproject.toml`:
+
+```bash
+cd apps/viewser
+npm run build-context:check
+npm run build-context:upload
+```
+
+Check-kommandot jämför `viewser:build-context:sha` i KV med aktuell
+git-commit för samma ytor som tarballen innehåller. Upload-kommandot sparar
+både URL, SHA och dirty-flagga i KV. Det finns ingen auto-publish.
 
 ## Skyddsmodellen i publik drift (ADR 0050)
 
