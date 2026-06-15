@@ -32,9 +32,9 @@ import {
 
 // AUTOGEN_MODEL_FACTS_START -- skrivs av scripts/update_canvas_facts.py, redigera inte for hand
 const MODEL_FACTS = {
-  generatedAt: "2026-06-12",
-  llmModelsVersion: 12,
-  engineModels: ["gpt-5.4"],
+  generatedAt: "2026-06-15",
+  llmModelsVersion: 13,
+  engineModels: ["gpt-5.4", "gpt-5.5", "gpt-5.4-mini"],
   embeddingModel: "text-embedding-3-small",
   chatFallbackModel: "gpt-5.5",
   visionFallbackModel: "gpt-5.5",

@@ -43,26 +43,30 @@ def _write_policy(tmp_path: Path, roles: list[dict]) -> Path:
 
 
 def test_resolves_brief_model_params_from_real_policy():
-    """v11-startvärdena (ADR 0052): briefModel = low / 6000."""
+    """briefModel = medium / 6000 (v13 model routing bumpade effort low->medium;
+    modellen stannar gpt-5.4 per coach-matrisen)."""
     params = resolve_role_params("briefModel")
     assert params.role_id == "briefModel"
     assert params.model == "gpt-5.4"
-    assert params.reasoning_effort == "low"
+    assert params.reasoning_effort == "medium"
     assert params.max_output_tokens == 6000
 
 
 def test_real_policy_declares_adr_0052_start_values():
     """Hela ADR-tabellen, så en framtida policy-bump som tappar ett värde syns."""
+    # v13 (model routing, coach-beslut 2026-06-15) bumpade konduktor-/planerings-/
+    # kritiker-rollerna till high reasoning + högre tak och briefModel till medium;
+    # övriga rollers effort/tokens är oförändrade.
     expected = {
-        "briefModel": ("low", 6000),
-        "planningModel": ("medium", 6000),
-        "routerModel": ("low", 4000),
+        "briefModel": ("medium", 6000),
+        "planningModel": ("high", 16000),
+        "routerModel": ("high", 8000),
         "copyDirectiveModel": ("low", 4000),
         "styleDirectiveModel": ("none", 2000),
         "rerankModel": ("low", 2000),
         "codegenModel": ("medium", 4000),
         "repairModel": ("medium", 4000),
-        "verifierModel": ("low", 4000),
+        "verifierModel": ("high", 8000),
         "variantModel": ("medium", 8000),
         "dossierModel": ("medium", 12000),
     }

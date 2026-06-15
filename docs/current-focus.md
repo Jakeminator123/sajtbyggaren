@@ -45,7 +45,12 @@ ersätter ett specialfall i stället för att lägga ett. Planeringssvaret är n
 dessutom katalog-medvetet (ADR 0059): det skiljer en känd, monterbar
 katalog-sektion/-komponent från en genuint ny som ärligt kräver intag — enbart
 via router-data, ingen apply/render-ändring (den synliga monteringen är nästa
-verifierade pass).
+verifierade pass). Och: model routing v13 (`llm-models.v1.json`) — planning/
+router/verifier på gpt-5.5 (high reasoning, högre tokentak), rerank på
+gpt-5.4-mini, brief → medium reasoning; centralt + reversibelt via policyn +
+`llm_model_params.py` (inga hårdkodade modeller). OBS: gpt-5.5/gpt-5.4-mini
+behöver real-key-smoke mot prod-nyckeln innan vi förlitar oss på dem (CI/tester
+mockar utan nyckel och fångar inte modell-tillgänglighet).
 
 **Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
@@ -74,13 +79,13 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `64800d12` (2026-06-15 ~05:40 UTC+2; `jakob-be` = HEAD,
-8+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
-directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 utkast
-(`f481d201`), novel-intent planeringssvar (`9d749486`), katalog-medveten plan
-(`64800d12`) + ADR 0059-utredning om synlig render (denna commit);
-`origin/jakob-be` i synk efter push, working tree rent; `main`/`origin/main`
-orörda på `f4e02756`). Föregående: `b4a818c1`.
+Last verified state: `d3c1a034` (2026-06-15 ~11:40 UTC+2; `jakob-be` = HEAD,
+9+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
+directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 (`f481d201`) +
+render-utredning (`d3c1a034`), novel-intent + katalog-medveten plan
+(`9d749486`/`64800d12`), model routing v13 (denna commit); `origin/jakob-be`
+i synk efter push, working tree rent; `main`/`origin/main` orörda på
+`f4e02756`). Föregående: `b4a818c1`.
 
 ## Öppna PR att känna till
 
