@@ -4363,6 +4363,27 @@ def run_followup_chain(
             routes_path = SCAFFOLDS_DIR / scaffold_id_for_remove / "routes.json"
             if routes_path.exists():
                 scaffold_routes_for_remove = load_json(routes_path)
+        # Finding 7 (#328 review): refuse a page the base version ALREADY removed
+        # so repeating "ta bort sidan Om oss" is an honest no-op instead of a new,
+        # byte-identical version. Read the base Project Input's disabledRoutes from
+        # the SAME authoritative snapshot apply unions against.
+        already_disabled_routes: frozenset[str] = frozenset()
+        try:
+            from scripts.prompt_to_project_input import read_base_run_snapshot
+
+            base_pi_for_remove, _ = read_base_run_snapshot(
+                site_id,
+                base_run_id,
+                output_dir=prompt_inputs_dir,
+                runs_dir=runs_root,
+            )
+            already_disabled_routes = frozenset(
+                _disabled_route_ids_from_dossier(base_pi_for_remove)
+            )
+        except Exception:  # noqa: BLE001
+            # A missing/unreadable base snapshot just means "nothing already
+            # disabled" - never block a legitimate removal on it.
+            already_disabled_routes = frozenset()
         # Slice B (ADR 0060): contact is removable (allow_required_ids) with a
         # safe CTA fallback; home/services stay protected. The same removable set
         # gates the build's activeRoutes filter (_filter_disabled_routes), so the
@@ -4371,6 +4392,7 @@ def run_followup_chain(
             route_targets,
             scaffold_routes_for_remove,
             allow_required_ids=_REMOVABLE_REQUIRED_ROUTE_IDS,
+            already_disabled=already_disabled_routes,
         )
 
     if (
@@ -4457,6 +4479,19 @@ def run_followup_chain(
         applied_section_capabilities=added_capabilities,
         section_capability_for_intent=SECTION_TYPE_CAPABILITY,
     )
+    # Finding 2 (#328 review): a REFUSED route_remove (unknown/required/already-
+    # removed page) is otherwise only surfaced by the no-op gate above, which a
+    # COMPOUND follow-up ("ta bort sidan Banana och gör hero blå") skips because
+    # another part applied. Thread the honest refusal reasons onto the EXISTING
+    # unappliedFollowupIntents channel so a refused removal is never dropped
+    # silently while the rest of the prompt lands. compute() treats route_remove
+    # as covered, so this is the single, non-duplicating report for it.
+    for refused_item in route_refused:
+        refusal_reason = str(refused_item.get("reason", "")).strip()
+        if refusal_reason:
+            unapplied_followup_intents.append(
+                {"target": "sidborttagning", "reason": refusal_reason}
+            )
 
     # 4. Apply (kor-7c): create the next immutable v<N+1> Project Input. A valid
     #    plan whose patch is unmapped writes nothing (all-or-nothing, honest).

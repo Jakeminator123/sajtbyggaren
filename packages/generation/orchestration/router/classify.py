@@ -737,7 +737,19 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     # ("ta bort knappen") has neither a page noun nor a route label and falls
     # through to component_remove below.
     route_label_id = _detect_route_label(work)
-    if has_remove and (route_label_id is not None or has_page_noun):
+    # A nav/link-only removal ("ta bort länken till Om oss", "ta bort Om oss ur
+    # menyn") names a link/menu WIDGET, not a whole page. Removing the page would
+    # be destructive and is not what was asked; nav-only editing is a planned
+    # slice (coach's nav_edit). Until it lands, divert these to component_remove
+    # (an honest no-op) so a link/menu request can NEVER delete the page. An
+    # explicit page noun ("ta bort SIDAN Om oss") overrides - the operator named
+    # the page, so the page removal (which also rebuilds the nav) is intended.
+    nav_only_object = component_intent in ("link", "menu")
+    if (
+        has_remove
+        and (route_label_id is not None or has_page_noun)
+        and not (nav_only_object and not has_page_noun)
+    ):
         result.editKind = "route_remove"
         result.scope = "route"
         result.target = (

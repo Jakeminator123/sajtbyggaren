@@ -29,7 +29,11 @@ import { runOpenClawFollowupApply } from "@/lib/openclaw-runner";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
 import { classifyMessage } from "@/lib/router-classify-runner";
 import { readRunChangeSet } from "@/lib/run-change-set";
-import { readAppliedCopyDirectives, readBuildResult, runsDir } from "@/lib/runs";
+import {
+  readAppliedCopyDirectives,
+  readBuildResult,
+  runsDir,
+} from "@/lib/runs";
 import { loadSoulBaseLines } from "@/lib/soul";
 
 // Hostat: bygget kör detached i en sandbox men NDJSON-streamen poll:ar KV
@@ -124,88 +128,90 @@ const MarkedSectionSchema = z
   })
   .strict();
 
-const PromptPayloadSchema = z.object({
-  // Master-prompten från discovery-wizarden kan bli flera kilobyte
-  // (operatörens originaltext + 8 sektioner med kategori, kontakt,
-  // tjänster, story, sidor, ton). 16k är vältilltaget för worst-case
-  // (alla wizard-fält maxade) utan att riskera att brytas vid en
-  // ovanligt lång story-text.
-  prompt: z
-    .string()
-    .trim()
-    .min(1, "Prompt får inte vara tom.")
-    .max(16000, "Prompt får vara max 16 000 tecken."),
-  mode: z.enum(["init", "followup"]).default("init"),
-  siteId: z
-    .string()
-    .trim()
-    .regex(SITE_ID_PATTERN, "Ogiltigt siteId för följdprompt.")
-    .optional(),
-  // Iterera från en specifik historisk run istället för senaste. UI
-  // sätter denna när operatören klickar "Iterera från denna" på en
-  // versions-rad (se GAP-backend-build-trace-endpoint.md). Bakåt-
-  // kompatibel: utan baseRunId fungerar follow-up exakt som idag
-  // (prompt_to_project_input.py läser senaste PI-snapshotet för siteId).
-  baseRunId: z
-    .string()
-    .trim()
-    .regex(RUN_ID_PATTERN, "Ogiltigt baseRunId.")
-    .optional(),
-  discovery: DiscoveryPayloadSchema.optional(),
-  // ADR 0046: operatörens preview-markeringar ("Markera modul"). Mjuk
-  // prioriteringssignal — valideras mot base-runens facit på Python-sidan
-  // och triggar aldrig ensam en build. Max 5 (speglar MAX_MARKED_SECTIONS
-  // i preview-inspector-context.tsx).
-  markedSections: z.array(MarkedSectionSchema).max(5).optional(),
-  // Specialist-dispatch steg 2 (task A): strukturerat verktygs-intent från
-  // builder-dialogerna ({tool, params}). Skalet hålls permissivt — params
-  // djup-valideras per tool i sin konsument (asset_set re-valideras fält
-  // för fält i prompt-runner.ts + Python-helpern). Bara asset_set forwardas
-  // till CLI:t; övriga tools konsumeras i sina egna sömmar och ignoreras
-  // här precis som när fältet strippades tyst av det icke-stricta schemat.
-  toolIntent: z
-    .object({
-      tool: z.string().trim().min(1).max(40),
-      params: z.record(z.string(), z.unknown()),
-    })
-    .optional(),
-}).superRefine((payload, context) => {
-  if (payload.mode === "followup" && !payload.siteId) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["siteId"],
-      message: "Följdprompt kräver valt siteId.",
-    });
-  }
-  if (payload.mode === "followup" && payload.discovery) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["discovery"],
-      message: "Discovery-wizarden används bara i init-läge.",
-    });
-  }
-  if (payload.baseRunId && payload.mode !== "followup") {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["baseRunId"],
-      message: "baseRunId kan bara anges i follow-up-läge.",
-    });
-  }
-  if (payload.markedSections?.length && payload.mode !== "followup") {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["markedSections"],
-      message: "markedSections kan bara anges i follow-up-läge.",
-    });
-  }
-  if (payload.toolIntent && payload.mode !== "followup") {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["toolIntent"],
-      message: "toolIntent kan bara anges i follow-up-läge.",
-    });
-  }
-});
+const PromptPayloadSchema = z
+  .object({
+    // Master-prompten från discovery-wizarden kan bli flera kilobyte
+    // (operatörens originaltext + 8 sektioner med kategori, kontakt,
+    // tjänster, story, sidor, ton). 16k är vältilltaget för worst-case
+    // (alla wizard-fält maxade) utan att riskera att brytas vid en
+    // ovanligt lång story-text.
+    prompt: z
+      .string()
+      .trim()
+      .min(1, "Prompt får inte vara tom.")
+      .max(16000, "Prompt får vara max 16 000 tecken."),
+    mode: z.enum(["init", "followup"]).default("init"),
+    siteId: z
+      .string()
+      .trim()
+      .regex(SITE_ID_PATTERN, "Ogiltigt siteId för följdprompt.")
+      .optional(),
+    // Iterera från en specifik historisk run istället för senaste. UI
+    // sätter denna när operatören klickar "Iterera från denna" på en
+    // versions-rad (se GAP-backend-build-trace-endpoint.md). Bakåt-
+    // kompatibel: utan baseRunId fungerar follow-up exakt som idag
+    // (prompt_to_project_input.py läser senaste PI-snapshotet för siteId).
+    baseRunId: z
+      .string()
+      .trim()
+      .regex(RUN_ID_PATTERN, "Ogiltigt baseRunId.")
+      .optional(),
+    discovery: DiscoveryPayloadSchema.optional(),
+    // ADR 0046: operatörens preview-markeringar ("Markera modul"). Mjuk
+    // prioriteringssignal — valideras mot base-runens facit på Python-sidan
+    // och triggar aldrig ensam en build. Max 5 (speglar MAX_MARKED_SECTIONS
+    // i preview-inspector-context.tsx).
+    markedSections: z.array(MarkedSectionSchema).max(5).optional(),
+    // Specialist-dispatch steg 2 (task A): strukturerat verktygs-intent från
+    // builder-dialogerna ({tool, params}). Skalet hålls permissivt — params
+    // djup-valideras per tool i sin konsument (asset_set re-valideras fält
+    // för fält i prompt-runner.ts + Python-helpern). Bara asset_set forwardas
+    // till CLI:t; övriga tools konsumeras i sina egna sömmar och ignoreras
+    // här precis som när fältet strippades tyst av det icke-stricta schemat.
+    toolIntent: z
+      .object({
+        tool: z.string().trim().min(1).max(40),
+        params: z.record(z.string(), z.unknown()),
+      })
+      .optional(),
+  })
+  .superRefine((payload, context) => {
+    if (payload.mode === "followup" && !payload.siteId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["siteId"],
+        message: "Följdprompt kräver valt siteId.",
+      });
+    }
+    if (payload.mode === "followup" && payload.discovery) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["discovery"],
+        message: "Discovery-wizarden används bara i init-läge.",
+      });
+    }
+    if (payload.baseRunId && payload.mode !== "followup") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["baseRunId"],
+        message: "baseRunId kan bara anges i follow-up-läge.",
+      });
+    }
+    if (payload.markedSections?.length && payload.mode !== "followup") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["markedSections"],
+        message: "markedSections kan bara anges i follow-up-läge.",
+      });
+    }
+    if (payload.toolIntent && payload.mode !== "followup") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["toolIntent"],
+        message: "toolIntent kan bara anges i follow-up-läge.",
+      });
+    }
+  });
 
 // B169: per-siteId mutex för prompt-flödet. Tidigare en enda global
 // ``let promptInFlight: Promise | null`` som serialiserade ALLA sajter i
@@ -248,7 +254,9 @@ function markedSectionsAsRouteSections(
 // null so the client surface explicitly handles the unknown case
 // instead of silently rendering a green "build klar" banner over a
 // failed run (B44).
-function extractBuildStatus(buildResult: Record<string, unknown>): string | null {
+function extractBuildStatus(
+  buildResult: Record<string, unknown>,
+): string | null {
   const value = buildResult.status;
   return typeof value === "string" ? value : null;
 }
@@ -341,6 +349,22 @@ const CONVERSATION_ANSWER_KINDS: ReadonlySet<string> = new Set([
   "question",
 ]);
 
+// #328 review (finding 6): chain stages that are a TERMINAL honest no-op — the
+// KÖR-7 chain RECOGNISED a concrete edit and deliberately refused it (an unknown/
+// required/already-removed page for route_remove; an unsupported section type for
+// section_add). The legacy Phase 1+2 path has no executor for these either, so
+// falling through to it would mint an identical "legacy" version the operator
+// never asked for ("inget hände men en ny version skapades"). These stages stop
+// the follow-up with a build-free honest answer instead. The string values are
+// build_site.py's run_followup_chain stage names, surfaced verbatim as
+// bridge.status (run_openclaw_followup.py). NOTE: only stages with NO legacy
+// executor belong here — a generic no-op (plan_empty/router_no_edit) still falls
+// through so the legacy copy/edit resolver gets its chance.
+const TERMINAL_EDIT_NOOP_STAGES: ReadonlySet<string> = new Set([
+  "route_remove_unsupported",
+  "section_unsupported",
+]);
+
 type ConversationMetadata = {
   conversationKind: string;
   role: string | null;
@@ -425,7 +449,11 @@ async function latestChangeSnippet(
       "utf-8",
     );
     const input = JSON.parse(raw) as Record<string, unknown>;
-    for (const key of ["followUpPrompt", "originalPrompt", "rawPrompt"] as const) {
+    for (const key of [
+      "followUpPrompt",
+      "originalPrompt",
+      "rawPrompt",
+    ] as const) {
       const value = input[key];
       if (typeof value === "string" && value.trim()) {
         changePrompt = value.trim().slice(0, 300);
@@ -435,7 +463,8 @@ async function latestChangeSnippet(
   } catch {
     // input.json saknas/oläsbar -> historiken får klara sig utan prompten.
   }
-  const versionLabel = latest.version !== null ? `v${latest.version}` : "okänd version";
+  const versionLabel =
+    latest.version !== null ? `v${latest.version}` : "okänd version";
   const promptPart = changePrompt
     ? ` Senaste ändringsprompt: "${changePrompt}".`
     : "";
@@ -571,7 +600,9 @@ async function generateAppliedConfirmation(
     Array.isArray(chain.changedRoutes) &&
     chain.changedRoutes.every((r) => typeof r === "string")
   ) {
-    facts.push(`Ändrade sidor: ${(chain.changedRoutes as string[]).join(", ")}`);
+    facts.push(
+      `Ändrade sidor: ${(chain.changedRoutes as string[]).join(", ")}`,
+    );
   }
   if (role) facts.push(`Utförande roll: ${role}`);
   const systemContent = [
@@ -638,7 +669,11 @@ async function generateFollowupOutcomeSummary(
     buildStatus: string | null;
     appliedVisibleEffect: boolean | null;
     appliedVisibleEffectReason: string | null;
-    appliedCopyDirectives: { target: string; operation: string; payload: string }[];
+    appliedCopyDirectives: {
+      target: string;
+      operation: string;
+      payload: string;
+    }[];
     changedRoutes: string[];
     unappliedFollowupIntents: { target: string; reason: string }[];
     openClawDecisionAction: string | null;
@@ -647,7 +682,8 @@ async function generateFollowupOutcomeSummary(
 ): Promise<string | null> {
   if (!openaiEnv("OPENAI_API_KEY")) return null;
   const lines: string[] = [];
-  if (typeof facts.version === "number") lines.push(`Ny version: v${facts.version}`);
+  if (typeof facts.version === "number")
+    lines.push(`Ny version: v${facts.version}`);
   if (facts.buildStatus) lines.push(`Byggstatus: ${facts.buildStatus}`);
   lines.push(
     facts.appliedVisibleEffect === true
@@ -672,7 +708,11 @@ async function generateFollowupOutcomeSummary(
   if (facts.unappliedFollowupIntents.length > 0) {
     lines.push(
       `Önskemål som INTE kunde göras: ${facts.unappliedFollowupIntents
-        .map((p) => (p.target && p.reason ? `${p.target} – ${p.reason}` : p.target || p.reason))
+        .map((p) =>
+          p.target && p.reason
+            ? `${p.target} – ${p.reason}`
+            : p.target || p.reason,
+        )
         .join("; ")}`,
     );
   }
@@ -695,7 +735,10 @@ async function generateFollowupOutcomeSummary(
   ].join("\n");
   try {
     const timeout = new Promise<null>((resolve) => {
-      const timer = setTimeout(() => resolve(null), APPLIED_CONFIRMATION_TIMEOUT_MS);
+      const timer = setTimeout(
+        () => resolve(null),
+        APPLIED_CONFIRMATION_TIMEOUT_MS,
+      );
       if (typeof timer.unref === "function") timer.unref();
     });
     const completion = chatWithOpenAi([
@@ -984,6 +1027,55 @@ async function runPromptBuildOnce(
     }
   }
 
+  // #328 review (finding 6): a TERMINAL honest no-op edit. The bridge ran the
+  // chain, which RECOGNISED a concrete edit and refused it
+  // (route_remove_unsupported / section_unsupported) — applied=false, no run
+  // written. Falling through to the legacy Phase 1+2 build would mint an
+  // identical version the operator never asked for ("inget hände men en ny
+  // version skapades"). Return a build-free honest answer instead: no runId, no
+  // version, the preview stays on the current version. Mirrors the conversation
+  // gate's answer-only shape; the line is grounded ENTIRELY in the chain's own
+  // notes, so it can never fake a success.
+  if (
+    applyResult &&
+    !applyResult.bridge.applied &&
+    TERMINAL_EDIT_NOOP_STAGES.has(applyResult.bridge.status)
+  ) {
+    const chain = applyResult.bridge.chain ?? {};
+    const chainNotes = Array.isArray(chain.notes)
+      ? (chain.notes as unknown[]).filter(
+          (note): note is string =>
+            typeof note === "string" && note.trim().length > 0,
+        )
+      : [];
+    const honestNoOp =
+      chainNotes.length > 0
+        ? `Sajten är oförändrad — ingen ny version skapades. ${chainNotes.join(" ")}`
+        : "Sajten är oförändrad — din ändring kunde inte göras, så ingen ny " +
+          "version skapades.";
+    return {
+      runId: null,
+      siteId: payload.siteId ?? null,
+      projectId: null,
+      version: null,
+      briefSource: null,
+      buildStatus: null,
+      buildResult: {},
+      appliedCopyDirectives: [],
+      changeSet: null,
+      routerDecision: null,
+      // The honest decision (+ conversation metadata) so the client can see WHY
+      // no build ran; never rendered raw.
+      openClawDecision: applyResult.decision,
+      bridge: applyResult.bridge,
+      // Honest, build-grounded line FloatingChat renders instead of a build
+      // summary. runId is null so use-followup-build treats it as answer-only
+      // (no preview refresh) — it can never look like a successful change.
+      answerText: honestNoOp,
+      conversation: conversationMeta,
+    };
+  }
+
   // B164: the bridge returned null (timeout / exit!=0 / truncated stdout /
   // parse-fail). BEFORE falling through to the legacy Phase 1+2 build — which
   // would silently build a SECOND version on top of whatever the KÖR-7 chain
@@ -1055,11 +1147,13 @@ async function runPromptBuildOnce(
         ReturnType<typeof readAppliedCopyDirectives>
       > = [];
       try {
-        recoveredCopyDirectives = await readAppliedCopyDirectives(recoveredRunId);
+        recoveredCopyDirectives =
+          await readAppliedCopyDirectives(recoveredRunId);
       } catch {
         recoveredCopyDirectives = [];
       }
-      let recoveredChangeSet: Awaited<ReturnType<typeof readRunChangeSet>> = null;
+      let recoveredChangeSet: Awaited<ReturnType<typeof readRunChangeSet>> =
+        null;
       try {
         recoveredChangeSet = await readRunChangeSet(
           recoveredRunId,
@@ -1229,7 +1323,8 @@ async function runPromptBuildOnce(
           ),
           openClawDecisionAction:
             openClawDecision &&
-            typeof (openClawDecision as Record<string, unknown>).action === "string"
+            typeof (openClawDecision as Record<string, unknown>).action ===
+              "string"
               ? ((openClawDecision as Record<string, unknown>).action as string)
               : null,
           role: conversationMeta?.role ?? null,
@@ -1328,7 +1423,9 @@ async function pollHostedRunUntilSettled(
   const deadline = Date.now() + HOSTED_STREAM_BUDGET_MS;
   let buildingSignalled = false;
   while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, HOSTED_POLL_INTERVAL_MS));
+    await new Promise((resolve) =>
+      setTimeout(resolve, HOSTED_POLL_INTERVAL_MS),
+    );
     const status = await kvGetJson<HostedBuildRunStatus>(
       store,
       hostedRunKey(runId),
@@ -1379,7 +1476,9 @@ async function buildHostedFollowupResponse(
 ): Promise<Record<string, unknown>> {
   // conversation-metadatan coerceas via samma reader som lokalt (läser
   // ``conversation``-blocket defensivt; fält-drift → null).
-  const conversation = extractConversation({ conversation: result.conversation });
+  const conversation = extractConversation({
+    conversation: result.conversation,
+  });
 
   if (result.engine === "answer-only") {
     // Answer-only: inget bygge, inget runId. answerText från chat-hjälpen
@@ -1444,9 +1543,11 @@ async function buildHostedFollowupResponse(
     answerText = await generateFollowupOutcomeSummary(prompt, {
       engine: result.engine,
       version: typeof result.version === "number" ? result.version : null,
-      buildStatus: typeof result.buildStatus === "string" ? result.buildStatus : null,
+      buildStatus:
+        typeof result.buildStatus === "string" ? result.buildStatus : null,
       appliedVisibleEffect: extractAppliedVisibleEffect(buildResult),
-      appliedVisibleEffectReason: extractAppliedVisibleEffectReason(buildResult),
+      appliedVisibleEffectReason:
+        extractAppliedVisibleEffectReason(buildResult),
       // Sandboxen har redan validerat copyDirectives till {target,operation,
       // payload}-formen (write_hosted_result), men typen är unknown[] på wire:t
       // — coerce defensivt så vi aldrig läcker en icke-strukturerad post.
@@ -1463,12 +1564,20 @@ async function buildHostedFollowupResponse(
         ) {
           return [];
         }
-        return [{ target: obj.target, operation: obj.operation, payload: obj.payload }];
+        return [
+          {
+            target: obj.target,
+            operation: obj.operation,
+            payload: obj.payload,
+          },
+        ];
       }),
       changedRoutes: extractChangedRoutes(buildResult, null),
       unappliedFollowupIntents: extractUnappliedFollowupIntents(buildResult),
       openClawDecisionAction:
-        decision && typeof decision.action === "string" ? decision.action : null,
+        decision && typeof decision.action === "string"
+          ? decision.action
+          : null,
       role: conversation?.role ?? null,
     });
   }

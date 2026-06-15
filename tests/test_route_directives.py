@@ -123,6 +123,33 @@ def test_dedupes_and_preserves_order():
     assert disabled == ["about"]
 
 
+def test_already_disabled_route_is_refused_not_redisabled():
+    """#328 finding 7: a page the base version already removed is refused as
+    "already removed", not re-disabled. So repeating "ta bort sidan Om oss" is an
+    honest no-op (empty disabled -> route_remove_unsupported terminal) instead of
+    minting a new, byte-identical version."""
+    disabled, refused = resolve_disabled_routes(
+        ["about"], _LSB_ROUTES, already_disabled=frozenset({"about"})
+    )
+    assert disabled == []
+    assert len(refused) == 1
+    assert refused[0]["routeId"] == "about"
+    assert "redan borttagen" in refused[0]["reason"].lower()
+
+
+def test_already_disabled_still_allows_a_different_new_removal():
+    """already_disabled only gates the routes it names: a different, still-active
+    page resolves normally in the same compound call."""
+    disabled, refused = resolve_disabled_routes(
+        ["about", "contact"],
+        _LSB_ROUTES,
+        allow_required_ids=frozenset({"contact"}),
+        already_disabled=frozenset({"about"}),
+    )
+    assert disabled == ["contact"]
+    assert [item["routeId"] for item in refused] == ["about"]
+
+
 def test_malformed_scaffold_routes_refuses_safely():
     """A missing/malformed routes payload refuses every target (never crashes,
     never disables a route by accident)."""

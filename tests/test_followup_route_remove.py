@@ -213,6 +213,72 @@ def test_remove_services_page_is_still_refused(
     assert (build_dir / "app" / "tjanster" / "page.tsx").exists()
 
 
+def test_repeat_removal_of_disabled_page_is_honest_no_op(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """#328 finding 7: removing a page that is ALREADY removed is an HONEST no-op
+    (stage route_remove_unsupported), not a new byte-identical version. The
+    base version's directives.disabledRoutes is consulted so the resolver refuses
+    the already-disabled route instead of re-disabling it."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    first = run_followup_chain(
+        site_id,
+        "ta bort sidan Om oss",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert first["stage"] == "built", first
+
+    second = run_followup_chain(
+        site_id,
+        "ta bort sidan Om oss",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert second["applied"] is False, second
+    assert second["stage"] == "route_remove_unsupported", second
+
+
+def test_compound_refused_route_is_reported_not_silently_dropped(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """#328 finding 2: a refused route_remove in a COMPOUND follow-up (where
+    another part applies) must NOT be dropped silently. "gör sajten blå och ta
+    bort sidan Tjänster" applies the restyle (built) but reports the refused
+    services removal on the honest unappliedFollowupIntents channel."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    result = run_followup_chain(
+        site_id,
+        "gör sajten blå och ta bort sidan Tjänster",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    intents = result.get("unappliedFollowupIntents") or []
+    assert any(
+        item.get("target") == "sidborttagning"
+        and "obligatorisk" in item.get("reason", "").lower()
+        for item in intents
+    ), intents
+
+
 def test_disabled_route_is_sticky_across_a_later_restyle(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

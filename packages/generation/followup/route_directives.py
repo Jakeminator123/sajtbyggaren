@@ -47,6 +47,7 @@ def resolve_disabled_routes(
     *,
     allow_required: bool = False,
     allow_required_ids: frozenset[str] | None = None,
+    already_disabled: frozenset[str] | None = None,
 ) -> tuple[list[str], list[dict[str, str]]]:
     """Resolve route_remove targets to disable-able scaffold routeIds.
 
@@ -69,9 +70,16 @@ def resolve_disabled_routes(
     (kept for the resolver's direct unit-test seam). ``allow_required_ids`` is
     the Slice B path: the caller passes ``frozenset({"contact"})`` so contact -
     and only contact - becomes removable while ``services`` (and any other
-    required page) stays protected. Deterministic, offline, no LLM.
+    required page) stays protected.
+
+    ``already_disabled`` is the set of routeIds the base version already disabled
+    (``directives.disabledRoutes``). A target already in it is ``refused`` as
+    "already removed" rather than re-disabled, so repeating a successful removal
+    ("ta bort sidan Om oss" twice) is an HONEST no-op instead of minting a new,
+    byte-identical version. Deterministic, offline, no LLM.
     """
     allowed_required = allow_required_ids or frozenset()
+    already_disabled_ids = already_disabled or frozenset()
     default_routes = (
         scaffold_routes.get("defaultRoutes") if isinstance(scaffold_routes, dict) else None
     )
@@ -116,6 +124,17 @@ def resolve_disabled_routes(
                 {
                     "routeId": route_id,
                     "reason": "Startsidan kan inte tas bort.",
+                }
+            )
+            continue
+        if route_id in already_disabled_ids:
+            refused.append(
+                {
+                    "routeId": route_id,
+                    "reason": (
+                        f"Sidan {route_id!r} är redan borttagen "
+                        "(directives.disabledRoutes); ingen ny version behövs."
+                    ),
                 }
             )
             continue
