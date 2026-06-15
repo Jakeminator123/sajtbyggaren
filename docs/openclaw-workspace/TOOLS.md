@@ -25,6 +25,16 @@ ytor, inga nätverksanrop.
   (kedjan rapporterar no-op:en via `unappliedFollowupIntents`). Att vendorera in
   en ny komponent förblir en operatörs-PR (intag → granskning → Starter), aldrig
   en runtime-montering.
+- route_remove — ta bort EN hel icke-obligatorisk sida + dess nav-länk via ett
+  strukturerat direktiv (`directives.disabledRoutes`), aldrig en dossier och
+  aldrig fri filpatch (Route/Nav Mutation V1, ADR 0060). Ägs av
+  `route_editor`-rollen. `route_directives` validerar routeId mot DENNA sajts
+  scaffold + required-vakten; apply skriver den STICKY disabledRoutes-listan;
+  `build_site` beräknar `activeRoutes = defaultRoutes − disabledRoutes` i en
+  filterpunkt. Slice A behåller obligatoriska sidor (hem/tjänster/kontakt) — att
+  ta bort `contact` + retargeta dess CTA:er (mailto/tel/utelämna) + en
+  länkscan är Slice B. Okänd/obligatorisk sida -> ärlig no-op
+  (`stage=route_remove_unsupported`).
 - layout_change — flytta/ordna sektioner (planerad)
 - site_review — svara/granska read-only, ingen build. Ägs av dispatchern
   (router-rollen) by design — ingen egen agentroll och inget eget

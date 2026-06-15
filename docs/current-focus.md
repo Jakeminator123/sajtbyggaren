@@ -73,16 +73,16 @@ renderer-arbetet (designväggarna i ADR 0059). Allt detta är nu i `main` via #3
 
 **Nästa prioriteringar (coach + operatör 2026-06-15; full lista + agentprompt i handoff):**
 
-1. **Route/Nav Mutation V1 — ta bort sida + nav + interna länkar** (NY, högst):
-   OpenClaw/följdprompt kan idag inte ens TA BORT en sida — "ta bort Kontakt"
-   klassas som `component_remove` eller faller till `action_bridge_missing`.
-   Routern saknar `route_remove`/`page_remove`. Bygg det minsta säkra kontraktet:
-   ny editKind `route_remove` + klassificering ("ta bort sidan X / radera
-   kontaktsidan") + `directives.disabledRoutes` + `activeRoutes = defaultRoutes −
-   disabled` i write_pages/render_layout + nav byggd från activeRoutes +
-   contact-CTA-fallback (mailto/tel/utelämna ärligt) + route/link-scan mot aktiva
-   routes. Deterministisk mutation, INGEN fri filpatch. Basal redigeringsförmåga
-   som slår mer katalog-mount. Full agentprompt i handoff.
+1. **Route/Nav Mutation V1 — Slice A LANDAD (implementerad lokalt, ej mergad):**
+   OpenClaw/följdprompt kan nu TA BORT en icke-obligatorisk sida + dess nav-länk
+   via ny editKind `route_remove` + `route_editor`-roll + `directives.disabledRoutes`
+   (STICKY) + EN `activeRoutes`-filterpunkt i `build()` (ADR 0060). "ta bort sidan
+   Om oss" ger ny version utan `/om-oss` + nav-länk; okänd/obligatorisk sida →
+   ärlig no-op (`route_remove_unsupported`). Scaffold-agnostiskt (alla starters),
+   ingen fri filpatch, ingen ny dossier. **NÄSTA: Slice B** — ta bort `contact`
+   (required) + retargeta dess CTA:er (mailto/tel/utelämna) + Quality Gate
+   länk-scan mot aktiva routes (resolvern har redan `allow_required`-sömmen;
+   scout-inventering av de ~12 CTA-platserna i handoff).
 2. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
    prompttext blir ibland stray tjänste-kort kunden aldrig bett om; avgränsa
    till grundade tjänster (samma ärlighets-tema som directive-fixen).

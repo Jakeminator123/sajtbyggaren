@@ -163,6 +163,27 @@ _PAGE_NOUNS = (
     "tjänstesida", "prissida", "webbsida", "sida", "sidan", "sidor", "page",
 )
 
+# Swedish route-label -> scaffold routeId (Route/Nav Mutation V1). Best-effort:
+# the router resolves the label to a routeId from the prompt only; route_directives
+# validates that id against the ACTUAL scaffold routes and enforces the required-
+# page guard (the router never reads disk). Only UNAMBIGUOUS page labels are
+# listed: the core scaffold pages whose bare name IS a page (om oss / kontakt /
+# tjänster) plus their "-sida/-sidan" compounds. Section-type words
+# (faq/team/priser/recensioner/galleri) are deliberately NOT bare keys here so
+# "ta bort recensionerna" stays a component/section concern, never a route_remove.
+_ROUTE_LABEL_IDS = {
+    "om oss": "about", "om-oss": "about", "om oss-sidan": "about",
+    "om-oss-sidan": "about", "om oss sidan": "about", "om-oss-sida": "about",
+    "om oss sida": "about", "about": "about",
+    "kontakt": "contact", "kontakta oss": "contact",
+    "kontaktsida": "contact", "kontaktsidan": "contact",
+    "tjänster": "services", "tjänsterna": "services",
+    "tjänstesida": "services", "tjänstesidan": "services",
+}
+# Longest-first so "kontaktsidan" wins over a bare "kontakt" (both map to
+# contact, but specificity keeps the match deterministic).
+_ROUTE_LABEL_PHRASES = tuple(sorted(_ROUTE_LABEL_IDS, key=len, reverse=True))
+
 _SITE_REFS = (
     "hela sidan", "hela sajten", "startsidan", "hemsidan", "webbplatsen",
     "webbsidan", "sajten", "siten", "sidan", "designen", "layouten", "site",
@@ -504,6 +525,20 @@ def _detect_named_copy_section(text: str) -> str | None:
     return None
 
 
+def _detect_route_label(text: str) -> str | None:
+    """Return the best-effort scaffold routeId a route_remove names, or None.
+
+    Resolves a Swedish page label ("om oss" -> ``about``, "kontaktsidan" ->
+    ``contact``) to a routeId. Best-effort by contract: the router never reads
+    the scaffold, so route_directives validates the id (and the required-page
+    guard) downstream. Returns None when no unambiguous page label is present.
+    """
+    for phrase in _ROUTE_LABEL_PHRASES:
+        if _word_present(text, phrase):
+            return _ROUTE_LABEL_IDS[phrase]
+    return None
+
+
 def _copy_change_target(
     text: str, ctx: RouterContext, ordinal_target: RouterTarget | None
 ) -> RouterTarget | None:
@@ -692,6 +727,24 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
         result.target = target
         return result
 
+    # route_remove (Route/Nav Mutation V1): removing a WHOLE page/route. A remove
+    # verb + a page noun ("ta bort sidan Om oss", "radera kontaktsidan") OR a
+    # recognised route label ("ta bort Kontakt") targets a route, not a widget.
+    # The concrete routeId is resolved best-effort from the route-label lexicon
+    # and validated later against the scaffold by route_directives (which also
+    # enforces the required-page guard). Placed BEFORE component_remove so a page
+    # removal is never mis-typed as a widget removal; a bare component remove
+    # ("ta bort knappen") has neither a page noun nor a route label and falls
+    # through to component_remove below.
+    route_label_id = _detect_route_label(work)
+    if has_remove and (route_label_id is not None or has_page_noun):
+        result.editKind = "route_remove"
+        result.scope = "route"
+        result.target = (
+            RouterTarget(routeId=route_label_id) if route_label_id is not None else target
+        )
+        return result
+
     # component_remove (fix 2): only with a concrete object - a bare "ta bort"
     # is ambiguous, not a remove with an empty target.
     if has_remove:
@@ -797,6 +850,7 @@ _BUILD_BY_EDIT: dict[EditKind, BuildRequirement] = {
     "section_add": "targeted_rebuild",
     "layout_change": "targeted_rebuild",
     "route_add": "targeted_rebuild",
+    "route_remove": "targeted_rebuild",
     "visual_style": "targeted_rebuild",
     "copy_change": "artifact_patch_only",
     "none": "none",
@@ -808,6 +862,7 @@ _CONTEXT_BY_EDIT: dict[EditKind, ContextLevel] = {
     "section_add": "artifacts_plus_sections",
     "layout_change": "artifacts_plus_sections",
     "route_add": "artifacts_plus_sections",
+    "route_remove": "artifacts_plus_sections",
     "visual_style": "artifacts",
     "copy_change": "artifacts",
     "none": "none",

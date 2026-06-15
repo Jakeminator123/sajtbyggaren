@@ -47,6 +47,7 @@ EditKind = Literal[
     "copy_change",
     "layout_change",
     "route_add",
+    "route_remove",
     "none",
 ]
 

@@ -496,3 +496,75 @@ def test_render_layout_with_extra_routes_writes_nav_labels() -> None:
     assert '{"Team"}' in output
     assert _route_href_attr("/faq") in output
     assert _route_href_attr("/team") in output
+
+
+# ---------------------------------------------------------------------------
+# Route/Nav Mutation V1 (ADR 0060): directives.disabledRoutes filter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_disabled_route_ids_read_from_directives() -> None:
+    from scripts.build_site import _disabled_route_ids_from_dossier
+
+    assert _disabled_route_ids_from_dossier(
+        {"directives": {"disabledRoutes": ["about", "  ", "about"]}}
+    ) == {"about"}
+    # Missing/malformed directive -> empty set (never drops a route by accident).
+    assert _disabled_route_ids_from_dossier({}) == set()
+    assert _disabled_route_ids_from_dossier({"directives": {}}) == set()
+    assert _disabled_route_ids_from_dossier(
+        {"directives": {"disabledRoutes": "about"}}
+    ) == set()
+
+
+@pytest.mark.tooling
+def test_filter_disabled_routes_drops_non_required_keeps_required() -> None:
+    from scripts.build_site import _filter_disabled_routes
+
+    # about (non-required) is dropped.
+    filtered = _filter_disabled_routes(LSB_ROUTES, {"about"})
+    assert [r["id"] for r in filtered["defaultRoutes"]] == [
+        "home", "services", "contact",
+    ]
+    # contact (required) is NEVER dropped here (defense-in-depth, Slice A).
+    kept = _filter_disabled_routes(LSB_ROUTES, {"contact"})
+    assert [r["id"] for r in kept["defaultRoutes"]] == [
+        "home", "services", "about", "contact",
+    ]
+    # No disabled ids -> returns the input object unchanged (byte-identical path).
+    assert _filter_disabled_routes(LSB_ROUTES, set()) is LSB_ROUTES
+
+
+@pytest.mark.tooling
+def test_disabled_route_is_not_written_and_drops_from_nav(tmp_path: Path) -> None:
+    """With about disabled, build's activeRoutes seam means write_pages never
+    emits /om-oss and the nav drops the "Om oss" link (ADR 0060)."""
+    from scripts.build_site import (
+        _filter_disabled_routes,
+        _nav_items_from_scaffold,
+        write_pages,
+    )
+
+    active = _filter_disabled_routes(LSB_ROUTES, {"about"})
+    written = write_pages(tmp_path, _minimal_dossier(), active, [])
+    assert written == ["/", "/tjanster", "/kontakt"]
+    assert not (tmp_path / "app" / "om-oss" / "page.tsx").exists()
+
+    items = _nav_items_from_scaffold(active["defaultRoutes"], [])
+    assert ("/om-oss", "Om oss") not in items
+    assert [href for href, _ in items] == ["/", "/tjanster", "/kontakt"]
+
+
+@pytest.mark.tooling
+def test_disabled_route_removes_nav_link_in_layout(tmp_path: Path) -> None:
+    from scripts.build_site import _filter_disabled_routes, render_layout
+
+    active = _filter_disabled_routes(LSB_ROUTES, {"about"})
+    output = render_layout(
+        _minimal_dossier(),
+        dossier_routes=[],
+        scaffold_default_routes=active["defaultRoutes"],
+    )
+    assert "Om oss" not in output
+    assert _route_href_attr("/om-oss") not in output

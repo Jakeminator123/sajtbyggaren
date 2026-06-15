@@ -7,10 +7,59 @@ gpt-5.5-smoke), build-context omladdad, ADR 0059 slice 1 (`pricing` synlig
 bort sida + nav + interna länkar). Detaljerad köplan:
 [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-15 ~13:30 — SYNK + PROD-VERIFIERING + PRICING-SLICE + ROUTE/NAV NÄSTA (AUKTORITATIVT BLOCK)
+## PASS 2026-06-15 ~14:30 — ROUTE/NAV MUTATION V1 SLICE A IMPLEMENTERAD (AUKTORITATIVT BLOCK)
 
-> **Detta är det ENDA auktoritativa blocket. Allt nedan (inkl. 2026-06-14-passet)
-> är historik — verifiera alltid mot git/koden.**
+> **Detta är det ENDA auktoritativa blocket. Allt nedan är historik — verifiera
+> alltid mot git/koden.**
+>
+> **Status:** Route/Nav Mutation V1 Slice A implementerad lokalt på
+> `jakob-be` (EJ committad/mergad än — operatören beslutar commit/PR).
+> route_remove går nu hela vägen följdprompt → ny version utan sidan/nav.
+>
+> **Vad som landade (Slice A, ADR 0060):**
+> 1. Ny router-`EditKind` `route_remove` (+ router-decision-schema). `classify.py`
+>    klassar "ta bort sidan X / radera X-sidan / ta bort Kontakt" som route_remove
+>    FÖRE component_remove och resolverar best-effort routeId ur sid-etiketten;
+>    "ta bort knappen"/"ta bort recensionerna" förblir component_remove.
+> 2. Nytt direktiv `directives.disabledRoutes` i project-input-schemat — STICKY
+>    (apply union:ar med basversionen, så en borttagen sida inte återuppstår vid
+>    en senare orelaterad följdprompt).
+> 3. Ny `route_editor`-roll (roles.py, status supported, skill
+>    `skills/route-remove/SKILL.md`) — korsvaliderad mot action-registret.
+> 4. Ny `packages/generation/followup/route_directives.py` (resolver: validerar
+>    routeId mot DENNA sajts scaffold + required-vakten; refused-skäl för okänd/
+>    obligatorisk sida). Scaffold-agnostisk (alla starters).
+> 5. `apply_patch_plan(disabled_routes=...)` skriver `directives.disabledRoutes`
+>    (sticky union). `run_followup_chain` steg 3e trådar resolvern + ärlig no-op
+>    (`route_remove_unsupported`). `build()` filtrerar `activeRoutes = scaffold
+>    defaultRoutes − disabledRoutes` i EN punkt (nav + write_pages + guards);
+>    required-route droppas aldrig (defense-in-depth → `_pick_contact_route`
+>    kraschar aldrig).
+>
+> **Grönt:** ruff 0; `verify_openclaw` 6/6; governance_validate (21)/rules_sync/
+> term-coverage --strict; riktade sviter (router classify/schema, route_directives,
+> openclaw roles/registry, wizard-route-emission, section_directives, patch_apply,
+> followup chain restyle/unapplied, route_remove E2E, docs-freshness/hygiene).
+> naming-dictionary bumpad till v42 (Disabled Route).
+>
+> **NÄSTA — Slice B (route/nav forts.):** ta bort `contact` (required) + CTA-
+> retarget. Gör `_pick_contact_route` tolerant (None i st.f. SystemExit), retargeta
+> varje kontakt-CTA till `mailto:`→`tel:`→utelämna ärligt, och lägg en Quality
+> Gate-länkscan som failar på dinglande intern `href` mot disabled route.
+> Resolvern har redan `allow_required`-sömmen. SCOUT-INVENTERING (read-only, denna
+> session) av kontakt-CTA-/intern-länk-ytan: contact_path är EN chokepoint som
+> trådas från `write_pages` → varje renderer; ~12 emissionsplatser; två fällor:
+> (a) `_pick_contact_route` raise SystemExit, (b) `_route_href` avvisar
+> mailto:/tel:. Hårdkodade icke-kontakt-länkar att vitlista i länkscanen: `/`,
+> `/spel`, `/faq`, `/arbeten`. Detalj: se denna sessions scout-rapport.
+>
+> **Öppen fråga (operatör):** backoffice-yta för "editor-actions/mutationer"
+> (route_remove m.fl.) skild från dossiers — liten separat följd, ej byggd.
+
+## PASS 2026-06-15 ~13:30 — SYNK + PROD-VERIFIERING + PRICING-SLICE + ROUTE/NAV NÄSTA (HISTORIK)
+
+> **Historik (var auktoritativt 2026-06-15 ~13:30; ersatt av Route/Nav-passet
+> ovan). Verifiera alltid mot git/koden.**
 >
 > **Mandat:** operatören (Jakob) gav full agens + admin ("göra allt och ta oss
 > vidare"). Git-mutationer mot `main` + `jakob-be` (commit/push/PR/`--admin`-
