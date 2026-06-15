@@ -31,8 +31,9 @@ from packages.generation.maintenance import (
 )
 from scripts.run_golden_path_eval import MAX_GOLDEN_PATH_EVALS_ENV
 
+from .. import vercel_sync
 from ..paths import REPO_ROOT
-from ._helpers import safe_render
+from ._helpers import render_check, safe_render
 
 
 def _relative(path: Path) -> str:
@@ -310,8 +311,76 @@ def view_toggle() -> None:
         )
 
 
+def view_vercel_sync() -> None:
+    st.title("Vercel - synka & publicera")
+    st.caption(
+        "Publicerar den senaste Python-byggmotorn (genererings-/OpenClaw-/"
+        "LLM-kedjan) till Vercel Blob + KV så den HOSTADE runtimen kör senaste "
+        "koden. Blob- och KV-storen delas av alla Vercel-miljöer, så EN "
+        "uppladdning gäller production, preview och development samtidigt. "
+        "Samma sak finns som CLI: `python scripts/sync_vercel_build_context.py`."
+    )
+    st.caption(
+        "OBS: en vanlig git-push till `main` deployar bara Next.js-appen "
+        "(`apps/viewser`). Python-motorn (`scripts/`, `packages/`, "
+        "`governance/`, `data/starters/`) når den hostade sandboxen FÖRST när "
+        "tarballen laddas upp här."
+    )
+
+    st.divider()
+    if vercel_sync.is_linked():
+        st.success("Vercel-länk finns (`.vercel/`). env-pull och uppladdning kan köras.")
+    else:
+        st.warning(
+            "Ingen Vercel-länk hittad (`.vercel/` saknas). Länkning är interaktiv "
+            "och görs en gång från terminalen — den kan inte köras härifrån:\n\n"
+            "```\nvercel link\n```\n\n"
+            "Svara `yes` på *Link to existing project?* och ange "
+            "`sajtbyggaren-viewser`. Kör sedan om den här vyn."
+        )
+
+    st.subheader("Åtgärder")
+    c1, c2, c3 = st.columns(3)
+    if c1.button("Visa status (check)", width="stretch", key="vsync_check"):
+        st.session_state["vsync_results"] = [vercel_sync.run_check()]
+    if c2.button("Pulla env", width="stretch", key="vsync_pull"):
+        with st.spinner("Kör vercel env pull..."):
+            st.session_state["vsync_results"] = [vercel_sync.run_env_pull()]
+    if c3.button(
+        "Ladda upp nyaste tarballen (Python/LLM-kedjan)",
+        type="primary",
+        width="stretch",
+        key="vsync_upload",
+    ):
+        with st.spinner("Paketerar och laddar upp build-kontexten..."):
+            st.session_state["vsync_results"] = [
+                vercel_sync.run_upload(),
+                vercel_sync.run_check(),
+            ]
+
+    if st.button(
+        "Allt: pulla env + ladda upp + verifiera",
+        width="stretch",
+        key="vsync_all",
+    ):
+        with st.spinner("Kör hela syncen..."):
+            results = [vercel_sync.run_env_pull()]
+            if results[-1].ok:
+                results.append(vercel_sync.run_upload())
+                results.append(vercel_sync.run_check())
+            st.session_state["vsync_results"] = results
+
+    results: list = st.session_state.get("vsync_results", [])
+    if not results:
+        st.info("Inga körningar än. 'Visa status' läser bara — laddar inte upp något.")
+    else:
+        for result in results:
+            render_check(result)
+
+
 VIEWS = {
     "Cleanup - Säker rensning": lambda: safe_render(view_safe_cleanup),
     "Cleanup - Med varning": lambda: safe_render(view_warning_cleanup),
     "Toggle - Aktivera/inaktivera": lambda: safe_render(view_toggle),
+    "Vercel - synka & publicera": lambda: safe_render(view_vercel_sync),
 }

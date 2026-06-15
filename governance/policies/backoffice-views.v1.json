@@ -292,6 +292,15 @@
       "status": "active",
       "readsFrom": ["packages/generation/orchestration", "data/starters"],
       "lastVerified": "2026-06-11"
+    },
+    {
+      "view": "Vercel - synka & publicera",
+      "section": "Underhåll",
+      "ownerSource": "backoffice.views.maintenance",
+      "status": "diagnostic",
+      "readsFrom": ["scripts", "packages", "governance", "data/starters"],
+      "lastVerified": "2026-06-15",
+      "note": "Kör live: vercel env pull + laddar upp build-kontexten (Python-motorn/LLM-kedjan) till blob och skriver SHA till KV. Gäller alla Vercel-miljöer (delad blob+KV). Visar build-context:check- och länk-status. CLI-spegel: scripts/sync_vercel_build_context.py."
     }
   ]
 }
