@@ -818,9 +818,11 @@ def apply_patch_plan(
     # the NEW version's directives. STICKY by design - union the carried-forward
     # prior list (merge_followup_project_input deep-copies the previous version, so
     # a component generated in v2 rides along) with THIS call's specs, de-duplicated
-    # by id (first wins, so a re-issued same-id directive never duplicates the
-    # component). build_site.py reads directives.generativeComponents after
-    # write_pages and materialises each spec as one components/generated/<id>.tsx
+    # by id. LAST WINS (matris #1 fix): THIS call's spec replaces the prior spec
+    # with the same id IN PLACE (keeping its position), so a repeat "lägg till N
+    # bildplatshållare" UPDATES the existing grid's count instead of being silently
+    # dropped by a first-wins union. build_site.py reads directives.generativeComponents
+    # after write_pages and materialises each spec as one components/generated/<id>.tsx
     # spliced into its route's page.tsx. generative_component_directives already
     # dropped non-whitelisted recipes/components before they reached here, so an
     # honest no-op upstream never persists a phantom component.
@@ -830,8 +832,8 @@ def apply_patch_plan(
             gen_directives = {}
             merged["directives"] = gen_directives
         existing_gen = gen_directives.get("generativeComponents")
-        union_gen: list[dict] = []
-        seen_gen_ids: set[str] = set()
+        union_by_id: dict[str, dict] = {}
+        union_order: list[str] = []
         for entry in (
             (existing_gen if isinstance(existing_gen, list) else [])
             + generative_component_specs
@@ -841,10 +843,11 @@ def apply_patch_plan(
             entry_id = entry.get("id")
             if not isinstance(entry_id, str) or not entry_id.strip():
                 continue
-            if entry_id in seen_gen_ids:
-                continue
-            seen_gen_ids.add(entry_id)
-            union_gen.append(entry)
+            if entry_id not in union_by_id:
+                union_order.append(entry_id)
+            # Last wins: a re-issued same-id spec overwrites the prior one in place.
+            union_by_id[entry_id] = entry
+        union_gen = [union_by_id[entry_id] for entry_id in union_order]
         if union_gen:
             gen_directives["generativeComponents"] = union_gen
 

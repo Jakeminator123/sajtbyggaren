@@ -133,6 +133,41 @@ def test_image_grid_directive_is_sticky_across_a_later_restyle(
     assert "<GeneratedImagePlaceholderGrid />" in page
 
 
+def test_repeat_grid_prompt_updates_count_in_place_last_wins(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Matris #1 fix: a second 'lägg till N bildplatshållare' UPDATES the existing
+    grid's count in place (last-wins sticky union) - it used to be silently dropped
+    by a first-wins union. One grid, count updated 6 -> 8 (no second stacked grid)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    first = run_followup_chain(
+        site_id, "lägg till 6 bildplatshållare", do_build=False,
+        runs_dir=runs_dir, generated_dir=generated_dir, output_dir=prompt_inputs,
+    )
+    assert first["stage"] == "built", first
+    second = run_followup_chain(
+        site_id, "lägg till 8 bildplatshållare", do_build=False,
+        runs_dir=runs_dir, generated_dir=generated_dir, output_dir=prompt_inputs,
+    )
+    assert second["stage"] == "built", second
+
+    build_dir = _newest_build_dir(generated_dir, site_id)
+    generated = build_dir / "components" / "generated"
+    # Exactly one grid file (stable id) - no second stacked grid.
+    assert sorted(p.name for p in generated.glob("*.tsx")) == [
+        "image-placeholder-grid.tsx"
+    ]
+    # Its count was updated in place to 8 (last wins), not stuck at 6.
+    source = (generated / "image-placeholder-grid.tsx").read_text(encoding="utf-8")
+    assert "Array.from({ length: 8 }" in source
+    assert "Array.from({ length: 6 }" not in source
+
+
 def test_unrecognised_component_add_is_honest_no_op(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

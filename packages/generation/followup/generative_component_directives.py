@@ -162,6 +162,13 @@ def resolve_generative_component(
     if recipe is not None:
         contract = GENERATIVE_RECIPES[recipe]
         count = _parse_count(text, contract)
+        # The id is the sticky-union key in apply + the generated filename/
+        # component name, so it must be STABLE (one recipe -> one grid with a
+        # clean ``GeneratedImagePlaceholderGrid`` name, not Grid6/Grid8). A repeat
+        # "lägg till N bildplatshållare" therefore re-uses this id and apply's
+        # LAST-WINS union UPDATES the count (matris #1 fix: a second prompt used to
+        # be silently dropped by a first-wins union). Multiple distinct grids on
+        # one route is a later slice.
         spec = {
             "recipe": recipe,
             "count": count,

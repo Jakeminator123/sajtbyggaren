@@ -89,6 +89,41 @@ def test_splices_import_and_usage_into_page(tmp_path: Path):
     assert text.index("<GeneratedImagePlaceholderGrid />") < text.index("</main>")
 
 
+_PAGE_TSX_USE_CLIENT = (
+    '"use client";\n'
+    "\n"
+    'import { Sparkles } from "lucide-react";\n'
+    "\n"
+    "export default function Home() {\n"
+    "  return (\n"
+    '    <main className="flex flex-1 flex-col">\n'
+    '      <section className="hero">Hej</section>\n'
+    "    </main>\n"
+    "  );\n"
+    "}\n"
+)
+
+
+def test_import_inserted_after_leading_use_client_directive(tmp_path: Path):
+    """Bug fix (matris #2): a page starting with a 'use client' directive must keep
+    that directive as the FIRST statement - the generated import goes AFTER it,
+    never before (prepending an import before 'use client' breaks the Next build)."""
+    target = tmp_path / "build"
+    (target / "app").mkdir(parents=True)
+    (target / "components").mkdir()
+    page = target / "app" / "page.tsx"
+    page.write_text(_PAGE_TSX_USE_CLIENT, encoding="utf-8")
+
+    materialize_generative_components(target, [_SPEC])
+    text = page.read_text(encoding="utf-8")
+
+    # The "use client" directive is still the very first statement.
+    assert text.lstrip().startswith('"use client";')
+    # The generated import is present, but AFTER the directive (not before it).
+    assert text.index('"use client";') < text.index("@/components/generated/")
+    assert "<GeneratedImagePlaceholderGrid />" in text
+
+
 def test_materialise_is_idempotent(tmp_path: Path):
     target, page = _make_build(tmp_path)
     materialize_generative_components(target, [_SPEC])
