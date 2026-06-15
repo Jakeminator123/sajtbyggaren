@@ -151,6 +151,18 @@ def test_edit_instruction_carries_grounded_plan_without_false_success():
     assert any("ingen automatisk ändring" in step.lower() for step in d.plan)
 
 
+def test_section_add_plan_is_catalog_aware():
+    """Catalog-aware novel-intent plan (ADR 0059): a sanctioned catalog
+    section_add gets a plan naming it as a known, mountable catalog section (via
+    the existing section path), not a generic dead-end - still honest (V0 applies
+    nothing)."""
+    d = _decide_for("lägg till en FAQ-sektion")
+    assert d.router.editKind == "section_add"
+    assert d.action == "patch_plan_request"
+    assert any("katalog-sektion" in step.lower() for step in d.plan)
+    assert d.appliedVisibleEffect is False
+
+
 def test_visual_style_target_summary_describes_style_not_contentblocks():
     """ÄNDRING 2: a visual_style restyle changes the site's STYLE/THEME (colour,
     tone), NOT a content field - so the patch_plan_request summary must describe

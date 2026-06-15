@@ -369,18 +369,35 @@ def _edit_plan_steps(router: RouterDecision, summary: str) -> list[str]:
             "(brand.primaryColorHex / tone) som tema-utföraren applicerar"
         )
     elif edit == "section_add":
-        understood = f"att lägga till en sektion ({summary})"
+        # The router only emits section_add for a sanctioned catalog section
+        # (its componentIntent is the section-type slug), so this is always a
+        # known, mountable catalog section.
+        section = (router.componentIntent or "").strip() or "sektion"
+        understood = f"att lägga till en sanktionerad katalog-sektion ({section})"
         path = (
             "section_builder monterar sektionens capability + dossier via den "
-            "befintliga apply-kedjan"
+            "befintliga apply-kedjan (samma väg som FAQ/team redan tar)"
         )
     elif edit == "component_add":
-        understood = f"att lägga till en komponent ({summary})"
-        path = (
-            "component_builder skulle montera en känd katalog-komponent "
-            "(ADR 0059); en okänd komponent stannar som ärligt ej-stödd, aldrig "
-            "påhittad"
-        )
+        # Catalog-aware (ADR 0059): a recognised component noun (componentIntent
+        # set) is a known catalog component mountable via the section path; an
+        # unrecognised one is genuinely novel and stays an honest "needs intake"
+        # - never invented. The recognition is pure router data; the actual
+        # mount + visible render is the deterministic apply chain's job.
+        component = (router.componentIntent or "").strip()
+        if component:
+            understood = f"att lägga till en igenkänd katalog-komponent ({component})"
+            path = (
+                "component_builder skulle montera den via section-vägens "
+                "capability + dossier (ADR 0059), validerad mot capability-map"
+            )
+        else:
+            understood = f"att lägga till en komponent ({summary})"
+            path = (
+                "komponenten känns inte igen i katalogen än - den stannar "
+                "ärligt ej-stödd tills den kuraterats in via intaget (ADR 0054), "
+                "aldrig påhittad"
+            )
     elif edit == "copy_change":
         understood = f"en textändring ({summary})"
         path = (

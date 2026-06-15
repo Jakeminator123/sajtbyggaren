@@ -41,7 +41,11 @@ aldrig driftar. Single source, ingen dubblering. Dessutom: konduktorn (OpenClaw
 Core V0 `decide`) ger nu ett grundat novel-intent planeringssvar för en tydlig
 men ännu obyggbar ändring (`_edit_plan_steps` i `core.py`) i stället för en stum
 action_bridge_missing — ärligt (ingen falsk success, #313), deterministiskt,
-ersätter ett specialfall i stället för att lägga ett.
+ersätter ett specialfall i stället för att lägga ett. Planeringssvaret är nu
+dessutom katalog-medvetet (ADR 0059): det skiljer en känd, monterbar
+katalog-sektion/-komponent från en genuint ny som ärligt kräver intag — enbart
+via router-data, ingen apply/render-ändring (den synliga monteringen är nästa
+verifierade pass).
 
 **Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
@@ -51,12 +55,14 @@ ersätter ett specialfall i stället för att lägga ett.
 2. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
    landade omfärgning via tema-utföraren, men en namngiven tema-cue mappar i
    dag till grått; höj tema-mappningens täckning så vald stämning syns.
-3. **Katalog-mount mount-kod (ADR 0059)** (medel; coach-beslut 2026-06-15):
-   novel-intent planeringssvaret är nu landat i konduktorn (V0 `decide`); kvar
-   är komponentmonteringen + `componentIntentModel` — `component_builder`
-   partial→supported för redan kända katalog-komponenter via det befintliga
-   `section_directives.py`-maskineriet, med rails (inte fri generativ kod).
-   Kräver ett fokuserat pass + visuell check (som #320).
+3. **Katalog-mount: synlig render (ADR 0059)** (medel; coach-beslut 2026-06-15;
+   kräver visuell check som #320): konduktorn känner nu igen monterbara
+   katalog-sektioner/-komponenter (V0 `decide`, katalog-medvetet planeringssvar)
+   och mount-maskineriet finns redan (`section_directives.py` + apply). KVAR för
+   user-synligt värde: bredda den synliga render-vägen (reviews/trust → inline/
+   dedikerad route som faq/team) så "lägg till testimonials" faktiskt syns — det
+   rör prod-render, därför ett fokuserat pass med din visuella check, inte fri
+   generativ kod.
 
 Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
 (nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
@@ -68,12 +74,12 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `f481d201` (2026-06-15 ~01:10 UTC+2; `jakob-be` = HEAD,
-6+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
+Last verified state: `9d749486` (2026-06-15 ~05:00 UTC+2; `jakob-be` = HEAD,
+7+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
 directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 utkast
-(`f481d201`), novel-intent planeringssvar i konduktorn (denna commit);
-`origin/jakob-be` i synk efter push, working tree rent; `main`/`origin/main`
-orörda på `f4e02756`). Föregående: `b4a818c1`.
+(`f481d201`), novel-intent planeringssvar (`9d749486`) + katalog-medveten plan
+(denna commit); `origin/jakob-be` i synk efter push, working tree rent;
+`main`/`origin/main` orörda på `f4e02756`). Föregående: `b4a818c1`.
 
 ## Öppna PR att känna till
 
