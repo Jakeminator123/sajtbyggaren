@@ -68,27 +68,34 @@ En grundat-innehåll-grind kräver ≥1 riktig service (annars mount-only, aldri
 tom prissida). "lägg till en prissektion / priser / prislista" går nu följdprompt
 → monterad capability → synlig `/priser`-sida → ny version (tester i
 `tests/test_section_directives.py`). reviews/trust väntar fortsatt på
-renderer-arbetet (designväggarna i ADR 0059).
+renderer-arbetet (designväggarna i ADR 0059). Allt detta är nu i `main` via #326
+(`main = jakob-be = 7ab65132`), tarballen omladdad från synkade tippen.
 
-**Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
+**Nästa prioriteringar (coach + operatör 2026-06-15; full lista + agentprompt i handoff):**
 
-1. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
+1. **Route/Nav Mutation V1 — ta bort sida + nav + interna länkar** (NY, högst):
+   OpenClaw/följdprompt kan idag inte ens TA BORT en sida — "ta bort Kontakt"
+   klassas som `component_remove` eller faller till `action_bridge_missing`.
+   Routern saknar `route_remove`/`page_remove`. Bygg det minsta säkra kontraktet:
+   ny editKind `route_remove` + klassificering ("ta bort sidan X / radera
+   kontaktsidan") + `directives.disabledRoutes` + `activeRoutes = defaultRoutes −
+   disabled` i write_pages/render_layout + nav byggd från activeRoutes +
+   contact-CTA-fallback (mailto/tel/utelämna ärligt) + route/link-scan mot aktiva
+   routes. Deterministisk mutation, INGEN fri filpatch. Basal redigeringsförmåga
+   som slår mer katalog-mount. Full agentprompt i handoff.
+2. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
    prompttext blir ibland stray tjänste-kort kunden aldrig bett om; avgränsa
    till grundade tjänster (samma ärlighets-tema som directive-fixen).
-2. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära; utrett
-   2026-06-15): INTE en `_TONE_COLOR_TOKENS`-breddning — ett låst paritetstest
-   (`test_painter_palma_token_overrides...`) befäster designen att `tone` styr
-   typografin och bara explicita färgord/hex styr paletten (t.ex. `cafe-bistro`
-   med `tone.primary="varm"` + variant `warm-bistro` blir inte grått). Gråheten
-   gäller scenarier där variantvalet ger en neutral variant och tonen saknar
-   färgord. Riktig fix = variant-palett/-val (estetiskt; kräver din riktning),
-   inte en blind token-rad.
-3. **Katalog-mount: synlig render (ADR 0059)** (medel; coach-beslut 2026-06-15):
-   slice 1 LANDAD denna runda — `pricing` → synlig `/priser`-route (se ovan).
-   KVAR: `reviews` (`render_section_reviews` är en medveten stub → kräver
-   recensions-datamodell + renderer) och `trust` (redan i `render_home`s
-   default-komposition → kräver koordination, inte en placement-rad). Båda rör
-   prod-render → fokuserat pass med din visuella check, inte fri generativ kod.
+3. **Katalog-mount: synlig render (ADR 0059)** — slice 1 (`pricing`) LANDAD;
+   KVAR `reviews` (`render_section_reviews` är en medveten stub → recensions-
+   datamodell + renderer) + `trust` (redan i `render_home`s komposition →
+   koordination, inte en placement-rad). Rör prod-render → fokuserat pass med din
+   visuella check, inte fri generativ kod.
+4. **Tema-trohet — "Casual Café" grått** (utrett 2026-06-15): INTE en
+   `_TONE_COLOR_TOKENS`-breddning — ett låst paritetstest befäster att `tone`
+   styr typografin, bara explicita färgord/hex styr paletten (`cafe-bistro` med
+   `tone.primary="varm"` blir inte grått). Riktig fix = variant-palett/-val
+   (estetiskt; kräver din riktning), inte en blind token-rad.
 
 Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
 (nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
@@ -100,14 +107,15 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `81d73772` (2026-06-15 ~13:00 UTC+2; #325 mergad så
-`main = jakob-be = origin/main = origin/jakob-be = 81d73772`). Denna runda
-ovanpå #325: real-key-smoke OK (gpt-5.5 + gpt-5.4-mini + gpt-5.4 svarar mot
-prod-nyckeln → v13 prod-säker), build-context-tarball omladdad till stabil
-blob-URL + KV, och ADR 0059 slice 1 — `pricing` synlig `/priser`-route
-(`section_directives.py` `VISIBLE_SECTION_ROUTES` + grundat-innehåll-grind,
-tester i `tests/test_section_directives.py`). Christophers #324 + #320 öppna.
-Föregående: `d7dea188`.
+Last verified state: `7ab65132` (2026-06-15 ~13:30 UTC+2; #326 mergad så
+`main = jakob-be = origin/main = origin/jakob-be = 7ab65132`, working tree rent).
+#326 = ADR 0059 slice 1 (`pricing` synlig `/priser`-route, `section_directives.py`
+`VISIBLE_SECTION_ROUTES` + grundat-innehåll-grind, tester i
+`tests/test_section_directives.py`) + `.cursorignore`-chore. Ovanpå #325 denna
+runda: real-key-smoke OK (gpt-5.5 + gpt-5.4-mini + gpt-5.4 mot prod-nyckeln →
+v13 prod-säker); build-context-tarball omladdad från synkade tippen (hostad prod
+kör pricing). Christophers #324 + #320 öppna (ej mergade). Föregående: `81d73772`
+(#325).
 
 ## Öppna PR att känna till
 
