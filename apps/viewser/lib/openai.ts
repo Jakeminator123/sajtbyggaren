@@ -31,9 +31,13 @@ export type UsageSummary = {
   model: string;
 };
 
-// Fallback lyft från gpt-4o -> gpt-5.5 (2026-06-11): prod kör redan gpt-5.5
-// via env; fallbacken ska inte tyst hamna två generationer efter.
-const DEFAULT_MODEL = openaiEnv("OPENAI_MODEL") ?? "gpt-5.5";
+// Fallback gpt-5.5 -> gpt-5.4 (prod-fix 2026-06-15): gpt-5.5 avvisar ett eget
+// `temperature`-värde (se supportsCustomTemperature nedan), och när
+// OPENAI_MODEL inte är satt för Viewser-processen föll vi tillbaka på just
+// gpt-5.5 — vilket fick VARJE TS-chat-anrop att kasta på prod. gpt-5.4 är den
+// modell governance-Python-lagret redan kör (llm-models.v1.json) och som
+// validerat godtar våra parametrar.
+const DEFAULT_MODEL = openaiEnv("OPENAI_MODEL") ?? "gpt-5.4";
 // B170: USD-priserna gick tidigare bara via process.env, till skillnad från
 // nyckel/modell ovan — Token Meter visade $0 när priserna bara stod i rotens
 // .env. Samma openaiEnv-fallback som övriga OpenAI-inställningar.
@@ -66,6 +70,20 @@ function getClient(): OpenAI {
     openaiClientKey = apiKey;
   }
   return openaiClient;
+}
+
+// Prod-fix 2026-06-15: gpt-5.x och o-seriens reasoning-modeller stödjer bara
+// default-temperaturen (1) och avvisar ett eget värde med
+// 400 "Unsupported value: 'temperature' does not support 0.3 ... Only the
+// default (1) value is supported". Lokalt kör chatten gpt-4o-mini (godtar 0.3)
+// men prod kör en gpt-5.x via OPENAI_MODEL/fallback — så den hårdkodade 0.3:an
+// fick VARJE TS-chat-anrop (conversation-svar, G1-preclassify,
+// applied-confirmation) att kasta och kunden fick bara den ärliga felraden.
+// Samma defensiva, modell-medvetna mönster som B176 (max_tokens ->
+// max_completion_tokens): skicka temperature ENBART till modeller som stödjer
+// ett eget värde.
+function supportsCustomTemperature(model: string): boolean {
+  return !/^(gpt-5|o\d)/i.test(model);
 }
 
 function maxOutputTokens(): number {
@@ -194,7 +212,9 @@ export async function chatWithOpenAi(
   const completion = await client.chat.completions.create({
     model,
     messages,
-    temperature: 0.3,
+    // Se supportsCustomTemperature: gpt-5.x/o-serien får INTE ett eget
+    // temperature-värde (de avvisar allt utom default 1 med 400).
+    ...(supportsCustomTemperature(model) ? { temperature: 0.3 } : {}),
     max_completion_tokens: roleParams.maxOutputTokens ?? maxOutputTokens(),
     ...(roleParams.reasoningEffort
       ? { reasoning_effort: roleParams.reasoningEffort }
