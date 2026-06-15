@@ -82,6 +82,18 @@ def test_default_route_id_is_home():
     assert specs[0]["routeId"] == "home"
 
 
+def test_id_is_stable_across_counts_so_apply_can_update_in_place():
+    """Matris #1: the spec id is the STABLE recipe slug regardless of count, so a
+    repeat 'lägg till N bildplatshållare' re-uses the same id and apply's
+    last-wins union UPDATES the count (instead of a first-wins union silently
+    dropping the second prompt). The count still flows through on the spec."""
+    six, _ = resolve_generative_component("lägg till 6 bildplatshållare")
+    eight, _ = resolve_generative_component("lägg till 8 bildplatshållare")
+    assert six[0]["id"] == eight[0]["id"] == "image-placeholder-grid"
+    assert six[0]["count"] == 6
+    assert eight[0]["count"] == 8
+
+
 def test_indefinite_article_is_not_a_count():
     """"en bildgrid" is an article, not count=1 -> default grid size, not 1."""
     specs, _ = resolve_generative_component("lägg till en bildgrid")

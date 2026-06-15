@@ -40,6 +40,14 @@ __all__ = [
 # the schema pattern for ``directives.generativeComponents[].id``.
 _SAFE_SLUG = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
+# A leading React directive ("use client" / "use server") MUST remain the FIRST
+# statement in the file; an import prepended before it breaks the Next.js build.
+# This matches such a directive (either quote style, optional semicolon) at the
+# very top so a generated import is inserted AFTER it instead of before.
+_LEADING_DIRECTIVE_RE = re.compile(
+    r"^\s*(?:\"use (?:client|server)\"|'use (?:client|server)')\s*;?[ \t]*\r?\n"
+)
+
 # The V1 recipe allowlist. A spec whose recipe is not here is a contract violation
 # (the schema enum + the resolver allowlist should make it unreachable); we fail
 # closed rather than write an unknown template. Each value is a template renderer
@@ -142,16 +150,32 @@ def _page_path_for_route(target: Path, route_id: str) -> Path | None:
     return candidate if candidate.exists() else None
 
 
+def _prepend_import(text: str, import_line: str) -> str:
+    """Insert ``import_line`` at the top, but AFTER a leading React directive.
+
+    A ``"use client"`` / ``"use server"`` directive must stay the file's FIRST
+    statement; prepending an import before it breaks the Next.js build (bug fix).
+    When such a directive leads the file the import goes right after it; otherwise
+    it goes at the very top (unchanged for the common server-component page).
+    """
+    match = _LEADING_DIRECTIVE_RE.match(text)
+    if match:
+        return text[: match.end()] + import_line + text[match.end() :]
+    return import_line + text
+
+
 def _splice_into_page(
     page_text: str, *, import_line: str, usage_line: str
 ) -> str | None:
     """Return ``page_text`` with the import + usage spliced in, or None to skip.
 
     Inserts ``usage_line`` immediately before the LAST ``</main>`` (the same
-    "before the closing main" placement the section renderers use) and prepends
-    ``import_line`` (valid TS - import order is free). Idempotent: an already
-    present import or usage is left untouched, so re-running never double-inserts.
-    Returns None when the page has no ``</main>`` to splice into (honest skip).
+    "before the closing main" placement the section renderers use) and inserts
+    ``import_line`` at the top - but AFTER any leading ``"use client"`` directive
+    (which must remain the first statement, or the Next.js build breaks).
+    Idempotent: an already present import or usage is left untouched, so re-running
+    never double-inserts. Returns None when the page has no ``</main>`` to splice
+    into (honest skip).
     """
     marker = "</main>"
     text = page_text
@@ -163,7 +187,7 @@ def _splice_into_page(
         line_start = text.rfind("\n", 0, idx) + 1
         text = text[:line_start] + usage_line + text[line_start:]
     if import_line not in text:
-        text = import_line + text
+        text = _prepend_import(text, import_line)
     return text
 
 
