@@ -34,6 +34,11 @@ export type UsageSummary = {
 // Fallback lyft från gpt-4o -> gpt-5.5 (2026-06-11): prod kör redan gpt-5.5
 // via env; fallbacken ska inte tyst hamna två generationer efter.
 const DEFAULT_MODEL = openaiEnv("OPENAI_MODEL") ?? "gpt-5.5";
+
+// gpt-5.x / o-serien är reasoning-modeller som BARA tillåter default
+// temperature (=1) — ett explicit temperature-värde ger 400 "unsupported_value".
+// Spegel av samma /^(gpt-5|o\d)/-detektor i lib/asset-store/vision.ts.
+const DEFAULT_MODEL_IS_REASONING = /^(gpt-5|o\d)/.test(DEFAULT_MODEL);
 // B170: USD-priserna gick tidigare bara via process.env, till skillnad från
 // nyckel/modell ovan — Token Meter visade $0 när priserna bara stod i rotens
 // .env. Samma openaiEnv-fallback som övriga OpenAI-inställningar.
@@ -105,9 +110,7 @@ export function readRoleModelParams(roleId: string): RoleModelParams {
     const data = JSON.parse(readFileSync(policyPath, "utf8")) as {
       roles?: Array<Record<string, unknown>>;
     };
-    const role = data.roles?.find(
-      (entry) => entry && entry.id === roleId,
-    );
+    const role = data.roles?.find((entry) => entry && entry.id === roleId);
     if (!role) return {};
     const params: RoleModelParams = {};
     const rawEffort = role.reasoningEffort;
@@ -194,7 +197,9 @@ export async function chatWithOpenAi(
   const completion = await client.chat.completions.create({
     model,
     messages,
-    temperature: 0.3,
+    // Reasoning-modeller (gpt-5.x/o-serien) avvisar temperature !== 1 med 400;
+    // skicka det bara till äldre modeller (t.ex. gpt-4o).
+    ...(DEFAULT_MODEL_IS_REASONING ? {} : { temperature: 0.3 }),
     max_completion_tokens: roleParams.maxOutputTokens ?? maxOutputTokens(),
     ...(roleParams.reasoningEffort
       ? { reasoning_effort: roleParams.reasoningEffort }

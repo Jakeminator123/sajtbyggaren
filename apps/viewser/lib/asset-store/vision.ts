@@ -182,14 +182,18 @@ export async function classifyAsset(args: {
   try {
     const completion = await client.chat.completions.create({
       model: VISION_MODEL,
-      temperature: 0.2,
+      // Reasoning-modeller (gpt-5.x/o-serien) avvisar temperature !== 1 med 400;
+      // skicka det bara till äldre modeller (t.ex. gpt-4o).
+      ...(VISION_MODEL_IS_REASONING ? {} : { temperature: 0.2 }),
       // B176: gpt-5.x avvisar `max_tokens` (400); ersättaren funkar brett.
       // 600 (inte 200): på reasoning-modeller räknas reasoning-tokens in i
       // budgeten — 200 åts upp av tänkandet och gav tomt svar -> mock.
       max_completion_tokens: 600,
       // Lågt effort: enkel klassificering behöver inget djupt resonemang,
       // och varje reasoning-token tas från svarsbudgeten ovan.
-      ...(VISION_MODEL_IS_REASONING ? { reasoning_effort: "low" as const } : {}),
+      ...(VISION_MODEL_IS_REASONING
+        ? { reasoning_effort: "low" as const }
+        : {}),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTIONS },
