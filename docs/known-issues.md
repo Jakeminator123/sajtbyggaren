@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (av 23 öppna), 5 unknown, 174 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (av 24 öppna), 5 unknown, 174 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/12-bug-and-pr-review.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -818,6 +818,26 @@ redan kända (B119/B155/B89), avsiktliga (recommendedPages-halvwire,
 msg-0058) eller medvetna fallbacks (change-set-baseline). **Alla fyra är nu
 stängda** — B166 via `8f0681d`, B164/B169/B172 via `e35eef8` (bug-sweep
 round 2); se Stängda-sektionen.
+
+### Route/Nav Mutation V1 (ADR 0060) — skjutet review-fynd 2026-06-15
+
+- **`B205` Låg** - `ecommerce-lite`-scaffolden (Starter `commerce-base`) har en
+  Shopify-CMS-catch-all `data/starters/commerce-base/app/[page]/page.tsx` som
+  resolvar valfri en-segments-path via `getPage(handle)` och annars `notFound()`.
+  En `route_remove` (`directives.disabledRoutes`) tas bort ur den enda
+  activeRoutes-sömmen (`_filter_disabled_routes`), så builden skriver ingen
+  statisk `app/<slug>/page.tsx` och navet tappar länken. I preview/design-läget
+  (ingen riktig Shopify-backend) ger den borttagna pathen därför 404 — den gamla
+  sidan renderas alltså inte. Gapet: på en riktig Shopify-uppkopplad deploy kan
+  samma path fortfarande matcha catch-allen och rendera en CMS-sida med samma
+  handle, eftersom `disabledRoutes` bara filtrerar scaffold-routes, inte CMS-
+  innehåll. Att täppa till det kräver att de borttagna handlesen trådas in i en
+  vendored Shopify-template-route (`commerce-base`) plus en guard där —
+  icke-trivialt och brett mot hela ecommerce-lite-spåret, som ligger utanför
+  kärn-småföretagsflödet. Medvetet skjutet (ADR 0060 review-fynd 3) till en
+  dedikerad e-handels-slice hellre än en riskabel punktfix; finding 1 (site-plan-
+  artefakt-drift) fixades i samma pass. Källa: ADR 0060 route_remove-review
+  (skjutet fynd 3), verifierat 2026-06-15. Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
 

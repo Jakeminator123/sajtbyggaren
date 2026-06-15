@@ -2149,6 +2149,20 @@ def build_plan_artefakts(
     site_plan["selectedDossiers"] = merge_operator_selected_with_helper(
         operator_selected, result.site_plan["selectedDossiers"]
     )
+    # Route/Nav Mutation V1 (ADR 0060): a route_remove follow-up records the
+    # disabled scaffold routes on directives.disabledRoutes. build() re-filters
+    # defaultRoutes through the single _filter_disabled_routes seam (activeRoutes)
+    # so the rendered site drops the page and its nav link. produce_site_plan
+    # reads routes straight from the scaffold registry and does NOT see the
+    # directive, so its routePlan would still claim the removed route - dishonest
+    # artifact drift. Reflect that SAME seam decision onto the site-plan artifact
+    # here (no second filter): routePlan now matches the routes the site ships.
+    disabled_route_ids = _disabled_route_ids_from_dossier(dossier)
+    route_plan = site_plan.get("routePlan")
+    if disabled_route_ids and isinstance(route_plan, list):
+        site_plan["routePlan"] = _filter_disabled_routes(
+            {"defaultRoutes": route_plan}, disabled_route_ids
+        )["defaultRoutes"]
     # Revalidate after merge: helper validated before this function mutates
     # selectedDossiers, but the merged payload is a new object.
     validate_site_plan(site_plan)
