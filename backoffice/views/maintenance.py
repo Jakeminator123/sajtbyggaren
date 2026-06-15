@@ -378,9 +378,137 @@ def view_vercel_sync() -> None:
             render_check(result)
 
 
+def _render_blob_overview(audit: dict, site_count: int) -> None:
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Objekt totalt", audit.get("totalObjects", 0))
+    c2.metric("Storlek totalt", format_megabytes(audit.get("totalBytes", 0)))
+    c3.metric("Sajter", site_count)
+    by_prefix = audit.get("byPrefix", {})
+    rows = [
+        {
+            "Prefix": prefix,
+            "Objekt": group.get("objects", 0),
+            "Storlek": format_megabytes(group.get("bytes", 0)),
+        }
+        for prefix, group in sorted(
+            by_prefix.items(), key=lambda kv: kv[1].get("bytes", 0), reverse=True
+        )
+    ]
+    if rows:
+        st.dataframe(rows, width="stretch", hide_index=True)
+
+
+def _prefix_objects(site: dict, prefix: str) -> int:
+    return site.get("prefixes", {}).get(prefix, {}).get("objects", 0)
+
+
+def view_hosted_sites() -> None:
+    st.title("Vercel - hostade sajter")
+    st.caption(
+        "Översikt + rensning av den HOSTADE lagringen (Vercel Blob + Upstash KV). "
+        "Radering tar bort en sajts ALLA blob-objekt (`generated/`, "
+        "`run-artifacts/`, `run-state/`, `preview-bundles/`) OCH dess KV-nycklar "
+        "(versioner, run-index, pekare, sandbox-session) — permanent och "
+        "oåterkalleligt. Rör inte lokala diskartefakter (se Cleanup-vyerna) eller "
+        "build-context (Python-motorn)."
+    )
+
+    if st.button("Ladda / uppdatera översikt", width="stretch", key="hs_load"):
+        with st.spinner("Läser blob-storen (kan ta några sekunder)..."):
+            ok_audit, audit, err_audit = vercel_sync.audit_blob()
+            ok_sites, sites, err_sites = vercel_sync.list_sites()
+        if not ok_audit or not ok_sites or audit is None or sites is None:
+            st.error(
+                "Kunde inte läsa blob-storen:\n\n"
+                + "\n".join(filter(None, [err_audit, err_sites]))
+            )
+        else:
+            st.session_state["hs_audit"] = audit
+            st.session_state["hs_sites"] = sites
+
+    audit = st.session_state.get("hs_audit")
+    sites = st.session_state.get("hs_sites")
+    if not audit or not sites:
+        st.info(
+            "Tryck 'Ladda / uppdatera översikt' för att läsa blob-storen. "
+            "Inget raderas av att läsa."
+        )
+        return
+
+    _render_blob_overview(audit, sites.get("count", 0))
+
+    site_list = sites.get("sites", [])
+    st.divider()
+    st.subheader("Sajter")
+    if site_list:
+        st.dataframe(
+            [
+                {
+                    "siteId": s["siteId"],
+                    "Objekt": s["totalObjects"],
+                    "Storlek": format_megabytes(s["totalBytes"]),
+                    "generated": _prefix_objects(s, "generated/"),
+                    "run-artifacts": _prefix_objects(s, "run-artifacts/"),
+                    "run-state": _prefix_objects(s, "run-state/"),
+                    "preview": _prefix_objects(s, "preview-bundles/"),
+                }
+                for s in site_list
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+    st.divider()
+    st.subheader("Radera en sajt (permanent)")
+    site_ids = [s["siteId"] for s in site_list]
+    if not site_ids:
+        st.success("Inga hostade sajter att radera.")
+        return
+
+    chosen = st.selectbox("Välj sajt", site_ids, key="hs_pick")
+    chosen_site = next((s for s in site_list if s["siteId"] == chosen), None)
+    if chosen_site is not None:
+        st.write(
+            f"`{chosen}` — {chosen_site['totalObjects']} blob-objekt "
+            f"({format_megabytes(chosen_site['totalBytes'])}) + tillhörande KV-nycklar."
+        )
+    st.error("Detta raderar sajtens alla filer, versioner och artefakter permanent.")
+    typed = st.text_input(f"Skriv `RADERA {chosen}` för att bekräfta", key="hs_confirm")
+    confirmed = typed.strip() == f"RADERA {chosen}"
+    if st.button(
+        "Radera sajt permanent",
+        type="primary",
+        width="stretch",
+        disabled=not confirmed,
+        key="hs_delete",
+    ):
+        with st.spinner(f"Raderar {chosen}..."):
+            ok, data, err = vercel_sync.delete_site(chosen)
+        if not ok or data is None:
+            st.error(f"Radering misslyckades:\n\n{err}")
+        else:
+            summary = (
+                f"Raderade `{data['siteId']}`: {data['deletedBlobs']} blob-objekt "
+                f"({format_megabytes(data['deletedBytes'])}), "
+                f"{data['kvKeysDeleted']} KV-nycklar."
+            )
+            if data.get("kvError"):
+                st.warning(f"{summary}\n\nKV-varning: {data['kvError']}")
+            else:
+                st.success(summary)
+            ok_audit, audit2, _ = vercel_sync.audit_blob()
+            ok_sites, sites2, _ = vercel_sync.list_sites()
+            if ok_audit and audit2 is not None:
+                st.session_state["hs_audit"] = audit2
+            if ok_sites and sites2 is not None:
+                st.session_state["hs_sites"] = sites2
+            st.rerun()
+
+
 VIEWS = {
     "Cleanup - Säker rensning": lambda: safe_render(view_safe_cleanup),
     "Cleanup - Med varning": lambda: safe_render(view_warning_cleanup),
     "Toggle - Aktivera/inaktivera": lambda: safe_render(view_toggle),
     "Vercel - synka & publicera": lambda: safe_render(view_vercel_sync),
+    "Vercel - hostade sajter": lambda: safe_render(view_hosted_sites),
 }

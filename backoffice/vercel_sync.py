@@ -13,15 +13,18 @@ production/preview/development samtidigt.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
+from typing import Any
 
 from backoffice.health import CheckResult
 from backoffice.paths import REPO_ROOT
 
 CHECK_SCRIPT = "apps/viewser/scripts/check-build-context.mjs"
 UPLOAD_SCRIPT = "apps/viewser/scripts/upload-build-context-to-blob.mjs"
+BLOB_ADMIN_SCRIPT = "apps/viewser/scripts/blob-admin.mjs"
 ENV_FILE = "apps/viewser/.env.vercel.local"
 
 
@@ -82,3 +85,44 @@ def run_env_pull() -> CheckResult:
 def run_upload() -> CheckResult:
     """Paketera + ladda upp build-kontexten (Python-motorn) till blob + KV."""
     return _run("build-context:upload", "node", [UPLOAD_SCRIPT])
+
+
+def _run_blob_admin(args: list[str]) -> tuple[bool, dict[str, Any] | None, str]:
+    """Kör blob-admin.mjs och parsa dess JSON-stdout.
+
+    Returnerar ``(ok, data, message)``. ``data`` är None vid fel; ``message``
+    bär stderr/diagnostik (loggar går till stderr, JSON till stdout).
+    """
+    node = shutil.which("node")
+    if node is None:
+        return False, None, "node hittades inte i PATH."
+    result = subprocess.run(
+        _exec_prefix(node) + [BLOB_ADMIN_SCRIPT, *args],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO_ROOT),
+    )
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+    if result.returncode != 0:
+        return False, None, stderr or stdout or f"exit {result.returncode}"
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError:
+        return False, None, (f"{stderr}\n{stdout}").strip()
+    return True, data, stderr
+
+
+def audit_blob() -> tuple[bool, dict[str, Any] | None, str]:
+    """Översikt över blob-storen (totalt + per topp-prefix)."""
+    return _run_blob_admin(["audit"])
+
+
+def list_sites() -> tuple[bool, dict[str, Any] | None, str]:
+    """Lista hostade sajter i blob med objekt/storlek per prefix."""
+    return _run_blob_admin(["list-sites"])
+
+
+def delete_site(site_id: str) -> tuple[bool, dict[str, Any] | None, str]:
+    """Radera en sajts alla blob-objekt + KV-nycklar (permanent)."""
+    return _run_blob_admin(["delete-site", site_id])
