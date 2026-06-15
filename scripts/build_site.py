@@ -573,6 +573,35 @@ def _route_href(route_path: str) -> str:
     return _jsx_safe_string(route_path)
 
 
+def _contact_href(contact_target: str | None) -> str | None:
+    """Return a JSX-safe href for a contact CTA, or ``None`` to omit the anchor.
+
+    The single contact-target seam for Route/Nav Mutation V1 Slice B (ADR 0060).
+    ``write_pages`` resolves ONE contact target and threads it to every renderer:
+
+    - a scaffold route path (``"/kontakt"``, ``"/kontakta-oss"``, ...) when the
+      contact page exists -> validated as a canonical site path via
+      ``_route_href`` (leading ``/``, no traversal), byte-identical to before;
+    - a ``mailto:``/``tel:`` action when the contact page was removed but the
+      business has a real email/phone -> passed through (JSX-safe) so the CTA
+      still converts without linking to a dead ``/kontakt`` route;
+    - ``None`` when the contact page was removed and no real channel exists ->
+      the caller omits the anchor honestly (never a dangling internal link).
+
+    Unlike ``_route_href`` (which rejects anything without a leading ``/`` so the
+    nav cannot emit a protocol href), this helper lets the ``mailto:``/``tel:``
+    fallback through. Any other shape returns ``None`` (defensive: never emit a
+    non-route, non-protocol href).
+    """
+    if not contact_target:
+        return None
+    if contact_target.startswith("/"):
+        return _route_href(contact_target)
+    if contact_target.startswith(("mailto:", "tel:")):
+        return _jsx_safe_string(contact_target)
+    return None
+
+
 def write_json(path: Path, data: Any) -> None:
     write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
@@ -1810,14 +1839,28 @@ def _disabled_route_ids_from_dossier(dossier: dict) -> set[str]:
     }
 
 
+# Route/Nav Mutation V1 Slice B (ADR 0060): the only ``required`` scaffold route
+# that may be removed. ``contact`` is removable because the build/render seam can
+# retarget its site-wide CTAs to mailto:/tel: (or omit them honestly) and the
+# Quality Gate link-scan guarantees no dead /kontakt link survives. ``home`` and
+# ``services`` (and every other required page) stay protected: they have no such
+# safe fallback. Mirrors the ``allow_required_ids`` the resolver is called with in
+# ``run_followup_chain`` step 3e, so the upstream refusal and this defense-in-depth
+# filter can never disagree about which required page is removable.
+_REMOVABLE_REQUIRED_ROUTE_IDS = frozenset({"contact"})
+
+
 def _filter_disabled_routes(scaffold_routes: dict, disabled_route_ids: set[str]) -> dict:
-    """Return ``scaffold_routes`` with non-required disabled routes removed (ADR 0060).
+    """Return ``scaffold_routes`` with disabled routes removed (ADR 0060).
 
     The single activeRoutes seam: drops a ``defaultRoutes`` entry whose id is in
-    ``disabled_route_ids`` UNLESS it is ``required`` (Slice A keeps mandatory
-    pages, and ``_pick_contact_route`` must keep finding the contact route).
-    Returns a shallow copy with a filtered ``defaultRoutes`` list so the loaded
-    scaffold dict is never mutated; ``optionalRoutes`` and other keys ride along
+    ``disabled_route_ids`` when it is either non-required OR a removable required
+    page (``_REMOVABLE_REQUIRED_ROUTE_IDS`` = ``{"contact"}`` in Slice B). A
+    required page that is NOT removable (``home``/``services``/...) is NEVER
+    dropped here, even if a hand-edited/buggy directive lists it, so the build
+    can never lose a mandatory page it has no safe fallback for. Returns a
+    shallow copy with a filtered ``defaultRoutes`` list so the loaded scaffold
+    dict is never mutated; ``optionalRoutes`` and other keys ride along
     unchanged. A no-op (nothing disabled / nothing matched) returns the input
     object so the common path is byte-identical.
     """
@@ -1830,7 +1873,10 @@ def _filter_disabled_routes(scaffold_routes: dict, disabled_route_ids: set[str])
         if not (
             isinstance(route, dict)
             and route.get("id") in disabled_route_ids
-            and not route.get("required")
+            and (
+                not route.get("required")
+                or route.get("id") in _REMOVABLE_REQUIRED_ROUTE_IDS
+            )
         )
     ]
     if len(filtered) == len(default_routes):
@@ -4317,8 +4363,14 @@ def run_followup_chain(
             routes_path = SCAFFOLDS_DIR / scaffold_id_for_remove / "routes.json"
             if routes_path.exists():
                 scaffold_routes_for_remove = load_json(routes_path)
+        # Slice B (ADR 0060): contact is removable (allow_required_ids) with a
+        # safe CTA fallback; home/services stay protected. The same removable set
+        # gates the build's activeRoutes filter (_filter_disabled_routes), so the
+        # upstream refusal and the build seam can never disagree.
         disabled_routes_resolved, route_refused = resolve_disabled_routes(
-            route_targets, scaffold_routes_for_remove
+            route_targets,
+            scaffold_routes_for_remove,
+            allow_required_ids=_REMOVABLE_REQUIRED_ROUTE_IDS,
         )
 
     if (

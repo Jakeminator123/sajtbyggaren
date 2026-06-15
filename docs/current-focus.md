@@ -73,16 +73,22 @@ renderer-arbetet (designväggarna i ADR 0059). Allt detta är nu i `main` via #3
 
 **Nästa prioriteringar (coach + operatör 2026-06-15; full lista + agentprompt i handoff):**
 
-1. **Route/Nav Mutation V1 — Slice A LANDAD (implementerad lokalt, ej mergad):**
-   OpenClaw/följdprompt kan nu TA BORT en icke-obligatorisk sida + dess nav-länk
-   via ny editKind `route_remove` + `route_editor`-roll + `directives.disabledRoutes`
-   (STICKY) + EN `activeRoutes`-filterpunkt i `build()` (ADR 0060). "ta bort sidan
-   Om oss" ger ny version utan `/om-oss` + nav-länk; okänd/obligatorisk sida →
-   ärlig no-op (`route_remove_unsupported`). Scaffold-agnostiskt (alla starters),
-   ingen fri filpatch, ingen ny dossier. **NÄSTA: Slice B** — ta bort `contact`
-   (required) + retargeta dess CTA:er (mailto/tel/utelämna) + Quality Gate
-   länk-scan mot aktiva routes (resolvern har redan `allow_required`-sömmen;
-   scout-inventering av de ~12 CTA-platserna i handoff).
+1. **Route/Nav Mutation V1 — Slice A + Slice B LANDADE (lokalt, ej mergade):**
+   OpenClaw/följdprompt kan TA BORT en sida + dess nav-länk via editKind
+   `route_remove` + `route_editor`-roll + `directives.disabledRoutes` (STICKY) +
+   EN `activeRoutes`-filterpunkt i `build()` (ADR 0060). Slice A: icke-obligatorisk
+   sida ("ta bort sidan Om oss"). **Slice B (branch
+   `feat/route-nav-mutation-v1-slice-b`, ovanpå Slice A:s öppna PR #328):** även
+   `contact` (required) kan tas bort MED säker CTA-fallback — `resolve_disabled_routes`
+   anropas med `allow_required_ids={"contact"}` (hem/tjänster skyddade),
+   `_pick_contact_route`→None, `write_pages` löser EN kontakt-target
+   (`mailto:`→`tel:`→utelämna) via `_contact_cta_target`/`_contact_href`, och en ny
+   Quality Gate-check `internal-link-scan` (soft→`degraded`) failar på varje död
+   intern länk. "ta bort sidan Kontakt och länkar dit" → ny version utan `/kontakt`,
+   CTA:er → `mailto:`, inga döda länkar; "ta bort sidan Tjänster" → ärlig no-op.
+   Scaffold-agnostiskt, ingen fri filpatch, ingen ny dossier. **NÄSTA:** ren
+   nav-only ("dölj i menyn men behåll sidan", coachens `nav_edit`) eller
+   wizard-extra-route-borttagning.
 2. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
    prompttext blir ibland stray tjänste-kort kunden aldrig bett om; avgränsa
    till grundade tjänster (samma ärlighets-tema som directive-fixen).

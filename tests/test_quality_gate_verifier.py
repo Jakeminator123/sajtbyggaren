@@ -243,7 +243,7 @@ def test_run_quality_gate_verifier_opt_in_no_key_is_non_blocking(_no_key, tmp_pa
     assert result.critic.source == "mock-no-key"
     # Status is decided solely by the blocking/warning checks.
     assert result.status == "ok"
-    assert len(result.checks) == 6
+    assert len(result.checks) == 7  # +internal-link-scan (ADR 0060 Slice B)
 
 
 @pytest.mark.tooling

@@ -1,13 +1,15 @@
-"""Phase 3 Quality Gate: run typecheck, route-scan, build-status and
-policy-compliance checks against the generated site.
+"""Phase 3 Quality Gate: run typecheck, route-scan, internal-link-scan,
+build-status, policy-compliance and the warning-lane checks against the
+generated site.
 
 Public API:
     run_quality_gate(*, target_dir, required_routes, npm_steps,
                      build_status, do_typecheck=True) -> QualityResult
-        Aggregates four checks into a single QualityResult. Locked by
+        Aggregates the checks into a single QualityResult. Locked by
         ADR 0015. Sprint 3A v1 reads results that scripts/build_site.py
         already computed (build_status, npm_steps) and runs typecheck +
-        route-scan + policy-compliance directly.
+        route-scan + policy-compliance directly; ADR 0060 Slice B adds the
+        internal-link-scan dead-link safety net.
 
     QualityResult, CheckResult
         Pydantic types for the gate output. Status aggregates to

@@ -127,13 +127,28 @@ def test_unknown_page_is_honest_no_op(
     assert result["editKind"] == "route_remove"
 
 
-def test_required_contact_page_is_kept_in_slice_a(
+def _internal_route_hrefs(text: str) -> list[str]:
+    """Return the in-site (``/``-prefixed) hrefs of <a>/<Link> tags in TSX."""
+    import re
+
+    link_re = re.compile(
+        r"<(?:a|Link)\b[^>]*?\bhref=(?:\"([^\"]+)\"|\{\"([^\"]+)\"\})",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    hrefs: list[str] = []
+    for match in link_re.finditer(text):
+        href = match.group(1) or match.group(2) or ""
+        if href.startswith("/"):
+            hrefs.append(href)
+    return hrefs
+
+
+def test_remove_contact_page_retargets_ctas_and_drops_dead_links(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """"ta bort sidan Kontakt" -> honest no-op in Slice A (required page kept).
-
-    The contact page + its site-wide CTAs stay intact; removing it + retargeting
-    the CTAs is Slice B."""
+    """Slice B (ADR 0060): "ta bort sidan Kontakt och länkar dit" removes the
+    contact page, retargets the site-wide CTAs to mailto:/tel:, and leaves NO
+    dead /kontakt link anywhere (the build stays shippable, not degraded)."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     from scripts.build_site import run_followup_chain
 
@@ -142,7 +157,50 @@ def test_required_contact_page_is_kept_in_slice_a(
 
     result = run_followup_chain(
         site_id,
-        "ta bort sidan Kontakt",
+        "ta bort sidan Kontakt och länkar dit",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "route_remove"
+    assert result["appliedVisibleEffect"] is True, result
+
+    build_dir = _newest_build_dir(generated_dir, site_id)
+    # The contact page is gone, the other pages stay.
+    assert not (build_dir / "app" / "kontakt" / "page.tsx").exists()
+    assert (build_dir / "app" / "page.tsx").exists()
+    assert (build_dir / "app" / "tjanster" / "page.tsx").exists()
+
+    # No page (incl. the shared layout nav) keeps a dead internal /kontakt link.
+    for page in (build_dir / "app").rglob("*.tsx"):
+        text = page.read_text(encoding="utf-8")
+        assert "/kontakt" not in _internal_route_hrefs(text), (
+            f"{page.relative_to(build_dir)} still links to a removed /kontakt route"
+        )
+
+    # The home page now retargets its contact CTA to a real channel (mailto:),
+    # since painter-palma has a real email - an honest fallback, not a dead link.
+    home = (build_dir / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "mailto:hej@malareipalma.es" in home
+
+
+def test_remove_services_page_is_still_refused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Slice B keeps home/services protected: "ta bort sidan Tjänster" is an
+    honest no-op (only contact is a removable required page)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    result = run_followup_chain(
+        site_id,
+        "ta bort sidan Tjänster",
         do_build=False,
         runs_dir=runs_dir,
         generated_dir=generated_dir,
@@ -152,8 +210,7 @@ def test_required_contact_page_is_kept_in_slice_a(
     assert result["applied"] is False, result
     assert result["stage"] == "route_remove_unsupported", result
     build_dir = _newest_build_dir(generated_dir, site_id)
-    # The contact page is still there (init build, untouched by the no-op).
-    assert (build_dir / "app" / "kontakt" / "page.tsx").exists()
+    assert (build_dir / "app" / "tjanster" / "page.tsx").exists()
 
 
 def test_disabled_route_is_sticky_across_a_later_restyle(

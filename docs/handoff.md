@@ -42,16 +42,35 @@ bort sida + nav + interna länkar). Detaljerad köplan:
 > followup chain restyle/unapplied, route_remove E2E, docs-freshness/hygiene).
 > naming-dictionary bumpad till v42 (Disabled Route).
 >
-> **NÄSTA — Slice B (route/nav forts.):** ta bort `contact` (required) + CTA-
-> retarget. Gör `_pick_contact_route` tolerant (None i st.f. SystemExit), retargeta
-> varje kontakt-CTA till `mailto:`→`tel:`→utelämna ärligt, och lägg en Quality
-> Gate-länkscan som failar på dinglande intern `href` mot disabled route.
-> Resolvern har redan `allow_required`-sömmen. SCOUT-INVENTERING (read-only, denna
-> session) av kontakt-CTA-/intern-länk-ytan: contact_path är EN chokepoint som
-> trådas från `write_pages` → varje renderer; ~12 emissionsplatser; två fällor:
-> (a) `_pick_contact_route` raise SystemExit, (b) `_route_href` avvisar
-> mailto:/tel:. Hårdkodade icke-kontakt-länkar att vitlista i länkscanen: `/`,
-> `/spel`, `/faq`, `/arbeten`. Detalj: se denna sessions scout-rapport.
+> **SLICE B LANDAD (lokalt, branch `feat/route-nav-mutation-v1-slice-b` ovanpå
+> Slice A:s öppna PR #328):** `contact` (required) kan nu tas bort MED säker
+> CTA-fallback, och en länkscan garanterar att ingen död `/kontakt`-länk blir kvar.
+> 1. `route_directives.resolve_disabled_routes` fick `allow_required_ids`; steg 3e
+>    anropar den med `{"contact"}` (hem/tjänster förblir skyddade — refuseras).
+>    `build()`-filtret speglar via EN `_REMOVABLE_REQUIRED_ROUTE_IDS = {"contact"}`.
+> 2. `_pick_contact_route` returnerar `None` i st.f. `SystemExit`. `write_pages`
+>    löser EN `contact_target` via `_contact_cta_target`: contact-routens path när
+>    sidan finns (byte-identiskt), annars `mailto:` riktig e-post → `tel:` riktigt
+>    nummer → `None` (utelämna). Ett malformerat scaffold-contact-path failar
+>    fortfarande snabbt.
+> 3. Ny `_contact_href`-hjälpare släpper igenom `mailto:`/`tel:` (till skillnad
+>    från `_route_href`). ALLA kontakt-CTA-emittorer (header+footer, hero,
+>    contact-cta, service-list ×4, collection, products, wizard-CTA, klinik/PS/
+>    byrå-länkarna) går genom delade `_filled_contact_cta`/`_text_contact_cta`
+>    och utelämnar ankaret när målet är `None`.
+> 4. Ny Quality Gate-check `internal-link-scan` (soft-blocking → `degraded`,
+>    `checks.py`/`gate.py`/`models.py` + `quality-result.schema.json` enum, nu 7
+>    checks) failar på varje död intern `<a>/<Link href="/...">` mot en route utan
+>    `page.tsx` på disk. Disk-härledd → no-op (noll falska positiva) på byggen utan
+>    borttagna routes; `/spel`/`/faq`/`/arbeten` har egna page.tsx så de passerar.
+>
+> **Grönt (Slice B):** ruff 0; riktade sviter (route_directives,
+> contact-route-cta-targets/-regression, wizard-route-emission, followup
+> route_remove E2E inkl. "ta bort sidan Kontakt och länkar dit", quality_gate +
+> verifier/critic, builder-hardening/-route-emission, artefact-schema-3c-lite).
+>
+> **NÄSTA (route/nav forts.):** ren nav-only ("dölj i menyn men behåll sidan",
+> coachens `nav_edit`) eller wizard-extra-route-borttagning.
 >
 > **Öppen fråga (operatör):** backoffice-yta för "editor-actions/mutationer"
 > (route_remove m.fl.) skild från dossiers — liten separat följd, ej byggd.

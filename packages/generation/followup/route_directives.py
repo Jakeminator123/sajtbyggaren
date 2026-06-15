@@ -20,6 +20,12 @@ route kept in this slice, is reported as ``refused`` so the chain can do an
 HONEST no-op with a reason (it never disables a page it cannot safely remove, and
 never invents a route). Deterministic, offline, no LLM.
 
+Slice B (ADR 0060): ``contact`` becomes removable too via ``allow_required_ids``
+(the caller passes ``frozenset({"contact"})``), while ``home``/``services`` stay
+protected (never in the allow-list, and ``home`` is refused unconditionally).
+Removing contact retargets its site-wide CTAs to ``mailto:``/``tel:`` or omits
+them - that materialisation lives in the build/render seam, not here.
+
 Conventions: identifiers + comments in English (governance/rules/code-in-english.md).
 """
 
@@ -30,7 +36,8 @@ from typing import Any
 __all__ = ["resolve_disabled_routes"]
 
 # The landing page is always kept: even a scaffold that forgot the ``required``
-# flag must never lose its root route. Guarded explicitly below.
+# flag must never lose its root route. Guarded explicitly below, before the
+# ``required`` check, so it cannot be opted into via ``allow_required_ids``.
 _ALWAYS_REQUIRED_ROUTE_IDS = frozenset({"home"})
 
 
@@ -39,14 +46,16 @@ def resolve_disabled_routes(
     scaffold_routes: dict[str, Any],
     *,
     allow_required: bool = False,
+    allow_required_ids: frozenset[str] | None = None,
 ) -> tuple[list[str], list[dict[str, str]]]:
     """Resolve route_remove targets to disable-able scaffold routeIds.
 
     Returns ``(disabled, refused)`` where:
 
     - ``disabled`` is the de-duplicated list of routeIds that BOTH exist in the
-      scaffold's ``defaultRoutes`` AND are safe to remove (not required unless
-      ``allow_required``, never ``home``). Recording one disables the page.
+      scaffold's ``defaultRoutes`` AND are safe to remove (never ``home``; a
+      ``required`` page only when ``allow_required`` is set OR its id is listed
+      in ``allow_required_ids``). Recording one disables the page.
     - ``refused`` is ``[{"routeId", "reason"}]`` for every target that is
       unknown (no label resolved), not a scaffold route, or a required page kept
       in this slice - the honest no-op signal.
@@ -56,10 +65,13 @@ def resolve_disabled_routes(
     router saw a page removal but could not name the page.
 
     ``scaffold_routes`` is the loaded ``routes.json`` (``defaultRoutes`` with
-    id/required). ``allow_required`` is reserved for Slice B (contact removal +
-    CTA retarget); Slice A keeps required pages so the contact route - and the
-    site-wide CTAs that link to it - stay intact. Deterministic, offline, no LLM.
+    id/required). ``allow_required`` opens every required page except ``home``
+    (kept for the resolver's direct unit-test seam). ``allow_required_ids`` is
+    the Slice B path: the caller passes ``frozenset({"contact"})`` so contact -
+    and only contact - becomes removable while ``services`` (and any other
+    required page) stays protected. Deterministic, offline, no LLM.
     """
+    allowed_required = allow_required_ids or frozenset()
     default_routes = (
         scaffold_routes.get("defaultRoutes") if isinstance(scaffold_routes, dict) else None
     )
@@ -107,14 +119,19 @@ def resolve_disabled_routes(
                 }
             )
             continue
-        if route.get("required") and not allow_required:
+        if (
+            route.get("required")
+            and not allow_required
+            and route_id not in allowed_required
+        ):
             refused.append(
                 {
                     "routeId": route_id,
                     "reason": (
                         f"Sidan {route_id!r} är obligatorisk i scaffolden (t.ex. "
-                        "tjänster/kontakt) och kan inte tas bort i den här "
-                        "versionen; obligatoriska sidor behålls tills vidare."
+                        "tjänster) och kan inte tas bort; obligatoriska sidor "
+                        "behålls (endast kontaktsidan kan tas bort, med säker "
+                        "CTA-fallback)."
                     ),
                 }
             )

@@ -94,6 +94,30 @@ def test_allow_required_opens_contact_removal_for_slice_b():
     assert refused_home[0]["routeId"] == "home"
 
 
+def test_allow_required_ids_opens_only_listed_required_routes():
+    """Slice B (ADR 0060) passes allow_required_ids={"contact"}: contact becomes
+    removable while services (also required) stays protected, and home is never
+    removable even if listed. This is the selective seam run_followup_chain uses
+    so "ta bort sidan Kontakt" works but "ta bort sidan Tjänster" stays refused."""
+    disabled, refused = resolve_disabled_routes(
+        ["contact"], _LSB_ROUTES, allow_required_ids=frozenset({"contact"})
+    )
+    assert disabled == ["contact"]
+    assert refused == []
+    # services is required and NOT in the allow-list -> still refused.
+    disabled_svc, refused_svc = resolve_disabled_routes(
+        ["services"], _LSB_ROUTES, allow_required_ids=frozenset({"contact"})
+    )
+    assert disabled_svc == []
+    assert refused_svc[0]["routeId"] == "services"
+    # home is never removable, even if it is (wrongly) listed in allow_required_ids.
+    disabled_home, refused_home = resolve_disabled_routes(
+        ["home"], _LSB_ROUTES, allow_required_ids=frozenset({"home", "contact"})
+    )
+    assert disabled_home == []
+    assert refused_home[0]["routeId"] == "home"
+
+
 def test_dedupes_and_preserves_order():
     disabled, _ = resolve_disabled_routes(["about", "about"], _LSB_ROUTES)
     assert disabled == ["about"]

@@ -257,8 +257,8 @@ def _commerce_bottom_cta_label(dossier: dict) -> str:
 def _hero_cta_target_path(
     dossier: dict,
     listing_route: dict | None,
-    contact_path: str,
-) -> str:
+    contact_path: str | None,
+) -> str | None:
     """Return the route the hero CTA should link to.
 
     B101 (re-Verifierings-Scout 3 2026-05-18): a hero CTA labelled
@@ -387,24 +387,24 @@ def _nav_items_from_scaffold(
 
 def _pick_contact_route(
     scaffold_default_routes: list[dict],
-) -> dict:
-    """Return the scaffold's contact route.
+) -> dict | None:
+    """Return the scaffold's contact route, or ``None`` when there is none.
 
     Renderers that link operators to the contact page route hrefs
     through this helper so a scaffold that ever moves the contact id
-    to ``/kontakta-oss`` keeps its CTAs aligned with the nav. Missing
-    contact routes fail fast: otherwise the builder could silently emit
-    CTA links to ``/kontakt`` without writing the matching page.
+    to ``/kontakta-oss`` keeps its CTAs aligned with the nav.
+
+    Route/Nav Mutation V1 Slice B (ADR 0060): a ``route_remove`` follow-up can
+    now disable the (required) contact route, so ``activeRoutes`` may legitimately
+    carry no contact route. This returns ``None`` in that case instead of raising
+    ``SystemExit``; ``write_pages`` resolves a ``mailto:``/``tel:`` CTA fallback
+    (or omits the CTA) via ``_contact_cta_target`` + ``_contact_href`` so the
+    builder never crashes and never emits a dead ``/kontakt`` link.
     """
     for route in scaffold_default_routes:
         if route.get("id") == "contact":
             return route
-    route_ids = [str(route.get("id", "<missing>")) for route in scaffold_default_routes]
-    raise SystemExit(
-        "Builder failed: scaffold routes.json defaultRoutes must include "
-        "a route with id='contact' because generated navigation and CTAs "
-        f"link to the contact page. Found route ids: {route_ids!r}."
-    )
+    return None
 
 
 def _pick_listing_route(

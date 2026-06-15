@@ -870,8 +870,8 @@ def test_repair_and_quality_results_are_not_skeleton(
 
     check_names = {check["name"] for check in quality["checks"]}
     assert check_names == {
-        "typecheck", "route-scan", "build-status", "policy-compliance",
-        "contact-cta-presence", "placeholder-copy-scan",
+        "typecheck", "route-scan", "internal-link-scan", "build-status",
+        "policy-compliance", "contact-cta-presence", "placeholder-copy-scan",
     }, (
         f"Quality Gate must run registered checks. Got {check_names!r}."
     )

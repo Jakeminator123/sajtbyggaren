@@ -183,8 +183,14 @@ def test_hero_cta_target_falls_back_to_contact_without_products_listing() -> Non
     assert _hero_cta_target_path(shop_dossier, products_listing, contact_path) == "/produkter"
 
 
-def test_pick_contact_route_returns_contact_and_fails_fast_when_missing() -> None:
-    """_pick_contact_route returns the contact route or exits, by design."""
+def test_pick_contact_route_returns_contact_or_none_when_missing() -> None:
+    """_pick_contact_route returns the contact route, or None when absent.
+
+    Route/Nav Mutation V1 Slice B (ADR 0060): the contact route can now be
+    removed by a route_remove follow-up, so a missing contact route is a valid
+    state (not a SystemExit). write_pages resolves a mailto:/tel: CTA fallback
+    (or omits the CTA) via _contact_cta_target instead of crashing.
+    """
     from packages.generation.build.render_helpers import _pick_contact_route
 
     with_contact = [
@@ -193,6 +199,7 @@ def test_pick_contact_route_returns_contact_and_fails_fast_when_missing() -> Non
         {"id": "contact", "path": "/kontakta-oss"},
     ]
     contact = _pick_contact_route(with_contact)
+    assert contact is not None
     assert contact["id"] == "contact"
     assert contact["path"] == "/kontakta-oss"
 
@@ -200,5 +207,4 @@ def test_pick_contact_route_returns_contact_and_fails_fast_when_missing() -> Non
         {"id": "home", "path": "/"},
         {"id": "services", "path": "/tjanster"},
     ]
-    with pytest.raises(SystemExit):
-        _pick_contact_route(without_contact)
+    assert _pick_contact_route(without_contact) is None

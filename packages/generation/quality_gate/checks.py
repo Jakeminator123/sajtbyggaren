@@ -201,6 +201,78 @@ def run_route_scan_check(
     )
 
 
+# Captures the href of an <a>/<Link> element in generated TSX (both the bare
+# ``href="..."`` and the JSX-expression ``href={"..."}`` forms). Used by the
+# internal-link scan; src=/action= and #anchor/mailto:/tel:/http(s) targets are
+# filtered out by the scan itself (only ``/``-prefixed hrefs are route targets).
+_INTERNAL_LINK_RE = re.compile(
+    r"<(?:a|Link)\b[^>]*?\bhref=(?:\"([^\"]+)\"|\{\"([^\"]+)\"\})",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+
+
+def run_internal_link_scan_check(target_dir: Path) -> CheckResult:
+    """Fail on a generated <a>/<Link> href that points at a route with no page.
+
+    Route/Nav Mutation V1 Slice B (ADR 0060): when a ``route_remove`` follow-up
+    drops a page (e.g. contact), every CTA that linked there must retarget to
+    ``mailto:``/``tel:`` or be omitted. This scan is the safety net that fails
+    the build (soft -> degraded) on any surviving dead internal link - an
+    ``<a href="/kontakt">`` pointing at a removed page.
+
+    Derived purely from disk: an internal href is "dead" when its normalized
+    path is not among the generated app routes (the ``app/**/page.tsx`` files,
+    which include scaffold defaults, wizard extras like ``/faq``/``/arbeten`` and
+    dossier routes like ``/spel``). External (``http(s)://``), in-page (``#...``)
+    and protocol (``mailto:``/``tel:``) targets are not route targets and are
+    skipped. A build with no removed routes keeps every CTA on a real route, so
+    this is a no-op there - zero false positives, byte-identical behaviour.
+    """
+    started = time.monotonic()
+    app_dir = target_dir / "app"
+    if not app_dir.exists():
+        return CheckResult(
+            name="internal-link-scan",
+            status="skipped",
+            detail="Ingen app/-katalog hittades; ingen länk-scan kördes.",
+        )
+    existing = _existing_app_routes(target_dir)
+    findings: list[str] = []
+    for path in sorted(app_dir.rglob("*.tsx")):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = path.relative_to(target_dir)
+        for match in _INTERNAL_LINK_RE.finditer(text):
+            href = match.group(1) or match.group(2) or ""
+            if not href.startswith("/"):
+                continue
+            if _normalize_internal_href(href) not in existing:
+                findings.append(
+                    f"{rel}: {href} -> ingen route på disk (död intern länk)"
+                )
+
+    elapsed = int((time.monotonic() - started) * 1000)
+    if not findings:
+        return CheckResult(
+            name="internal-link-scan",
+            status="ok",
+            detail="Inga döda interna länkar; alla <a>/<Link>-href pekar på en route.",
+            durationMs=elapsed,
+        )
+    return CheckResult(
+        name="internal-link-scan",
+        status="failed",
+        detail=(
+            f"{len(findings)} död(a) intern(a) länk(ar) mot routes som inte "
+            "finns (t.ex. en CTA mot en borttagen /kontakt-sida)."
+        ),
+        findings=findings[:50],
+        durationMs=elapsed,
+    )
+
+
 def run_build_status_check(
     *,
     build_status: str,

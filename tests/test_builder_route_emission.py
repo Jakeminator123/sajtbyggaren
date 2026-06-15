@@ -1589,14 +1589,15 @@ def test_pick_contact_route_returns_scaffold_contact() -> None:
 
 
 @pytest.mark.tooling
-def test_pick_contact_route_fails_when_missing() -> None:
-    """B50: a scaffold without contact id must fail before ghost CTAs
-    point at /kontakt without a matching route.
+def test_pick_contact_route_returns_none_when_missing() -> None:
+    """Route/Nav Mutation V1 Slice B (ADR 0060): the contact route can be removed,
+    so a missing contact route is a valid state - _pick_contact_route returns None
+    (was SystemExit in Slice A). write_pages then resolves a mailto:/tel: CTA
+    fallback (or omits the CTA) instead of inventing a dead /kontakt link.
     """
     from scripts.build_site import _pick_contact_route
 
-    with pytest.raises(SystemExit, match="must include a route with id='contact'"):
-        _pick_contact_route([{"id": "home", "path": "/"}])
+    assert _pick_contact_route([{"id": "home", "path": "/"}]) is None
 
 
 @pytest.mark.tooling
@@ -1776,9 +1777,13 @@ def test_write_pages_threads_contact_path_into_all_contact_ctas(
 
 
 @pytest.mark.tooling
-def test_write_pages_fails_when_contact_route_is_missing(tmp_path: Path) -> None:
-    """B50: missing contact route is a scaffold config error, not a
-    reason to invent /kontakt.
+def test_write_pages_without_contact_route_retargets_and_leaves_no_dead_link(
+    tmp_path: Path,
+) -> None:
+    """Slice B (ADR 0060): a route set without a contact route is now valid (the
+    contact page can be removed). write_pages succeeds, retargets the CTAs to a
+    real channel (mailto: the dossier email) and never invents a dead /kontakt
+    link.
     """
     from scripts.build_site import write_pages
 
@@ -1789,8 +1794,15 @@ def test_write_pages_fails_when_contact_route_is_missing(tmp_path: Path) -> None
         ]
     }
 
-    with pytest.raises(SystemExit, match="must include a route with id='contact'"):
-        write_pages(tmp_path, _minimal_dossier(), routes_without_contact, [])
+    written = write_pages(tmp_path, _minimal_dossier(), routes_without_contact, [])
+    assert written == ["/", "/tjanster"]
+    for page in (tmp_path / "app").rglob("*.tsx"):
+        output = page.read_text(encoding="utf-8")
+        assert _route_href_attr("/kontakt") not in output, (
+            f"{page.relative_to(tmp_path)} invented a dead /kontakt link"
+        )
+    home = (tmp_path / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "mailto:hej@test.se" in home
 
 
 @pytest.mark.tooling
