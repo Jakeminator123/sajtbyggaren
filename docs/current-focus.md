@@ -6,36 +6,43 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-15 ~17:30 — route_remove härdat, delivery-bias + build-context-guard mergade)
+## Status nu (2026-06-15 ~23:00 — nav_hide + route_remove-fix + docs-städning live i prod)
 
-**Git:** `main = jakob-be = origin/main = origin/jakob-be = cd9bb0ba` (+ denna
-rundas SystemExit-fix- och docs-commits). Production deployar från `main`.
+**Git:** `main = jakob-be = origin/main = origin/jakob-be = 25250a46`. Production
+deployar från `main`; build-context (Python-motorn) uppladdad + i synk
+(`npm run build-context:check` → 25250a46 matchar HEAD).
 
 **Stora planen + orientering för nästa agent:** läs det auktoritativa
 orienteringsblocket ÖVERST i [`docs/handoff.md`](handoff.md). Där bor den fulla
 beskrivningen (north star, de två flödena + action-bryggan, 4-fas-planen) — den
 upprepas inte här. Denna fil håller bara status, nästa prioriteringar och blockers.
 
-**Landat senast:** Route/Nav Mutation V1 (ADR 0060) — ta bort sida + nav +
-interna länkar: #328 (Slice A), #332 (Slice B, contact + CTA-retarget + länk-scan),
-#333 (härdning, 5 review-fynd) + en SystemExit-fix i `_base_disabled_route_ids`.
-Dessutom #320 (bygg-kort), #329 (test-tiers), #330 (delivery-bias,
-`docs/delivery-bias.md`), #331 (build-context-guard, `npm run build-context:check`).
+**Landat senast (2026-06-15 kväll):** `nav_hide` (#336, ADR 0060 — dölj sidans
+nav-länk site-wide men BEHÅLL sidan; `route_editor` äger nu route_remove +
+nav_hide), route_remove fynd 1 + 3 (#334 — site-plan-artefakt-ärlighet +
+B205-dok för ecommerce catch-all), docs/governance-städning (#335 —
+handoff-arkivering, current-focus-avdubbling, ADR-index). main fast-forward:ad =
+jakob-be; build-context uppladdad.
 
 **Nästa 3 prioriteringar** (faser/fullständig kapacitetslista i [`docs/handoff.md`](handoff.md)):
 
 1. **Fas 1 — beslutsenhet:** `run_followup_chain` ska KONSUMERA dirigentens
-   routerbeslut i st.f. att klassa om (rad ~4189). Tunn, ren vinst.
-2. **nav-only** (`nav_edit`: "dölj i menyn men behåll sidan") — liten, naturlig
-   efter route_remove-fynd 4.
-3. **generativ komponent V1** (fas 4) — störst effekt mot "lägg till"-glappet.
+   routerbeslut i st.f. att klassa om (rad ~4205). Tunn, ren, beteendebevarande
+   vinst (en beslutsyta, max ett modellanrop). OBS-nyans: ett injicerat beslut
+   måste bära samma `routeSections`-kontext som dagens interna klassning, annars
+   tappas ordinal→sectionId-upplösningen.
+2. **generativ komponent V1** (fas 4) — störst hävstång mot "lägg till"-glappet
+   (bildplatshållar-grid; kräver sandbox + versionering + quality-gate;
+   scout-scope finns i agent-transcripts).
+3. **#1 build-context-automatisering** — opportunistisk drift-härdning (annars kan
+   hostad prod tyst köra gammal Python). En lokal agent lägger upp ett sync-skript.
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `cd9bb0ba` (2026-06-15 ~17:30 UTC+2; #330 + #331 mergade,
-route_remove SystemExit-fix + stor-plan-docs denna runda). Öppen PR: #324
-(Christophers viewser UI/UX — väntar operatörens browser-check). Föregående:
-`1b998d70` (#333 route_remove-härdning).
+Last verified state: `25250a46` (2026-06-15 ~23:00 UTC+2; nav_hide #336 +
+route_remove-fix #334 + docs-städning #335 mergade → fast-forward till main →
+prod; build-context uppladdad + i synk). Öppen PR: #324 (Christophers viewser
+UI/UX — väntar operatörens browser-check). Föregående: `cdd473f8`.
 
 ## Öppna PR att känna till
 
@@ -43,9 +50,9 @@ route_remove SystemExit-fix + stor-plan-docs denna runda). Öppen PR: #324
   (banner-overlap, jargong, bygg-text + canary-skript). CLEAN + grön CI, men det
   är UI → hålls för operatörens browser-check innan merge.
 
-Mergat denna runda (2026-06-15) och i `main`: #328/#332/#333 (route_remove V1 +
-härdning), #320 (bygg-kort), #329 (test-tiers), #330 (delivery-bias), #331
-(build-context-guard). Cloud-agenterna bakom #330/#331 är klara (kan stängas).
+Mergat och i `main` (= 25250a46) kvällen 2026-06-15: #336 (nav_hide), #334
+(route_remove fynd 1/3), #335 (docs-städning). Tidigare: #328/#332/#333
+(route_remove V1 + härdning), #320/#329/#330/#331.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
