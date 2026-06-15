@@ -8,12 +8,13 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 
 ## Status nu (2026-06-14 ~22:00 — prod-E2E bevisad, direktiv-läckage-fix för kundkopian, docs-städning)
 
-**Git:** alla fyra referenserna stod på `41a24d77` (#319 B204) vid rundans
-start. Denna runda shippar PR `fix/directive-copy-leak` → `main` (squash) med
-direktiv-fixen + docs; `jakob-be` ff-synkas så att
-`main = jakob-be = origin/main = origin/jakob-be`. Production deployar från
-`main`. Föregående focus-block (takeover-prep 2026-06-14 ~17:00) ligger som
-historik överst i [`docs/handoff.md`](handoff.md).
+**Git:** `main = jakob-be = origin/main = origin/jakob-be = 81d73772` efter att
+#325 mergades till `main` 2026-06-15 (denna rundas sync-PR: review-fixes
+#318/#322, `directive_leak`-kritiker, OpenClaw novel-intent + katalog-medvetet
+plan, model routing v13). Production deployar från `main`. Christophers #324
+(UI/UX-putts) + #320 (bygg-progress) är fortfarande ÖPPNA (ej mergade — väntar
+visuell check). Föregående focus-block ligger som historik överst i
+[`docs/handoff.md`](handoff.md).
 
 **Nya PRs sedan föregående checkpoint:** #322 `fix/directive-copy-leak` (denna
 runda, squash-mergad till `main` som `be3795ce`). #317 (Cloud Agent env-setup)
@@ -55,22 +56,39 @@ review-flaggade buggar fixade — #318 additiv-vakt (`6062928c`: två citat mute
 aldrig copy), och #322-härdning (`d7dea188`: droppar directive-formade
 tjänste-kort + engelska craft-termer via den delade signalen).
 
+Och sent 2026-06-15: #325 mergad till `main` (prod). Real-key-smoken körd —
+gpt-5.5 + gpt-5.4-mini + gpt-5.4 svarar OK mot prod-nyckeln, så model routing
+v13 är prod-säker. Build-context-tarballen omladdad till sin stabila blob-URL
+(`build-context/current.tar.gz` + KV-pekaren), så hostad prod-byggväg nu kör den
+nya Python-koden (v13 + #318/#322). Och ADR 0059 slice 1 (synlig render):
+`pricing` blev en SYNLIG `/priser`-route via samma faq/team-mönster — planeringen
+definierar redan "Priser och paket" → `/priser` för `local-service-business`, och
+`render_pricing` är grundad (riktiga `services` → ärliga "Pris efter offert"-kort).
+En grundat-innehåll-grind kräver ≥1 riktig service (annars mount-only, aldrig en
+tom prissida). "lägg till en prissektion / priser / prislista" går nu följdprompt
+→ monterad capability → synlig `/priser`-sida → ny version (tester i
+`tests/test_section_directives.py`). reviews/trust väntar fortsatt på
+renderer-arbetet (designväggarna i ADR 0059).
+
 **Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
 1. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
    prompttext blir ibland stray tjänste-kort kunden aldrig bett om; avgränsa
    till grundade tjänster (samma ärlighets-tema som directive-fixen).
-2. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
-   landade omfärgning via tema-utföraren, men en namngiven tema-cue mappar i
-   dag till grått; höj tema-mappningens täckning så vald stämning syns.
-3. **Katalog-mount: synlig render (ADR 0059)** (medel; coach-beslut 2026-06-15;
-   kräver visuell check som #320): konduktorn känner nu igen monterbara
-   katalog-sektioner/-komponenter (V0 `decide`, katalog-medvetet planeringssvar)
-   och mount-maskineriet finns redan (`section_directives.py` + apply). KVAR för
-   user-synligt värde: bredda den synliga render-vägen (reviews/trust → inline/
-   dedikerad route som faq/team) så "lägg till testimonials" faktiskt syns — det
-   rör prod-render, därför ett fokuserat pass med din visuella check, inte fri
-   generativ kod.
+2. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära; utrett
+   2026-06-15): INTE en `_TONE_COLOR_TOKENS`-breddning — ett låst paritetstest
+   (`test_painter_palma_token_overrides...`) befäster designen att `tone` styr
+   typografin och bara explicita färgord/hex styr paletten (t.ex. `cafe-bistro`
+   med `tone.primary="varm"` + variant `warm-bistro` blir inte grått). Gråheten
+   gäller scenarier där variantvalet ger en neutral variant och tonen saknar
+   färgord. Riktig fix = variant-palett/-val (estetiskt; kräver din riktning),
+   inte en blind token-rad.
+3. **Katalog-mount: synlig render (ADR 0059)** (medel; coach-beslut 2026-06-15):
+   slice 1 LANDAD denna runda — `pricing` → synlig `/priser`-route (se ovan).
+   KVAR: `reviews` (`render_section_reviews` är en medveten stub → kräver
+   recensions-datamodell + renderer) och `trust` (redan i `render_home`s
+   default-komposition → kräver koordination, inte en placement-rad). Båda rör
+   prod-render → fokuserat pass med din visuella check, inte fri generativ kod.
 
 Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
 (nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
@@ -82,14 +100,14 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `d7dea188` (2026-06-15 ~12:20 UTC+2; `jakob-be` = HEAD,
-12+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift,
-directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 (`f481d201`) +
-render-utredning (`d3c1a034`), novel-intent + katalog-medveten plan
-(`9d749486`/`64800d12`), model routing v13 (`d49d1ab8`), review-fixar #318
-(`6062928c`) + #322-härdning (`d7dea188`); `origin/jakob-be` i synk efter
-push, working tree rent; `main`/`origin/main` orörda på `f4e02756`).
-Föregående: `b4a818c1`.
+Last verified state: `81d73772` (2026-06-15 ~13:00 UTC+2; #325 mergad så
+`main = jakob-be = origin/main = origin/jakob-be = 81d73772`). Denna runda
+ovanpå #325: real-key-smoke OK (gpt-5.5 + gpt-5.4-mini + gpt-5.4 svarar mot
+prod-nyckeln → v13 prod-säker), build-context-tarball omladdad till stabil
+blob-URL + KV, och ADR 0059 slice 1 — `pricing` synlig `/priser`-route
+(`section_directives.py` `VISIBLE_SECTION_ROUTES` + grundat-innehåll-grind,
+tester i `tests/test_section_directives.py`). Christophers #324 + #320 öppna.
+Föregående: `d7dea188`.
 
 ## Öppna PR att känna till
 

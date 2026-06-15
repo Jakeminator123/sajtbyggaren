@@ -140,6 +140,10 @@ def test_visible_routes_map_to_known_wizard_labels() -> None:
         "wizardLabel": "Vårt team",
         "routeId": "team",
     }
+    assert VISIBLE_SECTION_ROUTES["pricing"] == {
+        "wizardLabel": "Priser och paket",
+        "routeId": "pricing",
+    }
 
 
 def test_faq_section_surfaces_a_visible_route() -> None:
@@ -173,6 +177,57 @@ def test_team_section_visible_only_with_grounded_team() -> None:
     assert len(mount_only_empty) == 1
     assert mount_only_empty[0]["capability"] == "team-section"
     assert mount_only_empty[0]["reason"]
+
+
+def test_pricing_section_visible_only_with_grounded_services() -> None:
+    """pricing (Conductor Step 1, ADR 0059) surfaces /priser only when
+    project_input["services"] lists >=1 service with an id + label - exactly
+    the items render_pricing turns into "Pris efter offert" cards. With no such
+    service it stays mount-only: render_pricing's dashed "vi lägger upp en
+    prislista inom kort" placeholder is NOT grounded content, never a phantom
+    empty price page."""
+    grounded = {
+        "scaffoldId": "local-service-business",
+        "services": [
+            {"id": "vaggmaleri", "label": "Väggmålning", "summary": "Inomhus."}
+        ],
+    }
+    visible, mount_only = resolve_visible_section_pages(["pricing"], grounded)
+    assert visible == [
+        {"capability": "pricing", "wizardLabel": "Priser och paket", "routeId": "pricing"}
+    ]
+    assert mount_only == []
+
+    # No services -> dashed placeholder, so /priser stays honestly mount-only.
+    visible_empty, mount_only_empty = resolve_visible_section_pages(
+        ["pricing"], {"scaffoldId": "local-service-business", "services": []}
+    )
+    assert visible_empty == []
+    assert len(mount_only_empty) == 1
+    assert mount_only_empty[0]["capability"] == "pricing"
+    assert mount_only_empty[0]["reason"]
+
+    # A service missing its label is never a render_pricing card -> mount-only.
+    visible_partial, mount_only_partial = resolve_visible_section_pages(
+        ["pricing"],
+        {"scaffoldId": "local-service-business", "services": [{"id": "x"}]},
+    )
+    assert visible_partial == []
+    assert mount_only_partial[0]["capability"] == "pricing"
+
+
+def test_pricing_section_mount_only_on_non_wizard_scaffold() -> None:
+    """Even WITH grounded services, pricing stays mount-only on a non-wizard
+    scaffold (agency-studio) - the same scaffold honesty gate as faq/team."""
+    visible, mount_only = resolve_visible_section_pages(
+        ["pricing"],
+        {
+            "scaffoldId": "agency-studio",
+            "services": [{"id": "brand", "label": "Varumärke"}],
+        },
+    )
+    assert visible == []
+    assert [entry["capability"] for entry in mount_only] == ["pricing"]
 
 
 def test_route_less_capability_stays_mount_only() -> None:

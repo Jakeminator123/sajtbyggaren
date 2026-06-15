@@ -146,6 +146,6 @@ eval-tmp/
 *.pdf
 *.mp4
 
-#övrigt/
+övrigt/
 
-#data/output/
+data/output/

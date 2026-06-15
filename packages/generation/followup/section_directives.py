@@ -93,9 +93,9 @@ _SANCTIONED = (
 #
 # Only the local-service-business scaffold emits these wizard routes
 # (planning._WIZARD_ROUTE_SCAFFOLDS), so a section_add on any other scaffold
-# stays honestly mount-only. Kept narrow on purpose (faq + team first); the
-# remaining route-capable types (gallery/pricing/location) can follow the same
-# pattern once proven.
+# stays honestly mount-only. Kept narrow on purpose (faq + team + pricing,
+# ADR 0059); the remaining route-capable types (gallery/location) can follow
+# the same pattern once each has a grounded-content gate.
 #
 # B198 del b: ``contact-form`` surfaces on the EXISTING scaffold-default contact
 # route (``/kontakt``, routeId ``contact``) rather than a wizard-extra route -
@@ -105,9 +105,18 @@ _SANCTIONED = (
 # AND only when the implementing hard Dossier ``resend-contact-form`` is actually
 # mounted (the grounded-content gate below). The mailto default has no visible
 # component yet, so contact-form stays honestly mount-only there.
+#
+# Conductor Step 1 (ADR 0059): ``pricing`` joins faq/team on the SAME wizard-
+# route gate. planning._WIZARD_ROUTE_DEFINITIONS already defines "Priser och
+# paket" -> ``/priser`` (routeId ``pricing``) for local-service-business, and
+# ``render_pricing`` is grounded (lists the operator's real services as
+# honest "Pris efter offert" cards, never invented prices). The grounded-
+# content gate below requires >=1 real service so an empty /priser placeholder
+# never surfaces. No new renderer, no new engine - the proven faq/team pattern.
 VISIBLE_SECTION_ROUTES: dict[str, dict[str, str]] = {
     "faq-section": {"wizardLabel": "FAQ", "routeId": "faq"},
     "team-section": {"wizardLabel": "Vårt team", "routeId": "team"},
+    "pricing": {"wizardLabel": "Priser och paket", "routeId": "pricing"},
     "contact-form": {"wizardLabel": "Kontaktformulär", "routeId": "contact"},
 }
 
@@ -189,6 +198,12 @@ def _capability_has_grounded_content(capability: str, project_input: dict) -> bo
     - ``team-section``: grounded only when ``company.team`` lists at least one
       named member. An empty team would render a dashed "vi fyller på snart"
       placeholder, which is NOT grounded content, so it stays mount-only.
+    - ``pricing``: grounded only when ``project_input["services"]`` lists at
+      least one service with both an ``id`` and a ``label`` - exactly the items
+      ``render_pricing`` turns into "Pris efter offert" cards. With no such
+      service ``render_pricing`` falls back to a dashed "vi lägger upp en
+      prislista inom kort" placeholder, which is NOT grounded content, so
+      /priser stays mount-only (never a phantom empty price page).
     - ``contact-form`` (B198 del b): grounded only when the implementing hard
       Dossier ``resend-contact-form`` is actually mounted
       (``selectedDossiers.required``). That is the ONLY contact-form variant
@@ -205,6 +220,16 @@ def _capability_has_grounded_content(capability: str, project_input: dict) -> bo
         return isinstance(team, list) and any(
             isinstance(member, dict) and str(member.get("name") or "").strip()
             for member in team
+        )
+    if capability == "pricing":
+        services = (
+            project_input.get("services") if isinstance(project_input, dict) else None
+        )
+        return isinstance(services, list) and any(
+            isinstance(svc, dict)
+            and str(svc.get("id") or "").strip()
+            and str(svc.get("label") or "").strip()
+            for svc in services
         )
     if capability == "contact-form":
         return _resend_contact_form_mounted(project_input)
