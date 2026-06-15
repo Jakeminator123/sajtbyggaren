@@ -575,14 +575,27 @@ def _offer_tagline_phrases(brief: dict[str, Any]) -> set[str]:
 
 
 def _drop_offer_tagline_services(services: list[str], brief: dict[str, Any]) -> list[str]:
-    """Drop ``servicesMentioned`` entries that are ~equal to the offer/tagline.
+    """Drop ``servicesMentioned`` entries that are tagline-equal OR directive-shaped.
 
-    Honesty-preserving: only removes a service whose normalised text equals a
-    company offer/tagline phrase (hero one-liner / subheadline). Real services
-    are kept unchanged and nothing is fabricated. A no-op when the brief carries
-    no offer/tagline phrase (e.g. a legacy brief without positioning), so that
-    path stays byte-identical.
+    Honesty-preserving: only ever REMOVES an item, never fabricates copy. Two
+    drops:
+
+    1. directive-shaped instruction text briefModel mis-filed as a service
+       (#322 review): a directive differentiator the story/hero guard dropped
+       can otherwise SURVIVE as a service card, because ``servicesMentioned`` is
+       collected separately. Uses the SAME shared signal
+       (``_looks_like_directive``) so prevention is consistent across
+       story/hero/FAQ/offer - one source, no drift.
+    2. a service whose normalised text equals a company offer/tagline phrase
+       (hero one-liner / subheadline).
+
+    No-op on the honest baseline (concrete service nouns trip neither drop), so
+    the four mock baselines stay byte-identical. The directive drop carries the
+    same high-precision/false-positive trade-off as the story/hero guard (a real
+    service literally starting with a directive lead verb is rare; the cost is
+    one missing card, never fabricated copy).
     """
+    services = [service for service in services if not _looks_like_directive(service)]
     tagline_phrases = _offer_tagline_phrases(brief)
     if not tagline_phrases:
         return services

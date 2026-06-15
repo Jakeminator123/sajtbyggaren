@@ -37,9 +37,15 @@ from typing import Any
 
 # Composite craft/meta terms a genuine customer-facing sentence never uses
 # about itself. Their presence means the string is talking ABOUT the page/copy
-# (a builder directive), not to the visitor. Word-boundary matched.
+# (a builder directive), not to the visitor. Word-boundary matched. English
+# mirrors ("contact section"/"hero section") are added (#322 review: English/
+# mixed briefModel output can leak the same way) - kept to UNAMBIGUOUS craft
+# nouns; bare "copy"/"cta"/"the hero" are deliberately excluded because they can
+# appear in legitimate customer copy (precision over recall, same as the
+# Swedish set).
 _DIRECTIVE_CRAFT_TERM_RE = re.compile(
-    r"\b(?:kontaktsektion(?:en)?|hero[-\s]?sektion(?:en)?|subheadline)\b",
+    r"\b(?:kontaktsektion(?:en)?|hero[-\s]?sektion(?:en)?|subheadline"
+    r"|contact[-\s]?section|hero[-\s]?section)\b",
     re.IGNORECASE,
 )
 

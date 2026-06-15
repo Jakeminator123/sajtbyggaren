@@ -535,6 +535,40 @@ def test_looks_like_directive_flags_instruction_text():
 
 
 @pytest.mark.tooling
+def test_looks_like_directive_flags_english_craft_terms():
+    """#322 review: English/mixed briefModel output can leak the same way. The
+    unambiguous English craft nouns 'contact section' / 'hero section' are now
+    caught (mirroring kontaktsektion/hero-sektion); ambiguous bare 'copy'/'cta'
+    stay UNcaught to keep precision (they appear in legit customer copy)."""
+    from packages.generation.planning.blueprint import _looks_like_directive
+
+    assert _looks_like_directive("Emphasise the local roots in the hero section.")
+    assert _looks_like_directive("Surface trust signals in the contact section.")
+    # Precision: ordinary English copy mentioning neither craft noun is kept.
+    assert not _looks_like_directive("We bake fresh bread every morning.")
+    assert not _looks_like_directive("Call us to book a table today.")
+
+
+@pytest.mark.tooling
+def test_drop_offer_tagline_services_drops_directive_shaped_service():
+    """#322 review: a directive-shaped string briefModel mis-filed under
+    servicesMentioned must NOT survive as a service card just because the
+    story/hero guard dropped it elsewhere. The shared signal drops it; real
+    concrete services are kept (no fabrication)."""
+    from packages.generation.planning.blueprint import _drop_offer_tagline_services
+
+    services = [
+        "Elinstallationer",
+        "Lyft hantverket tydligt i kontaktsektionen",  # directive-shaped
+        "Felsökning",
+    ]
+    assert _drop_offer_tagline_services(services, {}) == [
+        "Elinstallationer",
+        "Felsökning",
+    ]
+
+
+@pytest.mark.tooling
 def test_looks_like_directive_is_a_no_op_on_baseline_positioning():
     """Every deterministic baseline positioning/contentStrategy value reads as
     customer copy, so the guard never fires on the honest mock path - this is
