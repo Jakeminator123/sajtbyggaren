@@ -11,6 +11,7 @@ Christopher via `main` — precis som all annan dokumentation.
 | `begreppskarta-sajtbyggaren.canvas.tsx` | Interaktiv begreppskarta: bibliotek (scaffold/variant/dossier/starter), körningsartefakter (project input → site brief → site plan → generation package → byggd sajt), projektminne (project DNA), blueprint-fältgrupperna, faser mot 9/10 samt vad som finns/fattas på `main`. |
 | `openclaw-floden.canvas.tsx` | Interaktivt OpenClaw-flöde: Viewser-chatten → samtalsgrinden → konduktörens beslut → KÖR-kedjan (6a/7a–7d) → ny version + preview, plus roller, action-registry och hårda regler. |
 | `roller-vs-agenter-modeller.canvas.tsx` | Begreppsklargörande: skillnaden mellan Model Roles (var en LLM anropas), konduktör-roller (vem som förstår en ändring), SOUL-persona (hur chatten låter) och att fristående "agenter"/daemon inte finns här — plus var `gpt-4o` faktiskt körs, motorns 12 Model Roles, gränser och aktuell OpenAI-lineup (live via docs-MCP). |
+| `steward-revision-llm-floden.canvas.tsx` | Steward-/scout-revision: de två LLM-kedjorna (init Golden Path + följdprompt-konduktören) och hur de speglas i chatten (bygg vs chat-svar), status implementerat/kvar/i synk, glapp & obsoleta kedjor, samt en grundad städningsrekommendation för tester/docs/governance mot ett 9/10-flöde. Klickbar flödeskarta. |
 
 ## Så visas en canvas
 

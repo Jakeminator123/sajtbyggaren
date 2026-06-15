@@ -202,3 +202,9 @@ openclaw-docs/
 # speglar in den i Cursor-mappen varje omgång. Hålls gitignored för att
 # undvika .tsx-lint/governance-brus; ta bort raden om den ska versionas.
 docs/heavy-llm-flow/canvases/
+
+# Operatörens lokala scratch-/kommandoanteckningar (personlig, ej delbar -
+# innehåller absoluta lokala sökvägar). Hålls ur git så den inte bullrar som
+# untracked vid varje overlämning. .env-hemligheter täcks redan av raderna
+# .env / .env.* / !.env.example ovan.
+kommandon.txt
