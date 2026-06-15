@@ -6,43 +6,42 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-15 ~23:00 — nav_hide + route_remove-fix + docs-städning live i prod)
+## Status nu (2026-06-16 ~01:00 — Fas 1 + generativ komponent V1 live; ADR 0061/0062)
 
-**Git:** `main = jakob-be = origin/main = origin/jakob-be = 25250a46`. Production
-deployar från `main`; build-context (Python-motorn) uppladdad + i synk
-(`npm run build-context:check` → 25250a46 matchar HEAD).
+**Git:** `main = jakob-be = origin/main = origin/jakob-be = 0f2e5758` (+ denna
+current-focus-bump). Production deployar från `main`; build-context (Python-motorn)
+uppladdad + i synk (`npm run build-context:check`).
 
 **Stora planen + orientering för nästa agent:** läs det auktoritativa
 orienteringsblocket ÖVERST i [`docs/handoff.md`](handoff.md). Där bor den fulla
 beskrivningen (north star, de två flödena + action-bryggan, 4-fas-planen) — den
 upprepas inte här. Denna fil håller bara status, nästa prioriteringar och blockers.
 
-**Landat senast (2026-06-15 kväll):** `nav_hide` (#336, ADR 0060 — dölj sidans
-nav-länk site-wide men BEHÅLL sidan; `route_editor` äger nu route_remove +
-nav_hide), route_remove fynd 1 + 3 (#334 — site-plan-artefakt-ärlighet +
-B205-dok för ecommerce catch-all), docs/governance-städning (#335 —
-handoff-arkivering, current-focus-avdubbling, ADR-index). main fast-forward:ad =
-jakob-be; build-context uppladdad.
+**Landat senast (2026-06-15 kväll → 16 natt):** **Fas 1 — beslutsenhet** (#338,
+`run_followup_chain` konsumerar dirigentens routerbeslut, beteendebevarande).
+**Generativ komponent V1** (#341, ADR 0061, Fas 4 — "lägg till N bildplatshållare"
+materialiserar en ny `.tsx` genom build + Quality Gate; deterministiskt recept,
+inga nya npm-deps) + review-fixar (#342: last-wins grid-uppdatering + import efter
+`'use client'`). **ADR-sanningstvätt** (#340, ny ADR 0062 OpenClaw-dirigent +
+notiser). **Chat-regression fixad** (temperature ej till gpt-5.x reasoning-modeller).
+**build-context-automatisering** (#1: `scripts/sync_vercel_build_context.py` +
+backoffice-vy). nav_hide/route_remove-fix/docs-städning sedan tidigare.
 
 **Nästa 3 prioriteringar** (faser/fullständig kapacitetslista i [`docs/handoff.md`](handoff.md)):
 
-1. **Fas 1 — beslutsenhet:** `run_followup_chain` ska KONSUMERA dirigentens
-   routerbeslut i st.f. att klassa om (rad ~4205). Tunn, ren, beteendebevarande
-   vinst (en beslutsyta, max ett modellanrop). OBS-nyans: ett injicerat beslut
-   måste bära samma `routeSections`-kontext som dagens interna klassning, annars
-   tappas ordinal→sectionId-upplösningen.
-2. **generativ komponent V1** (fas 4) — störst hävstång mot "lägg till"-glappet
-   (bildplatshållar-grid; kräver sandbox + versionering + quality-gate;
-   scout-scope finns i agent-transcripts).
-3. **#1 build-context-automatisering** — opportunistisk drift-härdning (annars kan
-   hostad prod tyst köra gammal Python). En lokal agent lägger upp ett sync-skript.
+1. **Hostad edit-perf/pålitlighet** — varje edit kör en KALL bygg-sandbox (pip +
+   npm + next build = minuter); ingen snabbväg för direktiv-edits, och sandbox-TTL
+   (15 min, reuse av) ger 410 SANDBOX_STOPPED. Levrar: skippa `next build` för
+   direktiv-edits (störst), höj TTL + `VIEWSER_SANDBOX_REUSE`, cacha pip.
+2. **reviews/trust synliga** (ADR 0059) — kräver operatörens visuella riktning.
+3. **generativ V2** — fler recept / sandboxad fri TSX (efter V1-rälsen).
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `25250a46` (2026-06-15 ~23:00 UTC+2; nav_hide #336 +
-route_remove-fix #334 + docs-städning #335 mergade → fast-forward till main →
-prod; build-context uppladdad + i synk). Öppen PR: #324 (Christophers viewser
-UI/UX — väntar operatörens browser-check). Föregående: `cdd473f8`.
+Last verified state: `0f2e5758` (2026-06-16 ~01:00 UTC+2; Fas 1 #338 + generativ V1
+#341 + #342-fixar + ADR 0062 #340 mergade → fast-forward till main → prod;
+build-context uppladdad). Öppen PR: #324 (Christophers viewser UI/UX — väntar
+operatörens browser-check). Föregående: `25250a46`.
 
 ## Öppna PR att känna till
 
@@ -50,9 +49,10 @@ UI/UX — väntar operatörens browser-check). Föregående: `cdd473f8`.
   (banner-overlap, jargong, bygg-text + canary-skript). CLEAN + grön CI, men det
   är UI → hålls för operatörens browser-check innan merge.
 
-Mergat och i `main` (= 25250a46) kvällen 2026-06-15: #336 (nav_hide), #334
-(route_remove fynd 1/3), #335 (docs-städning). Tidigare: #328/#332/#333
-(route_remove V1 + härdning), #320/#329/#330/#331.
+Mergat och i `main` (= 0f2e5758): #338 (Fas 1), #341 (generativ V1, ADR 0061),
+#342 (generativ-fixar), #340 (ADR 0062), #337 (known-issues-arkiv), temperature-fix
++ blob-admin. Tidigare: #336/#334/#335 (nav_hide/route_remove-fix/docs),
+#328/#332/#333, #320/#329/#330/#331.
 
 Christophers UI-arbete sker på `christopher` (gamla `christopher-ui` är fryst legacy).
 
