@@ -22,12 +22,21 @@ import pytest
 pytestmark = pytest.mark.tooling
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-BUILDING_BLOCKS = REPO_ROOT / "backoffice" / "views" / "building_blocks.py"
+# Building Blocks är numera ett delpaket (building_blocks/). Läs ihop alla
+# undermoduler så källtexts-vakten är robust mot vilken modul som äger raden.
+BUILDING_BLOCKS_DIR = REPO_ROOT / "backoffice" / "views" / "building_blocks"
 REPO_BOUNDARIES = REPO_ROOT / "governance" / "policies" / "repo-boundaries.v1.json"
 
 
+def _building_blocks_source() -> str:
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(BUILDING_BLOCKS_DIR.rglob("*.py"))
+    )
+
+
 def test_scaffold_candidates_dir_is_under_data() -> None:
-    source = BUILDING_BLOCKS.read_text(encoding="utf-8")
+    source = _building_blocks_source()
     assert (
         'SCAFFOLD_CANDIDATES_DIR = REPO_ROOT / "data" / "scaffold-candidates"' in source
     ), (
@@ -41,7 +50,7 @@ def test_scaffold_create_writes_candidate_not_canonical_package() -> None:
     never ``SCAFFOLDS_DIR`` (packages/). If this reverts, Backoffice would write
     canonical scaffold folders again and break repo-boundaries.v1.json.
     """
-    source = BUILDING_BLOCKS.read_text(encoding="utf-8")
+    source = _building_blocks_source()
     assert "SCAFFOLD_CANDIDATES_DIR / pick" in source, (
         "view_scaffolds must create the skeleton under SCAFFOLD_CANDIDATES_DIR."
     )
