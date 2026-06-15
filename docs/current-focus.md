@@ -74,12 +74,13 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `9d749486` (2026-06-15 ~05:00 UTC+2; `jakob-be` = HEAD,
-7+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
+Last verified state: `64800d12` (2026-06-15 ~05:40 UTC+2; `jakob-be` = HEAD,
+8+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift lagad,
 directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 utkast
-(`f481d201`), novel-intent planeringssvar (`9d749486`) + katalog-medveten plan
-(denna commit); `origin/jakob-be` i synk efter push, working tree rent;
-`main`/`origin/main` orörda på `f4e02756`). Föregående: `b4a818c1`.
+(`f481d201`), novel-intent planeringssvar (`9d749486`), katalog-medveten plan
+(`64800d12`) + ADR 0059-utredning om synlig render (denna commit);
+`origin/jakob-be` i synk efter push, working tree rent; `main`/`origin/main`
+orörda på `f4e02756`). Föregående: `b4a818c1`.
 
 ## Öppna PR att känna till
 

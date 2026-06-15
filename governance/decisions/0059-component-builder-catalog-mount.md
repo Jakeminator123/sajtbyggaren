@@ -87,8 +87,30 @@ honesty-genom-konstruktion som restyle (#316) och copyDirectives.
 - befintliga följdprompt-ärlighetstester gröna;
 - visuell verifiering i `/studio` (operatören, i #320-anda) innan merge.
 
+## Synlig render — verkligt läge (utrett 2026-06-15)
+
+Den synliga render-vägen är INTE en ren "lägg till i `INLINE_SECTION_PLACEMENTS`"-
+config. Utredningen mot koden visade två designväggar, så denna del är ett
+fokuserat, koordinations-känsligt pass (med operatörens visuella check), inte
+ett snabbtillägg:
+
+- **reviews/testimonials:** `render_section_reviews` är en medveten stub som
+  returnerar `""` (reserverad slot för en extern recensions-widget när
+  operatör-integrationen landar). Den grundade render-grinden droppar därför en
+  inline-placering för `reviews`. Att göra "lägg till testimonials" synligt är
+  en RIKTIG funktion (recensions-datamodell + renderer), inte en slice.
+- **trust/guarantees:** `render_section_trust_proof` är en riktig, grundad
+  home-section ("Varför oss" ur `trustSignals`/USP/`businessFacts`, ärlig
+  suppression vid tomt) — MEN den ingår redan i `render_home`s default-
+  komposition med korssektions-koordination (testimonials-suppression). Att lägga
+  den i inline-placements skulle riskera dubbelrender; den synliga vägen kräver
+  koordination i `render_home`, inte en placement-rad.
+
+Slutsats: konduktor-igenkänningen (katalog-medvetet planeringssvar) och mount-
+maskineriet är klara; **renderaren är gapet** för det user-synliga värdet.
+
 ## Nästa steg
 
 Operatörens OK → ett fokuserat implementationspass (en slice i taget: intent +
-mount-konsolidering först, synlig render sedan), var och en grön mot alla
-guards innan push.
+mount-konsolidering först, synlig render sedan — med operatörens visuella check
+för render-slicen), var och en grön mot alla guards innan push.
