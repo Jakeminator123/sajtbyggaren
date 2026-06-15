@@ -146,6 +146,20 @@ def test_role_for_edit_kind_mapping(edit_kind: str, expected_role: str | None):
     assert role_for_edit_kind(edit_kind) == expected_role
 
 
+def test_component_builder_is_supported_with_generative_recipe():
+    """ADR 0061: component_builder flips from partial to SUPPORTED, mount-only by
+    default with the whitelisted image-placeholder-grid recipe as the visible
+    exception (the honest no-op stays for every non-recipe component_add)."""
+    contract = contract_for_role("component_builder")
+    assert contract.status == "supported"
+    # Mount-only default + ONE visible generative recipe (mirrors section_builder).
+    assert contract.mountOnly is True
+    assert contract.visibleTypes == ("image-placeholder-grid",)
+    # The owned edit kind + skill are unchanged (reuses component_add, ADR 0057).
+    assert contract.acceptsEditKinds == ("component_add",)
+    assert contract.skill == "skills/component-add/SKILL.md"
+
+
 def test_role_contracts_are_frozen():
     """Contracts are immutable - a caller can read but not mutate them."""
     contract = contract_for_role("stylist")

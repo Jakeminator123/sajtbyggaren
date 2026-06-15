@@ -33,6 +33,10 @@ lists exactly eight artefacts and codegen metadata fits inside
 """
 
 from .codegen import produce_codegen_artefakt
+from .followup_emit import (
+    GenerativeEmitError,
+    materialize_generative_components,
+)
 from .models import (
     CodegenFile,
     CodegenLLMResponse,
@@ -48,6 +52,8 @@ __all__ = [
     "CodegenModelResolutionError",
     "CodegenResult",
     "CodegenUsage",
+    "GenerativeEmitError",
+    "materialize_generative_components",
     "produce_codegen_artefakt",
     "resolve_codegen_model",
 ]

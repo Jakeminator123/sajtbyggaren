@@ -16,15 +16,23 @@ ytor, inga nätverksanrop.
   `appliedVisibleEffect=false`). Registryts `visibleTypes` är sanningen för
   vad som syns och korsvalideras mot rollkontrakten i
   `tests/test_openclaw_registry_consistency.py`.
-- component_add — lägga till en katalog-grundad komponent. Ägs av
-  `component_builder`-rollen (ADR 0057), grundad i Component Catalog (ADR 0040:
-  capability-map `components` + per-Starter `component-manifest.json`). PARTIAL +
-  mount-only i denna slice: en component_add-följdprompt ger ett katalog-grundat
-  svar ELLER en ÄRLIG no-op som pekar på det kurerade shadcn-intaget
-  (`scripts/component_intake.py`) — den monterar inget och skriver inga filer
-  (kedjan rapporterar no-op:en via `unappliedFollowupIntents`). Att vendorera in
-  en ny komponent förblir en operatörs-PR (intag → granskning → Starter), aldrig
-  en runtime-montering.
+- component_add — lägga till en komponent. Ägs av `component_builder`-rollen
+  (ADR 0057), grundad i Component Catalog (ADR 0040: capability-map `components` +
+  per-Starter `component-manifest.json`). SUPPORTED men mount-only som default med
+  ETT vitlistat, deterministiskt genererings-recept som undantag (Generative
+  Component V1, ADR 0061): `image-placeholder-grid` ("lägg till 6
+  bildplatshållare", "lägg till en bildgrid") MATERIALISERAS som EN ny
+  `components/generated/<id>.tsx` Server Component som splice:as in i routens
+  page.tsx via den befintliga build- + Quality Gate- + immutabel-versionerings-
+  pipelinen — INGEN fri LLM-genererad kod och INGA nya npm-beroenden i V1.
+  `directives.generativeComponents` är STICKY (union:as per id i apply); buildern
+  materialiserar idempotent och fail-closar på allt som skulle skriva utanför
+  build-katalogen eller röra `package.json`/`.env*`/`node_modules`. ALLT annat än
+  det vitlistade receptet förblir mount-only: en katalog-grundad component_add ger
+  ett katalog-grundat svar och en igenkänd-men-ostödd genererings-familj (en
+  karusell) blir en ÄRLIG no-op (stage `generative_unsupported`) som aldrig hittar
+  på en komponent. Att vendorera in en helt ny komponenttyp förblir en
+  operatörs-PR (intag → granskning → Starter); fri codegen är en senare slice.
 - route_remove — ta bort EN hel icke-obligatorisk sida + dess nav-länk via ett
   strukturerat direktiv (`directives.disabledRoutes`), aldrig en dossier och
   aldrig fri filpatch (Route/Nav Mutation V1, ADR 0060). Ägs av

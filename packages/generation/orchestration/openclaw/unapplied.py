@@ -99,6 +99,7 @@ def _edit_is_covered(
     theme_applied: bool,
     applied_section_capabilities: set[str],
     section_capability_for_intent: Mapping[str, str],
+    applied_generative: bool = False,
 ) -> bool:
     """True when the chain actually materialised this edit for the built version.
 
@@ -109,8 +110,11 @@ def _edit_is_covered(
     - ``visual_style`` -> covered iff a theme directive with values was applied;
     - ``section_add`` -> covered iff the section type resolved to a mounted
       capability;
-    - ``component_add`` / ``copy_change`` -> covered iff the router gave a target
-      section (the patch planner only collects edits that carry one);
+    - ``component_add`` -> covered iff the router gave a target section (the patch
+      planner only collects edits that carry one) OR the chain materialised a
+      generative component (ADR 0061: a recipe component_add carries no target but
+      IS applied, so it must not be falsely reported as unapplied);
+    - ``copy_change`` -> covered iff the router gave a target section;
     - ``component_remove`` / ``layout_change`` / ``route_add`` -> never covered
       (no executor owns the directive in this slice);
     - anything else (incl. ``none``) -> treated as covered (not reportable).
@@ -120,7 +124,9 @@ def _edit_is_covered(
     if edit_kind == "section_add":
         capability = section_capability_for_intent.get(component_intent or "")
         return bool(capability) and capability in applied_section_capabilities
-    if edit_kind in ("component_add", "copy_change"):
+    if edit_kind == "component_add":
+        return target is not None or applied_generative
+    if edit_kind == "copy_change":
         return target is not None
     if edit_kind in ("component_remove", "layout_change", "route_add"):
         return False
@@ -141,6 +147,7 @@ def compute_unapplied_followup_chain_intents(
     theme_applied: bool,
     applied_section_capabilities: Iterable[str],
     section_capability_for_intent: Mapping[str, str],
+    applied_generative: bool = False,
 ) -> list[dict[str, str]]:
     """Return bounded ``unappliedFollowupIntents`` posts for a built follow-up.
 
@@ -148,6 +155,9 @@ def compute_unapplied_followup_chain_intents(
     when a ``visual_style`` directive with values was applied; ``applied_section_capabilities``
     are the section capabilities the chain mounted; ``section_capability_for_intent``
     maps a router section-type slug to its capability (``SECTION_TYPE_CAPABILITY``).
+    ``applied_generative`` (ADR 0061) is True when the chain materialised a
+    generative component, so a targetless ``component_add`` that was actually
+    applied is treated as covered instead of falsely reported as unapplied.
 
     Enumerates the actionable edits (the top-level ``editKind`` plus every subtask
     with ``editKind != "none"``), drops the ones the chain covered, and emits ONE
@@ -187,6 +197,7 @@ def compute_unapplied_followup_chain_intents(
             theme_applied=theme_applied,
             applied_section_capabilities=applied_caps,
             section_capability_for_intent=section_capability_for_intent,
+            applied_generative=applied_generative,
         ):
             continue
         if edit_kind not in uncovered:

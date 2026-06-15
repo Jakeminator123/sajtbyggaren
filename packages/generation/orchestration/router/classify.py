@@ -212,6 +212,14 @@ _COMPONENT_INTENTS = {
     "kontaktformulär": "contact_form", "formulär": "form", "formuläret": "form",
     "karta": "map_embed", "kartan": "map_embed",
     "bildgalleri": "image_gallery", "galleri": "image_gallery",
+    # Generative Component V1 (ADR 0061): the image-placeholder-grid recipe nouns.
+    # These are distinct from a gallery (curated uploaded images) - they ask the
+    # component_builder to MATERIALISE a deterministic grid of placeholder tiles.
+    # An unknown component noun still classifies as component_add via the verb, so
+    # the generative resolver stays the single source of truth for what is a recipe.
+    "bildgrid": "image_placeholder_grid", "bildrutnät": "image_placeholder_grid",
+    "bildplatshållare": "image_placeholder_grid",
+    "bildplatshållarna": "image_placeholder_grid",
     "bild": "image", "bilder": "image", "video": "video", "film": "video",
     "meny": "menu", "menyn": "menu", "prislista": "pricing_table",
     "priser": "pricing_table", "faq": "faq_accordion", "öppettider": "opening_hours",

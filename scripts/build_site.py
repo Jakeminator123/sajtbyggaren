@@ -1860,6 +1860,33 @@ def _hidden_nav_route_ids_from_dossier(dossier: dict) -> set[str]:
     }
 
 
+def _generative_components_from_dossier(dossier: dict) -> list[dict]:
+    """Return the generative-component specs (``directives.generativeComponents``).
+
+    Generative Component V1 (ADR 0061): a component_add follow-up with a
+    whitelisted recipe records ``{recipe, count, routeId, id}`` specs here. The
+    deterministic builder reads them after ``write_pages`` and materialises each
+    as one ``components/generated/<id>.tsx`` spliced into its route's page.tsx.
+    Read-only + defensive - a missing/malformed directive yields an empty list, so
+    no component is ever materialised by accident (mirrors
+    ``_hidden_nav_route_ids_from_dossier``).
+    """
+    directives = dossier.get("directives") if isinstance(dossier, dict) else None
+    specs = (
+        directives.get("generativeComponents") if isinstance(directives, dict) else None
+    )
+    if not isinstance(specs, list):
+        return []
+    return [
+        spec
+        for spec in specs
+        if isinstance(spec, dict)
+        and isinstance(spec.get("id"), str)
+        and spec.get("id", "").strip()
+        and isinstance(spec.get("recipe"), str)
+    ]
+
+
 def _base_hidden_nav_route_ids(
     site_id: str,
     base_run_id: str,
@@ -3379,6 +3406,30 @@ def build(
         f"Wrote {len(routes_all_with_dossiers)} routes and copied {len(copied_components)} dossier components",
     )
 
+    # Generative Component V1 (ADR 0061): a component_add follow-up with a
+    # whitelisted recipe records directives.generativeComponents on the version's
+    # Project Input. Materialise each spec HERE - after write_pages regenerated the
+    # routes' page.tsx and BEFORE npm - so the new components/generated/<id>.tsx is
+    # written and spliced into its route's page.tsx, then typechecked + built +
+    # gated by the SAME Quality Gate / Repair / immutable-versioning pipeline as
+    # the rest of the build (a QG/build failure never swaps current.json). The
+    # emit module fails closed on any path/policy violation (never writes outside
+    # the build dir, never touches package.json/.env/node_modules) and is
+    # idempotent. An init build has no such directive, so this is a no-op there.
+    generative_component_specs = _generative_components_from_dossier(dossier)
+    if generative_component_specs:
+        from packages.generation.codegen.followup_emit import (
+            materialize_generative_components,
+        )
+
+        materialized = materialize_generative_components(
+            target, generative_component_specs, trace=trace
+        )
+        print(
+            f"Materialised {len(materialized)} generative component(s): "
+            + (", ".join(materialized) if materialized else "(none)")
+        )
+
     npm_steps: list[dict] = []
     overall_status = "ok"
 
@@ -4615,12 +4666,39 @@ def run_followup_chain(
             already_hidden=already_hidden_nav,
         )
 
+    # 3g. Generative component (component_add, component_builder role - Generative
+    #     Component V1, ADR 0061): a component_add follow-up that names a
+    #     WHITELISTED, deterministic recipe ("lägg till 6 bildplatshållare", "lägg
+    #     till en bildgrid") materialises a NEW components/generated/<id>.tsx through
+    #     the existing build + Quality Gate + immutable-versioning pipeline.
+    #     Mirroring 3c/3e/3f, resolve the recipe BEFORE the no-op gate and thread it
+    #     through apply as directives.generativeComponents (sticky). A component_add
+    #     that names a recognised-but-unsupported generative family (a carousel) is
+    #     an HONEST no-op with a reason (stage generative_unsupported); a
+    #     non-generative component_add (a clock/contact-form widget) resolves to
+    #     nothing here, so the existing component_builder no-op handles it
+    #     byte-for-byte.
+    generative_components_resolved: list[dict] = []
+    generative_refused: list[dict[str, str]] = []
+    is_component_add = decision.editKind == "component_add" or any(
+        subtask.editKind == "component_add" for subtask in decision.subtasks
+    )
+    if is_component_add:
+        from packages.generation.followup.generative_component_directives import (
+            resolve_generative_component,
+        )
+
+        generative_components_resolved, generative_refused = (
+            resolve_generative_component(follow_up_prompt, decision, context)
+        )
+
     if (
         not plan.patches
         and theme_directive is None
         and not added_capabilities
         and not disabled_routes_resolved
         and not hidden_nav_routes_resolved
+        and not generative_components_resolved
     ):
         no_edit_note = (
             f"Router: messageKind={decision.messageKind} "
@@ -4655,6 +4733,16 @@ def run_followup_chain(
                 f"sida kunde döljas ur menyn: {reasons}"
             )
             stage = "nav_hide_unsupported"
+        elif generative_refused:
+            reasons = "; ".join(
+                f"{item['component']}: {item['reason']}"
+                for item in generative_refused
+            ) or "inget vitlistat genererings-recept kunde tolkas."
+            no_edit_note = (
+                "Router klassade en komponentadd (component_add) men inget stött "
+                f"genererings-recept kunde materialiseras: {reasons}"
+            )
+            stage = "generative_unsupported"
         elif is_restyle:
             no_edit_note = (
                 "Router klassade en stiländring (visual_style) men ingen känd "
@@ -4708,6 +4796,9 @@ def run_followup_chain(
         theme_applied=theme_applied_flag,
         applied_section_capabilities=added_capabilities,
         section_capability_for_intent=SECTION_TYPE_CAPABILITY,
+        # ADR 0061: a targetless generative component_add IS applied, so it must
+        # not be falsely reported as an unapplied component in the built branch.
+        applied_generative=bool(generative_components_resolved),
     )
     # Finding 2 (#328 review): a REFUSED route_remove (unknown/required/already-
     # removed page) is otherwise only surfaced by the no-op gate above, which a
@@ -4747,6 +4838,7 @@ def run_followup_chain(
             dossier_preferences=section_dossier_preferences or None,
             disabled_routes=disabled_routes_resolved or None,
             hidden_nav_routes=hidden_nav_routes_resolved or None,
+            generative_components=generative_components_resolved or None,
             unapplied_followup_intents=unapplied_followup_intents,
         )
     except PatchApplyError as exc:
@@ -4789,10 +4881,18 @@ def run_followup_chain(
     # warning). Union them with any surfaced section routes so the attribution is
     # honest for a compound follow-up. A nav_hide changes only the shared layout
     # nav (the page is untouched); union its routeIds too so the attribution is
-    # non-empty and honest rather than defaulting to home.
+    # non-empty and honest rather than defaulting to home. A generative component
+    # (ADR 0061) splices into its route's page.tsx, so union its routeId too.
+    generative_routes = [
+        spec.get("routeId")
+        for spec in generative_components_resolved
+        if isinstance(spec.get("routeId"), str) and spec.get("routeId")
+    ]
     affected_routes_hint = section_affected_routes + [
         route_id
-        for route_id in (disabled_routes_resolved + hidden_nav_routes_resolved)
+        for route_id in (
+            disabled_routes_resolved + hidden_nav_routes_resolved + generative_routes
+        )
         if route_id not in section_affected_routes
     ]
     targeted = build_targeted_version(

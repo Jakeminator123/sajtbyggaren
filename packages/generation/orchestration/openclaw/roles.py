@@ -13,8 +13,9 @@ docs/heavy-llm-flow/openclaw-2.0-conductor.md).
    the role consumes (input) and which directive kinds it may emit (output):
    ``section_add`` -> ``section_builder``, ``visual_style`` -> ``stylist``,
    ``copy_change`` -> ``copy``, ``component_add`` -> ``component_builder`` (ADR
-   0057, partial/mount-only). The ``router`` role is the dispatcher and produces
-   a routing decision, never a directive.
+   0057; supported with a mount-only default + the whitelisted image-placeholder-
+   grid generative recipe as the visible exception, ADR 0061). The ``router`` role
+   is the dispatcher and produces a routing decision, never a directive.
 
 2. Conversation classification (``classify_conversation``)
    An ADDITIVE, conductor-level extension of the router's ``messageKind``. It
@@ -75,12 +76,13 @@ __all__ = [
 
 # The conductor roles named in the conductor plan. ``router`` dispatches; the
 # editing roles each own exactly one editing directive. ``component_builder``
-# (ADR 0057) owns ``component_add`` as a partial, mount-only role: it answers
-# from the Component Catalog or does an honest no-op pointing at the intake CLI;
-# it mounts nothing and writes no files in this slice. ``route_editor`` (Route/
-# Nav Mutation V1, ADR 0060) owns ``route_remove``: it removes a whole
-# non-required page + its nav link via a structured directive (disabledRoutes),
-# no dossier and no free file patch.
+# (ADR 0057) owns ``component_add``: supported with a mount-only default, and the
+# whitelisted image-placeholder-grid generative recipe (ADR 0061) as the visible
+# exception that materialises a new components/generated/<id>.tsx through the
+# existing pipeline; every other component_add stays an honest catalog answer /
+# no-op (no invented component). ``route_editor`` (Route/Nav Mutation V1, ADR
+# 0060) owns ``route_remove``: it removes a whole non-required page + its nav link
+# via a structured directive (disabledRoutes), no dossier and no free file patch.
 Role = Literal[
     "router", "section_builder", "stylist", "copy", "component_builder",
     "route_editor",
@@ -199,20 +201,26 @@ ROLE_CONTRACTS: dict[Role, RoleContract] = {
         acceptsEditKinds=("component_add",),
         producesDirectives=("component_add",),
         contextLevel="component_registry",
-        status="partial",
+        status="supported",
         mountOnly=True,
         skill="skills/component-add/SKILL.md",
         summary=(
             "Owns the component_add edit kind (ADR 0057), grounded in the "
             "Component Catalog (ADR 0040: capability-map components + per-Starter "
-            "component-manifest). In this slice it is PARTIAL and mount-only: a "
-            "component_add follow-up gets a catalog-grounded answer or an HONEST "
-            "no-op that points at the curated shadcn intake CLI "
-            "(scripts/component_intake.py). It mounts nothing and writes no files; "
-            "the existing chain reports the honest no-op via "
-            "unappliedFollowupIntents. Vendoring a new component stays an operator "
-            "PR (intake -> review -> Starter), never a runtime mount."
+            "component-manifest). SUPPORTED with a mount-only default; the types in "
+            "visibleTypes (mirrored from action-registry.json) render VISIBLY. "
+            "Generative Component V1 (ADR 0061): the image-placeholder-grid recipe "
+            "('lägg till 6 bildplatshållare') MATERIALISES a new "
+            "components/generated/<id>.tsx Server Component (deterministic template, "
+            "no LLM-generated free code, no new npm deps) spliced into the route's "
+            "page.tsx through the existing build + Quality Gate + immutable-"
+            "versioning pipeline; the directive is sticky and the write path is "
+            "fail-closed. Every non-recipe component_add stays mount-only: a "
+            "catalog-grounded answer or an HONEST no-op (a recognised-but-unsupported "
+            "generative family is stage generative_unsupported), never an invented "
+            "component. Free codegen for arbitrary components is a later slice."
         ),
+        visibleTypes=("image-placeholder-grid",),
     ),
     "route_editor": RoleContract(
         role="route_editor",
@@ -240,9 +248,10 @@ ROLE_CONTRACTS: dict[Role, RoleContract] = {
 }
 
 # Router EditKind -> the role that owns its directive. The editing roles plus
-# component_builder (ADR 0057, partial/mount-only) and route_editor (ADR 0060,
-# route_remove) are mapped; the remaining router edit kinds (component_remove,
-# layout_change, route_add, none) are not owned by a role in this slice.
+# component_builder (ADR 0057; supported with the ADR 0061 generative recipe) and
+# route_editor (ADR 0060, route_remove) are mapped; the remaining router edit
+# kinds (component_remove, layout_change, route_add, none) are not owned by a role
+# in this slice.
 _ROLE_BY_EDIT_KIND: dict[EditKind, Role] = {
     "section_add": "section_builder",
     "visual_style": "stylist",
