@@ -257,11 +257,12 @@ def test_followup_chain_section_add_mounts_dossier_and_creates_new_version(
     implementing dossier is secured in selectedDossiers.required (the SAME apply
     machinery component_add uses), creating the next immutable version.
 
-    Visible-render slice (faq/team on the local-service-business scaffold): a
-    section type with a dedicated, grounded visible route is surfaced as a NEW
-    page, so the honest file-diff reports appliedVisibleEffect=true and the
-    affected route is the surfaced page. Every other type stays mount-only
-    (appliedVisibleEffect=false, home-defaulted) - the honest contract."""
+    Visible-render slice (faq/team/pricing on the local-service-business
+    scaffold): a section type with a dedicated, grounded visible route is
+    surfaced as a NEW page, so the honest file-diff reports
+    appliedVisibleEffect=true and the affected route is the surfaced page. Every
+    other type stays mount-only (appliedVisibleEffect=false, home-defaulted) -
+    the honest contract."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     from scripts.build_site import run_followup_chain
 
@@ -296,13 +297,30 @@ def test_followup_chain_section_add_mounts_dossier_and_creates_new_version(
 
     # Visible iff the capability has a dedicated route AND that route's grounded
     # content exists in the built version AND the scaffold emits wizard routes.
-    visible_route = {"faq-section": "faq", "team-section": "team"}.get(capability)
+    # faq/team (visible-render slice) + pricing (ADR 0059 slice 1, #326): pricing
+    # surfaces /priser when >=1 grounded service exists, mirroring
+    # section_directives._capability_has_grounded_content.
+    visible_route = {
+        "faq-section": "faq",
+        "team-section": "team",
+        "pricing": "pricing",
+    }.get(capability)
     scaffold_is_route_capable = v2_pi.get("scaffoldId") == "local-service-business"
     team = ((v2_pi.get("company") or {}).get("team")) or []
     team_grounded = any(
         isinstance(m, dict) and str(m.get("name") or "").strip() for m in team
     )
-    is_grounded = capability != "team-section" or team_grounded
+    services = v2_pi.get("services") or []
+    services_grounded = any(
+        isinstance(s, dict)
+        and str(s.get("id") or "").strip()
+        and str(s.get("label") or "").strip()
+        for s in services
+    )
+    is_grounded = (
+        (capability != "team-section" or team_grounded)
+        and (capability != "pricing" or services_grounded)
+    )
     if visible_route and scaffold_is_route_capable and is_grounded:
         assert result["appliedVisibleEffect"] is True, result
         assert result["affectedRoutes"] == [visible_route]
