@@ -12,9 +12,29 @@ bort sida + nav + interna länkar). Detaljerad köplan:
 > **Detta är det ENDA auktoritativa blocket. Allt nedan är historik — verifiera
 > alltid mot git/koden.**
 >
-> **Status:** Route/Nav Mutation V1 Slice A implementerad lokalt på
-> `jakob-be` (EJ committad/mergad än — operatören beslutar commit/PR).
-> route_remove går nu hela vägen följdprompt → ny version utan sidan/nav.
+> **Status:** Route/Nav Mutation V1 Slice A (#328) + Slice B (#332) MERGADE till
+> `main` = `jakob-be` = `8641e561`; build-context-tarballen omladdad så hostad
+> prod kör Slice B-Python (operatören testar i prod). route_remove går hela vägen
+> följdprompt → ny version utan sidan/nav.
+>
+> **Denna pass — route_remove-härdning (5/7 #328-review-fynd, branch
+> `fix/route-remove-hardening-328`):** (4) nav/länk-only-borttagning ("ta bort
+> länken till Om oss", "X ur menyn") klassas INTE som hel-sidborttagning utan som
+> component_remove (ärlig no-op) — en länkönskan kan aldrig radera en sida, men
+> ett sid-substantiv ("ta bort sidan Om oss") vinner; (7) redan borttagen sida
+> vägras (already_disabled) → ärlig no-op, ingen identisk ny version vid
+> upprepning; (6) Viewser `/api/prompt` gör route_remove_unsupported/
+> section_unsupported TERMINAL (build-fritt ärligt svar) i st.f. att falla till
+> legacy-bygget som mintade en identisk version; (2) nekad route_remove i
+> compound-flöde rapporteras nu på unappliedFollowupIntents-kanalen (tappas inte
+> tyst); (5) routerModel-fallbackpromten listar route_remove + section_add.
+> Skjutet medvetet (noterat): Finding 1 (site-plan.json listar borttagna routes —
+> ren artefakt-drift, build() omfiltrerar, route-scan grön) + Finding 3
+> (ecommerce-lite catch-all `[page]/page.tsx` — starter-specifik, ej company-
+> sajter). Grönt: ruff 0; tsc + eslint (Viewser) rena; verify_openclaw 6/6;
+> governance/rules_sync/term-coverage; riktade sviter (classify nav-only,
+> route_directives already-disabled, followup E2E upprepad no-op + compound-
+> refusal).
 >
 > **Vad som landade (Slice A, ADR 0060):**
 > 1. Ny router-`EditKind` `route_remove` (+ router-decision-schema). `classify.py`

@@ -395,7 +395,6 @@ def test_p2_2_remove_with_object_is_component_remove(prompt):
         ("ta bort sidan Om oss och länken i headern", "about"),
         ("radera kontaktsidan", "contact"),
         ("ta bort Kontakt", "contact"),
-        ("ta bort Kontakt ur menyn", "contact"),
         ("ta bort tjänster", "services"),
     ],
 )
@@ -424,6 +423,25 @@ def test_route_remove_unknown_page_has_no_route_id():
 def test_widget_and_section_removal_stay_component_remove(prompt):
     """A widget/section removal must NOT be hijacked by route_remove: only a
     page noun or a recognised page label routes to route_remove."""
+    d = classify_message(prompt)
+    assert d.editKind == "component_remove"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "ta bort länken till Om oss",
+        "ta bort Kontakt ur menyn",
+        "ta bort Om oss ur menyn",
+        "ta bort länken till kontakt i headern",
+    ],
+)
+def test_nav_or_link_only_removal_is_not_destructive_page_removal(prompt):
+    """#328 finding 4: a nav/link-only removal names a link/menu WIDGET, not a
+    whole page. It must NOT classify as route_remove (which would delete the
+    page); nav-only editing is a planned slice, so until it lands these divert
+    to component_remove (an honest no-op) — a link request can never delete a
+    page. An explicit page noun still wins (covered above)."""
     d = classify_message(prompt)
     assert d.editKind == "component_remove"
 
