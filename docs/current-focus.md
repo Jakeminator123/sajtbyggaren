@@ -12,13 +12,9 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 rundas SystemExit-fix- och docs-commits). Production deployar från `main`.
 
 **Stora planen + orientering för nästa agent:** läs det auktoritativa
-orienteringsblocket ÖVERST i [`docs/handoff.md`](handoff.md). Kort: north star =
-kärnloopen `prompt → företagshemsida → preview → följdprompt → ny version` (mål
-9/10). Två flöden — grundflödet (KÖR-kedjan `run_followup_chain`) + dirigenten
-(`OpenClaw Core decide()`) — kopplade via action-bryggan. 4-fas-plan för att
-sammanfläta dem: fas 1 (beslutsenhet, kedjan konsumerar dirigentens beslut) =
-kärnan kvar; fas 2 (roll-driven exekvering) bevisad via `route_editor`; fas 4
-(generativ komponent) = störst hävstång.
+orienteringsblocket ÖVERST i [`docs/handoff.md`](handoff.md). Där bor den fulla
+beskrivningen (north star, de två flödena + action-bryggan, 4-fas-planen) — den
+upprepas inte här. Denna fil håller bara status, nästa prioriteringar och blockers.
 
 **Landat senast:** Route/Nav Mutation V1 (ADR 0060) — ta bort sida + nav +
 interna länkar: #328 (Slice A), #332 (Slice B, contact + CTA-retarget + länk-scan),
@@ -26,22 +22,13 @@ interna länkar: #328 (Slice A), #332 (Slice B, contact + CTA-retarget + länk-s
 Dessutom #320 (bygg-kort), #329 (test-tiers), #330 (delivery-bias,
 `docs/delivery-bias.md`), #331 (build-context-guard, `npm run build-context:check`).
 
-**Nästa prioriteringar:**
+**Nästa 3 prioriteringar** (faser/fullständig kapacitetslista i [`docs/handoff.md`](handoff.md)):
 
-1. **Fas 1 — beslutsenhet** (sammanflätningens kärna): `run_followup_chain` ska
-   KONSUMERA dirigentens routerbeslut i st.f. att klassa om (rad ~4189). Tunn,
-   ren vinst (en beslutsyta, ett modellanrop, ingen driftrisk), bevisad av
-   befintliga förmågor utan beteendeändring.
+1. **Fas 1 — beslutsenhet:** `run_followup_chain` ska KONSUMERA dirigentens
+   routerbeslut i st.f. att klassa om (rad ~4189). Tunn, ren vinst.
 2. **nav-only** (`nav_edit`: "dölj i menyn men behåll sidan") — liten, naturlig
    efter route_remove-fynd 4.
-3. **generativ komponent V1** (fas 4) — störst effekt mot "lägg till modal/knapp/
-   ny komponent"-glappet (kräver sandbox + versionering + quality-gate-säkring).
-4. **katalog-render synlig** (reviews/trust, ADR 0059) — kräver operatörens
-   visuella riktning, inte fri generativ kod.
-
-Skjutna route_remove-fynd (ej blockerande): fynd 1 (`site-plan.json` listar
-borttagna routes — artefakt-drift, `build()` omfiltrerar, route-scan grön) + fynd
-3 (`ecommerce-lite` catch-all `[page]/page.tsx`).
+3. **generativ komponent V1** (fas 4) — störst effekt mot "lägg till"-glappet.
 
 **Öppna blockers:** inga hårda.
 

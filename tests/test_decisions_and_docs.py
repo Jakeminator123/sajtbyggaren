@@ -18,6 +18,9 @@ def test_decisions_are_uniquely_numbered():
     pattern = re.compile(r"^(\d{4})-")
     numbers: list[str] = []
     for path in DECISIONS_DIR.glob("*.md"):
+        # README.md is the ADR index (not an ADR); every other .md must be NNNN-.
+        if path.name == "README.md":
+            continue
         match = pattern.match(path.name)
         assert match, f"ADR filename does not start with NNNN-: {path.name}"
         numbers.append(match.group(1))

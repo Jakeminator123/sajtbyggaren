@@ -1,6 +1,6 @@
 # ADR 0025 - Browser-fallback för WebContainer-preview (B125)
 
-**Status:** Proposed
+**Status:** superseded av 0033 (förblev aldrig Accepted; B125-browserglappet som ADR:n adresserade löstes i stället av vercel-sandbox som primär preview)
 **Datum:** 2026-05-19, uppdaterad 2026-05-22
 **Beroenden:** ADR 0003 (preview-runtime StackBlitz-first), ADR 0021
 (StackBlitz preview-payload-workarounds), B59, B123, B124, B125.
