@@ -312,7 +312,7 @@ def test_verifier_critic_trace_event_records_source(_with_key, monkeypatch, tmp_
 
 @pytest.mark.governance
 def test_resolve_verifier_model_returns_policy_model():
-    assert resolve_verifier_model() == "gpt-5.4"
+    assert resolve_verifier_model() == "gpt-5.5"
 
 
 @pytest.mark.tooling

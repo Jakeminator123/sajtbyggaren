@@ -914,6 +914,19 @@ def _extract_literal_replace_directives(
     text = _normalise_followup_text(follow_up_prompt)
     if not text or len(text) < 4:
         return []
+    # #318 review fix: an ADDITIVE follow-up that merely quotes NEW content
+    # ("lägg till en knapp som säger 'X' och en som säger 'Y'") is never a
+    # copy-REPLACE, even though it carries two quoted spans. Without this guard
+    # the bare quoted pair (``has_quoted_pair`` below, kept for B204-mangled
+    # leading verbs) could pass the gate and - if the first quote happened to
+    # match an existing copy field - silently MUTATE that field. Guard on the
+    # instruction skeleton (quoted spans removed) so a quoted NEW value that
+    # merely reads additively never drives it. Mirrors the additive guard
+    # already in ``_followup_requested_copy_replace`` and
+    # ``_resolve_unquoted_literal_replace`` so the three stay consistent.
+    skeleton = _text_outside_quotes(follow_up_prompt) or text
+    if _followup_is_additive_request(skeleton):
+        return []
     old_value, new_value = _extract_literal_old_new(follow_up_prompt)
     # A clear quoted/marker OLD->NEW pair is a literal replace REQUEST on its
     # own, even when the leading verb never reached us intact: the viewser-chat

@@ -2119,6 +2119,23 @@ def test_literal_replace_on_service_summary() -> None:
 
 
 @pytest.mark.tooling
+def test_additive_two_quote_prompt_never_mutates_copy() -> None:
+    """#318 review fix: an ADDITIVE follow-up that quotes two values - even when
+    the FIRST quote matches the current tagline verbatim - is NOT a copy-replace.
+    Before the additive guard the bare quoted pair (has_quoted_pair, kept for
+    B204-mangled verbs) passed the literal-replace gate and silently mutated the
+    tagline to the SECOND quote; now it is an honest no-op."""
+    merged = _merge(
+        'lägg till en knapp som säger "Handgjorda örhängen i Malmö" och en '
+        'som säger "Boka tid"'
+    )
+    # The tagline (matched verbatim by the first quote) is untouched...
+    assert merged["company"]["tagline"] == "Handgjorda örhängen i Malmö"
+    # ...and no copyDirective was fabricated from the additive prompt.
+    assert "copyDirectives" not in merged.get("directives", {})
+
+
+@pytest.mark.tooling
 def test_literal_replace_honest_no_op_when_old_not_found() -> None:
     """ROW 2: when the quoted OLD text matches NO current field (e.g. the
     operator quoted the regenerated hero line), it is an HONEST no-op - no

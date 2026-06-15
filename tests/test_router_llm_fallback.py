@@ -312,7 +312,7 @@ def test_llm_valid_edit_is_not_clamped(monkeypatch):
 
 
 def test_resolve_router_model_reads_policy():
-    assert resolve_router_model() == "gpt-5.4"
+    assert resolve_router_model() == "gpt-5.5"
 
 
 def test_resolve_router_model_missing_role(tmp_path):

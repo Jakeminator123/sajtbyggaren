@@ -48,6 +48,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from packages.shared.directive_signal import looks_like_directive
+
 CriticSeverity = Literal["high", "medium", "low"]
 CriticIssueType = Literal[
     # Deterministic heuristics (kor-4a).
@@ -56,6 +58,11 @@ CriticIssueType = Literal[
     "placeholder_leakage",
     "missing_local_context",
     "missing_cta",
+    # Directive-leak (defense in depth on #322): briefModel instruction/meta
+    # text that reached contentBlocks instead of customer copy. Shares the
+    # single detection signal with the planning prevention stage
+    # (packages/shared/directive_signal.py).
+    "directive_leak",
     # Taste findings the verifierModel critic adds on top (kor-4b). These are
     # judgement calls a heuristic cannot make; the deterministic lane never
     # emits them.
@@ -279,6 +286,43 @@ def _check_generic_copy(content_blocks: dict[str, Any]) -> list[CriticIssue]:
                     )
                 )
                 break
+    return issues
+
+
+def _check_directive_leak(content_blocks: dict[str, Any]) -> list[CriticIssue]:
+    """Flag builder/instruction text that leaked into customer copy (#322).
+
+    Defense in depth on the planning prevention stage: if a directive-shaped
+    string (briefModel meta/instruction text - "Lyft X som ...", "... bör synas
+    tydligt i copy", a craft term like "kontaktsektion") reached
+    ``contentBlocks`` despite the planning stage dropping it pre-render, the
+    critic reports it instead of letting it render silently. Shares the SINGLE
+    detection signal (``looks_like_directive``) with the prevention stage so the
+    two can never drift. ``high`` severity: leaked instruction text on the public
+    page is as serious as a placeholder leak.
+    """
+    issues: list[CriticIssue] = []
+    seen: set[str] = set()
+    for address, text in _iter_block_texts(content_blocks):
+        if address in seen or not looks_like_directive(text):
+            continue
+        seen.add(address)
+        issues.append(
+            CriticIssue(
+                severity="high",
+                type="directive_leak",
+                target=address,
+                message=(
+                    "Direktivtext (bygginstruktion) läcker som kundcopy i "
+                    f'{address}: "{text[:80]}".'
+                ),
+                repairHint=(
+                    "Skriv om fältet som färdig, visningsbar kundcopy på "
+                    "promptens språk - aldrig en instruktion om copyn "
+                    "(briefModel one_liner/differentiator/local_angle)."
+                ),
+            )
+        )
     return issues
 
 
@@ -538,6 +582,7 @@ def run_deterministic_critic(
 
     issues: list[CriticIssue] = []
     issues += _check_generic_copy(content_blocks)
+    issues += _check_directive_leak(content_blocks)
     issues += _check_thin_offer(content_blocks)
     issues += _check_placeholder_leakage(content_blocks, brief, file_texts)
     issues += _check_missing_local_context(content_blocks, brief, file_texts)

@@ -33,18 +33,44 @@ som hindrar `briefModel`-instruktionstext från att renderas som synlig
 `packages/generation/brief/extract.py`, 6 nya tester). Detaljer + full
 nästa-steg-lista: [`docs/handoff.md`](handoff.md).
 
+Landat 2026-06-15 (denna runda): #321/#323 mergade; docs-drift lagad; och
+`directive_leak`-kritikern (`07ed6939`) — `_looks_like_directive` lyft till en
+delad signal (`packages/shared/directive_signal.py`) som både planning
+(prevention, #322) och quality_gate (detektion, försvar på djupet) delar, så de
+aldrig driftar. Single source, ingen dubblering. Dessutom: konduktorn (OpenClaw
+Core V0 `decide`) ger nu ett grundat novel-intent planeringssvar för en tydlig
+men ännu obyggbar ändring (`_edit_plan_steps` i `core.py`) i stället för en stum
+action_bridge_missing — ärligt (ingen falsk success, #313), deterministiskt,
+ersätter ett specialfall i stället för att lägga ett. Planeringssvaret är nu
+dessutom katalog-medvetet (ADR 0059): det skiljer en känd, monterbar
+katalog-sektion/-komponent från en genuint ny som ärligt kräver intag — enbart
+via router-data, ingen apply/render-ändring (den synliga monteringen är nästa
+verifierade pass). Och: model routing v13 (`llm-models.v1.json`) — planning/
+router/verifier på gpt-5.5 (high reasoning, högre tokentak), rerank på
+gpt-5.4-mini, brief → medium reasoning; centralt + reversibelt via policyn +
+`llm_model_params.py` (inga hårdkodade modeller). OBS: gpt-5.5/gpt-5.4-mini
+behöver real-key-smoke mot prod-nyckeln innan vi förlitar oss på dem (CI/tester
+mockar utan nyckel och fångar inte modell-tillgänglighet). Slutligen: tre
+review-flaggade buggar fixade — #318 additiv-vakt (`6062928c`: två citat muterar
+aldrig copy), och #322-härdning (`d7dea188`: droppar directive-formade
+tjänste-kort + engelska craft-termer via den delade signalen).
+
 **Nästa 3 prioriteringar (snabba kvalitetsvinster först; full prioriterad lista i handoff):**
 
-1. **`directive_leak`-check i `packages/generation/quality_gate/critic.py`**
-   (snabb): lyft `_looks_like_directive`-signalen till en Quality Gate-kritiker
-   som försvar på djupet ovanpå denna fix — fånga/rapportera direktivtext som
-   ändå slinker igenom i stället för att tyst rendera den.
-2. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
+1. **Fritext-övertolkning → påhittade "service"-kort** (snabb–medel): fri
    prompttext blir ibland stray tjänste-kort kunden aldrig bett om; avgränsa
-   till grundade tjänster (samma ärlighets-tema som denna fix).
-3. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
+   till grundade tjänster (samma ärlighets-tema som directive-fixen).
+2. **Tema-trohet — "Casual Café" renderas grått** (medel, kundnära): #316
    landade omfärgning via tema-utföraren, men en namngiven tema-cue mappar i
    dag till grått; höj tema-mappningens täckning så vald stämning syns.
+3. **Katalog-mount: synlig render (ADR 0059)** (medel; coach-beslut 2026-06-15;
+   kräver visuell check som #320): konduktorn känner nu igen monterbara
+   katalog-sektioner/-komponenter (V0 `decide`, katalog-medvetet planeringssvar)
+   och mount-maskineriet finns redan (`section_directives.py` + apply). KVAR för
+   user-synligt värde: bredda den synliga render-vägen (reviews/trust → inline/
+   dedikerad route som faq/team) så "lägg till testimonials" faktiskt syns — det
+   rör prod-render, därför ett fokuserat pass med din visuella check, inte fri
+   generativ kod.
 
 Större roadmap-program (efter snabbvinsterna): B197 hostad discovery-paritet
 (nu UPPLÅST sedan prod-E2E är grön; koordinera med Christophers spår
@@ -56,11 +82,14 @@ rent kosmetiskt). Underlag:
 
 **Öppna blockers:** inga hårda.
 
-Last verified state: `b4a818c1` (2026-06-14 ~22:00 UTC+2; direktiv-läckage-
-fixen + docs squash-mergade till `main` som PR #322 (`fix/directive-copy-leak`),
-`jakob-be` ff-synkad — alla fyra referenserna identiska. Denna docs-commit
-dokumenterar dessutom Christophers tre PR (#320/#321/#323) som öppnades mot
-`jakob-be` under rundan.)
+Last verified state: `d7dea188` (2026-06-15 ~12:20 UTC+2; `jakob-be` = HEAD,
+12+ commits före `main` = `f4e02756`: #321/#323 mergade, docs-drift,
+directive_leak-kritiker + delad signal (`07ed6939`), ADR 0059 (`f481d201`) +
+render-utredning (`d3c1a034`), novel-intent + katalog-medveten plan
+(`9d749486`/`64800d12`), model routing v13 (`d49d1ab8`), review-fixar #318
+(`6062928c`) + #322-härdning (`d7dea188`); `origin/jakob-be` i synk efter
+push, working tree rent; `main`/`origin/main` orörda på `f4e02756`).
+Föregående: `b4a818c1`.
 
 ## Öppna PR att känna till
 
@@ -68,17 +97,24 @@ Rundans egen PR #322 (`fix/directive-copy-leak`) squash-mergades till `main`
 och raderades (lokal + origin). #317 (Cloud Agent env-setup, `7ba0cd95`)
 mergades 2026-06-14.
 
-Tre PR från Christopher (`chgenberg`) öppnades mot `jakob-be` under denna runda
-(viewser-lanen, icke-draft). De ingår INTE i denna finaliseringsrunda och är ej
-bedömda här; läget kan ändras löpande (aktiv lane) — operatören/nästa agent
-triagerar och väljer bas:
+Christophers tre PR (`chgenberg`, viewser-lanen) triagerades 2026-06-15: två
+mergade till `jakob-be` (gröna, CLEAN, små diffar — jakob-be-lanens review-SLA),
+en hålls för operatörens visuella browser-check.
 
-- #320 (`feat/build-progress-perceived-latency` → `jakob-be`): feat(viewser),
-  bygg-kortet känns levande under hostat bygge.
-- #321 (`fix/b160-marketing-header-logo-lock` → `jakob-be`): fix(viewser),
-  B160 — komplettera logo-aspect-ratio-låset + stäng.
-- #323 (`fix/honest-no-op-keeps-unapplied-list` → `jakob-be`): fix(viewser),
-  no-op-svaret behåller den itemiserade unapplied-listan.
+- #321 (`fix/b160-marketing-header-logo-lock`): mergad till `jakob-be`
+  (`cb5c943c`, squash). fix(viewser) B160 — regressions-lås utökat till tredje
+  logo-renderaren (kod-fixen fanns redan); rena tester + docs.
+- #323 (`fix/honest-no-op-keeps-unapplied-list`): mergad till `jakob-be`
+  (`a45dc0eb`, squash). fix(viewser) — den itemiserade unapplied-listan följer
+  nu med även när dirigentens answerText vinner (#313-ärlighet).
+- #320 (`feat/build-progress-perceived-latency`): öppen, hålls för
+  operatörens visuella check. feat(viewser), bygg-kortet känns levande under
+  hostat bygge — grön CI, 1 fil (`viewer-panel.tsx`), men ren UI-känsla bör
+  ses i browser innan merge.
+
+Konsekvens: `jakob-be` ligger nu **2 commits före `main`** (`main` = `f4e02756`,
+`jakob-be` = `a45dc0eb`), 0 bakom. Synk `main` ← `jakob-be` görs vid nästa
+officiella version (eller direkt om operatören vill ha #321/#323 i prod nu).
 
 #306–#319 är squash-mergade till `jakob-be` och synkade till `main`
 (tip vid rundans start `41a24d77` = #319 B204). Äldre detaljer:

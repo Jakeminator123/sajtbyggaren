@@ -239,19 +239,29 @@ def _clarification(
 def _patch_plan_request(
     router: RouterDecision, context: AssembledContext
 ) -> OpenClawDecision:
+    summary = _target_summary(router)
     return OpenClawDecision(
         router=router,
         context=context,
         action="patch_plan_request",
+        # Novel-intent planeringssvar (coach-beslut 2026-06-15, ADR 0059-anda):
+        # a clear edit V0 cannot auto-apply yet now gets a grounded, honest
+        # "sa har skulle det kunna byggas" plan instead of a bare missing-bridge
+        # dead-end. Derived ONLY from the router (decide stays pure, no LLM/I/O)
+        # and it never claims the change was applied - patchPlanRequest stays the
+        # honest action_bridge_missing marker and appliedVisibleEffect stays
+        # False (#313). Replaces the curt special-case with conductor intelligence.
+        plan=_edit_plan_steps(router, summary),
         patchPlanRequest=PatchPlanRequest(
-            targetSummary=_target_summary(router),
+            targetSummary=summary,
             status="action_bridge_missing",
             blockedBy="openclaw-action-bridge",
         ),
         rationale=(
             "edit_instruction: patch-planner -> apply -> targeted render finns "
             "(kor-7b/7c/7d), men OpenClaw-action-bryggan som kör dem från ett "
-            "OpenClaw-beslut saknas - ärlig flagga, ingen falsk success."
+            "OpenClaw-beslut saknas - ärlig flagga + grundad plan, ingen falsk "
+            "success."
         ),
     )
 
@@ -337,6 +347,72 @@ def _target_summary(router: RouterDecision) -> str:
         elif target.sectionOrdinal is not None:
             section = f"section[{target.sectionOrdinal}]"
     return f"contentBlocks.{route}.{section}.<field>"
+
+
+def _edit_plan_steps(router: RouterDecision, summary: str) -> list[str]:
+    """A grounded, honest "sa har skulle det kunna byggas" plan for an edit.
+
+    Novel-intent planeringssvar (coach-beslut 2026-06-15): instead of a bare
+    action_bridge_missing flag, V0 explains what it understood and the concrete
+    path, so a clear-but-not-yet-bridged edit reads as conductor intelligence,
+    not a dead-end. Derived ONLY from the router (no LLM, no I/O - decide stays a
+    pure deterministic function) and it never claims the change was applied: the
+    last step is always the honest "no automatic change yet" line (#313). The
+    per-kind path names the role that WOULD own it (stylist/section_builder/
+    component_builder/copy), so the plan also documents the conductor's own map.
+    """
+    edit = router.editKind
+    if edit == "visual_style":
+        understood = "en stil-/tema-ändring (färg, ton)"
+        path = (
+            "stylisten tolkar den till en validerad tema-mutation "
+            "(brand.primaryColorHex / tone) som tema-utföraren applicerar"
+        )
+    elif edit == "section_add":
+        # The router only emits section_add for a sanctioned catalog section
+        # (its componentIntent is the section-type slug), so this is always a
+        # known, mountable catalog section.
+        section = (router.componentIntent or "").strip() or "sektion"
+        understood = f"att lägga till en sanktionerad katalog-sektion ({section})"
+        path = (
+            "section_builder monterar sektionens capability + dossier via den "
+            "befintliga apply-kedjan (samma väg som FAQ/team redan tar)"
+        )
+    elif edit == "component_add":
+        # Catalog-aware (ADR 0059): a recognised component noun (componentIntent
+        # set) is a known catalog component mountable via the section path; an
+        # unrecognised one is genuinely novel and stays an honest "needs intake"
+        # - never invented. The recognition is pure router data; the actual
+        # mount + visible render is the deterministic apply chain's job.
+        component = (router.componentIntent or "").strip()
+        if component:
+            understood = f"att lägga till en igenkänd katalog-komponent ({component})"
+            path = (
+                "component_builder skulle montera den via section-vägens "
+                "capability + dossier (ADR 0059), validerad mot capability-map"
+            )
+        else:
+            understood = f"att lägga till en komponent ({summary})"
+            path = (
+                "komponenten känns inte igen i katalogen än - den stannar "
+                "ärligt ej-stödd tills den kuraterats in via intaget (ADR 0054), "
+                "aldrig påhittad"
+            )
+    elif edit == "copy_change":
+        understood = f"en textändring ({summary})"
+        path = (
+            "copy-rollen skriver en validerad copyDirective som apply-kedjan "
+            "tillämpar"
+        )
+    else:
+        understood = f"en ändring ({summary})"
+        path = "patch-planeraren -> apply -> riktad render skulle utföra den"
+    return [
+        f"Jag uppfattar {understood}.",
+        f"Så skulle det kunna byggas: {path}.",
+        "Ingen automatisk ändring görs ännu - OpenClaw-action-bryggan som kör "
+        "kedjan från ett konduktörsbeslut saknas (ingen falsk success, #313).",
+    ]
 
 
 def _subtask_line(index: int, subtask: object) -> str:

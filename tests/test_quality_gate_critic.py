@@ -83,6 +83,68 @@ def test_clean_blueprint_has_no_issues_and_full_score():
 
 
 # ---------------------------------------------------------------------------
+# directive_leak (defense in depth on #322; single shared signal w/ planning)
+# ---------------------------------------------------------------------------
+
+
+# Canonical briefModel leaks (mirror tests/test_planning_blueprint.py): an
+# imperative lead verb, a modal + copy-craft-verb construction, a craft term.
+_DIRECTIVE_LEAK_STRINGS: tuple[str, ...] = (
+    "Lyft Kafé Solrosen som det självklara fikastället i Göteborg",
+    "Göteborg som lokal förankring bör synas tydligt i copy och kontaktsektion",
+    "Framhäv hantverket i varje rad subheadline",
+)
+
+
+@pytest.mark.tooling
+def test_directive_leak_flags_instruction_text_in_content_blocks():
+    """A directive-shaped string that reached contentBlocks is reported as a
+    high-severity directive_leak finding (it must never render as customer copy).
+    """
+    gp = {
+        "contentBlocks": {
+            "home.hero": {
+                "headline": "Lyft Kafé Solrosen som det självklara fikastället",
+            },
+        }
+    }
+    critic = run_deterministic_critic(generation_package=gp, site_brief={})
+    assert "directive_leak" in _issue_types(critic)
+    leak = next(i for i in critic.issues if i.type == "directive_leak")
+    assert leak.severity == "high"
+    assert leak.target == "home.hero"
+
+
+@pytest.mark.tooling
+def test_clean_blueprint_has_no_directive_leak():
+    """Honest, customer-ready copy never trips the directive_leak heuristic."""
+    gp, brief = _clean_blueprint()
+    critic = run_deterministic_critic(generation_package=gp, site_brief=brief)
+    assert "directive_leak" not in _issue_types(critic)
+
+
+@pytest.mark.tooling
+def test_directive_leak_critic_shares_single_signal_with_planning():
+    """Lockstep: the critic and the planning prevention stage use the SAME
+    detection function (one source in packages/shared/directive_signal.py), so
+    prevention and detection can never drift. Also checks the canonical leak
+    strings + honest baseline copy.
+    """
+    from packages.generation.planning.blueprint import _looks_like_directive
+    from packages.shared.directive_signal import looks_like_directive
+
+    # Same object = single source of truth (not two mirrored copies).
+    assert _looks_like_directive is looks_like_directive
+    for text in _DIRECTIVE_LEAK_STRINGS:
+        assert looks_like_directive(text) is True
+    for honest in (
+        "Trygg elektriker i Malmö när elen måste bli rätt.",
+        "Be om offert",
+    ):
+        assert looks_like_directive(honest) is False
+
+
+# ---------------------------------------------------------------------------
 # generic_copy
 # ---------------------------------------------------------------------------
 

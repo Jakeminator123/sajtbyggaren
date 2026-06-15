@@ -41,7 +41,12 @@
         },
         "source": {
           "type": "string",
-          "enum": ["deterministic-v0", "verifierModel", "mock-no-key", "mock-llm-error"],
+          "enum": [
+            "deterministic-v0",
+            "verifierModel",
+            "mock-no-key",
+            "mock-llm-error"
+          ],
           "description": "Provenance. deterministic-v0 = kor-4a heuristics only. kor-4b verifierModel critic adds: verifierModel (LLM findings merged on top of the heuristics), mock-no-key / mock-llm-error (verifier requested but fell back to the heuristic findings only - same findings as kor-4a)."
         }
       }
@@ -61,8 +66,18 @@
         },
         "type": {
           "type": "string",
-          "enum": ["generic_copy", "thin_offer", "placeholder_leakage", "missing_local_context", "missing_cta", "fake_or_ungrounded_trust", "weak_hero", "too_template_like"],
-          "description": "Finding kind. generic_copy/thin_offer/placeholder_leakage/missing_local_context/missing_cta come from the kor-4a deterministic heuristics; fake_or_ungrounded_trust/weak_hero/too_template_like are kor-4b verifierModel taste findings (and a refined generic_copy). Adding a type requires bumping this enum and the CriticIssueType Literal together."
+          "enum": [
+            "generic_copy",
+            "thin_offer",
+            "placeholder_leakage",
+            "missing_local_context",
+            "missing_cta",
+            "directive_leak",
+            "fake_or_ungrounded_trust",
+            "weak_hero",
+            "too_template_like"
+          ],
+          "description": "Finding kind. generic_copy/thin_offer/placeholder_leakage/missing_local_context/missing_cta/directive_leak come from the kor-4a deterministic heuristics (directive_leak is defense in depth on #322: briefModel instruction/meta text that reached contentBlocks instead of customer copy); fake_or_ungrounded_trust/weak_hero/too_template_like are kor-4b verifierModel taste findings (and a refined generic_copy). Adding a type requires bumping this enum and the CriticIssueType Literal together."
         },
         "target": {
           "type": "string",
@@ -85,7 +100,14 @@
       "properties": {
         "name": {
           "type": "string",
-          "enum": ["typecheck", "route-scan", "build-status", "policy-compliance", "contact-cta-presence", "placeholder-copy-scan"],
+          "enum": [
+            "typecheck",
+            "route-scan",
+            "build-status",
+            "policy-compliance",
+            "contact-cta-presence",
+            "placeholder-copy-scan"
+          ],
           "description": "Canonical check name. Locked by ADR 0015; adding a name here requires bumping the schema and the QualityResult Pydantic Literal at the same time."
         },
         "status": {
