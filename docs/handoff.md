@@ -12,7 +12,7 @@ bort sida + nav + interna länkar). Detaljerad köplan:
 > **Detta är det ENDA auktoritativa blocket. Allt nedan är historik — verifiera
 > alltid mot git/koden.**
 >
-> **Status:** Route/Nav Mutation V1 **Slice A** implementerad lokalt på
+> **Status:** Route/Nav Mutation V1 Slice A implementerad lokalt på
 > `jakob-be` (EJ committad/mergad än — operatören beslutar commit/PR).
 > route_remove går nu hela vägen följdprompt → ny version utan sidan/nav.
 >
