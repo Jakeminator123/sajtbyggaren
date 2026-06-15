@@ -9,6 +9,8 @@ import pytest
 
 from backoffice.freshness import compute_freshness
 
+pytestmark = pytest.mark.tooling
+
 
 @pytest.mark.tooling
 def test_active_with_data_is_green(tmp_path: Path):

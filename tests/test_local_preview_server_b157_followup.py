@@ -28,6 +28,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.source_lock
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LOCAL_PREVIEW_SERVER = (
     REPO_ROOT / "apps" / "viewser" / "lib" / "local-preview-server.ts"

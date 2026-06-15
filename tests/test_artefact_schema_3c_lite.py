@@ -26,6 +26,8 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+pytestmark = pytest.mark.source_lock
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS_DIR = REPO_ROOT / "governance" / "schemas"
 QUALITY_SCHEMA = SCHEMAS_DIR / "quality-result.schema.json"

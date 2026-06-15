@@ -6,6 +6,8 @@ import os
 import time
 from pathlib import Path
 
+import pytest
+
 from backoffice.maintenance import (
     apply_safe_cleanup,
     apply_warning_cleanup,
@@ -16,6 +18,8 @@ from backoffice.maintenance import (
 )
 from packages.generation.maintenance import MAX_GENERATED_ENV_VAR, MAX_RUNS_ENV_VAR
 from scripts.run_golden_path_eval import MAX_GOLDEN_PATH_EVALS_ENV
+
+pytestmark = pytest.mark.tooling
 
 
 def _write(path: Path, size: int) -> None:

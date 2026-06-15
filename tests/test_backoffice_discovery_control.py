@@ -11,6 +11,8 @@ import pytest
 
 from backoffice import asset_graph, discovery_control, impact
 
+pytestmark = pytest.mark.tooling
+
 
 def _policy() -> dict[str, Any]:
     return discovery_control.load_discovery_policy()

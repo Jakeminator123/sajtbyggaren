@@ -8,7 +8,11 @@ starter/scaffold/variant/Dossier-val.
 
 from __future__ import annotations
 
+import pytest
+
 from backoffice import sni_diagnostics
+
+pytestmark = pytest.mark.tooling
 
 
 def test_warning_lines_are_in_swedish_and_explicit() -> None:

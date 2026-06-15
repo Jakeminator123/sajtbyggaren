@@ -16,6 +16,8 @@ import pytest
 
 from backoffice import model_roles
 
+pytestmark = pytest.mark.tooling
+
 
 def _models_fixture() -> dict:
     return {

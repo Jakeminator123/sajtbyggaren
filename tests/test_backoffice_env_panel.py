@@ -20,6 +20,8 @@ from backoffice.env_panel import (
     write_router_fallback,
 )
 
+pytestmark = pytest.mark.tooling
+
 
 @pytest.mark.tooling
 def test_scan_env_keys_reports_set_without_value():

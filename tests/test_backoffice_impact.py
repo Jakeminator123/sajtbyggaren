@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from backoffice import asset_graph, impact
+
+pytestmark = pytest.mark.tooling
 
 
 def test_impact_for_starter_lists_mapped_scaffold() -> None:
