@@ -345,6 +345,13 @@
           "uniqueItems": true,
           "items": {"type": "string", "minLength": 1, "maxLength": 64},
           "description": "Avstängda scaffold-routes härledda ur en route_remove-följdprompt (Route/Nav Mutation V1, ADR 0060). Varje post är ett scaffold-routeId (t.ex. 'about') som operatören bett att TA BORT. build_site.py beräknar activeRoutes = scaffold.defaultRoutes minus disabledRoutes i EN filterpunkt, så den avstängda sidan varken skrivs som page.tsx, hamnar i headern/footern-nav eller räknas av route-guards/Quality Gate. Listan är STICKY (ackumuleras över versioner, union:as i apply) så en borttagen sida inte återuppstår vid en senare orelaterad följdprompt; ett routeId som inte finns i scaffolden, eller en required-route i Slice A, droppas ärligt av route_directives innan den når hit (aldrig en byggkrasch)."
+        },
+        "hiddenNavRoutes": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 64},
+          "description": "Scaffold-routes vars NAV-LÄNK ska döljas, härledda ur en nav_hide-följdprompt (Route/Nav Mutation V1, ADR 0060, route_editor-rollen). Varje post är ett scaffold-routeId (t.ex. 'about') som operatören bett att dölja UR MENYN men BEHÅLLA som sida. Till skillnad från disabledRoutes filtreras dessa INTE ur activeRoutes: page.tsx skrivs fortfarande, route-guards/Quality Gate räknar sidan, och _pick_contact_route hittar fortfarande kontaktsidan; bara header/footer-navets (href,label)-lista hoppar över posten i EN söm (_nav_items_from_scaffold). Listan är STICKY (ackumuleras över versioner, union:as i apply) så en dold länk inte återuppstår vid en senare orelaterad följdprompt; ett routeId som inte finns i scaffolden, eller startsidan, droppas ärligt av route_directives innan den når hit (aldrig en byggkrasch). En post vars route senare tas bort helt (disabledRoutes) blir en ofarlig no-op (sidan finns inte att navigera till)."
         }
       }
     },

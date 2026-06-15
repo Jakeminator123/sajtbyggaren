@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["resolve_disabled_routes"]
+__all__ = ["resolve_disabled_routes", "resolve_hidden_nav_routes"]
 
 # The landing page is always kept: even a scaffold that forgot the ``required``
 # flag must never lose its root route. Guarded explicitly below, before the
@@ -158,3 +158,96 @@ def resolve_disabled_routes(
         if route_id not in disabled:
             disabled.append(route_id)
     return disabled, refused
+
+
+def resolve_hidden_nav_routes(
+    route_ids: list[str | None],
+    scaffold_routes: dict[str, Any],
+    *,
+    already_hidden: frozenset[str] | None = None,
+) -> tuple[list[str], list[dict[str, str]]]:
+    """Resolve nav_hide targets to scaffold routeIds whose nav link is hidden.
+
+    The non-destructive sibling of ``resolve_disabled_routes`` (Route/Nav
+    Mutation V1, ADR 0060, route_editor role). nav_hide HIDES a page's
+    header/footer nav link while KEEPING the page, so - unlike route_remove -
+    there is NO required-page guard: a required page (services/contact) may
+    legitimately have its nav link hidden while the page and its CTAs stay.
+
+    Returns ``(hidden, refused)`` where:
+
+    - ``hidden`` is the de-duplicated list of routeIds that exist in the
+      scaffold's ``defaultRoutes`` and are safe to hide from nav. ``home`` is
+      always KEPT in the nav (the landing page must stay reachable from the
+      navigation), so a request to hide it is refused.
+    - ``refused`` is ``[{"routeId", "reason"}]`` for every target that is
+      unknown (no label resolved), not a scaffold route, ``home``, or already
+      hidden - the honest no-op signal.
+
+    ``already_hidden`` is the set of routeIds the base version already hid
+    (``directives.hiddenNavRoutes``); a target already in it is refused as
+    "already hidden" so repeating the request is an HONEST no-op instead of
+    minting a new, byte-identical version. Deterministic, offline, no LLM.
+    """
+    already_hidden_ids = already_hidden or frozenset()
+    default_routes = (
+        scaffold_routes.get("defaultRoutes") if isinstance(scaffold_routes, dict) else None
+    )
+    by_id: dict[str, dict[str, Any]] = {}
+    if isinstance(default_routes, list):
+        for route in default_routes:
+            if isinstance(route, dict) and isinstance(route.get("id"), str):
+                by_id[route["id"]] = route
+
+    hidden: list[str] = []
+    refused: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for route_id in route_ids:
+        if not route_id or not isinstance(route_id, str):
+            refused.append(
+                {
+                    "routeId": "(okänd)",
+                    "reason": (
+                        "Ingen igenkänd sida i prompten; ange vilken sida vars "
+                        "meny-länk ska döljas (t.ex. 'dölj Om oss i menyn')."
+                    ),
+                }
+            )
+            continue
+        if route_id in seen:
+            continue
+        seen.add(route_id)
+        route = by_id.get(route_id)
+        if route is None:
+            refused.append(
+                {
+                    "routeId": route_id,
+                    "reason": (
+                        f"Sidan {route_id!r} finns inte bland scaffoldens sidor; "
+                        "ingen meny-länk döljs (aldrig en påhittad route)."
+                    ),
+                }
+            )
+            continue
+        if route_id in _ALWAYS_REQUIRED_ROUTE_IDS:
+            refused.append(
+                {
+                    "routeId": route_id,
+                    "reason": "Startsidans meny-länk kan inte döljas.",
+                }
+            )
+            continue
+        if route_id in already_hidden_ids:
+            refused.append(
+                {
+                    "routeId": route_id,
+                    "reason": (
+                        f"Sidan {route_id!r} är redan dold i menyn "
+                        "(directives.hiddenNavRoutes); ingen ny version behövs."
+                    ),
+                }
+            )
+            continue
+        if route_id not in hidden:
+            hidden.append(route_id)
+    return hidden, refused

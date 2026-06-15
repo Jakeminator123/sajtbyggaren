@@ -428,22 +428,41 @@ def test_widget_and_section_removal_stay_component_remove(prompt):
 
 
 @pytest.mark.parametrize(
-    "prompt",
+    ("prompt", "route_id"),
     [
-        "ta bort länken till Om oss",
-        "ta bort Kontakt ur menyn",
-        "ta bort Om oss ur menyn",
-        "ta bort länken till kontakt i headern",
+        ("ta bort länken till Om oss", "about"),
+        ("ta bort Kontakt ur menyn", "contact"),
+        ("ta bort Om oss ur menyn", "about"),
+        ("ta bort länken till kontakt i headern", "contact"),
+        ("dölj Om oss i menyn", "about"),
+        ("göm Kontakt ur navigeringen", "contact"),
     ],
 )
-def test_nav_or_link_only_removal_is_not_destructive_page_removal(prompt):
-    """#328 finding 4: a nav/link-only removal names a link/menu WIDGET, not a
-    whole page. It must NOT classify as route_remove (which would delete the
-    page); nav-only editing is a planned slice, so until it lands these divert
-    to component_remove (an honest no-op) — a link request can never delete a
-    page. An explicit page noun still wins (covered above)."""
+def test_nav_or_link_only_removal_is_nav_hide_not_destructive(prompt, route_id):
+    """#328 finding 4 + Route/Nav Mutation V1 nav_hide: a nav/link-only request
+    names the navigation/link, not a whole page. It must NEVER classify as
+    route_remove (which would delete the page). Now that nav_hide has landed it
+    is a REAL capability (route_editor) that hides the nav link while keeping the
+    page, with the resolved routeId — not the old component_remove no-op. An
+    explicit page noun still wins as route_remove (covered above)."""
     d = classify_message(prompt)
-    assert d.editKind == "component_remove"
+    assert d.editKind == "nav_hide"
+    assert d.target is not None
+    assert d.target.routeId == route_id
+    assert d.buildRequirement == "targeted_rebuild"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    ["ta bort länken", "dölj menyn", "ta bort en länk"],
+)
+def test_nav_request_without_resolvable_page_stays_component_remove(prompt):
+    """A nav/link request that names NO resolvable page ("ta bort länken") cannot
+    become nav_hide (we never invent which page to hide); it stays the honest
+    component_remove no-op, never a destructive route_remove."""
+    d = classify_message(prompt)
+    assert d.editKind != "nav_hide"
+    assert d.editKind != "route_remove"
 
 
 @pytest.mark.parametrize(

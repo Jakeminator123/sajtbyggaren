@@ -41,6 +41,13 @@
       "note": "Reorder/move sections; needs an apply capability, not free CSS."
     },
     {
+      "id": "nav_hide",
+      "skill": "skills/route-remove/SKILL.md",
+      "routerEditKind": "nav_hide",
+      "status": "supported",
+      "note": "Route/Nav Mutation V1 (ADR 0060), route_editor role - the NON-DESTRUCTIVE sibling of route_remove. Hides a page's header/footer nav LINK while KEEPING the page, via a structured directive (directives.hiddenNavRoutes), NOT a dossier and NOT a free file patch. Flow: router classifies 'dölj Om oss i menyn / ta bort Om oss ur menyn / ta bort länken till Kontakt' as nav_hide and resolves a best-effort routeId from the page label -> route_directives.resolve_hidden_nav_routes validates the id against THIS site's scaffold defaultRoutes (home is always kept in nav; unknown/already-hidden are refused) -> apply records directives.hiddenNavRoutes (STICKY: union with the prior version) -> build_site threads hidden ids to write_pages -> render_layout -> _nav_items_from_scaffold, which drops ONLY the (href,label) nav item in one seam. Unlike route_remove the page.tsx is still written, route-guards/Quality Gate still count the page and _pick_contact_route still finds the contact route. A nav-only request that names no resolvable page ('ta bort länken') stays an honest component_remove no-op, never nav_hide. Skill shared with route_remove (route_editor role owns both)."
+    },
+    {
       "id": "route_remove",
       "skill": "skills/route-remove/SKILL.md",
       "routerEditKind": "route_remove",

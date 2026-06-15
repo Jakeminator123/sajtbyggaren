@@ -177,12 +177,14 @@ def _nav_items_from_scaffold(
     scaffold_default_routes: list[dict],
     dossier_routes: list[str],
     extra_routes: list[dict] | None = None,
+    hidden_nav_route_ids: set[str] | None = None,
 ) -> list[tuple[str, str]]:
     return _call_build_site(
         "_nav_items_from_scaffold",
         scaffold_default_routes,
         dossier_routes,
         extra_routes,
+        hidden_nav_route_ids,
     )
 
 
@@ -340,6 +342,7 @@ def render_layout(
     contact_path: str | None = None,
     extra_routes: list[dict] | None = None,
     font_stylesheet_href: str | None = None,
+    hidden_nav_route_ids: set[str] | None = None,
 ) -> str:
     """Whole-file layout.tsx with sticky header and footer.
 
@@ -365,6 +368,7 @@ def render_layout(
         scaffold_default_routes,
         dossier_routes,
         extra_routes,
+        hidden_nav_route_ids,
     )
     if contact_path is None:
         # Direct callers (unit tests) may omit contact_path; fall back to the
@@ -5916,6 +5920,7 @@ def write_pages(
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
     font_stylesheet_href: str | None = None,
+    hidden_nav_route_ids: set[str] | None = None,
 ) -> list[str]:
     """Write every page declared in ``scaffold_routes["defaultRoutes"]``.
 
@@ -6060,6 +6065,7 @@ def write_pages(
             contact_path=contact_target,
             extra_routes=sanitized_extras or None,
             font_stylesheet_href=font_stylesheet_href,
+            hidden_nav_route_ids=hidden_nav_route_ids,
         ),
     )
     # Sprint 1.2 — branded 404 + error pages. Skrivs alltid (de har

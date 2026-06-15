@@ -65,6 +65,20 @@ _REMOVE_VERBS = (
     "remove", "delete",
 )
 
+# Hide-verbs feed nav_hide ("dölj Om oss i menyn"): they hide a nav LINK while
+# keeping the page, so they are kept apart from _REMOVE_VERBS (which, with a page
+# noun, drive a whole-page route_remove). "dölj"/"göm" are nav-scoped here.
+_HIDE_VERBS = ("dölj", "dölja", "göm", "gömma", "hide")
+
+# Menu/nav cues that mean "in the navigation" - the signal that a remove/hide
+# targets the nav LINK, not the whole page ("ta bort Om oss UR MENYN", "dölj X
+# i navigeringen"). Paired with a resolved route label, this is nav_hide.
+_NAV_CUES = (
+    "menyn", "menyer", "meny", "navigeringen", "navigering", "navbaren",
+    "navbar", "navet", "ur menyn", "i menyn", "från menyn", "in the menu",
+    "from the menu", "navigation", "nav",
+)
+
 # Create-verbs feed both route_add and component_add (fix 3). "ny"/"nytt" are
 # intentionally NOT here - they are adjectives that would otherwise pull copy
 # prompts like "skriv ny rubrik" into route_add/component_add (fix 4); they are
@@ -648,6 +662,7 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
 
     has_add = _any_word(work, _ADD_VERBS)
     has_remove = _any_word(work, _REMOVE_VERBS)
+    has_hide = _any_word(work, _HIDE_VERBS)
     has_create = _any_word(work, _CREATE_VERBS)
     has_new = _any_word(work, _NEW_PAGE_CUES)
     has_style_verb = _any_word(work, _STYLE_VERBS)
@@ -685,8 +700,8 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     # "vad betyder premium?" can still resolve to answer_only.
     result.hasEditVerb = any(
         (
-            has_add, has_remove, has_create, has_style_verb, has_redesign,
-            has_layout_verb, has_copy_verb, has_change_verb,
+            has_add, has_remove, has_hide, has_create, has_style_verb,
+            has_redesign, has_layout_verb, has_copy_verb, has_change_verb,
             (has_style_adj and style_context),
         )
     )
@@ -737,14 +752,36 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     # ("ta bort knappen") has neither a page noun nor a route label and falls
     # through to component_remove below.
     route_label_id = _detect_route_label(work)
-    # A nav/link-only removal ("ta bort länken till Om oss", "ta bort Om oss ur
-    # menyn") names a link/menu WIDGET, not a whole page. Removing the page would
-    # be destructive and is not what was asked; nav-only editing is a planned
-    # slice (coach's nav_edit). Until it lands, divert these to component_remove
-    # (an honest no-op) so a link/menu request can NEVER delete the page. An
-    # explicit page noun ("ta bort SIDAN Om oss") overrides - the operator named
-    # the page, so the page removal (which also rebuilds the nav) is intended.
+    # A nav/link-only request ("ta bort länken till Om oss", "ta bort Om oss ur
+    # menyn", "dölj Om oss i menyn") names a link/menu WIDGET or the navigation,
+    # not a whole page. nav_hide (route_editor, Route/Nav Mutation V1) hides the
+    # page's nav LINK while KEEPING the page - never destructive. A request is
+    # nav-scoped when it names a link/menu component OR carries a menu cue.
     nav_only_object = component_intent in ("link", "menu")
+    nav_cue = _any_word(work, _NAV_CUES)
+    nav_scoped = nav_only_object or nav_cue
+    # nav_hide: hide a page's nav link. Fires when the request is nav-scoped AND
+    # names a resolvable page (route_label_id) AND is NOT an explicit whole-page
+    # removal (a page noun -> route_remove wins, which rebuilds the nav anyway).
+    # A hide verb alone qualifies ("dölj Om oss i menyn"); a remove verb only
+    # when nav-scoped (a bare "ta bort länken" with no resolvable route stays a
+    # component_remove no-op below - we never invent which page to hide).
+    if (
+        (has_hide or has_remove)
+        and nav_scoped
+        and route_label_id is not None
+        and not has_page_noun
+    ):
+        result.editKind = "nav_hide"
+        result.scope = "route"
+        result.target = RouterTarget(routeId=route_label_id)
+        return result
+    # route_remove (Route/Nav Mutation V1): removing a WHOLE page/route. A remove
+    # verb + a page noun ("ta bort sidan Om oss", "radera kontaktsidan") OR a
+    # recognised route label ("ta bort Kontakt") targets a route, not a widget.
+    # The nav-only guard below keeps a link/menu-only request (with no page noun)
+    # out of route_remove - it was already handled as nav_hide above when a route
+    # resolved, and falls to component_remove when it did not.
     if (
         has_remove
         and (route_label_id is not None or has_page_noun)
@@ -863,6 +900,7 @@ _BUILD_BY_EDIT: dict[EditKind, BuildRequirement] = {
     "layout_change": "targeted_rebuild",
     "route_add": "targeted_rebuild",
     "route_remove": "targeted_rebuild",
+    "nav_hide": "targeted_rebuild",
     "visual_style": "targeted_rebuild",
     "copy_change": "artifact_patch_only",
     "none": "none",
@@ -875,6 +913,7 @@ _CONTEXT_BY_EDIT: dict[EditKind, ContextLevel] = {
     "layout_change": "artifacts_plus_sections",
     "route_add": "artifacts_plus_sections",
     "route_remove": "artifacts_plus_sections",
+    "nav_hide": "artifacts_plus_sections",
     "visual_style": "artifacts",
     "copy_change": "artifacts",
     "none": "none",

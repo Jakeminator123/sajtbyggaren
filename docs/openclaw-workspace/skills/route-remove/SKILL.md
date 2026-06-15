@@ -1,4 +1,9 @@
-# SKILL: route_remove
+# SKILL: route_editor (route_remove + nav_hide)
+
+> route_editor-rollen äger två route/nav-mutationer: `route_remove` (ta bort en
+> hel sida, nedan) och `nav_hide` (dölj en sidas nav-länk men behåll sidan, sist
+> i filen). Båda är strukturerade direktiv, aldrig fri filpatch; de delar denna
+> skill.
 
 ## Mål
 Ta bort EN hel icke-obligatorisk sida (route) och dess nav-länk via ett
@@ -59,9 +64,36 @@ CTA-fallback. Steg 3e anropar resolvern med `allow_required_ids={"contact"}`
   scaffold-`defaultRoutes`, så att ta bort dem är en senare slice — de ger ärlig
   no-op ("finns inte bland scaffoldens sidor").
 
+## nav_hide (icke-destruktiv syster)
+**Mål:** dölj EN sidas header/footer-nav-länk men BEHÅLL sidan, via en följdprompt
+("dölj Om oss i menyn", "ta bort Om oss ur menyn", "ta bort länken till Kontakt").
+En länk-/menybegäran kan ALDRIG radera en sida.
+
+**Väg:** router klassar `nav_hide` (en hide/remove-verb + nav-scope — länk/meny
+eller en meny-cue — + en resolverad sid-etikett; en uttrycklig sid-substantiv
+vinner som `route_remove`) -> `run_followup_chain` (steg 3f) kör
+`route_directives.resolve_hidden_nav_routes` (validerar mot scaffold; startsidan
+behålls alltid i navet; okänd/redan-dold avvisas) -> `apply_patch_plan(hidden_nav_routes=...)`
+skriver `directives.hiddenNavRoutes` (STICKY) -> `build_site.py` trådar id:na till
+`write_pages → render_layout → _nav_items_from_scaffold`, som droppar ENBART
+nav-posten (href,label) i EN söm.
+
+**Skillnad mot route_remove:** `hiddenNavRoutes` filtreras INTE ur `activeRoutes`.
+`page.tsx` skrivs ändå, route-guards/Quality Gate räknar sidan och
+`_pick_contact_route` hittar fortfarande kontaktsidan. Synlig effekt kommer från
+fil-diffen: den delade `layout.tsx` ändras (nav-posten borta), så `appliedVisibleEffect`
+blir sant och preview uppdateras.
+
+**Honesty:** en nav-begäran utan utpekad sida ("ta bort länken") blir en ärlig
+`component_remove`-no-op (vi hittar aldrig på vilken sida som ska döljas); en
+okänd/startsida eller redan-dold länk ger `stage=nav_hide_unsupported` — aldrig
+en påhittad döljning.
+
 ## Status
-supported — router (`route_remove` editKind + schema) + route_editor-roll +
-route_directives (`allow_required_ids`) + apply (`directives.disabledRoutes`,
-sticky) + build-filter (`_REMOVABLE_REQUIRED_ROUTE_IDS`) + kontakt-CTA-retarget
-(`_contact_cta_target`/`_contact_href`) + Quality Gate `internal-link-scan` +
-tester. Se `../../action-registry.json`.
+supported — router (`route_remove` + `nav_hide` editKinds + schema) +
+route_editor-roll (äger båda) + route_directives (`resolve_disabled_routes` /
+`resolve_hidden_nav_routes`) + apply (`directives.disabledRoutes` /
+`hiddenNavRoutes`, sticky) + build-filter (`_REMOVABLE_REQUIRED_ROUTE_IDS`) +
+nav-söm (`_nav_items_from_scaffold(hidden_nav_route_ids=...)`) +
+kontakt-CTA-retarget (`_contact_cta_target`/`_contact_href`) + Quality Gate
+`internal-link-scan` + tester. Se `../../action-registry.json`.

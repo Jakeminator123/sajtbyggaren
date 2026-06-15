@@ -1839,6 +1839,49 @@ def _disabled_route_ids_from_dossier(dossier: dict) -> set[str]:
     }
 
 
+def _hidden_nav_route_ids_from_dossier(dossier: dict) -> set[str]:
+    """Return the routeIds whose nav link is hidden (``directives.hiddenNavRoutes``).
+
+    Route/Nav Mutation V1 nav_hide (ADR 0060, route_editor): a nav_hide follow-up
+    records scaffold routeIds whose header/footer nav link is hidden while the
+    page stays. Read-only + defensive - a missing/malformed directive yields an
+    empty set, so no nav item is ever dropped by accident.
+    """
+    directives = dossier.get("directives") if isinstance(dossier, dict) else None
+    hidden = directives.get("hiddenNavRoutes") if isinstance(directives, dict) else None
+    if not isinstance(hidden, list):
+        return set()
+    return {
+        route_id for route_id in hidden if isinstance(route_id, str) and route_id.strip()
+    }
+
+
+def _base_hidden_nav_route_ids(
+    site_id: str,
+    base_run_id: str,
+    *,
+    prompt_inputs_dir: Path,
+    runs_root: Path,
+) -> frozenset[str]:
+    """Return the routeIds the base version already hid from nav (ADR 0060).
+
+    The nav_hide counterpart to ``_base_disabled_route_ids``: a NON-FATAL
+    optimization that lets the resolver refuse an already-hidden nav link so a
+    repeat is an honest no-op instead of a byte-identical version. Swallows
+    ``read_base_run_snapshot``'s ``SystemExit`` (a pruned/missing/foreign base
+    snapshot) exactly like its sibling - this read must never crash the build.
+    """
+    try:
+        from scripts.prompt_to_project_input import read_base_run_snapshot
+
+        base_pi, _ = read_base_run_snapshot(
+            site_id, base_run_id, output_dir=prompt_inputs_dir, runs_dir=runs_root
+        )
+    except (SystemExit, Exception):  # noqa: BLE001
+        return frozenset()
+    return frozenset(_hidden_nav_route_ids_from_dossier(base_pi))
+
+
 def _base_disabled_route_ids(
     site_id: str,
     base_run_id: str,
@@ -3114,6 +3157,13 @@ def build(
     if disabled_route_ids:
         scaffold_routes = _filter_disabled_routes(scaffold_routes, disabled_route_ids)
 
+    # nav_hide (ADR 0060): hidden nav routeIds are deliberately NOT filtered out
+    # of scaffold_routes - the page stays (page.tsx, route guards, contact route
+    # lookup). They are threaded to write_pages -> render_layout ->
+    # _nav_items_from_scaffold so ONLY the header/footer nav (href,label) item is
+    # dropped, in that one seam. Read once here and passed down.
+    hidden_nav_route_ids = _hidden_nav_route_ids_from_dossier(dossier)
+
     sections_path = scaffold_dir / "sections.json"
     if sections_path.exists():
         from packages.generation.artifacts import validate_sections
@@ -3282,6 +3332,7 @@ def build(
         variant_id=variant.get("id") if isinstance(variant, dict) else None,
         blueprint=blueprint,
         font_stylesheet_href=font_stylesheet_href,
+        hidden_nav_route_ids=hidden_nav_route_ids,
     )
     if paths_written != routes_to_write:
         raise SystemExit(
@@ -3440,6 +3491,7 @@ def build(
             variant_id=variant.get("id") if isinstance(variant, dict) else None,
             blueprint=patched_blueprint,
             font_stylesheet_href=font_stylesheet_href,
+            hidden_nav_route_ids=hidden_nav_route_ids,
         )
 
     quality_payload, repair_payload = run_phase3_quality_and_repair(
@@ -4418,11 +4470,70 @@ def run_followup_chain(
             already_disabled=already_disabled_routes,
         )
 
+    # 3f. Nav hide (nav_hide, route_editor role - Route/Nav Mutation V1, ADR
+    #     0060): the NON-DESTRUCTIVE sibling of route_remove. Resolve the route
+    #     target(s) the router named to scaffold routeIds whose header/footer nav
+    #     link is hidden (validated against THIS site's scaffold; home always
+    #     kept) and route them through apply as directives.hiddenNavRoutes
+    #     (sticky). The page is NEVER removed - only its nav link. An unknown/home
+    #     route, or one already hidden, is an HONEST no-op with a clear reason.
+    hidden_nav_routes_resolved: list[str] = []
+    nav_hide_refused: list[dict[str, str]] = []
+    is_nav_hide = decision.editKind == "nav_hide" or any(
+        subtask.editKind == "nav_hide" for subtask in decision.subtasks
+    )
+    if is_nav_hide:
+        from packages.generation.followup.route_directives import (
+            resolve_hidden_nav_routes,
+        )
+
+        nav_targets: list[str | None] = []
+        if decision.editKind == "nav_hide":
+            nav_targets.append(
+                decision.target.routeId if decision.target is not None else None
+            )
+        for subtask in decision.subtasks:
+            if subtask.editKind == "nav_hide":
+                nav_targets.append(
+                    subtask.target.routeId if subtask.target is not None else None
+                )
+        scaffold_id_for_nav: str | None = None
+        base_site_plan_path_nav = runs_root / base_run_id / "site-plan.json"
+        if base_site_plan_path_nav.exists():
+            base_site_plan_nav = load_json(base_site_plan_path_nav)
+            candidate_nav = (
+                base_site_plan_nav.get("scaffoldId")
+                if isinstance(base_site_plan_nav, dict)
+                else None
+            )
+            if isinstance(candidate_nav, str) and candidate_nav:
+                scaffold_id_for_nav = candidate_nav
+        scaffold_routes_for_nav: dict[str, Any] = {}
+        if scaffold_id_for_nav:
+            routes_path_nav = SCAFFOLDS_DIR / scaffold_id_for_nav / "routes.json"
+            if routes_path_nav.exists():
+                scaffold_routes_for_nav = load_json(routes_path_nav)
+        # Refuse a nav link the base version ALREADY hid so repeating "dölj Om oss
+        # i menyn" is an honest no-op instead of a byte-identical version (same
+        # NON-FATAL base read as route_remove finding 7).
+        already_hidden_nav = _base_hidden_nav_route_ids(
+            site_id,
+            base_run_id,
+            prompt_inputs_dir=prompt_inputs_dir,
+            runs_root=runs_root,
+        )
+        hidden_nav_routes_resolved, nav_hide_refused = resolve_hidden_nav_routes(
+            nav_targets,
+            scaffold_routes_for_nav,
+            already_hidden=already_hidden_nav,
+        )
+
     if (
         not plan.patches
         and theme_directive is None
         and not added_capabilities
         and not disabled_routes_resolved
+        and not hidden_nav_routes_resolved
     ):
         no_edit_note = (
             f"Router: messageKind={decision.messageKind} "
@@ -4448,6 +4559,15 @@ def run_followup_chain(
                 f"stödd sida kunde tas bort: {reasons}"
             )
             stage = "route_remove_unsupported"
+        elif is_nav_hide:
+            reasons = "; ".join(
+                f"{item['routeId']}: {item['reason']}" for item in nav_hide_refused
+            ) or "ingen igenkänd sida kunde tolkas."
+            no_edit_note = (
+                "Router klassade en nav-döljning (nav_hide) men ingen stödd "
+                f"sida kunde döljas ur menyn: {reasons}"
+            )
+            stage = "nav_hide_unsupported"
         elif is_restyle:
             no_edit_note = (
                 "Router klassade en stiländring (visual_style) men ingen känd "
@@ -4515,6 +4635,14 @@ def run_followup_chain(
             unapplied_followup_intents.append(
                 {"target": "sidborttagning", "reason": refusal_reason}
             )
+    # Same honest channel for a refused nav_hide (unknown/home/already-hidden) in
+    # a COMPOUND follow-up, so it is never dropped silently while the rest lands.
+    for refused_item in nav_hide_refused:
+        refusal_reason = str(refused_item.get("reason", "")).strip()
+        if refusal_reason:
+            unapplied_followup_intents.append(
+                {"target": "nav-döljning", "reason": refusal_reason}
+            )
 
     # 4. Apply (kor-7c): create the next immutable v<N+1> Project Input. A valid
     #    plan whose patch is unmapped writes nothing (all-or-nothing, honest).
@@ -4531,6 +4659,7 @@ def run_followup_chain(
             section_positions=section_positions,
             dossier_preferences=section_dossier_preferences or None,
             disabled_routes=disabled_routes_resolved or None,
+            hidden_nav_routes=hidden_nav_routes_resolved or None,
             unapplied_followup_intents=unapplied_followup_intents,
         )
     except PatchApplyError as exc:
@@ -4571,10 +4700,12 @@ def run_followup_chain(
     # the affected attribution is the disabled route(s) (the nav itself lives in
     # the shared layout, which the targeted diff exempts from the unexpected-route
     # warning). Union them with any surfaced section routes so the attribution is
-    # honest for a compound follow-up.
+    # honest for a compound follow-up. A nav_hide changes only the shared layout
+    # nav (the page is untouched); union its routeIds too so the attribution is
+    # non-empty and honest rather than defaulting to home.
     affected_routes_hint = section_affected_routes + [
         route_id
-        for route_id in disabled_routes_resolved
+        for route_id in (disabled_routes_resolved + hidden_nav_routes_resolved)
         if route_id not in section_affected_routes
     ]
     targeted = build_targeted_version(

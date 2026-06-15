@@ -48,6 +48,7 @@ EditKind = Literal[
     "layout_change",
     "route_add",
     "route_remove",
+    "nav_hide",
     "none",
 ]
 
