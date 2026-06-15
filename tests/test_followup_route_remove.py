@@ -56,6 +56,25 @@ def _newest_build_dir(generated_dir: Path, site_id: str) -> Path:
     return builds[-1]
 
 
+def _route_plan_ids_and_paths(site_plan: dict) -> tuple[list[str], list[str]]:
+    """Return (ids, paths) listed on a site-plan's routePlan."""
+    route_plan = site_plan.get("routePlan") or []
+    ids = [r.get("id") for r in route_plan if isinstance(r, dict)]
+    paths = [r.get("path") for r in route_plan if isinstance(r, dict)]
+    return ids, paths
+
+
+def _only_run_site_plan(runs_dir: Path) -> dict:
+    """Read the site-plan.json of the single run present after an init seed."""
+    import json
+
+    run_dirs = [p for p in runs_dir.iterdir() if (p / "site-plan.json").is_file()]
+    assert len(run_dirs) == 1, f"expected exactly one seeded run, got {run_dirs}"
+    return json.loads(
+        (run_dirs[0] / "site-plan.json").read_text(encoding="utf-8")
+    )
+
+
 def test_init_build_has_about_page() -> None:
     """Guard: painter-palma's init build emits /om-oss (so the removal below is a
     real change, not a vacuous pass)."""
@@ -338,3 +357,52 @@ def test_base_disabled_route_ids_is_non_fatal_on_systemexit(
         runs_root=tmp_path,
     )
     assert result == frozenset()
+
+
+def test_site_plan_artifact_drops_removed_route(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """#332 finding 1 (artifact honesty): after "ta bort sidan Om oss" the NEW
+    version's site-plan.json must NOT list the removed /om-oss route. The build
+    re-filters defaultRoutes through the single _filter_disabled_routes seam, so
+    the rendered site already drops the page (the other tests prove that); this
+    guards that the site-plan ARTIFACT reflects the SAME activeRoutes instead of
+    claiming a route the site no longer ships."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    # Guard: the init build's site-plan lists /om-oss, so the removal below is a
+    # real artifact change (not a vacuous pass).
+    init_plan = _only_run_site_plan(runs_dir)
+    init_ids, init_paths = _route_plan_ids_and_paths(init_plan)
+    assert "about" in init_ids
+    assert "/om-oss" in init_paths
+
+    result = run_followup_chain(
+        site_id,
+        "ta bort sidan Om oss och länken i headern",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "route_remove"
+
+    import json
+
+    new_run_dir = runs_dir / result["runId"]
+    new_plan = json.loads(
+        (new_run_dir / "site-plan.json").read_text(encoding="utf-8")
+    )
+    new_ids, new_paths = _route_plan_ids_and_paths(new_plan)
+    # The removed route is gone from the artifact...
+    assert "about" not in new_ids, new_plan["routePlan"]
+    assert "/om-oss" not in new_paths, new_plan["routePlan"]
+    # ...and the surviving routes still stand (no over-pruning).
+    assert "/" in new_paths
+    assert "/tjanster" in new_paths
+    assert "/kontakt" in new_paths
