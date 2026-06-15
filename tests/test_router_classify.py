@@ -380,6 +380,54 @@ def test_p2_2_remove_with_object_is_component_remove(prompt):
     assert d.editKind == "component_remove"
 
 
+# --- Route/Nav Mutation V1 (ADR 0060): route_remove classification ----------
+#
+# Removing a WHOLE page is route_remove, not component_remove. The router
+# resolves a best-effort routeId from the page label; route_directives validates
+# it against the scaffold downstream. A widget removal ("ta bort knappen") and a
+# section-type removal ("ta bort recensionerna") must STAY component_remove.
+
+
+@pytest.mark.parametrize(
+    ("prompt", "route_id"),
+    [
+        ("ta bort sidan Om oss", "about"),
+        ("ta bort sidan Om oss och länken i headern", "about"),
+        ("radera kontaktsidan", "contact"),
+        ("ta bort Kontakt", "contact"),
+        ("ta bort Kontakt ur menyn", "contact"),
+        ("ta bort tjänster", "services"),
+    ],
+)
+def test_route_remove_classifies_with_resolved_route_id(prompt, route_id):
+    """A page removal is route_remove with the page's best-effort routeId."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "route_remove"
+    assert d.buildRequirement == "targeted_rebuild"
+    assert d.target is not None
+    assert d.target.routeId == route_id
+
+
+def test_route_remove_unknown_page_has_no_route_id():
+    """"ta bort sidan Banana": a page removal the router cannot name keeps
+    editKind route_remove but leaves routeId None (route_directives no-ops)."""
+    d = classify_message("ta bort sidan Banana")
+    assert d.editKind == "route_remove"
+    assert d.target is None or d.target.routeId is None
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    ["ta bort knappen", "ta bort kontaktformuläret", "ta bort recensionerna"],
+)
+def test_widget_and_section_removal_stay_component_remove(prompt):
+    """A widget/section removal must NOT be hijacked by route_remove: only a
+    page noun or a recognised page label routes to route_remove."""
+    d = classify_message(prompt)
+    assert d.editKind == "component_remove"
+
+
 @pytest.mark.parametrize(
     "prompt",
     ["skapa en klocka i andra sektionen", "bygg en kontaktknapp", "skapa en karta till vänster"],

@@ -338,6 +338,13 @@
               }
             }
           }
+        },
+        "disabledRoutes": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 64},
+          "description": "Avstängda scaffold-routes härledda ur en route_remove-följdprompt (Route/Nav Mutation V1, ADR 0060). Varje post är ett scaffold-routeId (t.ex. 'about') som operatören bett att TA BORT. build_site.py beräknar activeRoutes = scaffold.defaultRoutes minus disabledRoutes i EN filterpunkt, så den avstängda sidan varken skrivs som page.tsx, hamnar i headern/footern-nav eller räknas av route-guards/Quality Gate. Listan är STICKY (ackumuleras över versioner, union:as i apply) så en borttagen sida inte återuppstår vid en senare orelaterad följdprompt; ett routeId som inte finns i scaffolden, eller en required-route i Slice A, droppas ärligt av route_directives innan den når hit (aldrig en byggkrasch)."
         }
       }
     },

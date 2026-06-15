@@ -79,11 +79,13 @@ _CONVERSATION_KINDS = {"small_talk", "site_opinion", "question", "edit", "other"
 def test_exactly_the_named_roles_exist():
     """The registry holds exactly the conductor roles the plan names.
 
-    Updated DELIBERATELY for ADR 0057: component_builder joins the four original
-    roles as the partial/mount-only owner of component_add.
+    Updated DELIBERATELY for ADR 0057 (component_builder joins as the partial/
+    mount-only owner of component_add) and ADR 0060 (route_editor joins as the
+    supported owner of route_remove - Route/Nav Mutation V1).
     """
     assert set(ROLE_CONTRACTS) == {
-        "router", "section_builder", "stylist", "copy", "component_builder"
+        "router", "section_builder", "stylist", "copy", "component_builder",
+        "route_editor",
     }
 
 
@@ -94,6 +96,8 @@ def test_exactly_the_named_roles_exist():
         ("stylist", ("visual_style",), ("visual_style",)),
         ("copy", ("copy_change",), ("copy_change",)),
         ("component_builder", ("component_add",), ("component_add",)),
+        # ADR 0060: route_editor owns route_remove (Route/Nav Mutation V1).
+        ("route_editor", ("route_remove",), ("route_remove",)),
     ],
 )
 def test_editing_role_input_output_contract(
@@ -124,6 +128,8 @@ def test_router_role_dispatches_and_produces_no_directive():
         ("copy_change", "copy"),
         # ADR 0057: component_add is now owned by component_builder.
         ("component_add", "component_builder"),
+        # ADR 0060: route_remove is now owned by route_editor.
+        ("route_remove", "route_editor"),
         # Edit kinds no role owns in this slice -> None (honest surface).
         ("component_remove", None),
         ("layout_change", None),
@@ -171,6 +177,8 @@ def test_section_add_skill_constant_matches_contract():
         ("copy_change", "skills/copy-change/SKILL.md"),
         # ADR 0057: component_add resolves to the component_builder skill.
         ("component_add", "skills/component-add/SKILL.md"),
+        # ADR 0060: route_remove resolves to the route_editor skill.
+        ("route_remove", "skills/route-remove/SKILL.md"),
         # Edit kinds no role owns in this slice -> None (honest surface).
         ("component_remove", None),
         ("layout_change", None),
@@ -211,7 +219,7 @@ def test_section_add_dispatch_is_equivalent_to_old_edit_kind_gate():
     maps to the section-add skill, every other kind does not."""
     all_edit_kinds = [
         "section_add", "visual_style", "copy_change", "component_add",
-        "component_remove", "layout_change", "route_add", "none",
+        "route_remove", "component_remove", "layout_change", "route_add", "none",
     ]
     for edit_kind in all_edit_kinds:
         role_driven = skill_for_edit_kind(edit_kind) == SECTION_ADD_SKILL

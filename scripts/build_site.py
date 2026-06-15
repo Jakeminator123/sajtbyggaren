@@ -1794,6 +1794,50 @@ def write_dossier_routes(
 # ---------------------------------------------------------------------------
 
 
+def _disabled_route_ids_from_dossier(dossier: dict) -> set[str]:
+    """Return the routeIds disabled via ``directives.disabledRoutes`` (ADR 0060).
+
+    Route/Nav Mutation V1: a route_remove follow-up records disabled scaffold
+    routeIds here. Read-only + defensive - a missing/malformed directive yields
+    an empty set, so no route is ever dropped by accident.
+    """
+    directives = dossier.get("directives") if isinstance(dossier, dict) else None
+    disabled = directives.get("disabledRoutes") if isinstance(directives, dict) else None
+    if not isinstance(disabled, list):
+        return set()
+    return {
+        route_id for route_id in disabled if isinstance(route_id, str) and route_id.strip()
+    }
+
+
+def _filter_disabled_routes(scaffold_routes: dict, disabled_route_ids: set[str]) -> dict:
+    """Return ``scaffold_routes`` with non-required disabled routes removed (ADR 0060).
+
+    The single activeRoutes seam: drops a ``defaultRoutes`` entry whose id is in
+    ``disabled_route_ids`` UNLESS it is ``required`` (Slice A keeps mandatory
+    pages, and ``_pick_contact_route`` must keep finding the contact route).
+    Returns a shallow copy with a filtered ``defaultRoutes`` list so the loaded
+    scaffold dict is never mutated; ``optionalRoutes`` and other keys ride along
+    unchanged. A no-op (nothing disabled / nothing matched) returns the input
+    object so the common path is byte-identical.
+    """
+    default_routes = scaffold_routes.get("defaultRoutes")
+    if not isinstance(default_routes, list) or not disabled_route_ids:
+        return scaffold_routes
+    filtered = [
+        route
+        for route in default_routes
+        if not (
+            isinstance(route, dict)
+            and route.get("id") in disabled_route_ids
+            and not route.get("required")
+        )
+    ]
+    if len(filtered) == len(default_routes):
+        return scaffold_routes
+    return {**scaffold_routes, "defaultRoutes": filtered}
+
+
 def required_routes(scaffold_routes: dict) -> list[str]:
     return [r["path"] for r in scaffold_routes["defaultRoutes"] if r.get("required")]
 
@@ -2975,6 +3019,21 @@ def build(
     scaffold = load_json(scaffold_dir / "scaffold.json")
     scaffold_routes = load_json(scaffold_dir / "routes.json")
     variant = load_json(scaffold_dir / "variants" / f"{variant_id}.json")
+
+    # Route/Nav Mutation V1 (ADR 0060): a route_remove follow-up records the
+    # disabled scaffold routes on directives.disabledRoutes. Filter them out of
+    # defaultRoutes HERE, in ONE seam, so every downstream consumer sees only the
+    # active routes: all_default_routes/required_routes -> routes_to_write (so the
+    # page.tsx is never written), _nav_items_from_scaffold (so the header/footer
+    # nav drops the link), _pick_contact_route and the route guards. Defense in
+    # depth - a required route is NEVER dropped here (Slice A keeps mandatory
+    # pages and _pick_contact_route must keep finding the contact route), even
+    # though route_directives already refuses required ids upstream, so a
+    # hand-edited/buggy directive can never crash the build by removing a
+    # mandatory page.
+    disabled_route_ids = _disabled_route_ids_from_dossier(dossier)
+    if disabled_route_ids:
+        scaffold_routes = _filter_disabled_routes(scaffold_routes, disabled_route_ids)
 
     sections_path = scaffold_dir / "sections.json"
     if sections_path.exists():
@@ -4210,7 +4269,64 @@ def run_followup_chain(
             if capability and position in ("top", "bottom"):
                 section_positions[capability] = position
 
-    if not plan.patches and theme_directive is None and not added_capabilities:
+    # 3e. Route remove (route_remove, route_editor role - Route/Nav Mutation V1,
+    #     ADR 0060): the patch planner has no patchable edit for removing a whole
+    #     page, but it is a real follow-up. Mirroring 3b's restyle and 3c's
+    #     section_add wiring, resolve the route target(s) the router named to
+    #     disable-able scaffold routeIds (validated against THIS site's scaffold +
+    #     the required-page guard) and route them through apply as
+    #     directives.disabledRoutes (sticky). An unknown or required route is an
+    #     HONEST no-op with a clear reason - never a page removed that was not
+    #     asked for, and never a required page removed in this slice.
+    disabled_routes_resolved: list[str] = []
+    route_refused: list[dict[str, str]] = []
+    is_route_remove = decision.editKind == "route_remove" or any(
+        subtask.editKind == "route_remove" for subtask in decision.subtasks
+    )
+    if is_route_remove:
+        from packages.generation.followup.route_directives import (
+            resolve_disabled_routes,
+        )
+
+        route_targets: list[str | None] = []
+        if decision.editKind == "route_remove":
+            route_targets.append(
+                decision.target.routeId if decision.target is not None else None
+            )
+        for subtask in decision.subtasks:
+            if subtask.editKind == "route_remove":
+                route_targets.append(
+                    subtask.target.routeId if subtask.target is not None else None
+                )
+        # Resolve the scaffold from the base run's site-plan.json (it carries the
+        # authoritative scaffoldId and is always written for a build) so the
+        # required-page guard validates against THIS site's real scaffold routes.
+        scaffold_id_for_remove: str | None = None
+        base_site_plan_path = runs_root / base_run_id / "site-plan.json"
+        if base_site_plan_path.exists():
+            base_site_plan = load_json(base_site_plan_path)
+            candidate = (
+                base_site_plan.get("scaffoldId")
+                if isinstance(base_site_plan, dict)
+                else None
+            )
+            if isinstance(candidate, str) and candidate:
+                scaffold_id_for_remove = candidate
+        scaffold_routes_for_remove: dict[str, Any] = {}
+        if scaffold_id_for_remove:
+            routes_path = SCAFFOLDS_DIR / scaffold_id_for_remove / "routes.json"
+            if routes_path.exists():
+                scaffold_routes_for_remove = load_json(routes_path)
+        disabled_routes_resolved, route_refused = resolve_disabled_routes(
+            route_targets, scaffold_routes_for_remove
+        )
+
+    if (
+        not plan.patches
+        and theme_directive is None
+        and not added_capabilities
+        and not disabled_routes_resolved
+    ):
         no_edit_note = (
             f"Router: messageKind={decision.messageKind} "
             f"editKind={decision.editKind}; patch-planeraren föreslog inget "
@@ -4226,6 +4342,15 @@ def run_followup_chain(
                 f"sanktionerad/stödd sektionstyp kunde monteras: {reasons}"
             )
             stage = "section_unsupported"
+        elif is_route_remove:
+            reasons = "; ".join(
+                f"{item['routeId']}: {item['reason']}" for item in route_refused
+            ) or "ingen igenkänd sida kunde tolkas."
+            no_edit_note = (
+                "Router klassade en sidborttagning (route_remove) men ingen "
+                f"stödd sida kunde tas bort: {reasons}"
+            )
+            stage = "route_remove_unsupported"
         elif is_restyle:
             no_edit_note = (
                 "Router klassade en stiländring (visual_style) men ingen känd "
@@ -4295,6 +4420,7 @@ def run_followup_chain(
             added_capabilities=added_capabilities,
             section_positions=section_positions,
             dossier_preferences=section_dossier_preferences or None,
+            disabled_routes=disabled_routes_resolved or None,
             unapplied_followup_intents=unapplied_followup_intents,
         )
     except PatchApplyError as exc:
@@ -4331,10 +4457,20 @@ def run_followup_chain(
     section_affected_routes = list(
         getattr(apply_result, "sectionRoutesSurfaced", []) or []
     )
+    # A route_remove (ADR 0060) removes a page + rebuilds the site-wide nav, so
+    # the affected attribution is the disabled route(s) (the nav itself lives in
+    # the shared layout, which the targeted diff exempts from the unexpected-route
+    # warning). Union them with any surfaced section routes so the attribution is
+    # honest for a compound follow-up.
+    affected_routes_hint = section_affected_routes + [
+        route_id
+        for route_id in disabled_routes_resolved
+        if route_id not in section_affected_routes
+    ]
     targeted = build_targeted_version(
         new_version_path,
         apply_result=apply_result,
-        affected_routes=section_affected_routes or None,
+        affected_routes=affected_routes_hint or None,
         do_build=do_build,
         runs_dir=runs_dir,
         generated_dir=generated_dir,
