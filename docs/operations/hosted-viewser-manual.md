@@ -80,6 +80,8 @@ Nycklarna (alla prefixade `viewser:`):
 | `viewser:site:<siteId>:current` | hostad bygg-pekare { buildId, blobPrefix, updatedAt } | ingen |
 | `viewser:sandbox-session:<siteId>` | aktiv preview-sandbox { sandboxId, url, createdAt } | 45 min |
 | `viewser:build-context:url` | URL till build-context-tarballen i blob | ingen |
+| `viewser:build-context:sha` | git-SHA som build-context-tarballen laddades upp från | ingen |
+| `viewser:build-context:dirty` | `true` när senaste upload gjordes med ocommittade ändringar i build-kontext-ytorna | ingen |
 | `viewser:rate:<scope>:<ip>` | rate-limit-räknare | fönsterlängden |
 
 Vill du inspektera: upstash-konsolen (via Vercel-dashboardens storage-flik)
@@ -94,20 +96,27 @@ har en data-browser, eller curl:a rest-api:t med token.
    byggda sajter: `node apps/viewser/scripts/snapshot-site-to-blob.mjs <siteId>`).
    Hostad preview läser exakt detta layout.
 3. **Build-kontexten**: `build-context/current.tar.gz` — python-pipens kod
-   (scripts/, packages/, governance/, data/starters/, requirements.txt).
+   (scripts/, packages/, governance/, data/starters/, requirements.txt,
+   pyproject.toml).
 
-**Kom ihåg-regeln:** ändrar du något i pipen (scripts/, packages/generation/,
-governance/policies eller schemas, data/starters/, requirements.txt) måste du
-köra om
+**Kom ihåg-regeln:** efter merge av Python/generation/OpenClaw-ändringar i
+`scripts/`, `packages/`, `governance/`, `data/starters/`, `requirements.txt`
+eller `pyproject.toml` måste du först kontrollera och sedan ladda upp ny
+build-kontext:
 
 ```bash
-node apps/viewser/scripts/upload-build-context-to-blob.mjs
+cd apps/viewser
+npm run build-context:check
+npm run build-context:upload
 ```
 
-— annars bygger hostade byggen vidare på den gamla kodversionen. CLI:t
-skriver nya URL:en till kv-nyckeln ovan; env-fallbacken
-`VIEWSER_BUILD_CONTEXT_URL` behöver bara uppdateras om kv-skrivningen inte
-gick (CLI:t säger till i så fall).
+— annars bygger hostade byggen vidare på den gamla kodversionen. Checken
+jämför `viewser:build-context:sha` med aktuell git-commit för samma ytor som
+tarballen innehåller och varnar även om senaste upload markerades som dirty.
+Upload-CLI:t skriver URL, SHA och dirty-flagga till kv-nycklarna ovan;
+env-fallbacken `VIEWSER_BUILD_CONTEXT_URL` behöver bara uppdateras om
+kv-skrivningen inte gick (CLI:t säger till i så fall). Det finns ingen
+auto-publish: operatören kör upload-kommandot medvetet.
 
 ## 5. Auth-kedjan: oidc lokalt kontra hostat
 

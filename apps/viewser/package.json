@@ -10,6 +10,8 @@
     "start": "next start",
     "lint": "eslint",
     "assets:images": "node scripts/optimize-images.mjs",
+    "build-context:upload": "node scripts/upload-build-context-to-blob.mjs",
+    "build-context:check": "node scripts/check-build-context.mjs",
     "format": "prettier --write --ignore-unknown .",
     "format:check": "prettier --check --ignore-unknown ."
   },
