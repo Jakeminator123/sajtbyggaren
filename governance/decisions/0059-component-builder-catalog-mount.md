@@ -109,6 +109,26 @@ ett snabbtillägg:
 Slutsats: konduktor-igenkänningen (katalog-medvetet planeringssvar) och mount-
 maskineriet är klara; **renderaren är gapet** för det user-synliga värdet.
 
+## Implementerat 2026-06-15 (synlig render, slice 1: pricing)
+
+`pricing` blev den FÖRSTA breddningen av den synliga render-vägen (beslut 3)
+eftersom den — till skillnad från reviews/trust ovan — saknar de två
+designväggarna: `render_pricing` är en grundad route-renderer (listar
+operatörens riktiga `services` som ärliga "Pris efter offert"-kort, aldrig
+påhittade priser), och planeringen definierar redan `/priser` (wizardLabel
+"Priser och paket") för `local-service-business` — samma wizard-route-grind som
+faq/team. Tillagt i `VISIBLE_SECTION_ROUTES` + en grundat-innehåll-grind i
+`_capability_has_grounded_content` (kräver ≥1 `service` med `id` + `label`,
+annars mount-only — render_pricings streckade "vi lägger upp en prislista"-
+platshållare räknas inte som grundat innehåll). Apply trådar den synliga sidan
+generiskt (ingen hårdkodad faq/team-mängd), så "lägg till en prissektion / lägg
+till priser / lägg till en prislista" går nu från följdprompt → monterad
+capability → synlig `/priser`-sida → ny version. Okänd/ogrundad förblir ärlig
+mount-only. Hela kedjan verifierad: `classify.py` mappar priser/prislista/pris/
+paket → `sectionType="pricing"`; tester i `tests/test_section_directives.py`
+(pricing synlig/mount-only/scaffold-grind). reviews/trust väntar fortsatt på
+renderer-arbetet ovan.
+
 ## Nästa steg
 
 Operatörens OK → ett fokuserat implementationspass (en slice i taget: intent +
