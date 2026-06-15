@@ -1,16 +1,90 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-14 ~22:00 UTC+2 — kvällsrunda: kärnloopen
-`prompt → företagshemsida → preview → följdprompt → ny version` live-validerad
-på hostad prod, preview-arkitekturen klargjord, en deterministisk
-direktiv-läckage-fix för kundkopian ("Om oss"-buggen) shippad via en riktig PR
-(`fix/directive-copy-leak` → `main`), plus docs-städning. Detaljerad köplan:
+**Datum:** 2026-06-15 ~13:30 UTC+2 — synk-/städrunda: `main = jakob-be =
+7ab65132` (#325 + #326 mergade). Model routing v13 prod-verifierad (real-key
+gpt-5.5-smoke), build-context omladdad, ADR 0059 slice 1 (`pricing` synlig
+`/priser`-route) landad. Nästa riktiga produktspår: route/nav-mutation V1 (ta
+bort sida + nav + interna länkar). Detaljerad köplan:
 [`docs/current-focus.md`](current-focus.md).
 
-## PASS 2026-06-14 ~22:00 — PROD-E2E BEVISAD + DIREKTIV-LÄCKAGE-FIX (KUNDKOPIAN) + DOCS-STÄDNING (AUKTORITATIVT BLOCK)
+## PASS 2026-06-15 ~13:30 — SYNK + PROD-VERIFIERING + PRICING-SLICE + ROUTE/NAV NÄSTA (AUKTORITATIVT BLOCK)
 
-> **Detta är det ENDA auktoritativa blocket. Allt äldre är historik —
-> verifiera alltid mot git/koden.**
+> **Detta är det ENDA auktoritativa blocket. Allt nedan (inkl. 2026-06-14-passet)
+> är historik — verifiera alltid mot git/koden.**
+>
+> **Mandat:** operatören (Jakob) gav full agens + admin ("göra allt och ta oss
+> vidare"). Git-mutationer mot `main` + `jakob-be` (commit/push/PR/`--admin`-
+> merge) uttryckligen godkända. Arbetsbranchen är `jakob-be`.
+>
+> **Git nu:** `main = jakob-be = origin/main = origin/jakob-be = 7ab65132`,
+> working tree rent. Sessionen mergade #325 (review-fixes #318/#322,
+> directive_leak-kritiker, novel-intent + katalog-medvetet plan, model routing
+> v13) och #326 (ADR 0059 slice 1 pricing + `.cursorignore`-chore) till `main`.
+>
+> **Vad sessionen levererade (komplett, så ingen tror det "bara var en pricing-grej"):**
+> 1. #318 additiv-vakt (`6062928c`): två citat muterar aldrig befintlig copy.
+> 2. #322-härdning (`d7dea188`): droppar directive-formade tjänste-kort +
+>    engelska craft-termer via den delade signalen.
+> 3. directive_leak-kritiker (`07ed6939`): `_looks_like_directive` lyft till en
+>    delad signal (`packages/shared/directive_signal.py`) som BÅDE planning
+>    (prevention) och quality_gate (detektion) delar — single source.
+> 4. Novel-intent planeringssvar + katalog-medvetet plan i OpenClaw Core V0
+>    `decide` (`9d749486`/`64800d12`): en okänd-men-tydlig ändring får ett
+>    grundat, ärligt planeringssvar i stället för stum action_bridge_missing.
+> 5. Model routing v13 (`d49d1ab8`): planning/router/verifier → gpt-5.5 (high),
+>    rerank → gpt-5.4-mini, brief → medium; centralt i `llm-models.v1.json`.
+>    Real-key-smoke körd: gpt-5.5 + gpt-5.4-mini + gpt-5.4 svarar OK mot
+>    prod-nyckeln → prod-säker.
+> 6. ADR 0059 slice 1 (`c1198e32`): `pricing` synlig `/priser`-route (samma
+>    faq/team-mönster; grundat-innehåll-grind kräver ≥1 service, annars
+>    mount-only). "lägg till en prissektion / priser / prislista" ger nu en
+>    synlig ändring, inte bara mount.
+> 7. Build-context-tarballen omladdad (stabil blob-URL + KV) från `7ab65132` →
+>    hostad prod kör den nya Python-koden.
+>
+> **Grönt:** ruff (0), 154 riktade tester (section_directives/apply/render/
+> route-emission), `verify_openclaw.py` 6/6, governance_validate (21 policies),
+> rules_sync, check_term_coverage --strict.
+>
+> **Öppna PR (Christophers viewser-lane, EJ mergade):** #324 (UI/UX-putts) +
+> #320 (bygg-progress). Kräver operatörens visuella browser-check; #324 bör
+> retargetas mot `jakob-be` + baseras efter #320 (annars drift).
+>
+> **Nästa riktiga spår — route/nav-mutation V1 (coach + operatör 2026-06-15):**
+> Glappet som gör flödet "mekaniskt": OpenClaw kan inte ens TA BORT en sida.
+> "ta bort Kontakt" → `component_remove`/`action_bridge_missing`. Routern saknar
+> `route_remove`/`page_remove`. Bygg minsta säkra kontraktet (INGEN fri filpatch):
+> ny editKind `route_remove` i router-modell + schema; klassificera "ta bort
+> sidan X / radera kontaktsidan / ta bort Kontakt ur menyn"; svensk label→route-
+> map (Kontakt→contact `/kontakt`, Om oss→about `/om-oss`, Tjänster→services
+> `/tjanster`); `directives.disabledRoutes` i Project Input; `activeRoutes =
+> defaultRoutes − disabledRoutes` i write_pages/render_layout; nav byggd från
+> activeRoutes (inte råa defaults); contact disabled → inga `href="/kontakt"`,
+> CTA retargetas till mailto/tel om verklig data finns, annars utelämnas ärligt;
+> route/link-scan mot aktiva routes (faila vid länk till disabled route).
+> Acceptans: "ta bort sidan Om oss + länken i headern" / "ta bort Kontakt +
+> länkar dit" → ny version utan sidan/nav/länkar; okänd sida → ärlig no-op.
+> Läs: `router/models.py`, `router/classify.py`, `openclaw/core.py`,
+> `build/renderers.py`, `build/render_helpers.py`, scaffold `routes.json`,
+> `tests/test_builder_route_emission.py` + route/follow-up-tester.
+>
+> **Ärliga fynd att INTE missförstå:**
+> - Tema "Casual Café → grått": INTE en `_TONE_COLOR_TOKENS`-breddning. Ett låst
+>   paritetstest befäster att `tone` styr typografi, bara explicita färgord/hex
+>   styr paletten (`cafe-bistro`/`varm` blir inte grått). Riktig fix =
+>   variant-palett/-val (estetiskt, kräver operatörens riktning).
+> - reviews/trust synlig render: `render_section_reviews` är en medveten stub
+>   (returnerar ""); `render_section_trust_proof` ligger redan i `render_home`s
+>   default-komposition. Båda är riktiga render-jobb, inte placement-rader (0059).
+> - "OpenClaw ser inte filerna": by design — OpenClaw Core V0 `decide` är en REN
+>   funktion (ingen disk-I/O/build/preview/shell/network). Selected-file-context
+>   (läsa manifest/route-map/genererade filer) är coachens Nivå 2, ett medvetet
+>   nästa lager — inte en bugg. Per-run-filträdet hostat är en separat B199-lucka
+>   (Christophers lane, ej schemalagd).
+
+## PASS 2026-06-14 ~22:00 — PROD-E2E BEVISAD + DIREKTIV-LÄCKAGE-FIX (KUNDKOPIAN) + DOCS-STÄDNING (HISTORIK)
+
+> **Historik (var auktoritativt 2026-06-14; ersatt av 2026-06-15-passet ovan).**
 >
 > **Mandat:** operatören (Jakob) gav full mandat att avsluta och skeppa denna
 > session: validera kärnloopen live på hostad prod, fixa den observerade
