@@ -35,6 +35,17 @@ ytor, inga nätverksanrop.
   ta bort `contact` + retargeta dess CTA:er (mailto/tel/utelämna) + en
   länkscan är Slice B. Okänd/obligatorisk sida -> ärlig no-op
   (`stage=route_remove_unsupported`).
+- nav_hide — den ICKE-destruktiva systern till route_remove (Route/Nav Mutation
+  V1, ADR 0060, `route_editor`-rollen): döljer en sidas nav-LÄNK men BEHÅLLER
+  sidan, via ett strukturerat direktiv (`directives.hiddenNavRoutes`), aldrig en
+  dossier och aldrig fri filpatch. "dölj Om oss i menyn / ta bort Om oss ur
+  menyn / ta bort länken till Kontakt" -> `route_directives.resolve_hidden_nav_routes`
+  validerar routeId mot DENNA sajts scaffold (startsidan behålls alltid i navet;
+  okänd/redan-dold avvisas); apply skriver den STICKY hiddenNavRoutes-listan;
+  `build_site` trådar id:na till `_nav_items_from_scaffold` som droppar ENBART
+  nav-posten — page.tsx skrivs ändå, route-guards räknar sidan. En nav-begäran
+  utan utpekad sida ("ta bort länken") förblir en ärlig component_remove-no-op,
+  aldrig nav_hide. Okänd sida -> ärlig no-op (`stage=nav_hide_unsupported`).
 - layout_change — flytta/ordna sektioner (planerad)
 - site_review — svara/granska read-only, ingen build. Ägs av dispatchern
   (router-rollen) by design — ingen egen agentroll och inget eget

@@ -238,6 +238,7 @@ def apply_patch_plan(
     section_positions: dict[str, str] | None = None,
     dossier_preferences: dict[str, str] | None = None,
     disabled_routes: list[str] | None = None,
+    hidden_nav_routes: list[str] | None = None,
     unapplied_followup_intents: list[dict[str, str]] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
@@ -286,6 +287,16 @@ def apply_patch_plan(
     disabledRoutes`` in one filter point, so the page is dropped from nav,
     write_pages and the route guards. Like a theme-only restyle, a route-remove-
     only follow-up (no patch, no theme, no section) still writes the next version.
+
+    ``hidden_nav_routes`` (optional, the nav_hide edit, Route/Nav Mutation V1 /
+    ADR 0060) is the NON-destructive sibling: pre-resolved + validated scaffold
+    routeIds whose nav link is hidden (``route_directives.resolve_hidden_nav_routes``).
+    Recorded STICKY on ``directives.hiddenNavRoutes`` (union with the prior
+    version). Unlike ``disabled_routes`` these are NOT filtered out of
+    ``activeRoutes`` - ``build_site.py`` drops only the header/footer nav item, so
+    the page.tsx, route guards and contact-route lookup keep the full route set.
+    Like a route-remove-only follow-up, a nav-hide-only follow-up still writes the
+    next version.
 
     ``trace_run_dir`` (optional) is the directory of the **new** version's run,
     if one already exists, to append an append-only apply Engine Event to its
@@ -383,13 +394,24 @@ def apply_patch_plan(
         if isinstance(route_id, str) and route_id.strip()
     ]
 
+    # A nav_hide carries pre-resolved + validated scaffold routeIds whose nav
+    # link is hidden while the page stays (route_editor, ADR 0060). Like a
+    # route-remove it counts as a real change, so a nav-hide-only follow-up still
+    # writes the next version below.
+    hidden_nav_route_ids = [
+        route_id
+        for route_id in (hidden_nav_routes or [])
+        if isinstance(route_id, str) and route_id.strip()
+    ]
+
     # 2. Empty valid plan AND no theme AND no section capability AND no disabled
-    #    route -> nothing to apply (not an error). No write.
+    #    route AND no hidden nav route -> nothing to apply (not an error). No write.
     if (
         not plan.patches
         and not theme_changes
         and not section_capabilities
         and not disabled_route_ids
+        and not hidden_nav_route_ids
     ):
         return _trace(
             ApplyResult(
@@ -737,6 +759,31 @@ def apply_patch_plan(
         if union_disabled:
             route_directives["disabledRoutes"] = union_disabled
 
+    # nav_hide (route_editor, ADR 0060): record the hidden nav routeIds STICKY on
+    # directives.hiddenNavRoutes (union with the prior version, same as
+    # disabledRoutes). Unlike disabledRoutes these are NOT filtered out of
+    # activeRoutes - build_site drops only the nav (href,label) item, so the page
+    # stays. route_directives already dropped unknown/home ids upstream.
+    if hidden_nav_route_ids:
+        nav_directives = merged.get("directives")
+        if not isinstance(nav_directives, dict):
+            nav_directives = {}
+            merged["directives"] = nav_directives
+        existing_hidden = nav_directives.get("hiddenNavRoutes")
+        union_hidden: list[str] = []
+        for route_id in (
+            (existing_hidden if isinstance(existing_hidden, list) else [])
+            + hidden_nav_route_ids
+        ):
+            if (
+                isinstance(route_id, str)
+                and route_id.strip()
+                and route_id not in union_hidden
+            ):
+                union_hidden.append(route_id)
+        if union_hidden:
+            nav_directives["hiddenNavRoutes"] = union_hidden
+
     # visual_style restyle: set the named brand/tone fields from the directive's
     # EXPLICIT values (patch-driven; the prompt is never re-parsed here). These
     # are schema-declared Project Input fields rendered by patch_globals_css, so
@@ -938,6 +985,12 @@ def apply_patch_plan(
             f"Stängde av route(s) ({', '.join(disabled_route_ids)}) via "
             f"directives.disabledRoutes i v{next_version}; build filtrerar bort "
             "dem ur activeRoutes (sida, nav och route-guards)."
+        )
+    if hidden_nav_route_ids:
+        notes.append(
+            f"Dolde nav-länk(ar) ({', '.join(hidden_nav_route_ids)}) via "
+            f"directives.hiddenNavRoutes i v{next_version}; build döljer dem ur "
+            "header/footer-navet men behåller sidan (page.tsx + route-guards)."
         )
     result = ApplyResult(
         applied=True,

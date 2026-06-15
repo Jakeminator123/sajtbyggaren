@@ -96,8 +96,12 @@ def test_exactly_the_named_roles_exist():
         ("stylist", ("visual_style",), ("visual_style",)),
         ("copy", ("copy_change",), ("copy_change",)),
         ("component_builder", ("component_add",), ("component_add",)),
-        # ADR 0060: route_editor owns route_remove (Route/Nav Mutation V1).
-        ("route_editor", ("route_remove",), ("route_remove",)),
+        # ADR 0060: route_editor owns route_remove + nav_hide (Route/Nav Mutation V1).
+        (
+            "route_editor",
+            ("route_remove", "nav_hide"),
+            ("route_remove", "nav_hide"),
+        ),
     ],
 )
 def test_editing_role_input_output_contract(
@@ -128,8 +132,9 @@ def test_router_role_dispatches_and_produces_no_directive():
         ("copy_change", "copy"),
         # ADR 0057: component_add is now owned by component_builder.
         ("component_add", "component_builder"),
-        # ADR 0060: route_remove is now owned by route_editor.
+        # ADR 0060: route_remove + nav_hide are owned by route_editor.
         ("route_remove", "route_editor"),
+        ("nav_hide", "route_editor"),
         # Edit kinds no role owns in this slice -> None (honest surface).
         ("component_remove", None),
         ("layout_change", None),
@@ -177,8 +182,9 @@ def test_section_add_skill_constant_matches_contract():
         ("copy_change", "skills/copy-change/SKILL.md"),
         # ADR 0057: component_add resolves to the component_builder skill.
         ("component_add", "skills/component-add/SKILL.md"),
-        # ADR 0060: route_remove resolves to the route_editor skill.
+        # ADR 0060: route_remove + nav_hide resolve to the route_editor skill.
         ("route_remove", "skills/route-remove/SKILL.md"),
+        ("nav_hide", "skills/route-remove/SKILL.md"),
         # Edit kinds no role owns in this slice -> None (honest surface).
         ("component_remove", None),
         ("layout_change", None),
@@ -219,7 +225,8 @@ def test_section_add_dispatch_is_equivalent_to_old_edit_kind_gate():
     maps to the section-add skill, every other kind does not."""
     all_edit_kinds = [
         "section_add", "visual_style", "copy_change", "component_add",
-        "route_remove", "component_remove", "layout_change", "route_add", "none",
+        "route_remove", "nav_hide", "component_remove", "layout_change",
+        "route_add", "none",
     ]
     for edit_kind in all_edit_kinds:
         role_driven = skill_for_edit_kind(edit_kind) == SECTION_ADD_SKILL

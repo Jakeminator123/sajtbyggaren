@@ -316,6 +316,7 @@ def _nav_items_from_scaffold(
     scaffold_default_routes: list[dict],
     dossier_routes: list[str],
     extra_routes: list[dict] | None = None,
+    hidden_nav_route_ids: set[str] | None = None,
 ) -> list[tuple[str, str]]:
     """Build the (href, label) nav items for header + footer.
 
@@ -337,9 +338,19 @@ def _nav_items_from_scaffold(
     dossier routes — a path already declared by the scaffold or by a
     dossier wins, so emitting a wizard extra cannot duplicate the
     visible nav item.
+
+    ``hidden_nav_route_ids`` carries nav_hide routeIds (Route/Nav
+    Mutation V1, ADR 0060, route_editor): a scaffold route whose id is
+    in this set keeps its page but is SKIPPED from the nav (href,label)
+    list, so the header/footer link disappears while the page stays.
+    This is the only nav_hide seam — the page write, route guards and
+    _pick_contact_route all keep the full route set.
     """
+    hidden = hidden_nav_route_ids or set()
     items: list[tuple[str, str]] = [
-        (route["path"], _nav_label_for_route(route["id"])) for route in scaffold_default_routes
+        (route["path"], _nav_label_for_route(route["id"]))
+        for route in scaffold_default_routes
+        if route.get("id") not in hidden
     ]
     existing_paths = {href for href, _ in items}
     if extra_routes:

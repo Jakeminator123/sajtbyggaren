@@ -362,6 +362,7 @@ const CONVERSATION_ANSWER_KINDS: ReadonlySet<string> = new Set([
 // through so the legacy copy/edit resolver gets its chance.
 const TERMINAL_EDIT_NOOP_STAGES: ReadonlySet<string> = new Set([
   "route_remove_unsupported",
+  "nav_hide_unsupported",
   "section_unsupported",
 ]);
 

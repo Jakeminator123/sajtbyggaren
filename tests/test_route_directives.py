@@ -24,6 +24,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from packages.generation.followup.route_directives import (  # noqa: E402
     resolve_disabled_routes,
+    resolve_hidden_nav_routes,
 )
 
 pytestmark = pytest.mark.core
@@ -156,3 +157,66 @@ def test_malformed_scaffold_routes_refuses_safely():
     disabled, refused = resolve_disabled_routes(["about"], {})
     assert disabled == []
     assert refused and refused[0]["routeId"] == "about"
+
+
+# ---------------------------------------------------------------------------
+# nav_hide: resolve_hidden_nav_routes (the non-destructive sibling, ADR 0060)
+# ---------------------------------------------------------------------------
+
+
+def test_nav_hide_non_required_route_resolves_to_hidden():
+    hidden, refused = resolve_hidden_nav_routes(["about"], _LSB_ROUTES)
+    assert hidden == ["about"]
+    assert refused == []
+
+
+def test_nav_hide_required_route_is_allowed_unlike_route_remove():
+    """nav_hide is NON-destructive: hiding a required page's nav link keeps the
+    page + its CTAs, so (unlike route_remove Slice A) a required route resolves."""
+    hidden, refused = resolve_hidden_nav_routes(["contact"], _LSB_ROUTES)
+    assert hidden == ["contact"]
+    assert refused == []
+    hidden_svc, refused_svc = resolve_hidden_nav_routes(["services"], _LSB_ROUTES)
+    assert hidden_svc == ["services"]
+    assert refused_svc == []
+
+
+def test_nav_hide_home_is_always_refused():
+    """The landing page must stay reachable from the nav."""
+    hidden, refused = resolve_hidden_nav_routes(["home"], _LSB_ROUTES)
+    assert hidden == []
+    assert refused[0]["routeId"] == "home"
+    assert "startsidan" in refused[0]["reason"].lower()
+
+
+def test_nav_hide_unknown_route_is_refused():
+    hidden, refused = resolve_hidden_nav_routes(["banana"], _LSB_ROUTES)
+    assert hidden == []
+    assert refused[0]["routeId"] == "banana"
+    assert "finns inte" in refused[0]["reason"].lower()
+
+
+def test_nav_hide_none_target_is_refused():
+    hidden, refused = resolve_hidden_nav_routes([None], _LSB_ROUTES)
+    assert hidden == []
+    assert refused[0]["routeId"] == "(okänd)"
+
+
+def test_nav_hide_already_hidden_is_refused_not_rehidden():
+    """A nav link the base version already hid is refused as "already hidden" so
+    repeating "dölj Om oss i menyn" is an honest no-op, not an identical version."""
+    hidden, refused = resolve_hidden_nav_routes(
+        ["about"], _LSB_ROUTES, already_hidden=frozenset({"about"})
+    )
+    assert hidden == []
+    assert len(refused) == 1
+    assert refused[0]["routeId"] == "about"
+    assert "redan dold" in refused[0]["reason"].lower()
+
+
+def test_nav_hide_dedupes_and_refuses_malformed_safely():
+    hidden, _ = resolve_hidden_nav_routes(["about", "about"], _LSB_ROUTES)
+    assert hidden == ["about"]
+    hidden_bad, refused_bad = resolve_hidden_nav_routes(["about"], {})
+    assert hidden_bad == []
+    assert refused_bad and refused_bad[0]["routeId"] == "about"

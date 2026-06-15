@@ -89,7 +89,8 @@ Role = Literal[
 # Directive kinds a role may produce. These mirror the editing ``EditKind``
 # values an owning role exists for; the router role itself emits no directive.
 RoleDirectiveKind = Literal[
-    "section_add", "visual_style", "copy_change", "component_add", "route_remove"
+    "section_add", "visual_style", "copy_change", "component_add", "route_remove",
+    "nav_hide",
 ]
 
 
@@ -215,23 +216,25 @@ ROLE_CONTRACTS: dict[Role, RoleContract] = {
     ),
     "route_editor": RoleContract(
         role="route_editor",
-        acceptsEditKinds=("route_remove",),
-        producesDirectives=("route_remove",),
+        acceptsEditKinds=("route_remove", "nav_hide"),
+        producesDirectives=("route_remove", "nav_hide"),
         contextLevel="artifacts_plus_sections",
         status="supported",
         mountOnly=False,
         skill="skills/route-remove/SKILL.md",
         summary=(
-            "Owns the route_remove edit kind (Route/Nav Mutation V1, ADR 0060). "
-            "Removes a whole non-required page + its header/footer nav link via a "
-            "structured directive (directives.disabledRoutes), NOT a dossier and "
-            "NOT a free file patch. route_directives validates the routeId against "
-            "THIS site's scaffold + the required-page guard; apply records the "
-            "STICKY disabledRoutes list; build_site computes activeRoutes = "
-            "scaffold defaultRoutes minus disabledRoutes in one seam. An unknown "
-            "or required page is an HONEST no-op, never a faked removal. Slice A "
-            "keeps required pages (home/services/contact); contact removal + "
-            "CTA-retarget is Slice B."
+            "Owns route/nav mutation (Route/Nav Mutation V1, ADR 0060). "
+            "route_remove removes a whole non-required page + its nav link via a "
+            "structured directive (directives.disabledRoutes). nav_hide is the "
+            "non-destructive sibling: it HIDES a page's header/footer nav link "
+            "while KEEPING the page (directives.hiddenNavRoutes) - a link/menu "
+            "request ('dölj Om oss i menyn', 'ta bort Om oss ur menyn') can never "
+            "delete a page. Both are structured directives, NOT a dossier and NOT "
+            "a free file patch: route_directives validates the routeId against "
+            "THIS site's scaffold; apply records the STICKY list; build_site "
+            "computes activeRoutes (route_remove) resp. drops only the nav item "
+            "(nav_hide) in one seam each. An unknown page is an HONEST no-op, "
+            "never a faked change."
         ),
     ),
 }
@@ -246,6 +249,7 @@ _ROLE_BY_EDIT_KIND: dict[EditKind, Role] = {
     "copy_change": "copy",
     "component_add": "component_builder",
     "route_remove": "route_editor",
+    "nav_hide": "route_editor",
 }
 
 
