@@ -434,6 +434,13 @@ def apply_followup_to_json(
         from scripts.build_site import run_followup_chain
 
         try:
+            # Fas 1 (beslutsenhet): the message was already classified ONCE above
+            # (``router = _classify_router(...)``). Inject that SAME decision into
+            # the chain so it does not re-classify — one decision surface, at most
+            # one routerModel call per invocation (the bridge half and the chain
+            # half can no longer disagree on an ambiguous prompt). The chain
+            # re-resolves the ordinal->sectionId step internally, since the
+            # conductor's RouterContext carries no routeSections.
             chain = run_followup_chain(
                 site_id,
                 message,
@@ -441,6 +448,7 @@ def apply_followup_to_json(
                 do_build=do_build,
                 runs_dir=runs_dir,
                 generated_dir=generated_dir,
+                decision=router,
             )
         except SystemExit as exc:
             # The chain raises SystemExit when there is no prior run to build on.

@@ -55,6 +55,10 @@ from jsonschema import Draft202012Validator
 
 if TYPE_CHECKING:
     from packages.generation.build.dossier_dependencies import DependencyMerge
+    from packages.generation.orchestration.router import (
+        RouterDecision,
+        RouterTarget,
+    )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -4169,6 +4173,46 @@ def _latest_run_id_for_site(runs_root: Path, site_id: str) -> str | None:
     return None
 
 
+def _resolve_injected_decision_sections(
+    decision: RouterDecision,
+    route_sections: dict[str, list[str]],
+    *,
+    default_route_id: str,
+) -> RouterDecision:
+    """Replay ONLY the router's ordinal->sectionId resolution on an injected decision.
+
+    Fas 1 (beslutsenhet): the conductor (``run_openclaw_followup._classify_router``)
+    classifies a follow-up with ``RouterContext(siteId=...)`` but WITHOUT
+    ``routeSections`` (it has no assembled section map). Its decision therefore
+    carries a ``sectionOrdinal`` ("andra sektionen" -> 2) but a ``None``
+    ``sectionId`` on any ordinal target. The chain's internal classification, by
+    contrast, passes ``routeSections`` so ``router._build_target`` resolves that
+    ordinal to a concrete ``sectionId``.
+
+    To keep CONSUMING the conductor's decision behaviour-preserving, replay that
+    single resolution step here with the EXACT same rule as ``_build_target``
+    (``sections[ordinal - 1]`` when the 1-based ordinal is in range, against the
+    default route's section list), for the main target and every subtask target.
+    Nothing else is re-classified. A deep copy is returned so the conductor's own
+    decision object is never mutated (it is also embedded in the emitted
+    ``OpenClawDecision`` payload by the bridge).
+    """
+    resolved = decision.model_copy(deep=True)
+    sections = route_sections.get(default_route_id) or []
+
+    def _fill_section_id(target: RouterTarget | None) -> None:
+        if target is None or target.sectionId is not None:
+            return
+        ordinal = target.sectionOrdinal
+        if ordinal is not None and 0 < ordinal <= len(sections):
+            target.sectionId = sections[ordinal - 1]
+
+    _fill_section_id(resolved.target)
+    for subtask in resolved.subtasks:
+        _fill_section_id(subtask.target)
+    return resolved
+
+
 def run_followup_chain(
     site_id: str,
     follow_up_prompt: str,
@@ -4179,6 +4223,7 @@ def run_followup_chain(
     generated_dir: str | Path | None = None,
     output_dir: Path | None = None,
     auto_prune: bool = False,
+    decision: RouterDecision | None = None,
 ) -> dict[str, Any]:
     """KÖR-7 follow-up bridge as a real user path (CLI E2E wiring).
 
@@ -4203,6 +4248,15 @@ def run_followup_chain(
     the mock brief/plan). Returns a transient dict summary (never a new canonical
     artefakt, builder-profil §3); the per-step trace events are the durable
     record.
+
+    ``decision`` (Fas 1, beslutsenhet): an OPTIONAL pre-computed ``RouterDecision``
+    from the conductor (``run_openclaw_followup._classify_router``). When ``None``
+    the chain classifies the message itself exactly as before. When provided the
+    chain CONSUMES it instead of re-classifying, so a follow-up is classified ONCE
+    per ``--apply`` invocation. Behaviour-preserving: the conductor's
+    ``RouterContext`` carries no ``routeSections``, so the injected decision's
+    ordinal target is re-resolved to a concrete ``sectionId`` here (the same
+    ``router._build_target`` rule) before the rest of the chain runs.
     """
     from packages.generation.orchestration.apply import (
         PatchApplyError,
@@ -4282,13 +4336,32 @@ def run_followup_chain(
         if isinstance(route_sections_payload, dict)
         else {}
     )
-    # KÖR-6b: escalate genuinely ambiguous (unclear/long/complex multi_intent)
-    # follow-ups to routerModel when OPENAI_API_KEY is set; identical to the
-    # deterministic KÖR-6a heuristic without a key (no-key parity preserved).
-    decision = classify_message_with_llm_fallback(
-        follow_up_prompt,
-        context=RouterContext(siteId=site_id, routeSections=route_sections),
-    )
+    # Fas 1 (beslutsenhet): when the conductor already classified this message
+    # (run_openclaw_followup._classify_router), CONSUME that RouterDecision
+    # instead of re-classifying — one decision surface, at most one routerModel
+    # call per invocation (the bridge and the chain can no longer disagree on an
+    # ambiguous prompt). ``decision is None`` keeps the previous behaviour
+    # byte-for-byte: the chain classifies exactly as before.
+    if decision is None:
+        # KÖR-6b: escalate genuinely ambiguous (unclear/long/complex multi_intent)
+        # follow-ups to routerModel when OPENAI_API_KEY is set; identical to the
+        # deterministic KÖR-6a heuristic without a key (no-key parity preserved).
+        decision = classify_message_with_llm_fallback(
+            follow_up_prompt,
+            context=RouterContext(siteId=site_id, routeSections=route_sections),
+        )
+    else:
+        # The conductor builds its RouterContext WITHOUT routeSections, so an
+        # ordinal target ("andra sektionen") still carries sectionOrdinal but a
+        # None sectionId. Replay ONLY the ordinal->sectionId resolution (the SAME
+        # rule as router._build_target) so the injected decision resolves to the
+        # IDENTICAL sectionId the internal classification would have produced. No
+        # re-classification — classify_message_with_llm_fallback is not called.
+        decision = _resolve_injected_decision_sections(
+            decision,
+            route_sections,
+            default_route_id=RouterContext().defaultRouteId,
+        )
 
     # 2. Context (kor-7a): the router chose a level; honour it (artifacts+sections
     #    for an edit), plus the component registry to validate any capability.
