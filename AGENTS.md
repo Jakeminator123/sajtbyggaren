@@ -1,3 +1,7 @@
+delivery-bias: läs docs/delivery-bias.md innan ändringar som kan växa i
+docs/tester/scope; förmåga före dokumentation, smal testbudget och tydlig
+feature-pr-redovisning gäller.
+
 ## Cursor Cloud specific instructions
 
 ### Notis om shell-kommandon på Windows (Jakob/jakob-be)
