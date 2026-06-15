@@ -237,6 +237,7 @@ def apply_patch_plan(
     added_capabilities: list[str] | None = None,
     section_positions: dict[str, str] | None = None,
     dossier_preferences: dict[str, str] | None = None,
+    disabled_routes: list[str] | None = None,
     unapplied_followup_intents: list[dict[str, str]] | None = None,
 ) -> ApplyResult:
     """Apply a validated patch plan as the next Project Input version.
@@ -273,6 +274,18 @@ def apply_patch_plan(
     capability-map.v1.json + the manifest's enabled flag; an invalid/disabled
     preference falls back to the capability default - chat can never mount an
     unregistered Dossier.
+
+    ``disabled_routes`` (optional, the route_remove edit, Route/Nav Mutation V1 /
+    ADR 0060) carries scaffold routeIds the caller already resolved + validated
+    (``packages.generation.followup.route_directives.resolve_disabled_routes``,
+    which only returns ids that exist in the scaffold AND are not required). They
+    are recorded STICKY on ``directives.disabledRoutes`` - union of the prior
+    version's list (carried forward by the deep-copy merge) with this call's ids -
+    so a page removed in v2 does not reappear on a later unrelated follow-up.
+    ``build_site.py`` computes ``activeRoutes = scaffold defaultRoutes minus
+    disabledRoutes`` in one filter point, so the page is dropped from nav,
+    write_pages and the route guards. Like a theme-only restyle, a route-remove-
+    only follow-up (no patch, no theme, no section) still writes the next version.
 
     ``trace_run_dir`` (optional) is the directory of the **new** version's run,
     if one already exists, to append an append-only apply Engine Event to its
@@ -359,9 +372,25 @@ def apply_patch_plan(
         cap for cap in (added_capabilities or []) if isinstance(cap, str) and cap.strip()
     ]
 
-    # 2. Empty valid plan AND no theme AND no section capability -> nothing to
-    #    apply (not an error). No write.
-    if not plan.patches and not theme_changes and not section_capabilities:
+    # A route_remove carries pre-resolved + validated scaffold routeIds (each one
+    # already verified to exist in the scaffold and not be required by the
+    # caller's route_directives resolver). Like a theme-only restyle it counts as
+    # a real change, so a route-remove-only follow-up still writes the next
+    # version below (ADR 0060).
+    disabled_route_ids = [
+        route_id
+        for route_id in (disabled_routes or [])
+        if isinstance(route_id, str) and route_id.strip()
+    ]
+
+    # 2. Empty valid plan AND no theme AND no section capability AND no disabled
+    #    route -> nothing to apply (not an error). No write.
+    if (
+        not plan.patches
+        and not theme_changes
+        and not section_capabilities
+        and not disabled_route_ids
+    ):
         return _trace(
             ApplyResult(
                 applied=False,
@@ -679,6 +708,35 @@ def apply_patch_plan(
         # not linger (honest: nothing inline to render this version).
         directives.pop("mountedSections", None)
 
+    # route_remove (ADR 0060): record the disabled scaffold routes on the NEW
+    # version's directives. STICKY by design - union the carried-forward prior
+    # list (merge_followup_project_input deep-copies the previous version, so a
+    # route disabled in v2 rides along) with THIS call's disabled_route_ids, so a
+    # removed page never reappears on a later unrelated follow-up. build_site.py
+    # computes activeRoutes = scaffold defaultRoutes minus this list in one filter
+    # point, so nav, write_pages and the route guards all stop seeing the page.
+    # route_directives already dropped unknown/required ids before they reached
+    # here, so an honest no-op upstream never persists a phantom disabled route.
+    if disabled_route_ids:
+        route_directives = merged.get("directives")
+        if not isinstance(route_directives, dict):
+            route_directives = {}
+            merged["directives"] = route_directives
+        existing_disabled = route_directives.get("disabledRoutes")
+        union_disabled: list[str] = []
+        for route_id in (
+            (existing_disabled if isinstance(existing_disabled, list) else [])
+            + disabled_route_ids
+        ):
+            if (
+                isinstance(route_id, str)
+                and route_id.strip()
+                and route_id not in union_disabled
+            ):
+                union_disabled.append(route_id)
+        if union_disabled:
+            route_directives["disabledRoutes"] = union_disabled
+
     # visual_style restyle: set the named brand/tone fields from the directive's
     # EXPLICIT values (patch-driven; the prompt is never re-parsed here). These
     # are schema-declared Project Input fields rendered by patch_globals_css, so
@@ -874,6 +932,12 @@ def apply_patch_plan(
     for entry in section_mount_only:
         notes.append(
             f"Sektion {entry['capability']!r} förblir mount-only: {entry['reason']}"
+        )
+    if disabled_route_ids:
+        notes.append(
+            f"Stängde av route(s) ({', '.join(disabled_route_ids)}) via "
+            f"directives.disabledRoutes i v{next_version}; build filtrerar bort "
+            "dem ur activeRoutes (sida, nav och route-guards)."
         )
     result = ApplyResult(
         applied=True,

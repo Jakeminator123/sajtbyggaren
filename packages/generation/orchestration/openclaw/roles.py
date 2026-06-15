@@ -77,15 +77,19 @@ __all__ = [
 # editing roles each own exactly one editing directive. ``component_builder``
 # (ADR 0057) owns ``component_add`` as a partial, mount-only role: it answers
 # from the Component Catalog or does an honest no-op pointing at the intake CLI;
-# it mounts nothing and writes no files in this slice.
+# it mounts nothing and writes no files in this slice. ``route_editor`` (Route/
+# Nav Mutation V1, ADR 0060) owns ``route_remove``: it removes a whole
+# non-required page + its nav link via a structured directive (disabledRoutes),
+# no dossier and no free file patch.
 Role = Literal[
-    "router", "section_builder", "stylist", "copy", "component_builder"
+    "router", "section_builder", "stylist", "copy", "component_builder",
+    "route_editor",
 ]
 
 # Directive kinds a role may produce. These mirror the editing ``EditKind``
 # values an owning role exists for; the router role itself emits no directive.
 RoleDirectiveKind = Literal[
-    "section_add", "visual_style", "copy_change", "component_add"
+    "section_add", "visual_style", "copy_change", "component_add", "route_remove"
 ]
 
 
@@ -209,17 +213,39 @@ ROLE_CONTRACTS: dict[Role, RoleContract] = {
             "PR (intake -> review -> Starter), never a runtime mount."
         ),
     ),
+    "route_editor": RoleContract(
+        role="route_editor",
+        acceptsEditKinds=("route_remove",),
+        producesDirectives=("route_remove",),
+        contextLevel="artifacts_plus_sections",
+        status="supported",
+        mountOnly=False,
+        skill="skills/route-remove/SKILL.md",
+        summary=(
+            "Owns the route_remove edit kind (Route/Nav Mutation V1, ADR 0060). "
+            "Removes a whole non-required page + its header/footer nav link via a "
+            "structured directive (directives.disabledRoutes), NOT a dossier and "
+            "NOT a free file patch. route_directives validates the routeId against "
+            "THIS site's scaffold + the required-page guard; apply records the "
+            "STICKY disabledRoutes list; build_site computes activeRoutes = "
+            "scaffold defaultRoutes minus disabledRoutes in one seam. An unknown "
+            "or required page is an HONEST no-op, never a faked removal. Slice A "
+            "keeps required pages (home/services/contact); contact removal + "
+            "CTA-retarget is Slice B."
+        ),
+    ),
 }
 
 # Router EditKind -> the role that owns its directive. The editing roles plus
-# component_builder (ADR 0057, partial/mount-only) are mapped; the remaining
-# router edit kinds (component_remove, layout_change, route_add, none) are not
-# owned by a role in this slice.
+# component_builder (ADR 0057, partial/mount-only) and route_editor (ADR 0060,
+# route_remove) are mapped; the remaining router edit kinds (component_remove,
+# layout_change, route_add, none) are not owned by a role in this slice.
 _ROLE_BY_EDIT_KIND: dict[EditKind, Role] = {
     "section_add": "section_builder",
     "visual_style": "stylist",
     "copy_change": "copy",
     "component_add": "component_builder",
+    "route_remove": "route_editor",
 }
 
 
@@ -233,9 +259,10 @@ def role_for_edit_kind(edit_kind: str) -> Role | None:
 
     Honest about the current surface: section_add -> section_builder,
     visual_style -> stylist, copy_change -> copy, component_add ->
-    component_builder (ADR 0057, partial/mount-only). Any other edit kind
-    (component_remove, layout_change, route_add, none) returns None because no
-    role in this slice produces its directive yet.
+    component_builder (ADR 0057, partial/mount-only), route_remove ->
+    route_editor (ADR 0060). Any other edit kind (component_remove,
+    layout_change, route_add, none) returns None because no role in this slice
+    produces its directive yet.
     """
     return _ROLE_BY_EDIT_KIND.get(edit_kind)  # type: ignore[arg-type]
 
@@ -259,9 +286,9 @@ def skill_for_edit_kind(edit_kind: str | None) -> str | None:
     Returns ``None`` when ``edit_kind`` is missing/``"none"``, when no role owns
     the kind (component_remove, layout_change, route_add), or when the owning
     role declares no skill (the router dispatcher). ``component_add`` resolves to
-    the ``component_builder`` skill (ADR 0057). Defensive on purpose:
-    ``decision.editKind`` can be ``"none"``, so this accepts ``str | None`` and
-    never raises.
+    the ``component_builder`` skill (ADR 0057); ``route_remove`` resolves to the
+    ``route_editor`` skill (ADR 0060). Defensive on purpose: ``decision.editKind``
+    can be ``"none"``, so this accepts ``str | None`` and never raises.
     """
     if not edit_kind or edit_kind == "none":
         return None

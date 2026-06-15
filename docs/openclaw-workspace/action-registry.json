@@ -41,6 +41,13 @@
       "note": "Reorder/move sections; needs an apply capability, not free CSS."
     },
     {
+      "id": "route_remove",
+      "skill": "skills/route-remove/SKILL.md",
+      "routerEditKind": "route_remove",
+      "status": "supported",
+      "note": "Route/Nav Mutation V1 (ADR 0060). Removes a whole non-required page + its header/footer nav link via a structured directive (directives.disabledRoutes), NOT a dossier and NOT a free file patch. Flow: router classifies 'ta bort sidan X / radera X-sidan / ta bort Kontakt' as route_remove and resolves a best-effort routeId from the page label -> route_directives.resolve_disabled_routes validates the id against THIS site's scaffold defaultRoutes + the required-page guard (returns refused reasons for an unknown or required page) -> apply records directives.disabledRoutes (STICKY: union with the prior version so a removed page never reappears) -> build_site.py computes activeRoutes = scaffold defaultRoutes minus disabledRoutes in one seam, so the page.tsx is never written and the nav drops the link -> new immutable version + targeted render. Scaffold-agnostic (works on every starter that has a non-required route). Slice A keeps REQUIRED pages (home/services/contact) - removing contact + retargeting its CTAs to mailto/tel/none, plus a Quality Gate dangling-link scan, is Slice B. An unknown/required page is an HONEST no-op (stage route_remove_unsupported), never a faked removal. Wizard-extra routes (faq/team/pricing surfaced via wizardMustHave) are not scaffold defaultRoutes, so removing them is a later slice."
+    },
+    {
       "id": "site_review",
       "skill": "skills/site-review/SKILL.md",
       "routerEditKind": "site_review",
