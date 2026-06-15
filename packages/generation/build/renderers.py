@@ -148,8 +148,8 @@ def _hero_cta_variant(dossier: dict) -> str:
 def _hero_cta_target_path(
     dossier: dict,
     listing_route: dict | None,
-    contact_path: str,
-) -> str:
+    contact_path: str | None,
+) -> str | None:
     return _call_build_site("_hero_cta_target_path", dossier, listing_route, contact_path)
 
 
@@ -214,6 +214,98 @@ def _route_href(route: str) -> str:
     return _call_build_site("_route_href", route)
 
 
+def _contact_href(contact_target: str | None) -> str | None:
+    """Shim for ``scripts.build_site._contact_href`` (Route/Nav V1 Slice B).
+
+    Returns a JSX-safe href for a contact CTA target (a ``/`` route path or a
+    ``mailto:``/``tel:`` action), or ``None`` when the target is missing so the
+    caller omits the anchor instead of emitting a dead/invalid href.
+    """
+    return _call_build_site("_contact_href", contact_target)
+
+
+def _contact_cta_target(contact_route: dict | None, dossier: dict) -> str | None:
+    """Resolve the single contact-CTA target for a build (ADR 0060 Slice B).
+
+    Returns the scaffold's contact route path when the contact page exists
+    (the Slice A behaviour, byte-identical for every build that keeps contact).
+    When the contact page was removed (``contact_route is None``) it falls back
+    to the honest channel order ``mailto:`` a real email -> ``tel:`` a real
+    phone -> ``None`` (omit). "Real" means the value passes the
+    ``contact_placeholders`` guards, so the +46 8 000 00 00 / example.se stubs
+    are never published as a CTA. The resulting value is threaded to every
+    renderer as ``contact_path`` and turned into an href via ``_contact_href``.
+    """
+    if contact_route is not None:
+        # Contact page exists: its scaffold path must validate as a canonical
+        # site path. Fail fast on a malformed scaffold contact route (empty /
+        # protocol / traversal path), exactly as before Slice B - the lenient
+        # mailto:/tel: branch below is only for the synthesised removed-contact
+        # fallback, never for a declared (but broken) scaffold route.
+        path = str(contact_route["path"])
+        _route_href(path)
+        return path
+    contact = dossier.get("contact") if isinstance(dossier, dict) else None
+    contact = contact if isinstance(contact, dict) else {}
+    email = real_email(contact)
+    if email:
+        return "mailto:" + email
+    phone = real_phone(contact)
+    if phone:
+        return "tel:" + _phone_href(phone)
+    return None
+
+
+def _filled_contact_cta(
+    contact_path: str | None,
+    label: str,
+    *,
+    indent: str = "          ",
+    lead_icon: str = "",
+) -> str:
+    """Filled primary contact-CTA button, or ``""`` when there is no target.
+
+    Slice B (ADR 0060): the shared filled "Begär offert"/"Boka tid"/shop button
+    used by the service-list, collection, products and wizard-route renderers.
+    Returns ``""`` when contact was removed with no ``mailto:``/``tel:`` fallback
+    so the page omits the button instead of linking to a dead ``/kontakt`` route.
+    Byte-identical to the previous inline anchor when a target exists.
+    """
+    href = _contact_href(contact_path)
+    if href is None:
+        return ""
+    return (
+        f'{indent}<a href={href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{lead_icon}{label}<ArrowRight className="size-4" /></a>\n'
+    )
+
+
+def _text_contact_cta(
+    contact_path: str | None,
+    label: str,
+    *,
+    indent: str = "          ",
+    class_name: str = (
+        "inline-flex w-fit items-center gap-2 text-sm font-medium "
+        "underline-offset-4 hover:underline"
+    ),
+    icon_size: str = "size-4",
+) -> str:
+    """Underlined text contact-CTA link, or ``""`` when there is no target.
+
+    Slice B (ADR 0060): the shared clinic/professional/agency "Boka tid" /
+    "Diskutera ärende" / "Diskutera projekt" link. Same omit-on-no-target rule
+    as ``_filled_contact_cta``; byte-identical to the previous inline anchor when
+    a target exists (``_contact_href`` matches ``_jsx_safe_string`` for a valid
+    ``/`` path).
+    """
+    href = _contact_href(contact_path)
+    if href is None:
+        return ""
+    return (
+        f'{indent}<a href={href} className="{class_name}">{label}<ArrowRight className="{icon_size}" /></a>\n'
+    )
+
+
 def _hard_dossier_runtime(dossier: dict, dossier_id: str) -> dict[str, Any] | None:
     runtime = dossier.get("dossierRuntime")
     if not isinstance(runtime, dict):
@@ -275,8 +367,14 @@ def render_layout(
         extra_routes,
     )
     if contact_path is None:
-        contact_path = str(_pick_contact_route(scaffold_default_routes)["path"])
-    contact_href = _route_href(contact_path)
+        # Direct callers (unit tests) may omit contact_path; fall back to the
+        # scaffold's contact route. Slice B (ADR 0060): _pick_contact_route now
+        # returns None when the contact route was removed, so contact_path stays
+        # None and the contact CTAs below are omitted honestly (the footer
+        # degrades to a plain invitation, no dead /kontakt link).
+        fallback_route = _pick_contact_route(scaffold_default_routes)
+        contact_path = str(fallback_route["path"]) if fallback_route is not None else None
+    contact_href = _contact_href(contact_path)
     # nav_items entries come from _nav_items_from_scaffold (canonical
     # paths + Swedish labels driven by scaffold_default_routes). Paths go
     # through _route_href which validates them as canonical site paths
@@ -290,6 +388,14 @@ def render_layout(
     nav_links = "\n".join(
         f'            <a href={_route_href(href)} className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{_jsx_safe_string(label)}</a>'
         for href, label in nav_items
+    )
+    # Header "Kontakta oss" button. Slice B (ADR 0060): omitted when there is no
+    # contact target (contact page removed and no mailto:/tel: fallback) so the
+    # header never carries a dead /kontakt link. Byte-identical when present.
+    header_contact_cta = (
+        f'            <a href={contact_href} className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
+        if contact_href is not None
+        else ""
     )
     # Honest footer contact column: only render channels the operator
     # actually supplied. Placeholder phone/email/address (the B88
@@ -321,9 +427,18 @@ def render_layout(
         )
         footer_icons.append("MapPin")
     if not footer_contact_lines:
-        footer_contact_lines.append(
-            f'              <a href={contact_href} className="inline-flex items-center gap-2 font-medium hover:underline">Kontakta oss</a>'
-        )
+        if contact_href is not None:
+            footer_contact_lines.append(
+                f'              <a href={contact_href} className="inline-flex items-center gap-2 font-medium hover:underline">Kontakta oss</a>'
+            )
+        else:
+            # Slice B (ADR 0060): contact page removed and no real phone/email/
+            # address to fall back to - degrade to a plain honest line rather
+            # than a dead link, so the footer "Kontakt" column is never empty
+            # and never points at a removed /kontakt route.
+            footer_contact_lines.append(
+                '              <p className="text-[color:var(--muted)]">Kontakta oss gärna.</p>'
+            )
     footer_contact_block = "\n".join(footer_contact_lines)
     footer_icon_import = (
         ("import { " + ", ".join(sorted(footer_icons)) + ' } from "lucide-react";\n')
@@ -594,7 +709,7 @@ def render_layout(
         '            <nav className="flex items-center gap-5 text-sm font-medium">\n'
         f"{nav_links}\n"
         "            </nav>\n"
-        f'            <a href={contact_href} className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
+        f"{header_contact_cta}"
         "          </div>\n"
         "        </header>\n"
         # Sprint 2.4/2.5 — skip-link-mål.
@@ -643,7 +758,7 @@ def render_section_hero(
     *,
     dossier_routes: list[str],
     listing_route: dict | None,
-    contact_path: str,
+    contact_path: str | None,
     variant_id: str | None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -766,7 +881,11 @@ def render_section_hero(
     # B101 (re-Verifierings-Scout 3 2026-05-18): when CTA is shop the
     # primary hero button must link to the products listing, not the
     # contact route. Booking and quote variants keep contact as target.
-    hero_cta_href = _route_href(
+    # Slice B (ADR 0060): _hero_cta_target_path may return the contact target
+    # (a /path, a mailto:/tel: fallback, or None when contact was removed with
+    # no channel); _contact_href turns it into a safe href or None so the hero
+    # primary CTA is omitted rather than linking to a dead /kontakt route.
+    hero_cta_href = _contact_href(
         _hero_cta_target_path(dossier, listing_route, contact_path)
     )
 
@@ -952,7 +1071,7 @@ def render_section_product_grid(dossier: dict) -> str:
 def render_section_contact_cta(
     dossier: dict,
     *,
-    contact_path: str,
+    contact_path: str | None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the home-page closing contact-CTA section.
@@ -975,7 +1094,12 @@ def render_section_contact_cta(
     Path B step 4 (GAP-backend-path-b-section-renderer): extracted
     from ``render_home``.
     """
-    contact_href = _route_href(contact_path)
+    contact_href = _contact_href(contact_path)
+    if contact_href is None:
+        # Slice B (ADR 0060): contact page removed and no mailto:/tel: fallback.
+        # Drop the whole closing "Hör av dig idag" band rather than render a CTA
+        # banner with no target; the footer still carries an honest contact line.
+        return ""
     cta_label = "Kontakta oss"
     if blueprint is not None:
         # honesty: gate a phone-promising blueprint CTA ("Ring oss") when the
@@ -1039,7 +1163,7 @@ def _contact_page_hero_body(dossier: dict) -> str:
     )
 
 
-def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     """Render the contact-page Phone / Mail / Address card section.
 
     Produces the gradient-headed /kontakt section with three articles
@@ -1176,8 +1300,15 @@ def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt"
     # route with CTA text instead of publishing a dummy channel. No tel:/
     # mailto: and no lucide icon (so a fully-placeholder page stays icon-free).
     contact_cta_label = "Get in touch" if language == "en" else "Hör av dig"
+    # Slice B (ADR 0060): this section only renders on the contact page (so
+    # contact_path is normally its own route), but route through _contact_href +
+    # a guard for defence in depth - if there were ever no target the page omits
+    # the CTA rather than emitting a dead/invalid href. Byte-identical otherwise.
+    contact_cta_href = _contact_href(contact_path)
     contact_cta_anchor = (
-        f'              <a href={_route_href(contact_path)} className="mt-4 inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{_jsx_safe_string(contact_cta_label)}</a>\n'
+        f'              <a href={contact_cta_href} className="mt-4 inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{_jsx_safe_string(contact_cta_label)}</a>\n'
+        if contact_cta_href is not None
+        else ""
     )
     if not cards:
         invite_heading = "How to reach us" if language == "en" else "Så når du oss"
@@ -1611,7 +1742,7 @@ def render_home(
     dossier_routes: list[str],
     *,
     listing_route: dict | None = None,
-    contact_path: str = "/kontakt",
+    contact_path: str | None = "/kontakt",
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -1740,7 +1871,7 @@ _SERVICE_LIST_TREATMENT_DEFAULT = "card-grid"
 def render_section_service_list(
     dossier: dict,
     *,
-    contact_path: str,
+    contact_path: str | None,
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -1806,7 +1937,7 @@ def _service_list_header() -> str:
     )
 
 
-def _render_service_list_card_grid(dossier: dict, contact_path: str) -> str:
+def _render_service_list_card_grid(dossier: dict, contact_path: str | None) -> str:
     """3-col gradient-headered card grid (the default treatment).
 
     Kept byte-identical to the pre-Phase-2 output of
@@ -1814,7 +1945,6 @@ def _render_service_list_card_grid(dossier: dict, contact_path: str) -> str:
     invalidated by introducing treatment dispatch.
     """
     services = dossier["services"]
-    contact_href = _route_href(contact_path)
     items = "\n".join(
         f'          <article key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
         f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-6" /></span>\n'
@@ -1834,14 +1964,14 @@ def _render_service_list_card_grid(dossier: dict, contact_path: str) -> str:
         + '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         + f"{items}\n"
         + "          </div>\n"
-        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + _filled_contact_cta(contact_path, cta_label)
         + "        </div>\n"
         + "      </section>\n"
     )
 
 
 def _render_service_list_alternating_rows(
-    dossier: dict, contact_path: str
+    dossier: dict, contact_path: str | None
 ) -> str:
     """Vertical sequence of left-/right-flipped icon+copy rows.
 
@@ -1852,7 +1982,6 @@ def _render_service_list_alternating_rows(
     grid. Mapped to ``warm-craft``.
     """
     services = dossier["services"]
-    contact_href = _route_href(contact_path)
     items = "\n".join(
         (
             f'          <li key={_jsx_safe_string(svc["id"])} className="flex flex-col items-start gap-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:flex-row md:items-center md:gap-10 md:p-10'
@@ -1875,14 +2004,14 @@ def _render_service_list_alternating_rows(
         + '          <ul className="flex flex-col gap-6">\n'
         + f"{items}\n"
         + "          </ul>\n"
-        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + _filled_contact_cta(contact_path, cta_label)
         + "        </div>\n"
         + "      </section>\n"
     )
 
 
 def _render_service_list_icon_strip(
-    dossier: dict, contact_path: str
+    dossier: dict, contact_path: str | None
 ) -> str:
     """Compact horizontal icon-label strip with summaries underneath.
 
@@ -1892,7 +2021,6 @@ def _render_service_list_icon_strip(
     glance" bar. Mapped to ``clinical-calm``.
     """
     services = dossier["services"]
-    contact_href = _route_href(contact_path)
     pills = "\n".join(
         (
             f'              <li key={_jsx_safe_string(svc["id"])} className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2 text-sm font-medium tracking-tight">\n'
@@ -1922,13 +2050,13 @@ def _render_service_list_icon_strip(
         + '          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">\n'
         + f"{cards}\n"
         + "          </div>\n"
-        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + _filled_contact_cta(contact_path, cta_label)
         + "        </div>\n"
         + "      </section>\n"
     )
 
 
-def _render_service_list_tabular(dossier: dict, contact_path: str) -> str:
+def _render_service_list_tabular(dossier: dict, contact_path: str | None) -> str:
     """Formal row listing with thin separators and a column header.
 
     No card chrome — each service is a row spanning the full
@@ -1937,7 +2065,6 @@ def _render_service_list_tabular(dossier: dict, contact_path: str) -> str:
     a marketing grid. Mapped to ``nordic-trust``.
     """
     services = dossier["services"]
-    contact_href = _route_href(contact_path)
     rows = "\n".join(
         (
             f'              <li key={_jsx_safe_string(svc["id"])} className="grid items-center gap-4 border-b border-[color:var(--border)] py-6 md:grid-cols-[3rem_14rem_1fr] md:gap-8">\n'
@@ -1963,7 +2090,7 @@ def _render_service_list_tabular(dossier: dict, contact_path: str) -> str:
         + f"{rows}\n"
         + "            </ul>\n"
         + "          </div>\n"
-        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + _filled_contact_cta(contact_path, cta_label)
         + "        </div>\n"
         + "      </section>\n"
     )
@@ -1972,7 +2099,7 @@ def _render_service_list_tabular(dossier: dict, contact_path: str) -> str:
 def render_services(
     dossier: dict,
     *,
-    contact_path: str = "/kontakt",
+    contact_path: str | None = "/kontakt",
     blueprint: RenderBlueprint | None = None,
 ) -> str:
     services = dossier["services"]
@@ -2014,7 +2141,7 @@ def render_services(
 def _render_collection_page(
     dossier: dict,
     *,
-    contact_path: str,
+    contact_path: str | None,
     component_name: str,
     eyebrow: str,
     heading: str,
@@ -2022,7 +2149,6 @@ def _render_collection_page(
     cta_label: str | None = None,
 ) -> str:
     items_source = dossier["services"]
-    contact_href = _route_href(contact_path)
     icons_used = sorted(
         {_icon_for_service(item["id"]) for item in items_source} | {"ArrowRight"}
     )
@@ -2053,8 +2179,8 @@ def _render_collection_page(
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
         "          </div>\n"
-        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{label}<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
+        + _filled_contact_cta(contact_path, label)
+        + "        </div>\n"
         "      </section>\n"
         "    </main>\n"
         "  );\n"
@@ -2062,7 +2188,7 @@ def _render_collection_page(
     )
 
 
-def render_treatments(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_treatments(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     return _render_collection_page(
         dossier,
         contact_path=contact_path,
@@ -2077,7 +2203,7 @@ def render_treatments(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     )
 
 
-def render_expertise(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_expertise(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     return _render_collection_page(
         dossier,
         contact_path=contact_path,
@@ -2092,7 +2218,7 @@ def render_expertise(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     )
 
 
-def render_work(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_work(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     return _render_collection_page(
         dossier,
         contact_path=contact_path,
@@ -2182,7 +2308,7 @@ def render_about(dossier: dict) -> str:
     )
 
 
-def render_contact(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_contact(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     # Path B step 4 — contact-info card grid (Phone / Mail / Address)
     # is produced by ``render_section_contact_info``. The lucide import is
     # derived from the icons the section actually emits (the same approach
@@ -2225,7 +2351,7 @@ def render_contact(dossier: dict, *, contact_path: str = "/kontakt") -> str:
 def render_products(
     dossier: dict,
     *,
-    contact_path: str = "/kontakt",
+    contact_path: str | None = "/kontakt",
 ) -> str:
     """Products-page renderer for ecommerce-lite (B13 route-emission).
 
@@ -2243,7 +2369,6 @@ def render_products(
     #19 follow-up).
     """
     products = _product_grid_items(dossier)
-    contact_href = _route_href(contact_path)
     icons_used = sorted(
         {
             _icon_for_service(_product_grid_text(item, "id", f"product-{index + 1}"))
@@ -2274,8 +2399,12 @@ def render_products(
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         f"{products_intro_block}"
         f"{product_grid_block}"
-        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />{bottom_cta_label}<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
+        + _filled_contact_cta(
+            contact_path,
+            bottom_cta_label,
+            lead_icon='<ShoppingBag className="size-4" />',
+        )
+        + "        </div>\n"
         "      </section>\n"
         "    </main>\n"
         "  );\n"
@@ -2338,20 +2467,26 @@ def _wizard_section_heading(
     )
 
 
-def _wizard_contact_cta(dossier: dict, contact_path: str) -> str:
+def _wizard_contact_cta(dossier: dict, contact_path: str | None) -> str:
     """Trailing contact CTA used by every wizard-route renderer.
 
     Re-uses ``_hero_cta_label`` so booking-driven businesses say
     "Boka tid" instead of "Begär offert" on /priser and /portfolio,
-    matching the home/services pages. Mirrors the route-href guard
-    discipline from B50 (path goes through ``_route_href``).
+    matching the home/services pages.
+
+    Slice B (ADR 0060): the CTA target goes through ``_filled_contact_cta``
+    (so a removed contact page retargets to ``mailto:``/``tel:`` or omits).
+    When there is no target the whole trailing block is dropped - no empty
+    ``<div>`` and no dead ``/kontakt`` link.
     """
-    cta_href = _route_href(contact_path)
     cta_label = _hero_cta_label(dossier)
+    cta_anchor = _filled_contact_cta(contact_path, cta_label, indent="            ")
+    if not cta_anchor:
+        return ""
     return (
         '          <div>\n'
-        f'            <a href={cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
-        "          </div>\n"
+        + cta_anchor
+        + "          </div>\n"
     )
 
 
@@ -2449,7 +2584,7 @@ def _faq_uses_accordion_component(dossier: dict) -> bool:
 def render_faq(
     dossier: dict,
     *,
-    contact_path: str = "/kontakt",
+    contact_path: str | None = "/kontakt",
     blueprint: RenderBlueprint | None = None,
     accordion_component: bool | None = None,
 ) -> str:
@@ -2938,7 +3073,7 @@ def _render_hero_block(
     company: dict,
     location_tag: str,
     hero_cta_label: str,
-    hero_cta_href: str,
+    hero_cta_href: str | None,
     contact_phone: str,
     spel_cta: str,
     hero_asset: dict | None,
@@ -3005,9 +3140,18 @@ def _render_hero_block(
         phone_cta_button = (
             f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
         )
+    # Slice B (ADR 0060): the primary hero CTA is omitted when there is no target
+    # (contact page removed and no mailto:/tel: fallback) so the hero never links
+    # to a dead /kontakt route. Byte-identical when a target exists. Reused across
+    # the gradient/split (via cta_buttons) and centered layouts (12-space indent).
+    primary_cta_anchor = (
+        f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
+        if hero_cta_href is not None
+        else ""
+    )
     cta_buttons = (
         '          <div className="flex flex-wrap gap-3">\n'
-        f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
+        f"{primary_cta_anchor}"
         f"{phone_cta_button}"
         f"{spel_cta}"
         "          </div>\n"
@@ -3038,7 +3182,7 @@ def _render_hero_block(
             f"{proof_p_10}"
             f"{usp_chips_centered}"
             '          <div className="flex flex-wrap items-center justify-center gap-3">\n'
-            f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
+            f"{primary_cta_anchor}"
             f"{phone_cta_button}"
             f"{spel_cta}"
             "          </div>\n"
@@ -3388,7 +3532,7 @@ def _render_home_faq_section(
     )
 
 
-def render_gallery(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_gallery(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     """Render the wizard-driven /galleri route.
 
     Uses ``dossier["gallery"]`` images that ``copy_operator_uploads``
@@ -3444,7 +3588,7 @@ def _team_members(dossier: dict) -> list[dict]:
     return [member for member in team if isinstance(member, dict) and member.get("name")]
 
 
-def render_team(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_team(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     """Render the wizard-driven /team route.
 
     Reads ``company.team`` (same source as render_about) and renders
@@ -3490,7 +3634,7 @@ def render_team(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     )
 
 
-def render_pricing(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_pricing(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     """Render the wizard-driven /priser route.
 
     Lists the dossier's ``services`` array as price-quote cards with
@@ -3540,7 +3684,7 @@ def render_pricing(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     )
 
 
-def render_portfolio(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_portfolio(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     """Render the wizard-driven /portfolio route.
 
     Combines uploaded gallery images with the services list as
@@ -3602,7 +3746,7 @@ def render_portfolio(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     )
 
 
-def render_map(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_map(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
     """Render the wizard-driven /karta route.
 
     Shows the contact address, service areas and a Google Maps query
@@ -4279,7 +4423,7 @@ def _render_restaurant_route(
     *,
     route_id: str,
     page_function_name: str,
-    contact_path: str,
+    contact_path: str | None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Compose a restaurant route via the section dispatcher.
@@ -4330,7 +4474,7 @@ def _render_restaurant_route(
 def render_menu(
     dossier: dict,
     *,
-    contact_path: str = "/hitta-hit",
+    contact_path: str | None = "/hitta-hit",
     blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the restaurant /meny route via the section dispatcher.
@@ -4365,7 +4509,7 @@ def render_menu(
 def render_booking(
     dossier: dict,
     *,
-    contact_path: str = "/hitta-hit",
+    contact_path: str | None = "/hitta-hit",
     blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the restaurant /bokning route via the section dispatcher.
@@ -4455,7 +4599,7 @@ def render_section_team_block(dossier: dict) -> str:
 def render_section_treatment_summary(
     dossier: dict,
     *,
-    contact_path: str = "/kontakta-oss",
+    contact_path: str | None = "/kontakta-oss",
 ) -> str:
     """Render a compact home-page treatments preview for clinic-healthcare.
 
@@ -4491,8 +4635,8 @@ def render_section_treatment_summary(
         '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{cards}\n"
         "          </ul>\n"
-        f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
+        + _text_contact_cta(contact_path, "Boka tid")
+        + "        </div>\n"
         "      </section>\n"
         "\n"
     )
@@ -4504,7 +4648,7 @@ _TREATMENT_LIST_TREATMENT_DEFAULT = "minimal-rows"
 def render_section_treatment_list(
     dossier: dict,
     *,
-    contact_path: str = "/kontakta-oss",
+    contact_path: str | None = "/kontakta-oss",
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -4569,7 +4713,7 @@ def _treatment_list_header() -> str:
 
 def _render_treatment_list_minimal_rows(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """Vertical list of rounded border-cards (the default treatment).
 
@@ -4591,7 +4735,7 @@ def _render_treatment_list_minimal_rows(
         + '          <ul className="flex flex-col gap-4">\n'
         + f"{items}\n"
         + "          </ul>\n"
-        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        + _text_contact_cta(contact_path, "Boka tid")
         + "        </div>\n"
         + "      </section>\n"
         + "\n"
@@ -4600,7 +4744,7 @@ def _render_treatment_list_minimal_rows(
 
 def _render_treatment_list_split_cards(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """Two-column grid of warm cards with an accent-tinted left rail.
 
@@ -4623,7 +4767,7 @@ def _render_treatment_list_split_cards(
         + '          <ul className="grid gap-6 md:grid-cols-2">\n'
         + f"{items}\n"
         + "          </ul>\n"
-        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        + _text_contact_cta(contact_path, "Boka tid")
         + "        </div>\n"
         + "      </section>\n"
         + "\n"
@@ -4632,7 +4776,7 @@ def _render_treatment_list_split_cards(
 
 def _render_treatment_list_numbered_stack(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """Sequence with monospaced numerals and thin horizontal separators.
 
@@ -4661,7 +4805,7 @@ def _render_treatment_list_numbered_stack(
         + '          <ul className="flex flex-col border-t border-[color:var(--border)]">\n'
         + f"{items}\n"
         + "          </ul>\n"
-        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        + _text_contact_cta(contact_path, "Boka tid")
         + "        </div>\n"
         + "      </section>\n"
         + "\n"
@@ -4730,7 +4874,7 @@ _EXPERTISE_AREAS_TREATMENT_DEFAULT = "numbered-2col"
 def render_section_expertise_areas(
     dossier: dict,
     *,
-    contact_path: str = "/kontakta-oss",
+    contact_path: str | None = "/kontakta-oss",
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -4786,7 +4930,7 @@ def _expertise_areas_header() -> str:
 
 def _render_expertise_areas_numbered_2col(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """2-col grid with numbered eyebrows and left-rail borders.
 
@@ -4809,7 +4953,7 @@ def _render_expertise_areas_numbered_2col(
         + '          <div className="grid gap-10 md:grid-cols-2">\n'
         + f"{cards}\n"
         + "          </div>\n"
-        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka introduktionssamtal<ArrowRight className="size-4" /></a>\n'
+        + _text_contact_cta(contact_path, "Boka introduktionssamtal")
         + "        </div>\n"
         + "      </section>\n"
         + "\n"
@@ -4818,7 +4962,7 @@ def _render_expertise_areas_numbered_2col(
 
 def _render_expertise_areas_tag_cluster(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """Pill cloud where practice areas read as an associative tag cluster.
 
@@ -4846,7 +4990,7 @@ def _render_expertise_areas_tag_cluster(
         + f"{pills}\n"
         + "          </ul>\n"
         + f'          <p className="max-w-3xl text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(summary_line)}</p>\n'
-        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka introduktionssamtal<ArrowRight className="size-4" /></a>\n'
+        + _text_contact_cta(contact_path, "Boka introduktionssamtal")
         + "        </div>\n"
         + "      </section>\n"
         + "\n"
@@ -4859,7 +5003,7 @@ _PRACTICE_GRID_TREATMENT_DEFAULT = "dense-grid"
 def render_section_practice_grid(
     dossier: dict,
     *,
-    contact_path: str = "/kontakta-oss",
+    contact_path: str | None = "/kontakta-oss",
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -4923,7 +5067,7 @@ def _practice_grid_header() -> str:
 
 def _render_practice_grid_dense_grid(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """3-col compact card grid (the default treatment).
 
@@ -4935,8 +5079,14 @@ def _render_practice_grid_dense_grid(
         f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] p-7">\n'
         f'              <h2 className="text-lg font-semibold tracking-tight">{_jsx_safe_string(svc["label"])}</h2>\n'
         f'              <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        f'              <a href={_jsx_safe_string(contact_path)} className="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline">Diskutera ärende<ArrowRight className="size-3" /></a>\n'
-        "            </article>"
+        + _text_contact_cta(
+            contact_path,
+            "Diskutera ärende",
+            indent="              ",
+            class_name="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline",
+            icon_size="size-3",
+        )
+        + "            </article>"
         for svc in services
     )
     return (
@@ -4954,7 +5104,7 @@ def _render_practice_grid_dense_grid(
 
 def _render_practice_grid_tabular(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """Formal row listing with thin separators (no card chrome).
 
@@ -4970,8 +5120,14 @@ def _render_practice_grid_tabular(
             f'              <li key={_jsx_safe_string(svc["id"])} className="grid items-baseline gap-4 border-b border-[color:var(--border)] py-6 md:grid-cols-[14rem_1fr_auto] md:gap-8">\n'
             f'                <h2 className="text-base font-semibold tracking-tight md:text-lg">{_jsx_safe_string(svc["label"])}</h2>\n'
             f'                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-            f'                <a href={_jsx_safe_string(contact_path)} className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline">Diskutera ärende<ArrowRight className="size-3" /></a>\n'
-            "              </li>"
+            + _text_contact_cta(
+                contact_path,
+                "Diskutera ärende",
+                indent="                ",
+                class_name="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline",
+                icon_size="size-3",
+            )
+            + "              </li>"
         )
         for svc in services
     )
@@ -4997,7 +5153,7 @@ def _render_practice_grid_tabular(
 
 def _render_practice_grid_grouped(
     services: list[dict],
-    contact_path: str,
+    contact_path: str | None,
 ) -> str:
     """2-col feature columns with numbered eyebrows.
 
@@ -5014,8 +5170,14 @@ def _render_practice_grid_grouped(
             f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--accent)]">{_jsx_safe_string(f"Område {idx:02d}")}</p>\n'
             f'              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
             f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-            f'              <a href={_jsx_safe_string(contact_path)} className="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline">Diskutera ärende<ArrowRight className="size-3" /></a>\n'
-            "            </article>"
+            + _text_contact_cta(
+                contact_path,
+                "Diskutera ärende",
+                indent="              ",
+                class_name="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline",
+                icon_size="size-3",
+            )
+            + "            </article>"
         )
         for idx, svc in enumerate(services, start=1)
     )
@@ -5146,7 +5308,7 @@ _SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT = "editorial-stack"
 def render_section_selected_work_preview(
     dossier: dict,
     *,
-    contact_path: str = "/kontakta-oss",  # noqa: ARG001 — included for kwarg-call symmetry; preview uses /arbeten as the explicit follow link
+    contact_path: str | None = "/kontakta-oss",  # noqa: ARG001 — included for kwarg-call symmetry; preview uses /arbeten as the explicit follow link
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -5329,7 +5491,7 @@ def _render_selected_work_preview_marquee_row(services: list[dict]) -> str:
 def render_section_selected_work_grid(
     dossier: dict,
     *,
-    contact_path: str = "/kontakta-oss",
+    contact_path: str | None = "/kontakta-oss",
 ) -> str:
     """Render the full Selected Work catalogue for agency-studio /arbeten.
 
@@ -5354,8 +5516,12 @@ def render_section_selected_work_grid(
         f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Case {idx:02d}")}</p>\n'
         f'              <h2 className="max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(svc["label"])}</h2>\n'
         f'              <p className="max-w-3xl text-base text-[color:var(--muted)] leading-relaxed md:text-lg">{_jsx_safe_string(svc["summary"])}</p>\n'
-        f'              <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Diskutera projekt<ArrowRight className="size-4" /></a>\n'
-        "            </li>"
+        + _text_contact_cta(
+            contact_path,
+            "Diskutera projekt",
+            indent="              ",
+        )
+        + "            </li>"
         for idx, svc in enumerate(services, start=1)
     )
     return (
@@ -5643,7 +5809,7 @@ def _render_dispatched_route(
     dossier: dict,
     dossier_routes: list[str] | None = None,
     listing_route: dict | None = None,
-    contact_path: str,
+    contact_path: str | None,
     variant_id: str | None = None,
     blueprint: RenderBlueprint | None = None,
 ) -> str:
@@ -5778,6 +5944,13 @@ def write_pages(
     # copy and the icon imports stay byte-consistent. With no blueprint this is
     # the original dossier object, so non-blueprint builds are unchanged.
     render_dossier = apply_blueprint_to_dossier(dossier, blueprint)[0]
+    # Route/Nav Mutation V1 Slice B (ADR 0060): resolve the ONE contact-CTA
+    # target for this build and thread it to every renderer. It is the contact
+    # route path when the page exists (Slice A behaviour, byte-identical), or a
+    # mailto:/tel: fallback (or None -> omit) when contact was removed. Every
+    # contact CTA turns this into an href via _contact_href, so no renderer
+    # hardcodes /kontakt and a removed contact page never leaves a dead link.
+    contact_target = _contact_cta_target(contact_route, render_dossier)
     # Route-scoping för "Färglägg sektionen": routes med en section-style-
     # override får data-route-id på sin <main> så CSS-overriden kan
     # selektera per route i stället för globalt. Läses från det
@@ -5795,7 +5968,7 @@ def write_pages(
                 dossier=render_dossier,
                 dossier_routes=dossier_routes,
                 listing_route=listing_route,
-                contact_path=contact_route["path"],
+                contact_path=contact_target,
                 variant_id=variant_id,
                 blueprint=blueprint,
             )
@@ -5804,30 +5977,30 @@ def write_pages(
                 render_dossier,
                 dossier_routes,
                 listing_route=listing_route,
-                contact_path=contact_route["path"],
+                contact_path=contact_target,
                 variant_id=variant_id,
                 blueprint=blueprint,
             )
         elif route_id == "services":
             content = render_services(
                 render_dossier,
-                contact_path=contact_route["path"],
+                contact_path=contact_target,
                 blueprint=blueprint,
             )
         elif route_id == "products":
-            content = render_products(render_dossier, contact_path=contact_route["path"])
+            content = render_products(render_dossier, contact_path=contact_target)
         elif route_id == "menu":
             content = render_menu(
-                render_dossier, contact_path=contact_route["path"], blueprint=blueprint
+                render_dossier, contact_path=contact_target, blueprint=blueprint
             )
         elif route_id == "booking":
             content = render_booking(
-                render_dossier, contact_path=contact_route["path"], blueprint=blueprint
+                render_dossier, contact_path=contact_target, blueprint=blueprint
             )
         elif route_id == "about":
             content = render_about(render_dossier)
         elif route_id == "contact":
-            content = render_contact(render_dossier, contact_path=contact_route["path"])
+            content = render_contact(render_dossier, contact_path=contact_target)
         else:
             raise SystemExit(
                 "Builder failed: scaffold route id "
@@ -5867,11 +6040,11 @@ def write_pages(
             if renderer is render_faq:
                 content = renderer(
                     render_dossier,
-                    contact_path=contact_route["path"],
+                    contact_path=contact_target,
                     blueprint=blueprint,
                 )
             else:
-                content = renderer(render_dossier, contact_path=contact_route["path"])
+                content = renderer(render_dossier, contact_path=contact_target)
             if route_id in style_override_routes:
                 content = annotate_route_marker(content, route_id)
             write(route_to_page_path(target, path), content)
@@ -5884,7 +6057,7 @@ def write_pages(
             render_dossier,
             dossier_routes,
             scaffold_default_routes=default_routes,
-            contact_path=contact_route["path"],
+            contact_path=contact_target,
             extra_routes=sanitized_extras or None,
             font_stylesheet_href=font_stylesheet_href,
         ),

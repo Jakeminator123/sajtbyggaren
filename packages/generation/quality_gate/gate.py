@@ -13,6 +13,7 @@ from typing import Any, Literal
 from .checks import (
     run_build_status_check,
     run_contact_cta_presence_check,
+    run_internal_link_scan_check,
     run_placeholder_copy_scan_check,
     run_policy_compliance_check,
     run_route_scan_check,
@@ -25,9 +26,9 @@ from .verifier import run_verifier_critic
 # Severity-fältet säger "räknas mot status alls", inte "failure → failed".
 # Avbildning från severity + check-namn till QualityResult.status sker i
 # _aggregate_status() nedan, per ADR 0015 §3:
-#   - typecheck / build-status         (blocking, hardest) → status=failed
-#   - route-scan / policy-compliance   (blocking, soft)    → status=degraded
-#   - contact-cta-presence / placeholder-copy-scan (warning) → no status change
+#   - typecheck / build-status                         (blocking, hardest) → status=failed
+#   - route-scan / internal-link-scan / policy-compliance (blocking, soft) → status=degraded
+#   - contact-cta-presence / placeholder-copy-scan     (warning)           → no status change
 #
 # `degraded` är ett avsiktligt mellan-tillstånd: pipelinen får exit 0 men
 # overall_status="degraded" så operatören ser att något failade och Repair
@@ -38,6 +39,7 @@ from .verifier import run_verifier_critic
 _CHECKS_REGISTRY: tuple[tuple[str, Literal["blocking", "warning"]], ...] = (
     ("typecheck", "blocking"),
     ("route-scan", "blocking"),
+    ("internal-link-scan", "blocking"),
     ("build-status", "blocking"),
     ("policy-compliance", "blocking"),
     ("contact-cta-presence", "warning"),
@@ -56,8 +58,9 @@ def _aggregate_status(checks: list[CheckResult]) -> QualityStatus:
     """Compute QualityResult.status from individual checks.
 
     ``failed`` when typecheck or build-status failed (these are blocking).
-    ``degraded`` when route-scan or policy-compliance failed but the
-    blocking checks are ok/skipped.
+    ``degraded`` when route-scan, internal-link-scan or policy-compliance
+    failed but the hardest blocking checks (typecheck/build-status) are
+    ok/skipped.
     ``ok`` otherwise.
     """
     blocking_checks = [c for c in checks if c.severity == "blocking"]
@@ -74,11 +77,18 @@ def _aggregate_status(checks: list[CheckResult]) -> QualityStatus:
         return "failed"
 
     soft_failed = (
-        by_name.get("route-scan", None)
-        and by_name["route-scan"].status == "failed"
-    ) or (
-        by_name.get("policy-compliance", None)
-        and by_name["policy-compliance"].status == "failed"
+        (
+            by_name.get("route-scan", None)
+            and by_name["route-scan"].status == "failed"
+        )
+        or (
+            by_name.get("internal-link-scan", None)
+            and by_name["internal-link-scan"].status == "failed"
+        )
+        or (
+            by_name.get("policy-compliance", None)
+            and by_name["policy-compliance"].status == "failed"
+        )
     )
     if soft_failed:
         return "degraded"
@@ -173,6 +183,7 @@ def run_quality_gate(
     checks = [
         _with_registry_severity(run_typecheck_check(target_dir, do_typecheck=do_typecheck)),
         _with_registry_severity(run_route_scan_check(target_dir, required_routes)),
+        _with_registry_severity(run_internal_link_scan_check(target_dir)),
         _with_registry_severity(
             run_build_status_check(build_status=build_status, npm_steps=npm_steps)
         ),

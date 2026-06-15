@@ -103,12 +103,13 @@
           "enum": [
             "typecheck",
             "route-scan",
+            "internal-link-scan",
             "build-status",
             "policy-compliance",
             "contact-cta-presence",
             "placeholder-copy-scan"
           ],
-          "description": "Canonical check name. Locked by ADR 0015; adding a name here requires bumping the schema and the QualityResult Pydantic Literal at the same time."
+          "description": "Canonical check name. Locked by ADR 0015; adding a name here requires bumping the schema and the QualityResult Pydantic Literal at the same time. internal-link-scan is the Route/Nav Mutation V1 Slice B (ADR 0060) dead-internal-link safety net."
         },
         "status": {
           "type": "string",

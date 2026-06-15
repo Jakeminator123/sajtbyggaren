@@ -28,24 +28,40 @@ delade mallar rörs aldrig. Scaffold-agnostiskt (fungerar på varje starter som
 har en icke-obligatorisk route).
 
 ## Honesty
-En okänd sida (ingen route med det id:t i scaffolden) eller en obligatorisk sida
-(Slice A behåller `required`-sidor: hem/tjänster/kontakt) ger ärlig no-op
+En okänd sida (ingen route med det id:t i scaffolden) eller en skyddad
+obligatorisk sida (hem/tjänster behålls alltid) ger ärlig no-op
 (`stage=route_remove_unsupported`) med konkret anledning — aldrig en påhittad
-borttagning och aldrig en borttagen obligatorisk sida. Synlig-effekt-signalen
+borttagning och aldrig en borttagen skyddad sida. Synlig-effekt-signalen
 (`appliedVisibleEffect`/`previewShouldRefresh`) kommer från fil-diffen i kedjan:
 den borttagna sidans fil försvinner och nav:en (delad layout) ändras, så en
 verklig borttagning rapporteras ärligt.
 
-## Gränser (Slice A)
-- Bara icke-obligatoriska scaffold-`defaultRoutes` (t.ex. `about`).
-- Obligatoriska sidor (`required: true`) behålls — att ta bort `contact` och
-  retargeta dess CTA:er till `mailto:`/`tel:`/utelämna, plus en Quality
-  Gate-länkscan mot aktiva routes, är nästa slice (`allow_required`).
+## Kontakt-borttagning (Slice B)
+`contact` kan tas bort fast den är `required`, eftersom det finns en säker
+CTA-fallback. Steg 3e anropar resolvern med `allow_required_ids={"contact"}`
+(hem/tjänster förblir skyddade). När contact tas bort:
+- `_pick_contact_route` returnerar `None`; `write_pages` löser EN kontakt-target
+  via `_contact_cta_target`: `mailto:` en riktig e-post → `tel:` ett riktigt
+  telefonnummer → annars `None` (utelämna CTA:n ärligt). Platshållar-värden
+  (`+46 8 000 00 00` / `example.se`) räknas aldrig som riktiga.
+- Varje kontakt-CTA går genom `_contact_href` (släpper igenom `mailto:`/`tel:`,
+  utelämnar ankaret när målet är `None`) — ingen renderare hårdkodar `/kontakt`.
+- En Quality Gate-länkscan (`internal-link-scan`, soft-blocking → `degraded`)
+  failar på varje kvarvarande död intern `<a>/<Link>`-länk mot en route utan
+  `page.tsx`, så ingen död `/kontakt`-länk kan överleva.
+
+## Gränser
+- Bara scaffold-`defaultRoutes`: icke-obligatoriska (t.ex. `about`) + den
+  borttagbara obligatoriska `contact`. Hem/tjänster (och övriga `required`) är
+  skyddade — aldrig borttagbara (resolvern refuserar, och build-filtret droppar
+  dem aldrig som försvar på djupet).
 - Wizard-extra-routes (faq/team/priser som ytas via `wizardMustHave`) är inte
-  scaffold-`defaultRoutes`, så att ta bort dem är en senare slice — i Slice A
-  ger de ärlig no-op ("finns inte bland scaffoldens sidor").
+  scaffold-`defaultRoutes`, så att ta bort dem är en senare slice — de ger ärlig
+  no-op ("finns inte bland scaffoldens sidor").
 
 ## Status
 supported — router (`route_remove` editKind + schema) + route_editor-roll +
-route_directives + apply (`directives.disabledRoutes`, sticky) + build-filter +
+route_directives (`allow_required_ids`) + apply (`directives.disabledRoutes`,
+sticky) + build-filter (`_REMOVABLE_REQUIRED_ROUTE_IDS`) + kontakt-CTA-retarget
+(`_contact_cta_target`/`_contact_href`) + Quality Gate `internal-link-scan` +
 tester. Se `../../action-registry.json`.

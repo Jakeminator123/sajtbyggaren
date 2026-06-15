@@ -372,8 +372,8 @@ def test_quality_result_payload_has_real_checks_not_skeleton():
     assert "checks" in payload
     check_names = {c["name"] for c in payload["checks"]}
     assert check_names == {
-        "typecheck", "route-scan", "build-status", "policy-compliance",
-        "contact-cta-presence", "placeholder-copy-scan",
+        "typecheck", "route-scan", "internal-link-scan", "build-status",
+        "policy-compliance", "contact-cta-presence", "placeholder-copy-scan",
     }
     for check in payload["checks"]:
         assert check["status"] != "not-run", (

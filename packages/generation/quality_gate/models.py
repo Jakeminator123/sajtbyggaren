@@ -15,6 +15,7 @@ from .critic import CriticResult
 CheckName = Literal[
     "typecheck",
     "route-scan",
+    "internal-link-scan",
     "build-status",
     "policy-compliance",
     "contact-cta-presence",
@@ -52,8 +53,9 @@ class QualityResult(BaseModel):
         ``status``.
       - ``failed`` when typecheck or build-status is ``failed``
         (these are blocking).
-      - ``degraded`` when route-scan or policy-compliance is ``failed``
-        but typecheck and build-status are ok or skipped.
+      - ``degraded`` when route-scan, internal-link-scan or
+        policy-compliance is ``failed`` but typecheck and build-status
+        are ok or skipped.
 
     ``summary`` is a short string that build-result.json can surface
     without rendering the full check list. Failed blocking checks

@@ -498,7 +498,7 @@ def test_critic_does_not_appear_in_checks_list(tmp_path):
         generation_package=gp,
         site_brief=brief,
     )
-    assert len(result.checks) == 6
+    assert len(result.checks) == 7  # +internal-link-scan (ADR 0060 Slice B)
     assert all(c.name != "critic" for c in result.checks)
 
 

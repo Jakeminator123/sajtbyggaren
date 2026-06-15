@@ -633,10 +633,11 @@ def test_quality_result_checks_enum_excludes_page_quality_traits() -> None:
         "packages/generation/quality_gate/models.py:CheckName, and "
         "the dispatcher together."
     )
-    # Lock the canonical v1 check set.
+    # Lock the canonical check set (ADR 0060 Slice B added internal-link-scan).
     assert set(check_name_enum) == {
         "typecheck",
         "route-scan",
+        "internal-link-scan",
         "build-status",
         "policy-compliance",
         "contact-cta-presence",

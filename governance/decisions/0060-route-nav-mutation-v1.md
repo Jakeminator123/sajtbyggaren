@@ -1,6 +1,7 @@
 # ADR 0060 — Route/Nav Mutation V1 (route_remove: ta bort sida + nav-länk)
 
-**Status:** Accepted (implementerad 2026-06-15, Slice A)
+**Status:** Accepted (Slice A implementerad 2026-06-15; Slice B —
+contact-borttagning + CTA-retarget + länkscan — implementerad 2026-06-15)
 **Beroenden:** ADR 0057 (rollkontrakt), ADR 0038 (synlig sektionsrender,
 mönstret för `directives`-driven render), ADR 0036 (router-vokabulär), ADR 0034
 (följdprompt-väg). Coach + operatör 2026-06-15.
@@ -15,6 +16,13 @@ mönstret för `directives`-driven render), ADR 0036 (router-vokabulär), ADR 00
 [`apply.py`](../../packages/generation/orchestration/apply/apply.py),
 [`scripts/build_site.py`](../../scripts/build_site.py),
 [`action-registry.json`](../../docs/openclaw-workspace/action-registry.json).
+Slice B berör dessutom:
+[`build/renderers.py`](../../packages/generation/build/renderers.py),
+[`build/render_helpers.py`](../../packages/generation/build/render_helpers.py),
+[`quality_gate/checks.py`](../../packages/generation/quality_gate/checks.py),
+[`quality_gate/gate.py`](../../packages/generation/quality_gate/gate.py),
+[`quality_gate/models.py`](../../packages/generation/quality_gate/models.py),
+[`quality-result.schema.json`](../schemas/quality-result.schema.json).
 
 ## Kontext
 
@@ -63,16 +71,48 @@ kontroll i appliceringen.**
    handredigerat direktiv skulle innehålla den), så `_pick_contact_route` kan
    aldrig krascha bygget.
 
-## Vad ADR 0060 INTE beslutar (Slice B / senare)
+## Beslut (Slice B — ta bort `contact` (required) + säker CTA-fallback)
 
-- **Borttagning av `contact` (required) + CTA-retarget.** Slice B gör
-  `_pick_contact_route` tolerant (None i stället för `SystemExit`), retargetar
-  varje kontakt-CTA till `mailto:`/`tel:`/utelämnar ärligt, och lägger en
-  Quality Gate-länkscan som failar på en dinglande intern `href` mot en disabled
-  route. Resolvern har redan sömmen (`allow_required`). Scout-inventeringen av de
-  ~12 CTA-emissionsplatserna ligger i sessionsunderlaget.
+6. **`contact` blir borttagbar, men bara `contact`.** `run_followup_chain` steg
+   3e anropar `resolve_disabled_routes(..., allow_required_ids={"contact"})`.
+   Resolvern fick en ny parameter `allow_required_ids`: en `required`-route får
+   tas bort bara om dess id ligger i den mängden. `home` refuseras alltid (före
+   required-checken) och `services` (och alla andra `required`) förblir skyddade.
+   Build-seamens `_filter_disabled_routes` speglar detta via en enda
+   `_REMOVABLE_REQUIRED_ROUTE_IDS = {"contact"}` så upstream-refusal och
+   defense-in-depth-filtret aldrig kan vara oense om vilken obligatorisk sida som
+   är borttagbar.
+
+7. **EN kontakt-target-chokepoint + tolerant `_pick_contact_route`.**
+   `_pick_contact_route` returnerar `None` i stället för `SystemExit` när ingen
+   contact-route finns. `write_pages` löser EN `contact_target` via
+   `_contact_cta_target`: contact-routens path när sidan finns (Slice A, byte-
+   identiskt), annars `mailto:` en riktig e-post → `tel:` ett riktigt
+   telefonnummer → `None` (utelämna). "Riktig" = passerar
+   `contact_placeholders`-vakterna (aldrig `+46 8 000 00 00`/`example.se`).
+
+8. **Ny `_contact_href`-hjälpare (släpper igenom `mailto:`/`tel:`).** Till
+   skillnad från `_route_href` (som kräver inledande `/` så nav:en aldrig
+   emitterar en protokoll-href) släpper `_contact_href` igenom `mailto:`/`tel:`
+   och returnerar `None` för allt annat. Varje kontakt-CTA-emittor (lager-header
+   + footer, hero, contact-cta-band, service-list ×4, collection, products,
+   wizard-CTA, klinik/PS/byrå-länkarna) går nu genom `_contact_href` (via de
+   delade `_filled_contact_cta`/`_text_contact_cta`-hjälparna) och utelämnar
+   ankaret ärligt när målet är `None`. Ingen renderare hårdkodar `/kontakt` i
+   produktion; ett malformerat scaffold-`contact`-path failar fortfarande snabbt
+   (`_contact_cta_target` validerar den befintliga routens path).
+
+9. **Quality Gate `internal-link-scan` (soft-blocking → `degraded`).** En ny
+   check skannar varje genererad `<a>/<Link href="/...">` och failar på en intern
+   länk vars normaliserade path saknar `page.tsx` på disk (en död `/kontakt`-länk
+   mot en borttagen sida). Härleds helt från disk (inkluderar wizard-extras
+   `/faq`/`/arbeten` och dossier-routes `/spel`), så ett bygge utan borttagna
+   routes är en no-op (noll falska positiva, byte-identiskt beteende).
+
+## Vad ADR 0060 INTE beslutar (senare)
+
 - Borttagning av wizard-extra-routes (faq/team/priser via `wizardMustHave`) — de
-  är inte scaffold-`defaultRoutes`, så de ger ärlig no-op i Slice A.
+  är inte scaffold-`defaultRoutes`, så de ger ärlig no-op.
 - Ren nav-only ("dölj i menyn men behåll sidan") — coachens `nav_edit`, en
   senare liten förmåga.
 
@@ -80,9 +120,12 @@ kontroll i appliceringen.**
 
 Deterministisk apply + guards + immutabla versioner. Routern förstår och
 föreslår; `route_directives` + `build()` validerar och materialiserar. En okänd
-sida (inget routeId i scaffolden) eller en required-sida (Slice A) är en ärlig
-no-op (`stage=route_remove_unsupported`) med konkret anledning — aldrig en
-påhittad eller falsk borttagning, aldrig fri filpatch.
+sida (inget routeId i scaffolden) eller en skyddad required-sida (hem/tjänster)
+är en ärlig no-op (`stage=route_remove_unsupported`) med konkret anledning —
+aldrig en påhittad eller falsk borttagning, aldrig fri filpatch. När `contact`
+tas bort (Slice B) retargetas dess CTA:er till en riktig kanal
+(`mailto:`/`tel:`) eller utelämnas ärligt, och `internal-link-scan` garanterar
+att ingen död `/kontakt`-länk överlever.
 
 ## Verifiering (implementerad)
 
@@ -94,8 +137,18 @@ påhittad eller falsk borttagning, aldrig fri filpatch.
 - build-emission: med `disabledRoutes=["about"]` skrivs ingen `/om-oss/page.tsx`
   och nav saknar "Om oss" (`tests/test_wizard_route_emission.py`);
 - E2E via `run_followup_chain` (`tests/test_followup_route_remove.py`): "ta bort
-  sidan Om oss" → ny version utan sidan/nav; okänd → ärlig no-op; required
-  kontakt → ärlig no-op; `disabledRoutes` sticky över en senare restyle;
+  sidan Om oss" → ny version utan sidan/nav; okänd → ärlig no-op; `disabledRoutes`
+  sticky över en senare restyle;
+- Slice B (`tests/test_followup_route_remove.py`): "ta bort sidan Kontakt och
+  länkar dit" → ny version utan `/kontakt`, CTA:er retargetade till `mailto:`,
+  inga döda interna `/kontakt`-länkar; "ta bort sidan Tjänster" → ärlig no-op
+  (skyddad). Resolver-seamen `allow_required_ids` + skyddet av home/services
+  (`tests/test_route_directives.py`); build-filter contact-borttagning + skydd
+  (`tests/test_wizard_route_emission.py`); `_pick_contact_route`→None +
+  CTA-target-fallback (`tests/test_contact_route_cta_targets.py`,
+  `tests/test_builder_route_emission.py`); `internal-link-scan` ok/failed/degraded
+  (`tests/test_quality_gate.py`); schema/Pydantic-paritet med den nya checken
+  (`tests/test_artefact_schema_3c_lite.py`);
 - roll/registry-konsistens (`tests/test_openclaw_roles.py`,
   `tests/test_openclaw_registry_consistency.py`); ruff 0; `verify_openclaw` 6/6;
   governance/rules_sync/term-coverage gröna.

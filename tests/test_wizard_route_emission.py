@@ -519,7 +519,7 @@ def test_disabled_route_ids_read_from_directives() -> None:
 
 
 @pytest.mark.tooling
-def test_filter_disabled_routes_drops_non_required_keeps_required() -> None:
+def test_filter_disabled_routes_drops_non_required_and_removable_contact() -> None:
     from scripts.build_site import _filter_disabled_routes
 
     # about (non-required) is dropped.
@@ -527,8 +527,15 @@ def test_filter_disabled_routes_drops_non_required_keeps_required() -> None:
     assert [r["id"] for r in filtered["defaultRoutes"]] == [
         "home", "services", "contact",
     ]
-    # contact (required) is NEVER dropped here (defense-in-depth, Slice A).
-    kept = _filter_disabled_routes(LSB_ROUTES, {"contact"})
+    # Slice B (ADR 0060): contact is a removable required page (it has a safe
+    # CTA fallback) so it IS dropped here when disabled.
+    contact_removed = _filter_disabled_routes(LSB_ROUTES, {"contact"})
+    assert [r["id"] for r in contact_removed["defaultRoutes"]] == [
+        "home", "services", "about",
+    ]
+    # home/services stay protected: a non-removable required id is NEVER dropped
+    # here, even if a hand-edited directive lists it (defense in depth).
+    kept = _filter_disabled_routes(LSB_ROUTES, {"home", "services"})
     assert [r["id"] for r in kept["defaultRoutes"]] == [
         "home", "services", "about", "contact",
     ]

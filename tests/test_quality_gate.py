@@ -19,6 +19,7 @@ from packages.generation.quality_gate import (
 )
 from packages.generation.quality_gate.checks import (
     run_build_status_check,
+    run_internal_link_scan_check,
     run_policy_compliance_check,
     run_route_scan_check,
     run_typecheck_check,
@@ -43,6 +44,73 @@ def _write_page(target: Path, route: str, default_export: bool = True) -> None:
         )
     else:
         path.write_text("// no export here", encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# internal-link-scan (ADR 0060 Slice B)
+# ---------------------------------------------------------------------------
+
+
+def _write_page_with_links(target: Path, route: str, *links: str) -> None:
+    """Write a page.tsx whose body links to each href in ``links``."""
+    if route == "/":
+        path = target / "app" / "page.tsx"
+    else:
+        path = target / "app" / route.lstrip("/") / "page.tsx"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    anchors = "".join(f'<a href="{href}">x</a>' for href in links)
+    path.write_text(
+        f"export default function Page() {{ return <div>{anchors}</div>; }}",
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.tooling
+def test_internal_link_scan_ok_when_every_link_targets_a_real_route(tmp_path):
+    """Links to routes that exist on disk (plus mailto:/tel:/external) -> ok."""
+    _write_page(tmp_path, "/")
+    _write_page(tmp_path, "/tjanster")
+    _write_page_with_links(
+        tmp_path,
+        "/",
+        "/tjanster",
+        "mailto:hej@example.se",
+        "tel:+46812345",
+        "https://example.com",
+        "#main-content",
+    )
+    result = run_internal_link_scan_check(tmp_path)
+    assert result.status == "ok", result
+    assert result.findings == []
+
+
+@pytest.mark.tooling
+def test_internal_link_scan_flags_dead_link_to_removed_route(tmp_path):
+    """A surviving /kontakt link after the contact page was removed -> failed."""
+    _write_page(tmp_path, "/")
+    _write_page(tmp_path, "/tjanster")
+    # /kontakt has no page.tsx (it was removed) but a CTA still links there.
+    _write_page_with_links(tmp_path, "/tjanster", "/kontakt")
+    result = run_internal_link_scan_check(tmp_path)
+    assert result.status == "failed", result
+    assert any("/kontakt" in f for f in result.findings)
+
+
+@pytest.mark.tooling
+def test_internal_link_scan_degrades_quality_status(tmp_path):
+    """A dead internal link is soft-blocking -> overall status degraded."""
+    _write_page(tmp_path, "/")
+    _write_page_with_links(tmp_path, "/", "/kontakt")
+    result = run_quality_gate(
+        target_dir=tmp_path,
+        required_routes=["/"],
+        npm_steps=[],
+        build_status="skipped",
+        do_typecheck=False,
+    )
+    assert result.status == "degraded", result
+    link_scan = next(c for c in result.checks if c.name == "internal-link-scan")
+    assert link_scan.status == "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +271,10 @@ def test_run_quality_gate_aggregates_to_ok_when_all_pass(tmp_path):
     )
     assert isinstance(result, QualityResult)
     assert result.status == "ok"
-    assert len(result.checks) == 6
+    # typecheck, route-scan, internal-link-scan, build-status,
+    # policy-compliance, contact-cta-presence, placeholder-copy-scan (ADR 0060
+    # added internal-link-scan as the dead-internal-link safety net).
+    assert len(result.checks) == 7
 
 
 @pytest.mark.tooling
