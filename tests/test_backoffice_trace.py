@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.tooling
+
 
 @pytest.mark.tooling
 def test_load_trace_events_tolerates_partial_ndjson(tmp_path: Path) -> None:

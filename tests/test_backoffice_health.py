@@ -9,7 +9,11 @@ turning into a red crash.
 
 from __future__ import annotations
 
+import pytest
+
 import backoffice.health as health
+
+pytestmark = pytest.mark.tooling
 
 
 def test_run_focus_check_soft_skips_without_gh(monkeypatch) -> None:

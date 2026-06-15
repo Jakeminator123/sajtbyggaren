@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.tooling
+
 VIEW_MODULES = [
     "backoffice.views.control_room",
     "backoffice.views.status",

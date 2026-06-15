@@ -19,6 +19,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.tooling
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 IDENTITY_PY = REPO_ROOT / "backoffice" / "views" / "identity.py"
 POLICY_PATH = REPO_ROOT / "governance" / "policies" / "backoffice-views.v1.json"

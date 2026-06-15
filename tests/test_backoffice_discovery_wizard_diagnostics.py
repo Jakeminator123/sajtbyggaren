@@ -14,6 +14,8 @@ import pytest
 from backoffice import discovery_wizard_diagnostics as diagnostics
 from backoffice.paths import POLICIES_DIR, REPO_ROOT
 
+pytestmark = pytest.mark.tooling
+
 
 def _rows_by_answer_path() -> dict[str, dict[str, str]]:
     return {row["answerPath"]: dict(row) for row in diagnostics.wizard_generation_rows()}

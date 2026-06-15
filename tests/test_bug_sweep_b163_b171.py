@@ -25,6 +25,8 @@ import pytest
 
 from tests.support.viewser import VIEWSER_DIR
 
+pytestmark = pytest.mark.source_lock
+
 
 def _read(relative: str) -> str:
     return (VIEWSER_DIR / relative).read_text(encoding="utf-8")

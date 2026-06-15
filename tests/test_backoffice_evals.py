@@ -5,6 +5,10 @@ from __future__ import annotations
 import subprocess
 from typing import Any
 
+import pytest
+
+pytestmark = pytest.mark.tooling
+
 
 class _FakeProcess:
     pid = 12345

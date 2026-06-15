@@ -9,6 +9,8 @@ import pytest
 
 from backoffice import selection_profiles
 
+pytestmark = pytest.mark.tooling
+
 
 def _profile(**overrides) -> dict:
     payload = {

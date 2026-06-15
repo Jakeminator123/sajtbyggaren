@@ -42,6 +42,9 @@ markers = [
   "slow: tests that take more than a few seconds (e.g. real Next.js build); skipped automatically when prerequisite tooling like npm is unavailable",
   "e2e: end-to-end tests that call the real OpenAI API; gated on SAJTBYGGAREN_E2E=1 + OPENAI_API_KEY and skipped otherwise. Deselect from the fast lane with -m 'not e2e'",
   "requires_node: tests that shell out to Node.js/npm (e.g. next dev / npm build); skipped automatically when npm is unavailable. Deselect with -m 'not requires_node'",
+  "smoke: tiny fast smoke subset for the quickest local sanity check; registered now, applied incrementally (see docs/testing.md)",
+  "integration: hosted/viewser integration locks (apps/viewser source-level locks); run with -m integration, deselect from the fast lane with -m 'not integration'",
+  "source_lock: historical source-code locks tied to a specific past bug/sprint; run or deselect them as a group with -m source_lock / -m 'not source_lock' (review candidates, see docs/testing.md)",
 ]
 filterwarnings = [
   "ignore::DeprecationWarning",

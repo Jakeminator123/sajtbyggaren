@@ -9,11 +9,15 @@ varje scaffold faktiskt har en ``routes.json`` att peka mot.
 
 from __future__ import annotations
 
+import pytest
+
 from backoffice.discovery_wizard_diagnostics import (
     _RUNTIME_SCAFFOLD_IDS,
     SCAFFOLDS_DIR,
 )
 from packages.generation.discovery.resolve import _RUNTIME_SCAFFOLD_HINTS
+
+pytestmark = pytest.mark.tooling
 
 
 def test_backoffice_runtime_scaffold_ids_match_resolver():

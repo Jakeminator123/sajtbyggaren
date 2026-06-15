@@ -42,7 +42,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.core, pytest.mark.tooling]
+pytestmark = [pytest.mark.core, pytest.mark.tooling, pytest.mark.integration]
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VIEWSER = REPO_ROOT / "apps" / "viewser"

@@ -33,6 +33,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.build_site import build  # noqa: E402
 
+pytestmark = pytest.mark.source_lock
+
 B154_SITE_ID = "b154-noir-editorial-dev"
 DEV_READY_TIMEOUT_SECONDS = 90
 NPM_INSTALL_TIMEOUT_SECONDS = 300

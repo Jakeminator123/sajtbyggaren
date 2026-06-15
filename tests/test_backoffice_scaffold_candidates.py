@@ -17,6 +17,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.tooling
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUILDING_BLOCKS = REPO_ROOT / "backoffice" / "views" / "building_blocks.py"
 REPO_BOUNDARIES = REPO_ROOT / "governance" / "policies" / "repo-boundaries.v1.json"

@@ -13,6 +13,8 @@ import pytest
 from backoffice import asset_graph
 from backoffice.views import building_blocks
 
+pytestmark = pytest.mark.tooling
+
 
 def test_scaffold_is_real_uses_all_required_files(tmp_path: Path) -> None:
     scaffold_dir = tmp_path / "demo"

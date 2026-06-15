@@ -19,6 +19,8 @@ from backoffice.loop_proof import (
     slugify,
 )
 
+pytestmark = pytest.mark.tooling
+
 
 @pytest.mark.tooling
 def test_baseline_prompt_choices_are_the_four_golden_path_prompts():

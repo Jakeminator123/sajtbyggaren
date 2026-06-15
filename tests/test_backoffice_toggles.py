@@ -12,6 +12,8 @@ from backoffice.maintenance import (
     set_top_level_enabled,
 )
 
+pytestmark = pytest.mark.tooling
+
 
 def test_toggle_helper_writes_collection_enabled(tmp_path: Path) -> None:
     path = tmp_path / "policy.json"

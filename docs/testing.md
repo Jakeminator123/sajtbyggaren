@@ -1,7 +1,12 @@
 # Testlanes och testklassificering
 
-Sviten har vuxit till ~160 filer och en full körning tar flera minuter.
-Det här dokumentet beskriver de tre körlanen och klassificerar
+Sviten har vuxit till 209 testfiler och cirka 4227 testfall, och en full
+körning tar flera minuter. (Ögonblicksbild per `jakob-be@3747e74`, mätt med
+`python -m pytest --collect-only -q`. Två filer hoppar import utan
+extra-beroenden — `requests`/`bs4` — och samlas inte i den siffran. När #328
+mergas tillkommer två testfiler, `test_route_directives.py` och
+`test_followup_route_remove.py`, så filsiffran blir 211; re-mät vid rebase så
+siffran inte driftar.) Det här dokumentet beskriver körlanen och klassificerar
 testfamiljerna, så att en agent eller operatör kan välja rätt lane utan
 att tappa regressionsskydd. Bakgrund: extern testaudit 2026-06-10 som
 föreslog massradering av historiska regressionslås — beslutet blev i
@@ -17,6 +22,32 @@ historiska lås listas som operatörsbeslut (se sist).
 | Full svit (parallell) | `python -m pytest tests/ -q -n auto` | allt, via pytest-xdist — för breda ändringar (flera paket) eller på explicit begäran | ~5 min (uppmätt 291 s, 16 workers) |
 | Full svit (seriell) | `python -m pytest tests/ -q` | allt — det CI kör på varje PR; merge-gaten | ~13 min på operatörens Windows-maskin |
 | Grindade | markörerna `slow`, `e2e`, `requires_node` | skippas automatiskt när förutsättningen saknas (npm, nyckel, `SAJTBYGGAREN_E2E=1`) | varierar |
+
+### Markörlanor (tier-urval)
+
+Utöver lanen ovan finns markörer som låter dig välja eller välja bort hela
+testfamiljer additivt. De ändrar inte vad CI kör — CI kör alltid full svit
+(`python -m pytest tests/ -v`), så markörerna är bara lokala snabbval och
+merge-gaten är oförändrad. Alla markörer är registrerade i `pyproject.toml`
+under `--strict-markers`.
+
+| Markör | Kommando | Vad den väljer |
+| ------ | -------- | -------------- |
+| `tooling` | `python -m pytest -m tooling -q` | operatörsverktyg och repo-hygien, inklusive hela `test_backoffice_*`-familjen |
+| `integration` | `python -m pytest -m integration -q` | de nio hostade viewser-låsen (`test_viewser_hosted_*`) |
+| `source_lock` | `python -m pytest -m source_lock -q` | de historiska källkodslåsen (granskningskandidaterna, se sist) |
+| `smoke` | `python -m pytest -m smoke -q` | en liten, snabb sanity-delmängd — markören är registrerad men ännu inte applicerad på några tester; den taggas inkrementellt i en egen, granskad runda |
+
+Snabb lokal check som hoppar de tunga/hostade familjerna:
+
+```
+python -m pytest -m "not slow and not integration" -q
+```
+
+De sju `test_viewser_hosted_*`-filer som redan låg i kärnlanen behåller sina
+`core`- och `tooling`-markörer och får `integration` additivt. Det betyder att
+`-m "not integration"` väljer bort just dem ur snabblanen, medan `-m core` är
+helt oförändrat — kärnlanen samlar samma uppsättning som tidigare.
 
 `python scripts/review_check.py --core` kör hela guard-kedjan
 (governance, rules-sync, term coverage, ruff) med kärnlanen i stället
@@ -118,14 +149,16 @@ Detalj- och paritetsfamiljer som skyddar enskilda byggsteg:
 assets/tokens/prompt-meta-paritet, mediarendering, favicon/og-bild,
 kontaktrutter och CTA-mål, section treatments, planering/blueprint-
 detaljer, dossier-montering och discovery, wizard- och Viewser-UI-låsen
-(`test_viewser_*`), quality-gate-specialfallen samt eval-tooling
+(`test_viewser_*`; de nio hostade `test_viewser_hosted_*` bär även markören
+`integration`), quality-gate-specialfallen samt eval-tooling
 (`test_mini_eval`, `test_golden_path_eval`, `test_run_eval_suite`,
 `test_eval_gate`).
 
 ### Tooling/infrastruktur
 
 Skydd för operatörsverktyg och repo-hygien, inte produktflödet:
-`test_backoffice_*`, sprintvakt, docs-checkarna (`test_docs_check`,
+`test_backoffice_*` (hela familjen bär nu markören `tooling` på modulnivå),
+sprintvakt, docs-checkarna (`test_docs_check`,
 `test_docs_freshness`, `test_decisions_and_docs`), namngivning/term-
 coverage, repo-gränser, github-workflow, `test_kill_dev_trees`,
 `test_test_hygiene`, `test_build_site_size`.
@@ -133,7 +166,10 @@ coverage, repo-gränser, github-workflow, `test_kill_dev_trees`,
 ### Historiska källkodslås — granskningskandidater (operatörsbeslut)
 
 Lås skrivna mot en specifik historisk bugg eller sprint, där koden de
-låser kan ha förändrats så mycket att låset mest kostar körtid:
+låser kan ha förändrats så mycket att låset mest kostar körtid. De fem
+filerna nedan bär numera markören `source_lock`, så de kan köras eller
+väljas bort som grupp (`-m source_lock` / `-m "not source_lock"`) utan att
+någon rad raderas:
 
 - `test_bug_sweep_b163_b171.py` — källkodslås från bug-sweepen
   2026-06-10; värdet sjunker när seams refaktoreras.
