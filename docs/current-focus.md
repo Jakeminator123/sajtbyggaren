@@ -19,7 +19,7 @@ upprepas inte här. Denna fil håller bara status, nästa prioriteringar och blo
 
 **Landat senast (2026-06-15 kväll → 16 natt):** **Fas 1 — beslutsenhet** (#338,
 `run_followup_chain` konsumerar dirigentens routerbeslut, beteendebevarande).
-**Generativ komponent V1** (#341, ADR 0061, Fas 4 — "lägg till N bildplatshållare"
+**generativ komponent V1** (#341, ADR 0061, Fas 4 — "lägg till N bildplatshållare"
 materialiserar en ny `.tsx` genom build + Quality Gate; deterministiskt recept,
 inga nya npm-deps) + review-fixar (#342: last-wins grid-uppdatering + import efter
 `'use client'`). **ADR-sanningstvätt** (#340, ny ADR 0062 OpenClaw-dirigent +
