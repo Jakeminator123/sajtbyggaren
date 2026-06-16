@@ -597,9 +597,9 @@ def test_prompt_route_conversation_gate_answers_without_build() -> None:
       1. De tre konversations-kinds:en speglas i en stängd uppsättning.
       2. Gaten ligger EFTER applied-grenen men FÖRE Phase 1
          (runPromptToProjectInput) — inget bygge kan starta.
-      3. Svarstexten genereras via den BEFINTLIGA lib/openai.ts-chathelpern
-         (chatWithOpenAi) med ärlig no-key-fallback ("OPENAI_API_KEY saknas"
-         — aldrig en låtsad konversation).
+      3. Svarstexten genereras via lib/openai.ts-chathelpern — den registrerade
+         answerModel-rollen (chatWithAnswerModel, ADR 0065) — med ärlig
+         no-key-fallback ("OPENAI_API_KEY saknas" — aldrig en låtsad konversation).
       4. Return-objektet bär ``answerText`` + ``runId: null`` och ett tomt
          ``buildResult`` (appliedVisibleEffect kan aldrig bli true för en
          konversation; previewShouldRefresh är false från bryggan).
@@ -634,13 +634,20 @@ def test_prompt_route_conversation_gate_answers_without_build() -> None:
         "konversations-gaten."
     )
 
-    # 3. Befintliga chathelpern + ärlig no-key-fallback.
-    assert 'import { chatWithOpenAi, openaiEnv } from "@/lib/openai"' in text, (
+    # 3. Lib/openai.ts-chathelpern + ärlig no-key-fallback. ADR 0065 trådar
+    # konversationssvaret via den REGISTRERADE answerModel-rollen
+    # (chatWithAnswerModel), fortfarande en lib/openai.ts-export — route.ts ska
+    # aldrig instansiera en egen OpenAI-klient.
+    assert (
+        'import { chatWithAnswerModel, openaiEnv } from "@/lib/openai"' in text
+    ), (
         "route.ts måste återanvända lib/openai.ts-chathelpern (ingen egen "
-        "OpenAI-klient)."
+        "OpenAI-klient) — ADR 0065 trådar konversationssvaret via den "
+        "registrerade answerModel-rollen (chatWithAnswerModel)."
     )
-    assert "chatWithOpenAi([" in text, (
-        "Konversations-svaret ska genereras via chatWithOpenAi."
+    assert "chatWithAnswerModel([" in text, (
+        "Konversations-svaret ska genereras via den registrerade "
+        "answerModel-rollen (chatWithAnswerModel), inte en egen OpenAI-klient."
     )
     assert 'openaiEnv("OPENAI_API_KEY")' in text, (
         "No-key-grenen måste kolla nyckeln via openaiEnv (samma resolution "
