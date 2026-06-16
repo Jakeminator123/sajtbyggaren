@@ -208,3 +208,23 @@ docs/heavy-llm-flow/canvases/
 # untracked vid varje overlämning. .env-hemligheter täcks redan av raderna
 # .env / .env.* / !.env.example ovan.
 kommandon.txt
+htmlcov/
+.coverage
+
+# Local evaluation artifacts (post evals-folder-plan). All under
+# ``data/evals/`` are operator-local runs — neither summary reports
+# nor heavy work-tree versioned artifacts. summaries/ kept in git
+# via .gitkeep in each subfolder so backoffice always has a place to
+# write to; artifacts/ ignored completely and scripts run
+# mkdir(parents=True, exist_ok=True) when new runs are written.
+data/evals/summaries/*/*.json
+data/evals/summaries/*/*.md
+data/evals/artifacts/
+
+# Legacy eval-folders — kept in ignore until migration is complete
+# on operator's machine. Backoffice cleanup recognises both structures.
+data/evals/eval-runs/
+data/evals/manual-scorecards/
+data/evals/generated/
+data/evals/scaffold-probe/
+data/evals/golden-path/

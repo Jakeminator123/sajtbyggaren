@@ -149,3 +149,13 @@ eval-tmp/
 övrigt/
 
 data/output/
+docs/archive/
+data/runs/
+data/evals/summaries/*/*.json
+data/evals/summaries/*/*.md
+data/evals/artifacts/
+data/evals/eval-runs/
+data/evals/manual-scorecards/
+data/evals/generated/
+data/evals/scaffold-probe/
+data/evals/golden-path/
