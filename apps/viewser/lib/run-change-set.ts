@@ -19,7 +19,12 @@
 
 import { computeRunDiff } from "@/components/builder/inspector/run-diff";
 import type { RunChangeSet } from "@/lib/build-changes";
-import { listRuns, readRunArtefacts, type RunArtefactBundle } from "@/lib/runs";
+import {
+  listRuns,
+  readGenerativeComponents,
+  readRunArtefacts,
+  type RunArtefactBundle,
+} from "@/lib/runs";
 
 const RUN_ID_PATTERN = /^[a-zA-Z0-9._-]+$/;
 
@@ -134,11 +139,24 @@ export async function readRunChangeSet(
   // som bara ändrade copy i en markerad sektion ska fortfarande ge ett
   // changeSet så FloatingChat kan visa vad operatören pekade på.
   const appliedFocusSections = readAppliedFocusSections(current);
+  // ADR 0061/0064: `generativeComponents` är STICKY (kumulativ union per id),
+  // så vad just DEN här följdprompten lade till = poster vars `id` saknas i
+  // föregående run. readGenerativeComponents kastar aldrig (fel → []), så ett
+  // saknat/oläsbart snapshot degraderar tyst till "inga generativa tillägg".
+  const currentGenerative = await readGenerativeComponents(runId);
+  const previousGenerative = await readGenerativeComponents(previousRunId);
+  const previousGenerativeIds = new Set(
+    previousGenerative.map((component) => component.id),
+  );
+  const generativeComponentsAdded = currentGenerative.filter(
+    (component) => !previousGenerativeIds.has(component.id),
+  );
   const hasExactDelta =
     diff.routesAdded.length > 0 ||
     diff.routesRemoved.length > 0 ||
     variantChanged ||
-    appliedFocusSections.length > 0;
+    appliedFocusSections.length > 0 ||
+    generativeComponentsAdded.length > 0;
   if (!hasExactDelta) return null;
 
   return {
@@ -148,5 +166,6 @@ export async function readRunChangeSet(
     variantBefore: variantChanged ? diff.variant.before : null,
     variantAfter: variantChanged ? diff.variant.after : null,
     appliedFocusSections,
+    generativeComponentsAdded,
   };
 }

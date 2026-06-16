@@ -32,6 +32,22 @@ export type BuildChange = {
 };
 
 /**
+ * En generativ komponent som lades till i den nya versionen (delta mot
+ * föregående run). Strukturellt identisk med ``AppliedGenerativeComponent``
+ * i ``lib/runs.ts`` men deklarerad lokalt så det här presentations-modulen
+ * förblir beroende-fri. Schema-låst i
+ * ``governance/schemas/project-input.schema.json:directives.generativeComponents``
+ * (ADR 0061/0064).
+ */
+export type ChangeSetGenerativeComponent = {
+  recipe: "image-placeholder-grid" | "cta-contact-block";
+  count: number;
+  routeId: string;
+  id: string;
+  position?: "top" | "bottom" | "before-contact";
+};
+
+/**
  * Strukturerad, EXAKT change-set som `/api/prompt` skickar på wiren för
  * follow-up-builds. Härledd serverside i `lib/run-change-set.ts` genom
  * att diffa den nya runens artefakter mot föregående run via
@@ -61,6 +77,14 @@ export type RunChangeSet = {
    * markeringar fanns.
    */
   appliedFocusSections: { routeId: string; sectionId: string; note?: string }[];
+  /**
+   * ADR 0061/0064: generativa komponenter (bildgrid / kontakt-CTA) som den
+   * här följdprompten lade till — härlett som delta mot föregående runs
+   * sticky `directives.generativeComponents` (diffat på `id`). Tom lista när
+   * inga nya komponenter materialiserades. Gör generativ V1 synlig i
+   * "Ändrat"-listan i stället för en generisk "Klart!".
+   */
+  generativeComponentsAdded: ChangeSetGenerativeComponent[];
 };
 
 interface KeywordRule {
@@ -206,6 +230,35 @@ export function summarizeChangesFromPrompt(prompt: string): BuildChange[] {
 }
 
 /**
+ * Beskriv en generativ komponent (ADR 0061/0064) som en svensk
+ * "Ändrat"-rad. Använder operatörens egna begrepp ("bildgrid", "kontakt-CTA")
+ * och håller sig ärlig: bara det receptet faktiskt materialiserar, ingen
+ * påhittad kontaktfakta. Positionssuffix bara för top/bottom (default-slotten
+ * `before-contact`/utelämnad ger ingen brusig parentes).
+ */
+function describeGenerativeComponent(
+  gen: ChangeSetGenerativeComponent,
+): BuildChange {
+  const positionSuffix =
+    gen.position === "top"
+      ? " (överst)"
+      : gen.position === "bottom"
+        ? " (nederst)"
+        : "";
+  if (gen.recipe === "image-placeholder-grid") {
+    return {
+      category: "media",
+      label: `Bildgrid med ${gen.count} platshållare tillagd${positionSuffix}`,
+    };
+  }
+  // cta-contact-block — count är alltid 1 (ett CTA-block) per schemat.
+  return {
+    category: "content",
+    label: `Kontakt-CTA tillagd${positionSuffix}`,
+  };
+}
+
+/**
  * Mappa en EXAKT change-set till 0-3 BuildChange-bullets. Till skillnad
  * från `summarizeChangesFromPrompt` är varje rad här en bekräftad delta
  * (routes/variant härledda ur run-artefakter), så UI:t kan rendera dem
@@ -226,6 +279,13 @@ export function summarizeChangeSet(
   for (const route of changeSet.routesRemoved) {
     if (changes.length >= 3) return changes;
     changes.push({ category: "structure", label: `Sidan ${route} borttagen` });
+  }
+  // ADR 0061/0064: namnge generativa tillägg (bildgrid / kontakt-CTA) i
+  // klartext i stället för en generisk "Klart!". Varje post är ett bekräftat
+  // delta (ny `id` i den här versionens sticky `generativeComponents`).
+  for (const gen of changeSet.generativeComponentsAdded ?? []) {
+    if (changes.length >= 3) return changes;
+    changes.push(describeGenerativeComponent(gen));
   }
   if (
     changes.length < 3 &&

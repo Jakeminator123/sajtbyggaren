@@ -635,6 +635,164 @@ export async function readAppliedCopyDirectives(
 }
 
 /**
+ * Resolve, säkerhetsgranska och läsa `directives`-blocket ur den exakta
+ * project-input-snapshot som var input till `runId`. Delar EXAKT samma
+ * auktoritets- och path-traversal-skydd som `readAppliedCopyDirectives`
+ * (input.json:dossierPath → data/prompt-inputs/ ELLER examples/), så en
+ * ny direktiv-läsare aldrig kan dirigeras att läsa godtyckliga filer.
+ * Returnerar `null` för init-builds, builds utan directives och
+ * oläsbara/utanför-allowlist-artefakter — kallaren väljer fallback.
+ */
+async function readDirectivesSnapshot(
+  runId: string,
+): Promise<Record<string, unknown> | null> {
+  let runDir: string;
+  try {
+    runDir = await runDirFromId(runId);
+  } catch {
+    return null;
+  }
+
+  let inputJson: { dossierPath?: unknown };
+  try {
+    inputJson = await readJsonFile<{ dossierPath?: unknown }>(
+      path.join(runDir, "input.json"),
+    );
+  } catch {
+    return null;
+  }
+
+  const dossierPath = inputJson.dossierPath;
+  if (typeof dossierPath !== "string" || !dossierPath.trim()) {
+    return null;
+  }
+
+  const root = repoRoot();
+  const absoluteDossier = path.isAbsolute(dossierPath)
+    ? path.resolve(dossierPath)
+    : path.resolve(root, dossierPath);
+
+  const allowedRoots = [
+    path.resolve(root, "data", "prompt-inputs"),
+    path.resolve(root, "examples"),
+  ];
+  const insideAllowed = allowedRoots.some((allowed) => {
+    const rel = path.relative(allowed, absoluteDossier);
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+  });
+  if (!insideAllowed) {
+    return null;
+  }
+
+  let snapshot: Record<string, unknown>;
+  try {
+    snapshot = await readJsonFile<Record<string, unknown>>(absoluteDossier);
+  } catch {
+    return null;
+  }
+
+  const directives = (snapshot.directives ?? null) as
+    | Record<string, unknown>
+    | null;
+  if (!directives || typeof directives !== "object") {
+    return null;
+  }
+  return directives;
+}
+
+/**
+ * Generativ komponent som materialiserades ur en component_add-följdprompt
+ * (Generative Component V1, ADR 0061/0064). Schema-låst i
+ * ``governance/schemas/project-input.schema.json:directives.generativeComponents``;
+ * fält bortom dessa fem ignoreras medvetet så en framtida v2-utbyggnad inte
+ * spiller obekant data ut till UI:t.
+ */
+export type AppliedGenerativeComponent = {
+  recipe: "image-placeholder-grid" | "cta-contact-block";
+  count: number;
+  routeId: string;
+  id: string;
+  position?: "top" | "bottom" | "before-contact";
+};
+
+const GENERATIVE_RECIPES = new Set([
+  "image-placeholder-grid",
+  "cta-contact-block",
+] as const);
+const GENERATIVE_POSITIONS = new Set([
+  "top",
+  "bottom",
+  "before-contact",
+] as const);
+// Samma filsäkra slug-mönster som schemat (gemener, bindestreck, ingen
+// traversal) — defense in depth ovanpå write-sidans validering.
+const GENERATIVE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * Läs ``directives.generativeComponents`` ur project-input-snapshoten för
+ * ``runId``. Listan är STICKY (ackumuleras över versioner, union:as per id i
+ * apply), så den representerar ALLA generativa komponenter som finns i den
+ * versionen — kallaren (run-change-set) diffar mot föregående run för att
+ * härleda vad just DEN följdprompten lade till. Returnerar ``[]`` för
+ * init-builds, builds utan directives och oparsbara artefakter.
+ *
+ * Varje post valideras mot schema-enums (recept, position) och numeriska/
+ * slug-gränser; okända poster droppas så UI:t aldrig visar en ogiltig rad.
+ */
+export async function readGenerativeComponents(
+  runId: string,
+): Promise<AppliedGenerativeComponent[]> {
+  const directives = await readDirectivesSnapshot(runId);
+  if (!directives) return [];
+
+  const raw = (directives.generativeComponents ?? null) as unknown;
+  if (!Array.isArray(raw)) return [];
+
+  const result: AppliedGenerativeComponent[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const candidate = item as Record<string, unknown>;
+    if (!isStringIn(candidate.recipe, GENERATIVE_RECIPES)) continue;
+    const count = candidate.count;
+    if (
+      typeof count !== "number" ||
+      !Number.isInteger(count) ||
+      count < 1 ||
+      count > 12
+    ) {
+      continue;
+    }
+    if (
+      typeof candidate.routeId !== "string" ||
+      candidate.routeId.trim().length === 0 ||
+      candidate.routeId.length > 64
+    ) {
+      continue;
+    }
+    if (
+      typeof candidate.id !== "string" ||
+      candidate.id.length > 64 ||
+      !GENERATIVE_ID_PATTERN.test(candidate.id)
+    ) {
+      continue;
+    }
+    const component: AppliedGenerativeComponent = {
+      recipe: candidate.recipe,
+      count,
+      routeId: candidate.routeId,
+      id: candidate.id,
+    };
+    if (isStringIn(candidate.position, GENERATIVE_POSITIONS)) {
+      component.position = candidate.position;
+    }
+    result.push(component);
+    // Schema maxItems = 8; klipp på samma siffra som skyddsräcke.
+    if (result.length >= 8) break;
+  }
+  return result;
+}
+
+/**
  * Resolve the canonical Project Input file for a given siteId.
  *
  * Note: siteId callers MUST validate via `assertSafeSiteId` (see
