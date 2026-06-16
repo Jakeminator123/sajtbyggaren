@@ -259,6 +259,13 @@ COMMON_WORDS = {
     # symbol, not a canonical domain term. The badge logic is driven by the
     # backoffice-views.v1.json registry, not by a new vocabulary entry.
     "Freshness",
+    # backoffice/views/_editor.py shared safe-save helper symbols. EditResult is
+    # the returned outcome dataclass (ok/message/wrote/rolled_back) every editor
+    # surface renders as st.success/st.error; VerifyResult is the Protocol the
+    # post-write check (governance_validate or a readback) must satisfy. Same
+    # treatment as the CleanupResult / CheckResult / Freshness containers above -
+    # internal UI helper symbols, not canonical domain terms.
+    "EditResult", "VerifyResult",
     # backoffice/env_panel.py local dataclass holding the set/missing state of
     # one tracked env key (never its value). Same internal-UI-symbol treatment
     # as Freshness / CleanupResult above; not a canonical domain term.
