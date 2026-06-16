@@ -18,8 +18,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .io import atomic_write_json, atomic_write_text
+from .io import atomic_write_json
 from .paths import POLICIES_DIR
+from .views._editor import commit_edit
 
 LLM_MODELS_POLICY_NAME = "llm-models.v1.json"
 
@@ -74,7 +75,9 @@ def save_role_edit(
 ) -> tuple[bool, str]:
     """Persist a model/provider edit for one role, with validate + rollback.
 
-    Flow (identical to the historical view_model_roles behaviour):
+    Flow (identical to the historical view_model_roles behaviour, now routed
+    through the shared safe-save helper ``backoffice.views._editor.commit_edit``
+    so this surface can never drift from the others):
 
     1. re-run :func:`validate_role_edit` defensively,
     2. mutate a deep copy of ``models`` (caller's dict stays untouched on fail),
@@ -98,25 +101,24 @@ def save_role_edit(
     role["provider"] = new_provider
 
     path = policy_path or llm_models_policy_path()
-    backup = path.read_text(encoding="utf-8")
-    try:
-        atomic_write_json(path, updated)
-    except OSError as exc:
-        return False, f"Kunde inte skriva {path.name}: {exc}. Inget har ändrats."
-
     if run_validate is None:
         from . import health
 
         run_validate = health.run_governance_validate
 
-    validate_result = run_validate()
-    if not validate_result.ok:
-        atomic_write_text(path, backup)
-        return False, (
+    result = commit_edit(
+        target=path,
+        write=lambda: atomic_write_json(path, updated),
+        verify=run_validate,
+        success_message=(
+            f"Sparade {role_id} -> {new_model} ({new_provider}). governance_validate OK."
+        ),
+        write_error_message=lambda exc: (
+            f"Kunde inte skriva {path.name}: {exc}. Inget har ändrats."
+        ),
+        rollback_message=lambda output: (
             "governance_validate failade efter spara - rollback genomfört. "
-            f"Output:\n{validate_result.output}"
-        )
-
-    return True, (
-        f"Sparade {role_id} -> {new_model} ({new_provider}). governance_validate OK."
+            f"Output:\n{output}"
+        ),
     )
+    return result.ok, result.message

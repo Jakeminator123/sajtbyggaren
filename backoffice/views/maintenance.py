@@ -33,6 +33,7 @@ from scripts.run_golden_path_eval import MAX_GOLDEN_PATH_EVALS_ENV
 
 from .. import vercel_sync
 from ..paths import REPO_ROOT
+from ._editor import commit_edit
 from ._helpers import render_check, safe_render
 
 
@@ -265,33 +266,49 @@ def view_toggle() -> None:
                         key=f"confirm-toggle-{row.path}-{row.id}",
                     ):
                         continue
-                backup = row.path.read_text(encoding="utf-8")
-                try:
-                    if collection_key is None:
-                        set_top_level_enabled(row.path, value)
+                from .. import health, loaders
+
+                def _write_toggle(
+                    path: Path = row.path,
+                    enabled: bool = value,
+                    item_id: str = row.id,
+                    key: str | None = collection_key,
+                ) -> None:
+                    if key is None:
+                        set_top_level_enabled(path, enabled)
                     else:
                         set_collection_entry_enabled(
-                            row.path,
-                            collection_key=collection_key,
-                            item_id=row.id,
-                            enabled=value,
+                            path,
+                            collection_key=key,
+                            item_id=item_id,
+                            enabled=enabled,
                         )
-                    from .. import health, loaders
 
-                    result = health.run_governance_validate()
-                    if not result.ok:
-                        row.path.write_text(backup, encoding="utf-8")
-                        st.error(f"Validation failade; rollback genomfört.\n\n{result.output}")
-                    else:
-                        loaders.load_json.clear()
-                        loaders.read_text.clear()
-                        st.success(
-                            f"{row.id}: enabled={value} "
-                            f"(risk: {impact_result['riskLevel']})"
-                        )
-                except Exception as exc:  # noqa: BLE001
-                    row.path.write_text(backup, encoding="utf-8")
-                    st.error(f"Kunde inte spara toggle för {row.id}: {exc}")
+                # Delad säker spar-väg: skriv enabled-värdet -> governance_validate
+                # -> rollback om validate rödflaggar. set_* kastar ValueError på
+                # trasig policy-struktur, så write_exceptions vidgas till Exception.
+                result = commit_edit(
+                    target=row.path,
+                    write=_write_toggle,
+                    verify=health.run_governance_validate,
+                    success_message=(
+                        f"{row.id}: enabled={value} "
+                        f"(risk: {impact_result['riskLevel']})"
+                    ),
+                    write_exceptions=(Exception,),
+                    write_error_message=lambda exc, _id=row.id: (
+                        f"Kunde inte spara toggle för {_id}: {exc}"
+                    ),
+                    rollback_message=lambda output: (
+                        f"Validation failade; rollback genomfört.\n\n{output}"
+                    ),
+                )
+                if result.ok:
+                    loaders.load_json.clear()
+                    loaders.read_text.clear()
+                    st.success(result.message)
+                else:
+                    st.error(result.message)
 
     with tabs[0]:
         _render_rows(

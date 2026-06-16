@@ -19,6 +19,7 @@ import streamlit as st
 
 from ..io import atomic_write_text
 from ..paths import DOCS_DIR
+from ._editor import commit_edit, make_readback_verify, render_diff
 from ._helpers import safe_render
 
 # Path-lås: OpenClaw-workspacen är den enda ytan editorn får röra. SOUL_PATH är
@@ -33,33 +34,54 @@ TOOLS_PATH = OPENCLAW_WORKSPACE_DIR / "TOOLS.md"
 SOUL_MAX_CHARS = 8000
 
 
-def _save_soul(new_text: str) -> None:
-    """Skriv SOUL.md path-låst, med max-längd och tom-text-skydd."""
+def _soul_validation_errors(new_text: str) -> list[str]:
+    """Tom-text- och max-längd-spärr för SOUL.md (samma regel före write och
+    vid återläsnings-verifiering). Tom lista = får sparas."""
+    errors: list[str] = []
     if not new_text.strip():
-        st.error("SOUL.md får inte vara tom. Inget sparat.")
-        return
+        errors.append("SOUL.md får inte vara tom. Inget sparat.")
     if len(new_text) > SOUL_MAX_CHARS:
-        st.error(
+        errors.append(
             f"SOUL.md är för lång ({len(new_text)} tecken). "
             f"Max {SOUL_MAX_CHARS} tecken. Inget sparat."
         )
-        return
-    try:
-        atomic_write_text(SOUL_PATH, new_text)
-    except OSError as exc:
-        st.error(f"Kunde inte skriva SOUL.md: {exc}. Inget har ändrats.")
-        return
+    return errors
 
-    # Backoffice-cachen läser via mtime, men chatt-personan cacheas per process
-    # i Node — påminn operatören att starta om dev-servern.
-    from .. import loaders
 
-    loaders.read_text.clear()
-    st.success(
-        "Sparat till docs/openclaw-workspace/SOUL.md. Chatt-personan cacheas "
-        "per process i Viewser — starta om dev-servern så den laddar om. "
-        "Ingen git-commit har skett; committa ändringen som vanligt."
+def _save_soul(new_text: str) -> None:
+    """Skriv SOUL.md path-låst, med max-längd och tom-text-skydd.
+
+    Går via den delade säkra spar-vägen (``_editor.commit_edit``): validera ->
+    atomic write till den path-låsta ``SOUL_PATH`` -> återläsnings-verifiering
+    -> rollback om filen blev tom/för lång på disk. Skrivmålet är ALLTID
+    konstanten ``SOUL_PATH``; ingen fri path-input kan omdirigera skrivningen.
+    """
+    result = commit_edit(
+        target=SOUL_PATH,
+        validate=lambda: _soul_validation_errors(new_text),
+        write=lambda: atomic_write_text(SOUL_PATH, new_text),
+        verify=make_readback_verify(SOUL_PATH, _soul_validation_errors),
+        success_message=(
+            "Sparat till docs/openclaw-workspace/SOUL.md. Chatt-personan cacheas "
+            "per process i Viewser — starta om dev-servern så den laddar om. "
+            "Ingen git-commit har skett; committa ändringen som vanligt."
+        ),
+        write_error_message=lambda exc: (
+            f"Kunde inte skriva SOUL.md: {exc}. Inget har ändrats."
+        ),
+        rollback_message=lambda output: (
+            f"SOUL.md blev ogiltig på disk efter spara - rollback genomfört. {output}"
+        ),
     )
+    if result.ok:
+        # Backoffice-cachen läser via mtime, men chatt-personan cacheas per
+        # process i Node — påminn operatören att starta om dev-servern.
+        from .. import loaders
+
+        loaders.read_text.clear()
+        st.success(result.message)
+    else:
+        st.error(result.message)
 
 
 # Runtime-trunkeringen i apps/viewser/lib/soul.ts: allt över denna gräns når
@@ -110,6 +132,7 @@ def render_soul_editor(*, key_prefix: str = "identity") -> None:
                 f"{SOUL_RUNTIME_MAX_CHARS} klipps bort av runtime innan "
                 "chatt-personan ser den."
             )
+        render_diff(current, new_text, key=f"{key_prefix}-soul-diff")
         if st.button("Spara SOUL.md", key=f"{key_prefix}-soul-save"):
             _save_soul(new_text)
         st.session_state[f"{key_prefix}-soul-preview"] = new_text

@@ -10,12 +10,22 @@ import streamlit as st
 from .. import loaders
 from ..io import atomic_write_text
 from ..paths import DECISIONS_DIR, POLICIES_DIR, RULES_DIR
+from ._editor import commit_edit, render_diff
 from ._helpers import safe_render
 
 
 def _hard_reset_caches() -> None:
     loaders.load_json.clear()
     loaders.read_text.clear()
+
+
+def _policy_json_errors(text: str) -> list[str]:
+    """Förhandskontroll: en policy måste vara giltig JSON innan den sparas."""
+    try:
+        json.loads(text)
+    except json.JSONDecodeError as exc:
+        return [f"Ogiltig JSON, sparar inte: {exc}"]
+    return []
 
 
 def view_policies() -> None:
@@ -54,48 +64,40 @@ def view_policies() -> None:
         )
         text = selected_path.read_text(encoding="utf-8")
         new_text = st.text_area("JSON", value=text, height=600, key=f"edit-{selected}")
+        render_diff(text, new_text, key=f"diff-{selected}")
         if st.button("Spara", key=f"save-{selected}"):
-            # 1. JSON-validera
-            try:
-                json.loads(new_text)
-            except json.JSONDecodeError as exc:
-                st.error(f"Ogiltig JSON, sparar inte: {exc}")
-                return
-
-            # 2. Atomic write -> validate -> rollback on fail.
-            backup = text
-            try:
-                atomic_write_text(selected_path, new_text)
-            except OSError as exc:
-                st.error(
-                    f"Kunde inte skriva atomiskt till {selected}: {exc}. "
-                    "Inget på disk har ändrats."
-                )
-                return
-            _hard_reset_caches()
-
+            # Delad säker spar-väg: JSON-validera -> atomic write ->
+            # governance_validate -> rollback vid fail. governance_validate
+            # läser från disk i en subprocess, så filen skrivs först och rullas
+            # tillbaka till backupen om validate rödflaggar.
             from .. import health
 
-            result = health.run_governance_validate()
-            if not result.ok:
-                try:
-                    atomic_write_text(selected_path, backup)
-                except OSError as exc:
-                    st.error(
-                        f"governance_validate failade OCH rollback misslyckades ({exc}). "
-                        "Filen kan vara i obekant skick. Kontrollera mot git."
-                    )
-                    return
-                _hard_reset_caches()
-                st.error(
-                    f"governance_validate failade efter spara - automatisk rollback genomfört.\n\n"
-                    f"Output:\n{result.output}"
-                )
-                return
-
-            st.success(
-                f"Sparat och validerat. {selected} är fortfarande policy-konsistent."
+            result = commit_edit(
+                target=selected_path,
+                validate=lambda: _policy_json_errors(new_text),
+                write=lambda: atomic_write_text(selected_path, new_text),
+                verify=health.run_governance_validate,
+                success_message=(
+                    f"Sparat och validerat. {selected} är fortfarande policy-konsistent."
+                ),
+                write_error_message=lambda exc: (
+                    f"Kunde inte skriva atomiskt till {selected}: {exc}. "
+                    "Inget på disk har ändrats."
+                ),
+                rollback_message=lambda output: (
+                    "governance_validate failade efter spara - automatisk rollback genomfört.\n\n"
+                    f"Output:\n{output}"
+                ),
+                rollback_failed_message=lambda exc: (
+                    f"governance_validate failade OCH rollback misslyckades ({exc}). "
+                    "Filen kan vara i obekant skick. Kontrollera mot git."
+                ),
             )
+            _hard_reset_caches()
+            if result.ok:
+                st.success(result.message)
+            else:
+                st.error(result.message)
 
 
 def view_naming_dictionary() -> None:

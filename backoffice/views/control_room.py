@@ -37,6 +37,7 @@ from .. import health, loaders, model_roles, runtime_models
 from ..env_panel import read_non_secret_env
 from ..io import atomic_write_json, atomic_write_text
 from ..paths import DATA_DIR
+from ._editor import commit_edit, make_readback_verify, render_diff
 from ._helpers import render_check, safe_render
 from .identity import (
     OPENCLAW_WORKSPACE_DIR,
@@ -330,8 +331,23 @@ def _role_contract_status_by_edit_kind() -> dict[str, str]:
     return mapping
 
 
+def _action_registry_readback_errors(content: str) -> list[str]:
+    """Återläsnings-kontroll: registret måste vara giltig JSON efter spara."""
+    try:
+        json.loads(content)
+    except json.JSONDecodeError as exc:
+        return [f"action-registry.json blev ogiltig JSON: {exc}"]
+    return []
+
+
 def _save_action_status(registry: dict, action_id: str, new_status: str) -> None:
-    """Skriv ny status för EN action, path-låst till ACTION_REGISTRY_PATH."""
+    """Skriv ny status för EN action, path-låst till ACTION_REGISTRY_PATH.
+
+    Går via den delade säkra spar-vägen (``_editor.commit_edit``): förvalidera
+    status/action -> atomic write -> återläsnings-verifiering -> rollback om
+    registret blev ogiltig JSON på disk. Tidigare en ren atomic write utan
+    efter-kontroll; happy-path-utfallet (samma bytes) är oförändrat.
+    """
     if new_status not in ACTION_STATUSES:
         st.error(f"Ogiltig status '{new_status}'. Tillåtna: {ACTION_STATUSES}.")
         return
@@ -343,18 +359,28 @@ def _save_action_status(registry: dict, action_id: str, new_status: str) -> None
         st.error(f"Action '{action_id}' finns inte i registret.")
         return
     action["status"] = new_status
-    try:
-        atomic_write_json(ACTION_REGISTRY_PATH, updated)
-    except OSError as exc:
-        st.error(f"Kunde inte skriva action-registry.json: {exc}. Inget har ändrats.")
-        return
-    loaders.read_text.clear()
-    loaders.load_json.clear()
-    st.success(
-        f"Sparade {action_id} -> {new_status}. Kom ihåg: detta dokumenterar "
-        "kodstöd - det aktiverar ingen förmåga. Ingen git-commit har skett; "
-        "committa som vanligt."
+    result = commit_edit(
+        target=ACTION_REGISTRY_PATH,
+        write=lambda: atomic_write_json(ACTION_REGISTRY_PATH, updated),
+        verify=make_readback_verify(ACTION_REGISTRY_PATH, _action_registry_readback_errors),
+        success_message=(
+            f"Sparade {action_id} -> {new_status}. Kom ihåg: detta dokumenterar "
+            "kodstöd - det aktiverar ingen förmåga. Ingen git-commit har skett; "
+            "committa som vanligt."
+        ),
+        write_error_message=lambda exc: (
+            f"Kunde inte skriva action-registry.json: {exc}. Inget har ändrats."
+        ),
+        rollback_message=lambda output: (
+            f"action-registry.json blev ogiltig efter spara - rollback genomfört. {output}"
+        ),
     )
+    if result.ok:
+        loaders.read_text.clear()
+        loaders.load_json.clear()
+        st.success(result.message)
+    else:
+        st.error(result.message)
 
 
 def _render_tab_actions() -> None:
@@ -449,32 +475,57 @@ def _render_tab_actions() -> None:
 # ----- flik E: skills ----------------------------------------------------------
 
 
-def _save_skill(skill_name: str, new_text: str) -> None:
-    """Skriv EN skill-fil, path-låst via skill_path(); caps + tom-text-skydd."""
+def _skill_validation_errors(new_text: str) -> list[str]:
+    """Tom-text- och max-längd-spärr för en SKILL.md (före write + återläsning)."""
+    errors: list[str] = []
     if not new_text.strip():
-        st.error("SKILL.md får inte vara tom. Inget sparat.")
-        return
+        errors.append("SKILL.md får inte vara tom. Inget sparat.")
     if len(new_text) > SKILL_MAX_CHARS:
-        st.error(
+        errors.append(
             f"SKILL.md är för lång ({len(new_text)} tecken). "
             f"Max {SKILL_MAX_CHARS} tecken. Inget sparat."
         )
+    return errors
+
+
+def _save_skill(skill_name: str, new_text: str) -> None:
+    """Skriv EN skill-fil, path-låst via skill_path(); caps + tom-text-skydd.
+
+    Går via den delade säkra spar-vägen (``_editor.commit_edit``): förvalidera
+    -> atomic write till den scan-validerade ``skill_path()`` -> återläsnings-
+    verifiering -> rollback om filen blev tom/för lång på disk. Tidigare en ren
+    atomic write; happy-path-utfallet (samma bytes) är oförändrat.
+    """
+    errors = _skill_validation_errors(new_text)
+    if errors:
+        for error in errors:
+            st.error(error)
         return
     try:
         target = skill_path(skill_name)
     except ValueError as exc:
         st.error(str(exc))
         return
-    try:
-        atomic_write_text(target, new_text)
-    except OSError as exc:
-        st.error(f"Kunde inte skriva SKILL.md: {exc}. Inget har ändrats.")
-        return
-    loaders.read_text.clear()
-    st.success(
-        f"Sparat till docs/openclaw-workspace/skills/{skill_name}/SKILL.md. "
-        "Ingen git-commit har skett; committa som vanligt."
+    result = commit_edit(
+        target=target,
+        write=lambda: atomic_write_text(target, new_text),
+        verify=make_readback_verify(target, _skill_validation_errors),
+        success_message=(
+            f"Sparat till docs/openclaw-workspace/skills/{skill_name}/SKILL.md. "
+            "Ingen git-commit har skett; committa som vanligt."
+        ),
+        write_error_message=lambda exc: (
+            f"Kunde inte skriva SKILL.md: {exc}. Inget har ändrats."
+        ),
+        rollback_message=lambda output: (
+            f"SKILL.md blev ogiltig på disk efter spara - rollback genomfört. {output}"
+        ),
     )
+    if result.ok:
+        loaders.read_text.clear()
+        st.success(result.message)
+    else:
+        st.error(result.message)
 
 
 def _render_tab_skills() -> None:
@@ -509,6 +560,7 @@ def _render_tab_skills() -> None:
             f"{len(new_text)} / {SKILL_MAX_CHARS} tecken. Texten är vägledning "
             "för rollen som kör skillen - inte en behörighetsyta."
         )
+        render_diff(current_text, new_text, key=f"cr-skill-diff-{selected_skill}")
         if st.button("Spara SKILL.md", key=f"cr-skill-save-{selected_skill}"):
             _save_skill(selected_skill, new_text)
 
