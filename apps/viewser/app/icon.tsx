@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-// Genererad favicon (ersätter webbläsarens generiska jordglob i fliken).
+// Genererad PNG-favicon som komplement till app/favicon.ico — moderna
+// webbläsare föredrar den här via <link rel="icon" type="image/png">.
 // On-brand monogram: off-white "S" på nära-svart kvadrat, samma värden som
 // --foreground/--background-tokens (oklch konverterat till hex för Satori).
 export const size = { width: 32, height: 32 };
