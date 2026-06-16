@@ -39,8 +39,8 @@ hero/commerce-CTA cluster (``_hero_cta_variant``, ``_hero_cta_label``,
 and are now imported from there directly instead of via the shim. What stays
 on the shim:
 
-* io wrappers that genuinely belong to ``scripts.build_site``
-  (``write``, ``route_to_page_path``, ``resolve_media_asset``);
+* path/media wrappers that still depend on ``scripts.build_site`` facade state
+  (``route_to_page_path``, ``resolve_media_asset``);
 * pure helpers/constants that still physically live ONLY in
   ``scripts.build_site`` (``_js_string_literal``, ``_member_initials``,
   ``_normalise_hex_color``, ``_normalize_tone_key``,
@@ -88,6 +88,7 @@ from packages.generation.build.dispatcher import (
     annotate_section_marker,
     render_route_generic,
 )
+from packages.generation.build.io_helpers import write
 from packages.generation.build.render_helpers import (
     _collect_icons_for_pages as _collect_icons_for_pages,
 )
@@ -364,10 +365,6 @@ def resolve_media_asset(dossier: dict, kind: str) -> dict | None:
 
 def route_to_page_path(target: Path, route: str) -> Path:
     return _call_build_site("route_to_page_path", target, route)
-
-
-def write(path: Path, contents: str) -> None:
-    _call_build_site("write", path, contents)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
