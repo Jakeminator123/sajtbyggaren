@@ -234,11 +234,17 @@ export type OpenClawBridge = {
 
 /**
  * The seam apps/viewser consumes from the ``--apply`` path:
- * ``{ decision: <OpenClawDecision>, bridge: <OpenClawBridge> }``.
+ * ``{ decision: <OpenClawDecision>, bridge: <OpenClawBridge>, report }``.
  */
 export type OpenClawApplyResult = {
   decision: OpenClawDecisionPayload;
   bridge: OpenClawBridge;
+  // Operator finding 2026-06-16: a short, DETERMINISTIC, honest Swedish line
+  // derived from decision + bridge (how the prompt was interpreted + what was
+  // done or why not). /api/prompt uses it as the answerText floor when the LLM
+  // chat helper produces nothing (no key / timeout), so an applied edit / honest
+  // no-op is never stum. Null when the Python seam did not emit it (field-drift).
+  report: string | null;
 };
 
 export type OpenClawApplyOptions = {
@@ -382,5 +388,6 @@ export async function runOpenClawFollowupApply(
   return {
     decision: decision as OpenClawDecisionPayload,
     bridge: coerceBridge(obj.bridge),
+    report: typeof obj.report === "string" ? obj.report : null,
   };
 }

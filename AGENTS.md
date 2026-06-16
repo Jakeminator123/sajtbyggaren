@@ -2,9 +2,49 @@ delivery-bias: läs docs/delivery-bias.md innan ändringar som kan växa i
 docs/tester/scope; förmåga före dokumentation, smal testbudget och tydlig
 feature-pr-redovisning gäller.
 
-## Cursor Cloud specific instructions
+Det här är det aktiva driftkontraktet för repo-agenter. Håll det kort, strikt
+och färskt. Långa förklaringar bor i `docs/` — se länkarna nedan.
 
-### Notis om shell-kommandon på Windows (Jakob/jakob-be)
+## Regelprioritet
+
+Följ regler i denna ordning:
+
+1. Användarens uppgift i den aktuella tråden
+2. Den här filen (`AGENTS.md`)
+3. `.cursor/BUGBOT.md` och reglerna under `.cursor/rules/`
+4. Repo-docs som länkas härifrån
+5. Generella modell-/verktygsdefaults
+
+Vid konflikt: välj det säkrare alternativet och förklara konflikten. Är rätt
+åtgärd oklar — stoppa och fråga Jakob. Redigera aldrig `.cursor/rules/`
+direkt; de är genererade speglar. Ändra källan under `governance/rules/` och
+kör `python scripts/rules_sync.py --check`.
+
+## Kärnarbetssätt
+
+Agera som en Cursor-kompatibel repo-agent för det här repot — samma kontrakt
+oavsett om du körs från Cursor eller Codex-IDE. Föredra små, direkta ändringar
+i förgrunden; läs tillräckligt med kontext för att undvika misstag och gör
+sedan minsta nyttiga ändring. Undvik breda refaktoreringar om operatören inte
+uttryckligen ber om dem.
+
+Produktmålet är bättre småföretagshemsidor genom kärnloopen
+`prompt -> företagshemsida -> preview -> följdprompt -> ny version`. För
+icke-triviala produkt-/builder-ändringar, håll `docs/product-operating-context.md`
+i sikte och parkera ändringar som inte hjälper loopen om operatören inte
+uttryckligen prioriterar dem.
+
+Kontextdocs att läsa vid behov:
+
+- `docs/agent-handbook.md` — onboarding, hårda regler, roller, standard-loop
+- `docs/agent-setup.md` — miljö, tjänster, fulla lint-/test-kommandon
+- `docs/agent-gotchas.md` — miljöfällor (portar, tmux, Vercel/Viewser, evals-dir)
+- `docs/product-operating-context.md` — produktkompass och prioriteringsfilter
+- `docs/delivery-bias.md` — scope/testbudget innan breddande ändringar
+- `docs/orchestrator-playbook.md` — fleragentpass (arbetssätt, inte fjärde fast roll)
+- `docs/testing.md`, `docs/known-issues.md`
+
+## Notis om shell-kommandon på Windows (Jakob/jakob-be)
 > ⚠️ **OBS! (Gäller endast för "jakob" och "jakob-be"):**  
 > De agenter som körs av användaren "jakob" eller "jakob-be" (inklusive ALLA
 > underagenter/subagenter de spawnar) kör nästan alltid i **PowerShell på
@@ -34,25 +74,7 @@ feature-pr-redovisning gäller.
 > och testa i bash-miljö när de är pipeline-kritiska.  
 > Detta gäller dock *enbart* sessioner/agentkörningar för "jakob" och "jakob-be".
 
-### Codex-IDE agent parity
-
-When working from Codex-IDE, act as a Cursor-compatible repo agent for this
-repository. Treat `.cursor/BUGBOT.md` and every rule under `.cursor/rules/`
-as active operating rules in addition to this file.
-
-For non-trivial changes, keep `docs/product-operating-context.md` in view:
-the product target is better small-business websites through the core loop
-`prompt -> företagshemsida -> preview -> följdprompt -> ny version`.
-
-For long Codex-IDE sessions with subagents, use
-`docs/orchestrator-playbook.md` as the operating playbook. It coordinates the
-existing Scout/Builder/Steward roles; it does not create a fourth fixed role.
-
-Do not edit `.cursor/rules/` directly. Those files are generated mirrors; the
-source lives under `governance/rules/`. If a rule needs to change, update the
-governance source and run the rule sync check.
-
-### Underagenter — sparsamhet (operatörspreferens 2026-06-11)
+## Underagenter — sparsamhet (operatörspreferens 2026-06-11)
 
 Spawna underagenter sparsamt, inte som standard. Gör små och medelstora
 uppgifter själv i förgrunden. Delegera bara när det ger verkligt värde: långa
@@ -63,182 +85,62 @@ flera skrivande underagenter samtidigt. Detta är en mjuk standard, inte ett
 förbud — fler agenter är okej när det tydligt hjälper. Samma anda finns i
 `docs/orchestrator-playbook.md` (sektionerna om underagenter och parallelisering).
 
-### READ-ONLY reference projects (NEVER modify)
+## READ-ONLY reference projects (NEVER modify)
 
-The following external folders are **strictly read-only reference material**.
-They are NOT part of this repo's build and must NEVER be created in, edited,
-deleted, renamed, moved, formatted, linted, committed, or written to in any
-way — not by an agent, a subagent, a script, or a git command. You MAY read
-and study them freely (that is their whole purpose); you may NOT change a
-single byte.
+These external folders are **strictly read-only reference material**: never
+create, edit, delete, rename, move, format, lint, commit or write to them in
+any way (agent, subagent, script or git). You MAY read and study them freely.
 
-- `C:\Users\jakem\Desktop\openclaw\` — the operator's standalone **OpenClaw
-  gateway/assistant** installation plus the **sajtmaskin** integration
-  (`sajtmaskin_agent.py`, `docs/sajtmaskin_docs/`, `assistant/`, `src/`,
-  `dist/`). This is the conductor/agent-role reference we study to design
-  Sajtbyggaren's own *conductor-only* OpenClaw — it is a reference, never a
-  build target.
-- `C:\Users\jakem\dev\projects\sajtmaskin\` — the **actual predecessor
-  project** (Next.js app + `infra/openclaw/` Docker gateway blueprint:
-  Dockerfile, render.yaml, railway.toml, `config/agents/sajtagenten/`,
-  `config/workspace/{SOUL,TOOLS,USER,BOOTSTRAP,HEARTBEAT}.md`, plus
-  `src/app/api/openclaw/`, `src/lib/openclaw/`, `src/components/openclaw/`).
-  This is the richest reference for an external Docker OpenClaw conductor.
-- Any other folder named `sajtmaskin`, wherever it appears on disk.
+- `C:\Users\jakem\Desktop\openclaw\`
+- `C:\Users\jakem\dev\projects\sajtmaskin\`
+- any other folder named `sajtmaskin`, wherever it is on disk.
 
-If a change to that material ever seems necessary, STOP and ask the operator
-first. The repo's own OpenClaw work happens ONLY inside this repository
+If a change there seems necessary, STOP and ask the operator first. The repo's
+own OpenClaw work happens ONLY inside this repo
 (`packages/generation/orchestration/openclaw/`, `openclaw-mvp/`, `apps/`,
-`scripts/`), never in the read-only reference folders above.
+`scripts/`). What each reference contains: see `docs/reference-projects.md`.
 
-### Overview
+## Lint, test och validering (kort)
 
-The operator/governance/builder layer is Python. The **output** of the
-builder is a Next.js project (TypeScript), so Node.js is required when you
-actually run `scripts/build_site.py` end-to-end (it shells out to
-`npm install` + `npm run build`). For pure governance/validation/test work
-no Node.js is needed.
+- Lint: `python -m ruff check .`. The ruff baseline is **0 findings** — every
+  new finding is a real bug to fix, not a `noqa` candidate (a `noqa` must be
+  backed by an ADR). Fix new findings in dedicated `chore: ruff auto-fixes`
+  commits, never mixed with feature work. `tests/test_docs_freshness.py`
+  enforces that this number matches reality.
+- Tester: riktade sviter för ändrade filer/paket är lokal default före commit
+  (`python -m pytest tests/test_<area>*.py -q` eller core-lane
+  `python -m pytest -m core -q`). Full svit kör i CI på varje PR och är
+  merge-gate; lokalt bara vid breda ändringar:
+  `python -m pytest tests/ -q -n auto` (pytest-xdist; se `docs/testing.md`).
+- Governance: `python scripts/governance_validate.py && python scripts/rules_sync.py --check && python scripts/check_term_coverage.py --strict`.
+- Fler kommandon och tjänster (backoffice, engine run, builder, Viewser): se
+  `docs/agent-setup.md`. Miljöfällor: se `docs/agent-gotchas.md`.
 
-Four main components:
+## Miljö och secrets
 
-1. Governance validation — JSON policies validated against schemas
-2. Streamlit backoffice — operator UI for governance editing
-3. Mock engine run — 3-phase pipeline (understand, plan, build), no real codegen
-4. Builder MVP — deterministic Next.js builder. Phase 1 (Site Brief) calls
- `briefModel` via OpenAI when `OPENAI_API_KEY` is set, otherwise falls back
- to a mock. Phase 2 (Plan) goes through shared
- `packages/generation/planning/produce_site_plan` (real `planningModel`
- with mock fallback). Phase 3 (Sprint 3A, ADR 0015) emits a deterministic
- codegen v1 manifest from `packages/generation/codegen/`, runs real
- Quality Gate checks (typecheck/route-scan/build-status/policy-compliance)
- from `packages/generation/quality_gate/`, and routes the result through
- a no-fix-applied Repair Pipeline in `packages/generation/repair/`. Real
- `codegenModel` LLM calls + mechanical fixes land in Sprint 3B.
+Operator-grant (Jakob, 2026-06-02; utökad 2026-06-03): agenten får läsa och
+redigera ALLA `.env*`-filer var som helst i repot (repo-root, `apps/viewser/`
+och valfri undermapp) plus `.cursorignore`, `.vercel/` och `.cursor/` som del
+av builder-/preview-/orkestreringsarbete. Skriv aldrig ut riktiga
+secret-värden i svar (använd redigerade former som "OPENAI_API_KEY är satt"),
+och committa aldrig `.env*` eller `.cursor/mcp.json` (de förblir gitignorerade).
 
-### Python environment
+Vercel-sandbox-preview lokalt kräver en färsk `VERCEL_OIDC_TOKEN` (`vercel env
+pull apps/viewser/.env.vercel.local`, ~12h TTL) i processens miljö plus
+`VIEWSER_PREVIEW_MODE=vercel-sandbox`. Cloud Agent-secrets kan override:a
+`apps/viewser/.env.local` — fulla detaljer i `docs/agent-gotchas.md`.
 
-A local virtualenv at `.venv/` is the recommended setup. `.venv/` is in
-`.gitignore` and must never be committed.
+## Språk och namngivning
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+Kod-identifierare och JSON-fältnamn på engelska; operatör-vänd text (docs,
+regler, UI-labels) på svenska med riktiga å/ä/ö. Undvik versala flerordsfraser
+i backticks/fetstil i `.md` om de inte står i naming-dictionary —
+`check_term_coverage.py --strict` flaggar dem.
 
-On Linux (Cloud Agent VMs), the venv package must be installed first.
-On Ubuntu Noble run `sudo apt-get update` FIRST (on a fresh VM both
-`python3-venv` and `python3.12-venv` report "no installation candidate"
-until the package lists are refreshed), then `sudo apt-get install -y
-python3-venv`. If the meta-package is still missing, install
-`python3.12-venv` explicitly before the first `python3 -m venv .venv`.
-When neither apt package is available,
-the VM update script falls back to `pip install virtualenv` and
-`~/.local/bin/virtualenv .venv` (same outcome as `python3 -m venv`; user
-installs land in `~/.local/bin`, which may be off the shell search path in
-non-login shells).
-Activate with `source .venv/bin/activate`. The update script handles
-this automatically.
+## Stoppvillkor
 
-### Running services
-
-| Service           | Command                                                                     | Notes                                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Backoffice        | `streamlit run backoffice.py --server.headless true`                        | Serves on port 8501                                                                                                                       |
-| Engine run | `python scripts/dev_generate.py "your prompt"`                                   | Writes artifacts to `data/runs/`. Calls `briefModel` + `planningModel` when `OPENAI_API_KEY` is set; mock fallback otherwise.             |
-| Builder MVP       | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `../sajtbyggaren-output/.generated/<siteId>/` by default (override with `--generated-dir` or env `SAJTBYGGAREN_GENERATED_DIR`) + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
-| Viewser (operator UI) | `cd apps/viewser && npm install && cp .env.example .env.local && npm run dev` | Operator prototype on http://localhost:3000 (`VIEWSER_PREVIEW_MODE=local-next` in `.env.local`). API routes shell out to `scripts/build_site.py`, so the repo-root `.venv` must be active first. |
-
-### Lint, test, validate
-
-Commands are documented in the README under "Snabbstart". Key commands:
-
-- Lint: `python -m ruff check .` (ruff is installed inside the venv)
-- Tests: targeted suites for the files/packages you changed are the local
-  default before commit (operator decision 2026-06-11), e.g.
-  `python -m pytest tests/test_<area>*.py -q` or the core lane
-  `python -m pytest -m core -q`. The FULL suite runs in CI on every PR
-  (governance workflow) and remains the merge gate. Run the full suite
-  locally only for broad changes (multiple packages) or on explicit request,
-  and then in parallel: `python -m pytest tests/ -q -n auto` (pytest-xdist;
-  see `docs/testing.md`).
-- Governance validation: `python scripts/governance_validate.py && python scripts/rules_sync.py --check && python scripts/check_term_coverage.py --strict`
-
-### Gotchas
-
-- The ruff binary is shipped inside the venv. If the binary is not on
-  `$PATH`, invoke via `python -m ruff check .` or `python -m ruff format .`.
-- Run `python -m ruff check .` for the current lint count. The baseline
-  is **0 findings** as of the post-Sprint-2B cleanup (`e8143cf` and later).
-  Any new finding is a real bug to fix, not a `noqa` candidate — `noqa`
-  comments must be backed by an ADR. Fix any new lint findings in dedicated
-  `chore: ruff auto-fixes` commits, never mixed with feature work.
-  `tests/test_docs_freshness.py` enforces that this number matches reality.
-- `.env` is not required for backoffice, mock/real engine dry-runs, governance checks or
-  the test suite. `OPENAI_API_KEY` is required when you want
-  `scripts/build_site.py` and `scripts/dev_generate.py` to call the real
-  `briefModel`/`planningModel`; without it both fall back to mock and write
-  `briefSource=mock-no-key` into `site-brief.json` plus
-  `planSource=mock-no-key` into `site-plan.json`.
-- All code identifiers and JSON field names must be in English; operator-
-  facing text (docs, rules, UI labels) is in Swedish.
-- The `check_term_coverage.py --strict` script flags capitalized phrases
-  (backtick-quoted or bold in markdown) as potential domain terms. Avoid
-  using uppercase multi-word phrases in backticks or bold in `.md` files
-  unless they are registered in the naming dictionary.
-- Tests use `tmp_path` for run artefacts and no longer pollute
-  `data/runs/`. If you see test runs leaving behind run directories, that
-  is a regression of `e376439` and must be filed in
-  `docs/known-issues.md`.
-- The builder writes generated sites to `../sajtbyggaren-output/` by
-  default (resolves to `/sajtbyggaren-output/` on Cloud Agent VMs). The
-  update script creates this directory with open permissions. If tests
-  fail with a permission error on that path, run
-  `sudo mkdir -p /sajtbyggaren-output && sudo chmod 777 /sajtbyggaren-output`.
-- Each `scripts/build_site.py` run writes the npm project under
-  `<generated-dir>/<siteId>/builds/<timestamp>/`. For a manual `npm run dev`,
-  `cd` into the newest `builds/*` directory, not the site root.
-- Cloud Agent secrets often inject `VIEWSER_PREVIEW_MODE=vercel-sandbox`
-  (Vercel sandbox). That wins over `apps/viewser/.env.local`, since
-  `process.env` beats dotenv, so local preview (`POST /api/preview/<siteId>`)
-  returns `vercel_auth` even though `.env.local` says `local-next` — unless
-  you start Viewser with an explicit override, e.g.
-  `VIEWSER_PREVIEW_MODE=local-next npm run dev` (tmux session `viewser-dev`).
-  Vercel sandbox preview still needs a fresh `VERCEL_OIDC_TOKEN` from
-  `vercel env pull apps/viewser/.env.vercel.local`. That pull (and the
-  auto-refresh in `scripts/dev.mjs`) runs with cwd = repo root, so `vercel link`
-  must be run ONCE from the repo root — it creates a monorepo link at
-  `.vercel/repo.json` mapping the project to `apps/viewser`. A link made inside
-  `apps/viewser/` is not found from the root and the refresh silently degrades.
-- Cloud Agent secrets often set `SAJTBYGGAREN_EVALS_DIR` (and
-  `SAJTBYGGAREN_GENERATED_DIR`). That is fine for builder work, but
-  `tests/test_cleanup_dev_artifacts.py::test_default_evals_dir_is_inside_data_evals_artifacts_mini`
-  asserts the repo-default evals path — unset `SAJTBYGGAREN_EVALS_DIR` (or
-  point it at `data/evals/artifacts/mini`) for a fully green full suite.
-- Long-running dev servers (Next.js preview, Streamlit backoffice) should run
-  under tmux on Cloud Agent VMs (portal config under
-  `/exec-daemon/tmux.portal.conf`).
-- Stop Viewser on port 3000 before `python -m pytest tests/`: otherwise
-  `test_api_prompt_smoke` (which starts its own Next dev server) flakes /
-  collides on an already-heavy suite. Run the full suite first, then start
-  `npm run dev` in `apps/viewser`. (Same coexistence note as the Windows
-  orphan gotcha above — applies to Cloud VMs too.)
-- Killing leftover Sajtbyggaren node processes (Windows) — the easy-fix: run
-  `kill-dev-trees.bat` (repo root) **as administrator**. It tree-kills only
-  Sajtbyggaren-scoped node trees (path token, or `next start`/`next dev` on the
-  preview port range, or a matching port listener). Run it elevated: without
-  admin the script often cannot read other processes' command lines (especially
-  after UAC changes, or when a process runs at a different integrity level), so
-  the match whitelist sees empty cmdlines and reports "ingen matchar" even when
-  Sajtbyggaren processes exist. Make a shortcut to the `.bat` with "Run as
-  administrator" ticked. This is the canonical "kill all my dev/preview node"
-  recovery after an interrupted `npm run dev` or an orphaned preview server.
-- Operator grant (Jakob, 2026-06-02; utökad 2026-06-03): the agent has standing
-  rights to read and edit ALL `.env*` files **anywhere in the repo** (repo root,
-  `apps/viewser/`, and any subfolder) plus `.cursorignore`, and the `.vercel/`
-  and `.cursor/` folders, as part of builder/preview/orchestration work. Never
-  print real secret values in replies, and never commit `.env*` or
-  `.cursor/mcp.json` (they stay gitignored). To run the vercel-sandbox preview
-  locally, the dev process needs a fresh `VERCEL_OIDC_TOKEN` (`vercel env pull
-  apps/viewser/.env.vercel.local`, ~12h TTL) in its environment plus
-  `VIEWSER_PREVIEW_MODE=vercel-sandbox`.
+Stoppa och fråga Jakob före: ändringar i read-only-referensprojekten ovan,
+exponering av secrets, breda arkitekturomskrivningar som inte efterfrågats,
+byte av governance-/regelsystem, radering av historiska docs, destruktiv
+städning utanför repot, eller manuell ändring av `.cursor/rules/`. Är den säkra
+vägen uppenbar — ta den och förklara kort.

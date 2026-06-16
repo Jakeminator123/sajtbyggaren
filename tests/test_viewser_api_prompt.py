@@ -191,6 +191,49 @@ def test_prompt_route_supports_followup_mode_without_schema_migration() -> None:
 
 
 @pytest.mark.tooling
+def test_terminal_noop_stages_cover_generative_unsupported() -> None:
+    """C1 (consolidation-hygiene): en ÄRLIG no-op-stage från run_followup_chain
+    får inte falla igenom till legacy och mynta en meningslös ny version.
+
+    ``generative_unsupported`` (build_site.py, en component_add mot ett
+    icke-vitlistat genererings-recept som en karusell) saknade tidigare i
+    ``TERMINAL_EDIT_NOOP_STAGES`` — då föll seamen igenom till legacy och kunde
+    skapa en byte-identisk ny version operatören aldrig bett om. Lås att de
+    faktiskt emitterade ``*_unsupported``-stagena (route_remove/nav_hide/section/
+    generative) behandlas som terminala, och att de GENERISKA no-op:arna
+    (plan_empty/router_no_edit) INTE gör det (de ska få legacy-vägen en chans)."""
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
+    block_match = re.search(
+        r"const TERMINAL_EDIT_NOOP_STAGES[^=]*=\s*new Set\(\[(.*?)\]\);",
+        text,
+        re.DOTALL,
+    )
+    assert block_match, (
+        "route.ts saknar TERMINAL_EDIT_NOOP_STAGES-mängden (Set<string>)."
+    )
+    stages = set(re.findall(r'"([^"]+)"', block_match.group(1)))
+    # De stage-strängar build_site.py emitterar idag (verifierade mot
+    # run_followup_chain) MÅSTE alla vara terminala — annars dubbel-bygger seamen.
+    for stage in (
+        "route_remove_unsupported",
+        "nav_hide_unsupported",
+        "section_unsupported",
+        "generative_unsupported",
+    ):
+        assert stage in stages, (
+            f"{stage!r} måste ligga i TERMINAL_EDIT_NOOP_STAGES så en ärlig "
+            "no-op rapporteras utan ett meningslöst legacy-bygge."
+        )
+    # De generiska no-op:arna får ALDRIG vara terminala: de ska falla igenom så
+    # legacy copy/edit-resolvern får sin chans (route.ts-kommentaren ovanför).
+    for generic in ("plan_empty", "router_no_edit"):
+        assert generic not in stages, (
+            f"{generic!r} är en GENERISK no-op och får inte behandlas som "
+            "terminal — den måste falla igenom till legacy-vägen."
+        )
+
+
+@pytest.mark.tooling
 def test_b169_prompt_route_uses_per_site_mutex_not_global_inflight() -> None:
     """B169 (bug-sweep 2026-06-10): the prompt route's mutex must be
     per-siteId, not a single global ``promptInFlight``.

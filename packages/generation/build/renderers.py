@@ -6,27 +6,53 @@ Christopher's section-dispatcher pattern + Phase 3 operator-pin tier
 from ``origin/main`` (PR #105 + PR #108) without re-inflating
 ``build_site.py`` past 7k rader.
 
-The split is now three-tier:
+Module layout after the megafiles refactor
+(``docs/refactor/megafiles-plan.md`` Del 1, slices A-3 + slice 5):
 
 * ``packages.generation.build.dispatcher``: section-id registry,
   scaffold sections cache, treatment-resolution helpers, generic route
   composer (``render_route_generic``).
-* ``packages.generation.build.renderers`` (this module): every page
-  renderer (``render_home`` etc.) and every section renderer
-  (``render_section_*``). Registers section renderers into
-  ``dispatcher._SECTION_RENDERERS`` at import time via
-  ``.update(...)`` blocks so the dispatcher's registry is fully
-  populated before any caller invokes it.
+* ``packages.generation.build.renderers`` (this module): the page
+  renderers (``render_home`` etc.), the hero subsystem and the generic
+  section renderers. It imports the extracted section families at import
+  time (side-effect registration) and re-exports their names so external
+  spellings keep resolving unchanged.
+* ``packages.generation.build.sections_restaurant`` /
+  ``sections_treatments`` / ``sections_professional``: the three
+  extracted section families. Each self-registers into
+  ``dispatcher._SECTION_RENDERERS`` via its own ``.update(...)`` block.
+* ``packages.generation.build.render_helpers``: the shared formatting/CTA,
+  hero/commerce-CTA and nav/icon helpers (``_jsx_safe_string``,
+  ``_contact_href``, ``_filled_contact_cta``, ``_route_href``,
+  ``_text_contact_cta``, ``_hero_cta_variant``, ``_hero_cta_label``,
+  ``_hero_cta_target_path``, ``_commerce_bottom_cta_label``,
+  ``_collect_icons_for_pages``). This module imports them directly from there.
 * ``packages.generation.build.static_assets``: deterministic static
   artefacts (robots.txt, sitemap.xml, OG fallback SVG, error pages,
   structured-data JSON-LD).
 
-Shared utility helpers (variant_css, ``_hero_cta_label``,
-``_nav_items_from_scaffold``, etc.) still live in ``scripts.build_site``
-and are reached via the lazy ``_call_build_site`` shim block below.
-A future sprint will finish moving them too; today's port keeps the
-helper territory untouched on purpose so PR-diff stays bounded to
-renderer + dispatcher movement.
+A lazy ``_call_build_site`` / ``_lazy_attr`` shim still remains below for
+the remaining helpers and constants not yet imported directly. The
+hero/commerce-CTA cluster (``_hero_cta_variant``, ``_hero_cta_label``,
+``_hero_cta_target_path``, ``_commerce_bottom_cta_label``) and
+``_collect_icons_for_pages`` already lived in ``render_helpers`` (slice 5)
+and are now imported from there directly instead of via the shim. What stays
+on the shim:
+
+* path/media wrappers that still depend on ``scripts.build_site`` facade state
+  (``route_to_page_path``, ``resolve_media_asset``);
+* pure helpers/constants that still physically live ONLY in
+  ``scripts.build_site`` (``_js_string_literal``, ``_member_initials``,
+  ``_normalise_hex_color``, ``_normalize_tone_key``,
+  ``_LISTING_COPY_BY_ROUTE_ID``, ``_RUNTIME_TOKEN_LISTENER_JS``);
+* helpers that already physically live in ``render_helpers`` and are
+  re-exported by ``scripts.build_site`` but are not yet rewired here
+  (``_icon_for_service``, ``_location_is_country_only``,
+  ``_nav_items_from_scaffold``, ``_normalize_business_type``,
+  ``_phone_href``, ``_pick_contact_route``, ``_pick_listing_route``).
+  For these the shim resolves to the same functions; rewiring them to a
+  direct ``render_helpers`` import (and moving the ``build_site``-only
+  helpers/constants down) is a later slice.
 """
 
 from __future__ import annotations
@@ -61,6 +87,121 @@ from packages.generation.build.dispatcher import (
     annotate_route_marker,
     annotate_section_marker,
     render_route_generic,
+)
+from packages.generation.build.io_helpers import write
+from packages.generation.build.render_helpers import (
+    _collect_icons_for_pages as _collect_icons_for_pages,
+)
+from packages.generation.build.render_helpers import (
+    _commerce_bottom_cta_label as _commerce_bottom_cta_label,
+)
+from packages.generation.build.render_helpers import (
+    _contact_href as _contact_href,
+)
+from packages.generation.build.render_helpers import (
+    _filled_contact_cta as _filled_contact_cta,
+)
+from packages.generation.build.render_helpers import (
+    _hero_cta_label as _hero_cta_label,
+)
+from packages.generation.build.render_helpers import (
+    _hero_cta_target_path as _hero_cta_target_path,
+)
+from packages.generation.build.render_helpers import (
+    _hero_cta_variant as _hero_cta_variant,
+)
+from packages.generation.build.render_helpers import (
+    _jsx_safe_string as _jsx_safe_string,
+)
+from packages.generation.build.render_helpers import (
+    _route_href as _route_href,
+)
+from packages.generation.build.render_helpers import (
+    _text_contact_cta as _text_contact_cta,
+)
+from packages.generation.build.sections_professional import (
+    render_section_capabilities_row as render_section_capabilities_row,
+)
+from packages.generation.build.sections_professional import (
+    render_section_client_roster as render_section_client_roster,
+)
+from packages.generation.build.sections_professional import (
+    render_section_industries_served as render_section_industries_served,
+)
+from packages.generation.build.sections_professional import (
+    render_section_insights_list as render_section_insights_list,
+)
+from packages.generation.build.sections_professional import (
+    render_section_manifesto_block as render_section_manifesto_block,
+)
+from packages.generation.build.sections_professional import (
+    render_section_partners_grid as render_section_partners_grid,
+)
+from packages.generation.build.sections_professional import (
+    render_section_process_steps as render_section_process_steps,
+)
+from packages.generation.build.sections_professional import (
+    render_section_selected_work_grid as render_section_selected_work_grid,
+)
+from packages.generation.build.sections_professional import (
+    render_section_selected_work_preview as render_section_selected_work_preview,
+)
+from packages.generation.build.sections_restaurant import (
+    render_booking as render_booking,
+)
+from packages.generation.build.sections_restaurant import (
+    render_menu as render_menu,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_booking_form_or_embed as render_section_booking_form_or_embed,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_booking_intro as render_section_booking_intro,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_cancellation_policy as render_section_cancellation_policy,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_dietary_key as render_section_dietary_key,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_fallback_phone as render_section_fallback_phone,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_hours_summary as render_section_hours_summary,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_large_party_note as render_section_large_party_note,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_lunch_rotation_note as render_section_lunch_rotation_note,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_menu_download_cta as render_section_menu_download_cta,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_menu_intro as render_section_menu_intro,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_menu_list as render_section_menu_list,
+)
+from packages.generation.build.sections_restaurant import (
+    render_section_wine_pairings as render_section_wine_pairings,
+)
+from packages.generation.build.sections_treatments import (
+    render_section_credentials as render_section_credentials,
+)
+from packages.generation.build.sections_treatments import (
+    render_section_expertise_areas as render_section_expertise_areas,
+)
+from packages.generation.build.sections_treatments import (
+    render_section_practice_grid as render_section_practice_grid,
+)
+from packages.generation.build.sections_treatments import (
+    render_section_treatment_list as render_section_treatment_list,
+)
+from packages.generation.build.sections_treatments import (
+    render_section_treatment_summary as render_section_treatment_summary,
 )
 from packages.generation.build.static_assets import (
     _render_structured_data_jsonld,
@@ -120,49 +261,12 @@ def _call_build_site(name: str, *args: Any, **kwargs: Any) -> Any:
     return getattr(_build_site_module(), name)(*args, **kwargs)
 
 
-def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) -> list[str]:
-    return _call_build_site("_collect_icons_for_pages", services, dossier_routes)
-
-
-def _commerce_bottom_cta_label(dossier: dict) -> str:
-    return _call_build_site("_commerce_bottom_cta_label", dossier)
-
-
-def _hero_cta_label(dossier: dict) -> str:
-    return _call_build_site("_hero_cta_label", dossier)
-
-
-def _hero_cta_variant(dossier: dict) -> str:
-    """Shim for ``scripts.build_site._hero_cta_variant``.
-
-    Returns ``"shop"`` / ``"booking"`` / ``"quote"`` based on the
-    dossier's conversionGoals + business type + scaffoldId. B97 uses
-    this to pick per-variant contact-page hero body copy so e-commerce
-    and booking businesses do not show the quote-flavoured
-    "Beskriv jobbet kort så återkommer vi … med tider och offert."
-    paragraph.
-    """
-    return _call_build_site("_hero_cta_variant", dossier)
-
-
-def _hero_cta_target_path(
-    dossier: dict,
-    listing_route: dict | None,
-    contact_path: str | None,
-) -> str | None:
-    return _call_build_site("_hero_cta_target_path", dossier, listing_route, contact_path)
-
-
 def _icon_for_service(service_id: str) -> str:
     return _call_build_site("_icon_for_service", service_id)
 
 
 def _js_string_literal(text: Any) -> str:
     return _call_build_site("_js_string_literal", _resolve_lazy(text))
-
-
-def _jsx_safe_string(text: str) -> str:
-    return _call_build_site("_jsx_safe_string", text)
 
 
 def _location_is_country_only(location: dict) -> bool:
@@ -212,20 +316,6 @@ def _pick_listing_route(scaffold_default_routes: list[dict]) -> dict | None:
     return _call_build_site("_pick_listing_route", scaffold_default_routes)
 
 
-def _route_href(route: str) -> str:
-    return _call_build_site("_route_href", route)
-
-
-def _contact_href(contact_target: str | None) -> str | None:
-    """Shim for ``scripts.build_site._contact_href`` (Route/Nav V1 Slice B).
-
-    Returns a JSX-safe href for a contact CTA target (a ``/`` route path or a
-    ``mailto:``/``tel:`` action), or ``None`` when the target is missing so the
-    caller omits the anchor instead of emitting a dead/invalid href.
-    """
-    return _call_build_site("_contact_href", contact_target)
-
-
 def _contact_cta_target(contact_route: dict | None, dossier: dict) -> str | None:
     """Resolve the single contact-CTA target for a build (ADR 0060 Slice B).
 
@@ -258,56 +348,6 @@ def _contact_cta_target(contact_route: dict | None, dossier: dict) -> str | None
     return None
 
 
-def _filled_contact_cta(
-    contact_path: str | None,
-    label: str,
-    *,
-    indent: str = "          ",
-    lead_icon: str = "",
-) -> str:
-    """Filled primary contact-CTA button, or ``""`` when there is no target.
-
-    Slice B (ADR 0060): the shared filled "Begär offert"/"Boka tid"/shop button
-    used by the service-list, collection, products and wizard-route renderers.
-    Returns ``""`` when contact was removed with no ``mailto:``/``tel:`` fallback
-    so the page omits the button instead of linking to a dead ``/kontakt`` route.
-    Byte-identical to the previous inline anchor when a target exists.
-    """
-    href = _contact_href(contact_path)
-    if href is None:
-        return ""
-    return (
-        f'{indent}<a href={href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{lead_icon}{label}<ArrowRight className="size-4" /></a>\n'
-    )
-
-
-def _text_contact_cta(
-    contact_path: str | None,
-    label: str,
-    *,
-    indent: str = "          ",
-    class_name: str = (
-        "inline-flex w-fit items-center gap-2 text-sm font-medium "
-        "underline-offset-4 hover:underline"
-    ),
-    icon_size: str = "size-4",
-) -> str:
-    """Underlined text contact-CTA link, or ``""`` when there is no target.
-
-    Slice B (ADR 0060): the shared clinic/professional/agency "Boka tid" /
-    "Diskutera ärende" / "Diskutera projekt" link. Same omit-on-no-target rule
-    as ``_filled_contact_cta``; byte-identical to the previous inline anchor when
-    a target exists (``_contact_href`` matches ``_jsx_safe_string`` for a valid
-    ``/`` path).
-    """
-    href = _contact_href(contact_path)
-    if href is None:
-        return ""
-    return (
-        f'{indent}<a href={href} className="{class_name}">{label}<ArrowRight className="{icon_size}" /></a>\n'
-    )
-
-
 def _hard_dossier_runtime(dossier: dict, dossier_id: str) -> dict[str, Any] | None:
     runtime = dossier.get("dossierRuntime")
     if not isinstance(runtime, dict):
@@ -325,10 +365,6 @@ def resolve_media_asset(dossier: dict, kind: str) -> dict | None:
 
 def route_to_page_path(target: Path, route: str) -> Path:
     return _call_build_site("route_to_page_path", target, route)
-
-
-def write(path: Path, contents: str) -> None:
-    _call_build_site("write", path, contents)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -463,7 +499,7 @@ def render_layout(
         logo_height = operator_logo.get("height")
         dims = ""
         if isinstance(logo_width, int) and isinstance(logo_height, int):
-            dims = f' width={{{logo_width}}} height={{{logo_height}}}'
+            dims = f" width={{{logo_width}}} height={{{logo_height}}}"
         # eslint-disable-next-line @next/next/no-img-element — vi använder
         # raw <img> för att slippa Next.js Image-loader inställningar i
         # alla starters; webp:erna är redan komprimerade av sharp.
@@ -474,11 +510,11 @@ def render_layout(
         # och bröt next build med "Expected '</', got '.'". Korrekt är att
         # låta hela attribut-värdet vara ett JS-uttryck (`src={...}`).
         header_logo_jsx = (
-            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
+            f"              <img src={_jsx_safe_string('/uploads/' + logo_filename)}"
             f' alt={_js_string_literal(logo_alt)} className="h-9 w-auto object-contain"{dims} />'
         )
         footer_logo_jsx = (
-            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
+            f"              <img src={_jsx_safe_string('/uploads/' + logo_filename)}"
             f' alt={_js_string_literal(logo_alt)} className="h-10 w-auto object-contain mb-1"{dims} />'
         )
     else:
@@ -577,9 +613,7 @@ def render_layout(
     # som matchar default --background. Detta gör att mobilen visuellt
     # ankrar mot sajtens identitet redan innan första paint.
     brand = dossier.get("brand") or {}
-    primary_hex_raw = (
-        brand.get("primaryColorHex") if isinstance(brand, dict) else None
-    )
+    primary_hex_raw = brand.get("primaryColorHex") if isinstance(brand, dict) else None
     theme_color_hex = _normalise_hex_color(primary_hex_raw) or "#ffffff"
     viewport_block = (
         "\n"
@@ -595,9 +629,7 @@ def render_layout(
     # the JSX attribute well-formed even if a future query carried one.
     font_stylesheet_link = ""
     if font_stylesheet_href and '"' not in font_stylesheet_href:
-        font_stylesheet_link = (
-            f'        <link rel="stylesheet" href="{font_stylesheet_href}" />\n'
-        )
+        font_stylesheet_link = f'        <link rel="stylesheet" href="{font_stylesheet_href}" />\n'
 
     return (
         'import type { Metadata, Viewport } from "next";\n'
@@ -838,14 +870,10 @@ def render_section_hero(
     # wins over BOTH the regenerated blueprint copy and the heroHeadline pin so
     # "ändra texten i hero-sektionen till X" is visible in the H1 and survives a
     # rebuild. Absent on init/most builds, so the no-override path is unchanged.
-    hero_headline_override = resolve_section_content_override(
-        dossier, "hero", "headline"
-    )
+    hero_headline_override = resolve_section_content_override(dossier, "hero", "headline")
     if hero_headline_override is not None:
         hero_headline = hero_headline_override
-    hero_subheadline_override = resolve_section_content_override(
-        dossier, "hero", "subheadline"
-    )
+    hero_subheadline_override = resolve_section_content_override(dossier, "hero", "subheadline")
     if hero_subheadline_override is not None:
         hero_subheadline = hero_subheadline_override
     spel_cta = (
@@ -889,9 +917,7 @@ def render_section_hero(
     # (a /path, a mailto:/tel: fallback, or None when contact was removed with
     # no channel); _contact_href turns it into a safe href or None so the hero
     # primary CTA is omitted rather than linking to a dead /kontakt route.
-    hero_cta_href = _contact_href(
-        _hero_cta_target_path(dossier, listing_route, contact_path)
-    )
+    hero_cta_href = _contact_href(_hero_cta_target_path(dossier, listing_route, contact_path))
 
     # Operator-uploaded hero image (if present) renders as a banner
     # above the gradient section. The asset is placed in public/uploads/
@@ -1006,9 +1032,7 @@ def _render_product_grid_image(item: dict, label: str, escape) -> str:
     image_url = item.get("imageUrl")
     if not isinstance(image_url, str) or not image_url.strip():
         service_id = _product_grid_text(item, "id", "product")
-        return (
-            f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(service_id)} className="size-6" /></span>\n'
-        )
+        return f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(service_id)} className="size-6" /></span>\n'
 
     product_image = item.get("productImage")
     alt = label
@@ -1062,8 +1086,7 @@ def render_section_product_grid(dossier: dict) -> str:
         return _jsx_safe_string(value)
 
     items = "\n".join(
-        _render_product_grid_card(item, index, escape)
-        for index, item in enumerate(products)
+        _render_product_grid_card(item, index, escape) for index, item in enumerate(products)
     )
     return (
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
@@ -1138,11 +1161,23 @@ _CONTACT_PAGE_HERO_BODY_BY_VARIANT: dict[tuple[str, str], str] = {
     # conversionGoals + business type + scaffoldId, so we reuse it here
     # for consistency with the hero CTA label/target.
     ("quote", "sv"): "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.",
-    ("quote", "en"): "Tell us briefly about the job and we'll get back within one business day with times and a quote.",
+    (
+        "quote",
+        "en",
+    ): "Tell us briefly about the job and we'll get back within one business day with times and a quote.",
     ("shop", "sv"): "Frågor om beställning, leverans eller retur? Vi återkommer inom en arbetsdag.",
-    ("shop", "en"): "Questions about your order, delivery or return? We get back to you within one business day.",
-    ("booking", "sv"): "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar.",
-    ("booking", "en"): "Tell us briefly what you need — we'll come back within one business day with a time that suits you.",
+    (
+        "shop",
+        "en",
+    ): "Questions about your order, delivery or return? We get back to you within one business day.",
+    (
+        "booking",
+        "sv",
+    ): "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar.",
+    (
+        "booking",
+        "en",
+    ): "Tell us briefly what you need — we'll come back within one business day with a time that suits you.",
 }
 
 
@@ -1241,8 +1276,7 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
             '              <address className="mt-2 not-italic">\n'
             f"{address_lines}\n"
             "              </address>\n"
-            "            </article>\n"
-            + footer
+            "            </article>\n" + footer
         )
 
     # Honest path: at least one field is a placeholder. Render only the
@@ -1339,15 +1373,9 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
         )
 
     if resend_runtime is not None:
-        submit_path = str(
-            resend_runtime.get("submitTarget") or "/api/contact/resend"
-        )
+        submit_path = str(resend_runtime.get("submitTarget") or "/api/contact/resend")
         mode = "integration" if resend_runtime.get("mode") == "integration" else "design"
-        heading = (
-            "Send us a message"
-            if language == "en"
-            else "Skicka ett meddelande"
-        )
+        heading = "Send us a message" if language == "en" else "Skicka ett meddelande"
         intro = (
             "Use the form below and we reply by email."
             if language == "en"
@@ -1375,9 +1403,7 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
             if behavior
             else ""
         )
-        design_mode_message = str(
-            resend_runtime.get("designModeBehavior", "")
-        ).strip()
+        design_mode_message = str(resend_runtime.get("designModeBehavior", "")).strip()
         if not design_mode_message:
             design_mode_message = (
                 "Design mode active: submission is a no-op until RESEND_API_KEY is configured."
@@ -1388,8 +1414,8 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
             f'              <p className="mt-2 text-[color:var(--muted)]">{_jsx_safe_string(intro)}</p>\n'
             f'              <p className="mt-2 text-sm font-medium text-[color:var(--muted)]">{_jsx_safe_string(mode_note)}</p>\n'
             + behavior_line
-            + "              <div className=\"mt-4\">\n"
-            + f'                <ResendContactForm submitPath={_jsx_safe_string(submit_path)} designModeAtBuild={"{true}" if mode == "design" else "{false}"} designModeMessage={_jsx_safe_string(design_mode_message)} />\n'
+            + '              <div className="mt-4">\n'
+            + f"                <ResendContactForm submitPath={_jsx_safe_string(submit_path)} designModeAtBuild={'{true}' if mode == 'design' else '{false}'} designModeMessage={_jsx_safe_string(design_mode_message)} />\n"
             + "              </div>\n"
             + "            </article>\n"
         )
@@ -1616,13 +1642,9 @@ def _collect_home_icons(dossier: dict, dossier_routes: list[str]) -> list[str]:
         icons_used = sorted({*icons_used, "Check"})
     story_text = (dossier.get("company") or {}).get("story") or ""
     trust_count = sum(
-        1
-        for item in (dossier.get("trustSignals") or [])
-        if isinstance(item, str) and item.strip()
+        1 for item in (dossier.get("trustSignals") or []) if isinstance(item, str) and item.strip()
     )
-    needs_quote_icon = (
-        bool(str(story_text).strip()) or trust_count >= _HOME_TESTIMONIAL_MIN_ITEMS
-    )
+    needs_quote_icon = bool(str(story_text).strip()) or trust_count >= _HOME_TESTIMONIAL_MIN_ITEMS
     if needs_quote_icon and "Quote" not in icons_used:
         icons_used = sorted({*icons_used, "Quote"})
     return icons_used
@@ -1842,9 +1864,7 @@ def render_home(
     section_order.extend(bottom_ids)
     section_order.append("contact-cta")
 
-    effective_sections = {
-        "home": {"requiredSections": section_order, "optionalSections": []}
-    }
+    effective_sections = {"home": {"requiredSections": section_order, "optionalSections": []}}
 
     body = render_route_generic(
         dossier,
@@ -1861,9 +1881,7 @@ def render_home(
         icon_import + "\n"
         "export default function Home() {\n"
         "  return (\n"
-        '    <main className="flex flex-1 flex-col">\n'
-        + body
-        + "    </main>\n"
+        '    <main className="flex flex-1 flex-col">\n' + body + "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -1916,9 +1934,7 @@ def render_section_service_list(
         default=_SERVICE_LIST_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "service-list"),
         visual_direction_pick=(
-            blueprint.section_treatment_pick("service-list")
-            if blueprint is not None
-            else None
+            blueprint.section_treatment_pick("service-list") if blueprint is not None else None
         ),
     )
     if treatment == "alternating-rows":
@@ -1974,9 +1990,7 @@ def _render_service_list_card_grid(dossier: dict, contact_path: str | None) -> s
     )
 
 
-def _render_service_list_alternating_rows(
-    dossier: dict, contact_path: str | None
-) -> str:
+def _render_service_list_alternating_rows(dossier: dict, contact_path: str | None) -> str:
     """Vertical sequence of left-/right-flipped icon+copy rows.
 
     Each service is its own row spanning the full container width;
@@ -1989,7 +2003,7 @@ def _render_service_list_alternating_rows(
     items = "\n".join(
         (
             f'          <li key={_jsx_safe_string(svc["id"])} className="flex flex-col items-start gap-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:flex-row md:items-center md:gap-10 md:p-10'
-            + (' md:flex-row-reverse' if idx % 2 == 0 else '')
+            + (" md:flex-row-reverse" if idx % 2 == 0 else "")
             + '">\n'
             f'            <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-7" /></span>\n'
             f'            <div className="flex flex-col gap-2">\n'
@@ -2014,9 +2028,7 @@ def _render_service_list_alternating_rows(
     )
 
 
-def _render_service_list_icon_strip(
-    dossier: dict, contact_path: str | None
-) -> str:
+def _render_service_list_icon_strip(dossier: dict, contact_path: str | None) -> str:
     """Compact horizontal icon-label strip with summaries underneath.
 
     The strip is a single row of small icon-label pills (each
@@ -2029,7 +2041,7 @@ def _render_service_list_icon_strip(
         (
             f'              <li key={_jsx_safe_string(svc["id"])} className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2 text-sm font-medium tracking-tight">\n'
             f'                <{_icon_for_service(svc["id"])} className="size-4 text-[color:var(--accent)]" />\n'
-            f'                <span>{_jsx_safe_string(svc["label"])}</span>\n'
+            f"                <span>{_jsx_safe_string(svc['label'])}</span>\n"
             "              </li>"
         )
         for svc in services
@@ -2086,7 +2098,7 @@ def _render_service_list_tabular(dossier: dict, contact_path: str | None) -> str
         + _service_list_header()
         + '          <div className="flex flex-col">\n'
         + '            <div className="grid gap-4 border-b border-[color:var(--border)] pb-3 text-xs font-mono uppercase tracking-widest text-[color:var(--muted)] md:grid-cols-[3rem_14rem_1fr] md:gap-8">\n'
-        + '              <span aria-hidden />\n'
+        + "              <span aria-hidden />\n"
         + "              <span>Tjänst</span>\n"
         + "              <span>Beskrivning</span>\n"
         + "            </div>\n"
@@ -2153,9 +2165,7 @@ def _render_collection_page(
     cta_label: str | None = None,
 ) -> str:
     items_source = dossier["services"]
-    icons_used = sorted(
-        {_icon_for_service(item["id"]) for item in items_source} | {"ArrowRight"}
-    )
+    icons_used = sorted({_icon_for_service(item["id"]) for item in items_source} | {"ArrowRight"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
         f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
@@ -2182,9 +2192,7 @@ def _render_collection_page(
         "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
-        "          </div>\n"
-        + _filled_contact_cta(contact_path, label)
-        + "        </div>\n"
+        "          </div>\n" + _filled_contact_cta(contact_path, label) + "        </div>\n"
         "      </section>\n"
         "    </main>\n"
         "  );\n"
@@ -2247,10 +2255,7 @@ def render_about(dossier: dict) -> str:
     # bemärkelse). Suppressas för ecommerce-lite. För övriga scaffolds
     # gäller fortsatt bara B104-checken (country-only suppression).
     scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
-    if (
-        not _location_is_country_only(location)
-        and scaffold_id != "ecommerce-lite"
-    ):
+    if not _location_is_country_only(location) and scaffold_id != "ecommerce-lite":
         location_section = (
             '          <div className="flex flex-col gap-2">\n'
             '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
@@ -2330,9 +2335,7 @@ def render_contact(dossier: dict, *, contact_path: str | None = "/kontakt") -> s
     )
     icons = sorted(set(_DISPATCHED_ICON_PATTERN.findall(contact_info_section)))
     icon_import = (
-        ("import { " + ", ".join(icons) + ' } from "lucide-react";\n' + "\n")
-        if icons
-        else ""
+        ("import { " + ", ".join(icons) + ' } from "lucide-react";\n' + "\n") if icons else ""
     )
     form_import = (
         'import { ResendContactForm } from "@/components/resend-contact-form";\n\n'
@@ -2340,9 +2343,7 @@ def render_contact(dossier: dict, *, contact_path: str | None = "/kontakt") -> s
         else ""
     )
     return (
-        form_import
-        + icon_import
-        + "export default function ContactPage() {\n"
+        form_import + icon_import + "export default function ContactPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
         f"{contact_info_section}"
@@ -2487,22 +2488,12 @@ def _wizard_contact_cta(dossier: dict, contact_path: str | None) -> str:
     cta_anchor = _filled_contact_cta(contact_path, cta_label, indent="            ")
     if not cta_anchor:
         return ""
-    return (
-        '          <div>\n'
-        + cta_anchor
-        + "          </div>\n"
-    )
+    return "          <div>\n" + cta_anchor + "          </div>\n"
 
 
 def _wizard_page_footer() -> str:
     """Closing tags shared by every wizard-route renderer."""
-    return (
-        "        </div>\n"
-        "      </section>\n"
-        "    </main>\n"
-        "  );\n"
-        "}\n"
-    )
+    return "        </div>\n      </section>\n    </main>\n  );\n}\n"
 
 
 _FAQ_DEFAULT_SV: list[tuple[str, str]] = [
@@ -2626,9 +2617,9 @@ def render_faq(
 
     if use_accordion:
         items = "\n".join(
-            f'            <AccordionItem key={_jsx_safe_string(f"faq-{i}")}>\n'
-            f'              <AccordionTrigger>{_jsx_safe_string(question)}</AccordionTrigger>\n'
-            f'              <AccordionContent>{_jsx_safe_string(answer)}</AccordionContent>\n'
+            f"            <AccordionItem key={_jsx_safe_string(f'faq-{i}')}>\n"
+            f"              <AccordionTrigger>{_jsx_safe_string(question)}</AccordionTrigger>\n"
+            f"              <AccordionContent>{_jsx_safe_string(answer)}</AccordionContent>\n"
             "            </AccordionItem>"
             for i, (question, answer) in enumerate(pairs)
         )
@@ -2949,9 +2940,7 @@ def _extract_usps(dossier: dict) -> list[str]:
         if isinstance(directives, dict):
             raw = directives.get("uniqueSellingPoints")
             if isinstance(raw, list):
-                candidates = [
-                    str(item).strip() for item in raw if isinstance(item, str)
-                ]
+                candidates = [str(item).strip() for item in raw if isinstance(item, str)]
     if not candidates:
         return []
     return [item for item in candidates if item][:_HERO_USP_MAX]
@@ -2973,9 +2962,7 @@ def _render_hero_usp_chips(usps: list[str], *, centered: bool = False) -> str:
         for i, item in enumerate(usps)
     )
     return (
-        f'          <ul className="flex flex-wrap gap-2 {align_class}">\n'
-        f"{items}\n"
-        "          </ul>\n"
+        f'          <ul className="flex flex-wrap gap-2 {align_class}">\n{items}\n          </ul>\n'
     )
 
 
@@ -3033,9 +3020,7 @@ def _hero_style_for(
     return "gradient"
 
 
-def _render_hero_background_video(
-    background_video: dict | None, hero_asset: dict | None
-) -> str:
+def _render_hero_background_video(background_video: dict | None, hero_asset: dict | None) -> str:
     """Render a tyst loopande bakgrundsvideo bakom hero-textinnehållet.
 
     Avgör layout: <video> ligger som ``absolute inset-0`` i en wrapper
@@ -3141,9 +3126,7 @@ def _render_hero_block(
     # three hero layouts so real-phone output stays byte-identical.
     phone_cta_button = ""
     if not is_placeholder_phone(contact_phone):
-        phone_cta_button = (
-            f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
-        )
+        phone_cta_button = f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
     # Slice B (ADR 0060): the primary hero CTA is omitted when there is no target
     # (contact page removed and no mailto:/tel: fallback) so the hero never links
     # to a dead /kontakt route. Byte-identical when a target exists. Reused across
@@ -3167,7 +3150,9 @@ def _render_hero_block(
         # left-aligned default to a centered one inline rather than
         # branching upstream.
         centered_location = (
-            location_tag.replace("flex items-center gap-2", "flex items-center gap-2 justify-center")
+            location_tag.replace(
+                "flex items-center gap-2", "flex items-center gap-2 justify-center"
+            )
             if location_tag
             else ""
         )
@@ -3269,9 +3254,7 @@ def _render_hero_block(
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{safe_name}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
         f"{proof_p_10}"
-        f"{usp_chips_left}"
-        + cta_buttons
-        + "        </div>\n"
+        f"{usp_chips_left}" + cta_buttons + "        </div>\n"
         "      </section>\n"
         "\n"
     )
@@ -3420,16 +3403,17 @@ def _render_home_story_section(dossier: dict) -> str:
 
 
 def _render_home_testimonials_section(dossier: dict) -> str:
-    """Render a testimonials-style section on the home page when the
+    """Render a trust-card section on the home page when the
     dossier has at least ``_HOME_TESTIMONIAL_MIN_ITEMS`` trustSignals.
 
     The threshold is intentional: with only 1–2 trustSignals, a
     3-column card grid looks underpopulated. The caller falls back to
     the existing ``trust_section`` (bullet list with ``ShieldCheck``
     icons) below this threshold. With 3+ items we render each
-    trustSignal as a card with a ``Quote``-glyph and bold attribution
-    ("Sagt om oss") so the visual feel matches real customer
-    testimonials, even though the source is operator-authored copy.
+    trustSignal as a card with a ``Quote``-glyph and neutral proof
+    label. The wording must not imply customer testimonials: the
+    ``trustSignals`` field is generic operator proof, not a verified
+    review schema.
 
     Returns ``""`` when fewer than the minimum number of items exist,
     so the caller can decide whether to render its bullet-list
@@ -3443,13 +3427,11 @@ def _render_home_testimonials_section(dossier: dict) -> str:
     if not isinstance(trust, list):
         return ""
     items: list[str] = [
-        str(item).strip()
-        for item in trust
-        if isinstance(item, str) and item.strip()
+        str(item).strip() for item in trust if isinstance(item, str) and item.strip()
     ]
     if len(items) < _HOME_TESTIMONIAL_MIN_ITEMS:
         return ""
-    # Fas 2.3 — hover-effekter på testimonial-cards. Identisk timing
+    # Fas 2.3 — hover-effekter på trust-cards. Identisk timing
     # och easing som services-cards så hover-känslan är konsistent
     # över startsidan. ``-translate-y-0.5`` ger en lätt lyft-effekt
     # som Apple/Stripe använder för dwell-tid på cards.
@@ -3457,7 +3439,7 @@ def _render_home_testimonials_section(dossier: dict) -> str:
         f'            <figure key={_jsx_safe_string(f"trust-card-{i}")} className="group relative flex h-full flex-col gap-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
         f'              <Quote className="size-6 text-[color:var(--primary)]/30 transition-colors group-hover:text-[color:var(--primary)]/60" />\n'
         f'              <blockquote className="text-base text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(item)}</blockquote>\n'
-        f'              <figcaption className="mt-auto text-xs uppercase tracking-widest text-[color:var(--muted)]">Sagt om oss</figcaption>\n'
+        f'              <figcaption className="mt-auto text-xs uppercase tracking-widest text-[color:var(--muted)]">Förtroendesignal</figcaption>\n'
         "            </figure>"
         for i, item in enumerate(items)
     )
@@ -3466,7 +3448,7 @@ def _render_home_testimonials_section(dossier: dict) -> str:
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Förtroende</p>\n'
-        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här uppskattar våra kunder</h2>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här bygger förtroende</h2>\n'
         "          </div>\n"
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{cards}\n"
@@ -3516,9 +3498,7 @@ def _render_home_faq_section(
     )
     faq_link = ""
     if has_faq_route:
-        faq_link = (
-            '          <a href="/faq" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se alla frågor<ArrowRight className="size-4" /></a>\n'
-        )
+        faq_link = '          <a href="/faq" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se alla frågor<ArrowRight className="size-4" /></a>\n'
     return (
         '      <section className="border-t border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
@@ -3807,14 +3787,15 @@ def render_map(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
         )
     else:
         areas_block = ""
-    query_source = ", ".join(address_lines) if address_lines else (
-        (location.get("city") if isinstance(location, dict) else None) or ""
+    query_source = (
+        ", ".join(address_lines)
+        if address_lines
+        else ((location.get("city") if isinstance(location, dict) else None) or "")
     )
     map_block: str
     if isinstance(query_source, str) and query_source.strip():
-        maps_url = (
-            "https://www.google.com/maps/search/?api=1&query="
-            + _url_quote(query_source.strip())
+        maps_url = "https://www.google.com/maps/search/?api=1&query=" + _url_quote(
+            query_source.strip()
         )
         map_block = (
             '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
@@ -3847,432 +3828,6 @@ def render_map(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
         + _wizard_contact_cta(dossier, contact_path)
         + _wizard_page_footer()
     )
-
-
-# ---------------------------------------------------------------------------
-# Restaurant-hospitality default-route renderers (Issue #90).
-#
-# These two functions wire the ``menu`` and ``booking`` route ids declared
-# by ``packages/generation/orchestration/scaffolds/restaurant-hospitality/
-# routes.json`` so a full build of a restaurant Project Input no longer
-# exits with a SystemExit from ``write_pages``. They are scaffold-default
-# renderers (registered as ``elif`` arms below), not wizard-extras, so
-# they do NOT live in ``_WIZARD_ROUTE_RENDERERS``.
-#
-# Scope per Issue #90: static markup only. No third-party booking
-# integration, no payment flow, no real-time availability — the
-# scaffold's compatible-dossiers.json declares ``menu-display`` and
-# ``booking-cta`` as required dossiers and the dossier-mounting layer
-# adds any dynamic UI on top during a separate compositional pass.
-#
-# Path B (section-driven renderer registry from
-# docs/scaffold-runtime-extension-needed.md) is deliberately deferred
-# to a future sprint; for Issue #90 we follow Path A (per-route
-# functions in the existing if/elif chain) to keep the change small
-# and reviewable.
-# ---------------------------------------------------------------------------
-
-
-def _menu_items(dossier: dict) -> list[dict]:
-    """Return menu items for a restaurant project input.
-
-    The project-input schema's ``services[]`` is structurally identical
-    to a menu item (``id`` + ``label`` + ``summary``), and the schema's
-    top-level ``additionalProperties: false`` forbids adding a separate
-    ``menu`` field. Restaurant operators therefore put menu items in
-    the ``services`` array; ``render_menu`` reads them back here.
-
-    The fallback returns a short sample so the page still has visible
-    content for projects that pin restaurant-hospitality without
-    supplying any items — that is rare in production but useful when
-    the planner picks the scaffold from a thin prompt.
-    """
-    items = dossier.get("services") or []
-    cleaned: list[dict] = []
-    if isinstance(items, list):
-        for item in items:
-            if isinstance(item, dict) and item.get("id") and item.get("label"):
-                cleaned.append(item)
-    if cleaned:
-        return cleaned
-    return [
-        {
-            "id": "house-special",
-            "label": "Dagens rätt",
-            "summary": (
-                "Vår kock väljer en huvudrätt utifrån säsongens råvaror. "
-                "Fråga personalen vad som serveras idag."
-            ),
-        },
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Path B step 7 — restaurant-hospitality section renderers.
-#
-# Each helper renders a single section from the restaurant scaffold's
-# sections.json. They are deliberately self-contained ``<section>``
-# blocks so render_route_generic can compose them in any order (for
-# example: hero + menu-preview + book-table-cta on home, then
-# menu-intro + menu-list + dietary-key on /menu). All customer text is
-# routed through ``_jsx_safe_string`` so JSX-special characters in
-# operator-supplied copy never break ``next build``.
-#
-# Optional sections (large-party-note, cancellation-policy) return an
-# empty string when the dossier has no content for them so a scaffold
-# can list them in optionalSections without forcing every site to
-# render an empty card.
-# ---------------------------------------------------------------------------
-
-
-def render_section_menu_intro(dossier: dict) -> str:
-    """Header section for the restaurant /meny route.
-
-    Eyebrow + heading + lead paragraph using the wizard idiom so the
-    section visually matches the existing about/services pages.
-    Customer text from the dossier is not interpolated here yet — the
-    copy is deterministic and operator-safe per the restaurant
-    scaffold contract.
-    """
-    eyebrow = _jsx_safe_string("Meny")
-    heading = _jsx_safe_string("Vad vi serverar just nu")
-    intro = _jsx_safe_string(
-        "Menyn växlar med säsongen och tillgången på råvaror. "
-        "Be gärna personalen om dagens rekommendation eller hör av dig "
-        "i förväg om du har önskemål eller allergier."
-    )
-    return (
-        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3">\n'
-        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{eyebrow}</p>\n'
-        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{heading}</h1>\n'
-        f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{intro}</p>\n'
-        "          </header>\n"
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_menu_list(dossier: dict) -> str:
-    """Card grid of menu items for the restaurant /meny route.
-
-    Reads ``services`` from the dossier via ``_menu_items`` (project
-    input schema reuses the services array for menu items). Each card
-    shows the item label and an optional summary. Empty dossiers fall
-    back to a "Dagens rätt" placeholder via ``_menu_items`` so the
-    page never renders an empty grid.
-    """
-    items = _menu_items(dossier)
-    card_fragments: list[str] = []
-    for item in items:
-        key_attr = _jsx_safe_string("menu-" + str(item["id"]))
-        label_attr = _jsx_safe_string(str(item["label"]))
-        summary_value = item.get("summary")
-        summary_fragment = ""
-        if isinstance(summary_value, str) and summary_value.strip():
-            summary_attr = _jsx_safe_string(summary_value)
-            summary_fragment = (
-                '              <p className="mt-2 text-sm '
-                'text-[color:var(--muted)] leading-relaxed">'
-                f"{summary_attr}</p>\n"
-            )
-        card_fragments.append(
-            f"            <article key={key_attr} "
-            'className="rounded-xl border border-[color:var(--border)] '
-            "bg-[color:var(--card,var(--background))] p-6 transition-all "
-            "duration-300 hover:-translate-y-0.5 "
-            'hover:border-[color:var(--primary)] hover:shadow-md">\n'
-            f'              <h2 className="text-lg font-semibold">{label_attr}</h2>\n'
-            f"{summary_fragment}"
-            "            </article>"
-        )
-    cards = "\n".join(card_fragments)
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{cards}\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_dietary_key(dossier: dict) -> str:
-    """Optional dietary-marker key for the /meny route.
-
-    Renders a small panel listing common Swedish dietary markers
-    (vegetariskt, veganskt, glutenfritt, laktosfritt) so visitors can
-    scan the menu legend at a glance. Empty when no menu item refers
-    to a marker; the dispatcher includes the section because the
-    restaurant scaffold's sections.json marks it as required, but the
-    panel itself stays minimal so it does not dominate the page.
-    """
-    markers: list[tuple[str, str]] = [
-        ("V", "Vegetariskt"),
-        ("VG", "Veganskt"),
-        ("GF", "Glutenfritt"),
-        ("LF", "Laktosfritt"),
-    ]
-    rows = "\n".join(
-        '            <li className="inline-flex items-center gap-2 rounded-full '
-        'border border-[color:var(--border)] px-3 py-1 text-xs '
-        'text-[color:var(--muted)]">'
-        f'<span className="font-semibold text-[color:var(--foreground)]">{_jsx_safe_string(short)}</span>'
-        f'<span>{_jsx_safe_string(label)}</span>'
-        "</li>"
-        for short, label in markers
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-3 py-8">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kostmarkeringar</p>\n'
-        '          <ul className="flex flex-wrap gap-2">\n'
-        f"{rows}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_booking_intro(dossier: dict) -> str:
-    """Header section for the restaurant /bokning route.
-
-    Mirrors render_section_menu_intro's structure with reservation-
-    flavoured copy. Per Issue #90 we do NOT embed a third-party
-    booking provider — the operator's preferred provider lands via the
-    ``booking-cta`` dossier in a separate compositional pass — so this
-    intro frames the contact-driven booking flow.
-    """
-    eyebrow = _jsx_safe_string("Boka bord")
-    heading = _jsx_safe_string("Boka en plats hos oss")
-    intro = _jsx_safe_string(
-        "Just nu tar vi bokningar via telefon och e-post. Ring eller "
-        "skriv så bekräftar vi tid och antal personer. För större "
-        "sällskap, hör av dig minst två dagar i förväg."
-    )
-    return (
-        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3">\n'
-        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{eyebrow}</p>\n'
-        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{heading}</h1>\n'
-        f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{intro}</p>\n'
-        "          </header>\n"
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_booking_form_or_embed(dossier: dict) -> str:
-    """Booking-form placeholder card for the /bokning route.
-
-    The MVP intentionally has no embedded reservation widget so the
-    section renders a copy block explaining that the operator handles
-    bookings via phone or email. A future scaffold variant can swap
-    this renderer for a Resoo / Tablefy / Quandoo embed without
-    touching the dispatcher.
-    """
-    body = _jsx_safe_string(
-        "Vi tar bokningar manuellt så att vi kan stämma av specialönskemål, "
-        "allergier och större sällskap. Använd kontaktuppgifterna nedan "
-        "eller hör av dig på sociala medier."
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Bokningsförfrågan</p>\n'
-        f'          <p className="max-w-2xl text-base text-[color:var(--foreground)] leading-relaxed">{body}</p>\n'
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_hours_summary(dossier: dict) -> str:
-    """Opening-hours summary card for /bokning and /hitta-hit.
-
-    Reads ``contact.openingHours`` from the dossier and renders a
-    single card. Returns an empty string when no hours are set so the
-    section is invisible rather than rendering an empty placeholder.
-    """
-    contact = dossier.get("contact") or {}
-    # Suppress the dummy "Mån-Fre 09:00-17:00" fallback so the card never
-    # presents placeholder hours as if they were the real schedule.
-    opening = real_opening_hours(contact)
-    if opening is None:
-        return ""
-    safe_hours = _jsx_safe_string(opening.strip())
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-8">\n'
-        '          <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Öppettider</p>\n'
-        f'            <p className="mt-2 text-base">{safe_hours}</p>\n'
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_fallback_phone(dossier: dict) -> str:
-    """Phone + email fallback cards for /bokning.
-
-    Reads ``contact.phone`` and ``contact.email``. Renders cards only
-    for the channels the operator actually staffs so the visitor does
-    not see "Boka via e-post" links pointing nowhere. Returns empty
-    when neither channel is configured.
-    """
-    contact = dossier.get("contact") or {}
-    # Only surface channels the operator actually staffs — placeholder
-    # phone/email are suppressed so /bokning never shows a dummy number
-    # or address as a bookable channel.
-    phone = real_phone(contact)
-    email = real_email(contact)
-    cards: list[str] = []
-    if isinstance(phone, str) and phone.strip():
-        cards.append(
-            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
-            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via telefon</p>\n'
-            f'              <a href={_jsx_safe_string("tel:" + _phone_href(phone))} '
-            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(phone)}</a>\n'
-            "            </div>"
-        )
-    if isinstance(email, str) and email.strip():
-        cards.append(
-            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
-            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via e-post</p>\n'
-            f'              <a href={_jsx_safe_string("mailto:" + email.strip())} '
-            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(email.strip())}</a>\n'
-            "            </div>"
-        )
-    if not cards:
-        return ""
-    grid = "\n".join(cards)
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-8">\n'
-        '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{grid}\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_large_party_note(dossier: dict) -> str:
-    """Optional 'larger party' guidance for /bokning.
-
-    Static text encouraging visitors with bigger groups to call ahead.
-    The MVP keeps the copy generic; a future scaffold variant can
-    wire this to a per-restaurant max-party-size from the dossier.
-    """
-    body = _jsx_safe_string(
-        "För sällskap över sex personer ber vi dig kontakta oss direkt så "
-        "vi kan reservera plats och förbereda menyn. Boka helst minst "
-        "två dagar i förväg."
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-3 py-8">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Större sällskap</p>\n'
-        f'          <p className="max-w-2xl text-base text-[color:var(--foreground)] leading-relaxed">{body}</p>\n'
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def render_section_cancellation_policy(dossier: dict) -> str:
-    """Optional cancellation-policy block for /bokning.
-
-    Static placeholder text matching the MVP's manual-booking flow.
-    A scaffold variant or operator override can replace this with the
-    operator's actual policy via a future dossier field.
-    """
-    body = _jsx_safe_string(
-        "Behöver du avboka eller ändra antalet personer? Hör av dig så "
-        "snart du kan, så hjälper vi nästa gäst som står på väntelistan."
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-3 py-8">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Avbokning</p>\n'
-        f'          <p className="max-w-2xl text-base text-[color:var(--foreground)] leading-relaxed">{body}</p>\n'
-        "        </div>\n"
-        "      </section>\n"
-    )
-
-
-def _restaurant_optional_section_stub(dossier: dict) -> str:
-    """No-op renderer for optional restaurant sections without bespoke copy.
-
-    Returned by ``render_section_wine_pairings``,
-    ``render_section_lunch_rotation_note`` and
-    ``render_section_menu_download_cta`` so a future operator-driven
-    fix can add real copy by simply replacing the renderer with a
-    section-shaped function. Until then these slots stay empty so
-    the page does not render placeholder marketing copy that the
-    operator did not approve.
-    """
-    return ""
-
-
-def render_section_wine_pairings(dossier: dict) -> str:
-    """Optional wine-pairing recommendations panel for /meny.
-
-    Empty MVP stub: a future scaffold variant or operator override
-    will populate this section with a curated list pulled from a
-    new dossier field. Returning empty keeps the page slim until
-    real content is wired.
-    """
-    return _restaurant_optional_section_stub(dossier)
-
-
-def render_section_lunch_rotation_note(dossier: dict) -> str:
-    """Optional lunch-rotation note for /meny.
-
-    Empty MVP stub: weekday lunch rotations require a structured
-    schedule the project-input schema does not yet model. The
-    section is still registered so a scaffold listing it in
-    optionalSections does not raise SystemExit at build time.
-    """
-    return _restaurant_optional_section_stub(dossier)
-
-
-def render_section_menu_download_cta(dossier: dict) -> str:
-    """Optional menu-PDF download CTA for /meny.
-
-    Empty MVP stub: file uploads are routed through
-    ``public/uploads`` only for hero/gallery/logo today. A future
-    scaffold can wire a menu PDF upload through the same path and
-    swap this stub for a real download button.
-    """
-    return _restaurant_optional_section_stub(dossier)
-
-
-# Restaurant section renderers register here so render_route_generic
-# can dispatch on the section ids declared in
-# packages/generation/orchestration/scaffolds/restaurant-hospitality/sections.json.
-# Optional sections without bespoke copy register a no-op stub so the
-# dispatcher can include them without raising SystemExit; operators or
-# scaffold variants can replace each stub with a real renderer when
-# the corresponding dossier fields land.
-_SECTION_RENDERERS.update(
-    {
-        "menu-intro": render_section_menu_intro,
-        "menu-list": render_section_menu_list,
-        "dietary-key": render_section_dietary_key,
-        "wine-pairings": render_section_wine_pairings,
-        "lunch-rotation-note": render_section_lunch_rotation_note,
-        "menu-download-cta": render_section_menu_download_cta,
-        "booking-intro": render_section_booking_intro,
-        "booking-form-or-embed": render_section_booking_form_or_embed,
-        "hours-summary": render_section_hours_summary,
-        "fallback-phone": render_section_fallback_phone,
-        "large-party-note": render_section_large_party_note,
-        "cancellation-policy": render_section_cancellation_policy,
-    }
-)
 
 
 # ---------------------------------------------------------------------------
@@ -4348,9 +3903,7 @@ def render_section_faq(
     a grounded FAQ replaces the generic template questions.
     """
     has_faq_route = "/faq" in (dossier_routes or [])
-    return _render_home_faq_section(
-        dossier, has_faq_route=has_faq_route, blueprint=blueprint
-    )
+    return _render_home_faq_section(dossier, has_faq_route=has_faq_route, blueprint=blueprint)
 
 
 def render_section_service_area(dossier: dict) -> str:
@@ -4403,152 +3956,18 @@ _SECTION_RENDERERS.update(
 
 
 _LSB_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "local-service-business"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "local-service-business"
 )
-
-
-_RESTAURANT_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "restaurant-hospitality"
-)
-
-
-def _render_restaurant_route(
-    dossier: dict,
-    *,
-    route_id: str,
-    page_function_name: str,
-    contact_path: str | None,
-    blueprint: RenderBlueprint | None = None,
-) -> str:
-    """Compose a restaurant route via the section dispatcher.
-
-    Loads ``restaurant-hospitality/sections.json`` for the section
-    list, dispatches each id through ``render_route_generic``, then
-    appends the standard contact-CTA section so the visitor always
-    has a path back to opening hours and phone. The page shell
-    (icon import + ``<main>`` wrapper + closing tags) is added
-    here so the renderer remains a drop-in replacement for the
-    previous specialised implementation.
-
-    ``page_function_name`` controls the name of the exported React
-    component (``MenuPage`` / ``BookingPage``) so a future scaffold
-    can reuse this helper for any new route.
-    """
-    sections = _load_scaffold_sections(_RESTAURANT_SCAFFOLD_DIR)
-    body = render_route_generic(
-        dossier,
-        route_id=route_id,
-        scaffold_sections=sections,
-        contact_path=contact_path,
-        blueprint=blueprint,
-    )
-    # kor-2: thread the blueprint so the trailing contact CTA follows
-    # conversion.primaryCta (e.g. "Boka bord") instead of the generic
-    # "Kontakta oss", consistent with the rest of the default-route set.
-    cta_section = annotate_section_marker(
-        render_section_contact_cta(
-            dossier, contact_path=contact_path, blueprint=blueprint
-        ),
-        "contact-cta",
-    )
-    return (
-        'import { ArrowRight } from "lucide-react";\n'
-        "\n"
-        f"export default function {page_function_name}() {{\n"
-        "  return (\n"
-        '    <main className="flex flex-1 flex-col">\n'
-        + body
-        + cta_section
-        + "    </main>\n"
-        + "  );\n"
-        + "}\n"
-    )
-
-
-def render_menu(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/hitta-hit",
-    blueprint: RenderBlueprint | None = None,
-) -> str:
-    """Render the restaurant /meny route via the section dispatcher.
-
-    Path B step 8 thin shim. The actual section composition lives
-    in ``render_section_menu_intro`` / ``render_section_menu_list``
-    / ``render_section_dietary_key`` and is dispatched through
-    ``render_route_generic`` based on the section list declared in
-    ``restaurant-hospitality/sections.json``. A future scaffold can
-    extend the route by appending an optional section (for example
-    ``wine-pairings``) to its sections.json without editing this
-    file.
-
-    The trailing contact CTA is added here as a deliberate page-
-    level affordance — the scaffold's sections.json keeps the
-    /menu route lean (intro + list + dietary key) and the CTA is
-    surfaced by the page wrapper so a hungry visitor always has a
-    path back to opening hours and phone.
-
-    ``contact_path`` defaults to ``/hitta-hit`` to match the
-    scaffold's ``contact`` route slug.
-    """
-    return _render_restaurant_route(
-        dossier,
-        route_id="menu",
-        page_function_name="MenuPage",
-        contact_path=contact_path,
-        blueprint=blueprint,
-    )
-
-
-def render_booking(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/hitta-hit",
-    blueprint: RenderBlueprint | None = None,
-) -> str:
-    """Render the restaurant /bokning route via the section dispatcher.
-
-    Path B step 8 thin shim. The actual section composition lives
-    in ``render_section_booking_intro`` /
-    ``render_section_booking_form_or_embed`` /
-    ``render_section_hours_summary`` /
-    ``render_section_fallback_phone`` and is dispatched through
-    ``render_route_generic`` based on the section list declared in
-    ``restaurant-hospitality/sections.json``.
-
-    Per Issue #90 we still do NOT embed a third-party booking
-    provider — the dispatcher composes a static reservation page
-    where the operator handles bookings via phone and email. A
-    scaffold variant can swap
-    ``render_section_booking_form_or_embed`` for an embedded
-    widget without touching the dispatcher.
-    """
-    return _render_restaurant_route(
-        dossier,
-        route_id="booking",
-        page_function_name="BookingPage",
-        contact_path=contact_path,
-        blueprint=blueprint,
-    )
 
 
 # ---------------------------------------------------------------------------
 # Path B step 12 — clinic-healthcare runtime activation
 # (and generic Path B native dispatch infrastructure for future scaffolds)
 #
-# Restaurant-hospitality (above) keeps render_menu / render_booking as
-# specialised entry points so write_pages can call them directly while
-# the home / about / contact routes flow through the LSB shims. A new
+# Restaurant-hospitality (extracted to build.sections_restaurant and
+# re-exported above) keeps render_menu / render_booking as specialised
+# entry points so write_pages can call them directly while the home /
+# about / contact routes flow through the LSB shims. A new
 # scaffold whose routes do NOT line up with the existing if/elif arms
 # (for example clinic-healthcare's ``treatments`` route) needs another
 # path: the scaffold registers itself in ``_DISPATCHED_SCAFFOLDS`` and
@@ -4600,1144 +4019,24 @@ def render_section_team_block(dossier: dict) -> str:
     )
 
 
-def render_section_treatment_summary(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/kontakta-oss",
-) -> str:
-    """Render a compact home-page treatments preview for clinic-healthcare.
-
-    Picks the first three services from the dossier (clinics use
-    the services array as their treatment catalogue), renders each
-    as a plain card with the treatment name and a short
-    plain-language summary, and ends with a "Boka tid"-CTA pointing
-    at the contact route. Visually calmer than the LSB
-    services-summary block (no hover-lift, softer borders) so it
-    sits well next to the credentials section a clinic home depends
-    on for trust.
-
-    Returns "" when the dossier carries no services so a generic
-    landing page does not emit an empty grid.
-    """
-    services = dossier.get("services") or []
-    if not services:
-        return ""
-    cards = "\n".join(
-        f'            <li key={_jsx_safe_string(svc["id"])} className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6">\n'
-        f'              <h3 className="text-lg font-semibold">{_jsx_safe_string(svc["label"])}</h3>\n'
-        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        "            </li>"
-        for svc in services[:3]
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <div className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Vård vi erbjuder</p>\n'
-        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Våra behandlingar</h2>\n'
-        "          </div>\n"
-        '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{cards}\n"
-        "          </ul>\n"
-        + _text_contact_cta(contact_path, "Boka tid")
-        + "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-_TREATMENT_LIST_TREATMENT_DEFAULT = "minimal-rows"
-
-
-def render_section_treatment_list(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/kontakta-oss",
-    variant_id: str | None = None,
-    blueprint: RenderBlueprint | None = None,
-) -> str:
-    """Render the full treatment list for the clinic /behandlingar route.
-
-    Section design-treatments (Phase 2): the section now resolves a
-    treatment id via ``_treatment_for_section`` and routes the same
-    services array through one of three private renderers:
-
-    * ``minimal-rows`` — the byte-identical default. Vertical list
-      of rounded-2xl border-cards with a quiet typographic header.
-      Mapped to ``clinic-calm`` so the calm clinic keeps the
-      pre-Phase-2 menu feel.
-    * ``split-cards`` — two-column grid of warmer cards where each
-      treatment card carries a soft accent-tinted left rail and
-      slightly bigger label typography. Mapped to ``warm-care``.
-    * ``numbered-stack`` — sequence with large monospaced
-      "01 / 02 / 03"-numerals and thin horizontal separators
-      between rows. Reads as a clinical sequence rather than a
-      menu of options. Mapped to ``modern-precision``.
-
-    Returns "" when no services are declared so the dispatcher
-    does not emit an empty list scaffold regardless of treatment.
-    """
-    services = dossier.get("services") or []
-    if not services:
-        return ""
-    treatment = _treatment_for_section(
-        variant_id,
-        "treatment-list",
-        default=_TREATMENT_LIST_TREATMENT_DEFAULT,
-        operator_pin=_operator_pin_for_section(dossier, "treatment-list"),
-        visual_direction_pick=(
-            blueprint.section_treatment_pick("treatment-list")
-            if blueprint is not None
-            else None
-        ),
-    )
-    if treatment == "split-cards":
-        return _render_treatment_list_split_cards(services, contact_path)
-    if treatment == "numbered-stack":
-        return _render_treatment_list_numbered_stack(services, contact_path)
-    return _render_treatment_list_minimal_rows(services, contact_path)
-
-
-def _treatment_list_header() -> str:
-    """Shared header markup for every treatment-list treatment.
-
-    Kept as a single source so the eyebrow + h1 + supporting copy
-    stay in lockstep across all three treatments. The Phase 3
-    operator-pin tier (ADR 0032) only changes which treatment
-    renderer dispatches; it does not (yet) override the header copy.
-    """
-    return (
-        '          <header className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Behandlingar</p>\n'
-        '            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight md:text-5xl">Det här hjälper vi dig med</h1>\n'
-        '            <p className="max-w-2xl text-base text-[color:var(--muted)] leading-relaxed">Beskrivningarna är skrivna i klarspråk. Är du osäker på vilken behandling som passar — ring eller skicka ett mejl så hjälper vi dig.</p>\n'
-        "          </header>\n"
-    )
-
-
-def _render_treatment_list_minimal_rows(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """Vertical list of rounded border-cards (the default treatment).
-
-    Kept byte-identical to the pre-Phase-2 output so existing
-    snapshots and any clinic build that did not pin a variant in
-    Phase 1 are not invalidated by introducing treatment dispatch.
-    """
-    items = "\n".join(
-        f'            <li key={_jsx_safe_string(svc["id"])} className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] p-8">\n'
-        f'              <h2 className="text-xl font-semibold tracking-tight md:text-2xl">{_jsx_safe_string(svc["label"])}</h2>\n'
-        f'              <p className="mt-3 text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        "            </li>"
-        for svc in services
-    )
-    return (
-        '      <section className="border-b border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _treatment_list_header()
-        + '          <ul className="flex flex-col gap-4">\n'
-        + f"{items}\n"
-        + "          </ul>\n"
-        + _text_contact_cta(contact_path, "Boka tid")
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-def _render_treatment_list_split_cards(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """Two-column grid of warm cards with an accent-tinted left rail.
-
-    Reads as a warmer brochure than ``minimal-rows`` — slightly
-    larger label typography, a soft accent-coloured left rail
-    (``border-l-4 border-[color:var(--accent)]``) and card-surface
-    background instead of a flat panel. Mapped to ``warm-care``.
-    """
-    items = "\n".join(
-        f'            <li key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-3 rounded-2xl border border-[color:var(--border)] border-l-4 border-l-[color:var(--accent)] bg-[color:var(--card)] p-8">\n'
-        f'              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
-        f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        "            </li>"
-        for svc in services
-    )
-    return (
-        '      <section className="border-b border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _treatment_list_header()
-        + '          <ul className="grid gap-6 md:grid-cols-2">\n'
-        + f"{items}\n"
-        + "          </ul>\n"
-        + _text_contact_cta(contact_path, "Boka tid")
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-def _render_treatment_list_numbered_stack(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """Sequence with monospaced numerals and thin horizontal separators.
-
-    Reads as a clinical sequence: a large mono "01 / 02 / 03"
-    numeral on the left, the treatment name and description on the
-    right, and a thin ``border-b`` separator between rows. No card
-    chrome — the eye runs straight down the numeral column. Mapped
-    to ``modern-precision``.
-    """
-    items = "\n".join(
-        (
-            f'            <li key={_jsx_safe_string(svc["id"])} className="grid gap-6 border-b border-[color:var(--border)] py-8 md:grid-cols-[6rem_1fr]">\n'
-            f'              <p className="font-mono text-3xl tracking-tight text-[color:var(--muted)] md:text-4xl">{_jsx_safe_string(f"{idx:02d}")}</p>\n'
-            "              <div className=\"flex flex-col gap-3\">\n"
-            f'                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
-            f'                <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-            "              </div>\n"
-            "            </li>"
-        )
-        for idx, svc in enumerate(services, start=1)
-    )
-    return (
-        '      <section className="border-b border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _treatment_list_header()
-        + '          <ul className="flex flex-col border-t border-[color:var(--border)]">\n'
-        + f"{items}\n"
-        + "          </ul>\n"
-        + _text_contact_cta(contact_path, "Boka tid")
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-def render_section_credentials(dossier: dict) -> str:
-    """Render a credentials / certifications row for clinic-healthcare.
-
-    Reads ``dossier.trustSignals`` (the same array LSB uses for
-    trust bullets) and renders it as a compact inline row of badge-
-    cards under a "Legitimerade och certifierade"-eyebrow. This is
-    what surfaces a clinic's regulated status (Sveriges Tand-
-    läkarförbund, Vårdgivarregistret, etc.) on the home and
-    treatments pages where a patient is deciding whether the
-    practitioner is real.
-
-    Returns "" when the dossier has no trust signals so the
-    dispatcher does not emit a hollow section.
-    """
-    trust_raw = dossier.get("trustSignals") or []
-    trust: list[str] = []
-    for item in trust_raw:
-        if isinstance(item, str) and item.strip():
-            trust.append(item.strip())
-        elif isinstance(item, dict):
-            label = item.get("label")
-            if isinstance(label, str) and label.strip():
-                trust.append(label.strip())
-    if not trust:
-        return ""
-    badges = "\n".join(
-        f'            <li key={_jsx_safe_string(label)} className="flex items-center gap-3 rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-5 py-2 text-sm font-medium">\n'
-        '              <Check className="size-4 text-[color:var(--primary)]" />\n'
-        f'              <span>{_jsx_safe_string(label)}</span>\n'
-        "            </li>"
-        for label in trust
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.7)]">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Legitimerade och certifierade</p>\n'
-        '          <ul className="flex flex-wrap gap-3">\n'
-        f"{badges}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
 _SECTION_RENDERERS.update(
     {
         "about-story-block": render_section_about_story_block,
         "team-block": render_section_team_block,
-        "treatment-summary": render_section_treatment_summary,
-        "treatment-list": render_section_treatment_list,
-        "credentials": render_section_credentials,
-    }
-)
-
-
-_EXPERTISE_AREAS_TREATMENT_DEFAULT = "numbered-2col"
-
-
-def render_section_expertise_areas(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/kontakta-oss",
-    variant_id: str | None = None,
-    blueprint: RenderBlueprint | None = None,
-) -> str:
-    """Render a structured expertise-area grid for professional-services home.
-
-    Section design-treatments (Phase 2): the section now resolves a
-    treatment id via ``_treatment_for_section`` and routes the same
-    services array through one of two private renderers:
-
-    * ``numbered-2col`` — the byte-identical default. 2-col grid with
-      numeric eyebrows (``01``..``06``) and a left-rail border on
-      each card. Calm, court-filing-style restraint. Mapped to
-      ``legal-classic`` and ``accounting-trust`` (default-keep).
-    * ``tag-cluster`` — pill cloud where each practice area is a
-      compact rounded pill with the label inside and the scope
-      revealed on the row directly below. Reads as an associative
-      "what we do"-cloud rather than a numbered index. Mapped to
-      ``consulting-modern``.
-
-    Returns "" when the dossier carries no services so the
-    dispatcher does not emit an empty grid. Caps at six entries
-    on the home; the full list belongs on the practice-grid
-    section that runs the /expertis route.
-    """
-    services = dossier.get("services") or []
-    if not services:
-        return ""
-    treatment = _treatment_for_section(
-        variant_id,
-        "expertise-areas",
-        default=_EXPERTISE_AREAS_TREATMENT_DEFAULT,
-        operator_pin=_operator_pin_for_section(dossier, "expertise-areas"),
-        visual_direction_pick=(
-            blueprint.section_treatment_pick("expertise-areas")
-            if blueprint is not None
-            else None
-        ),
-    )
-    if treatment == "tag-cluster":
-        return _render_expertise_areas_tag_cluster(services, contact_path)
-    return _render_expertise_areas_numbered_2col(services, contact_path)
-
-
-def _expertise_areas_header() -> str:
-    """Shared header markup for every expertise-areas treatment."""
-    return (
-        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
-        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Vår expertis</h2>\n'
-        "          </div>\n"
-    )
-
-
-def _render_expertise_areas_numbered_2col(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """2-col grid with numbered eyebrows and left-rail borders.
-
-    Kept byte-identical to the pre-Phase-2 output so existing
-    snapshots and any PS build that did not pin a variant in Phase 1
-    are not invalidated by introducing treatment dispatch.
-    """
-    cards = "\n".join(
-        f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-3 border-l border-[color:var(--border)] pl-6">\n'
-        f'              <span className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"{idx:02d}")}</span>\n'
-        f'              <h3 className="text-xl font-semibold tracking-tight">{_jsx_safe_string(svc["label"])}</h3>\n'
-        f'              <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        "            </article>"
-        for idx, svc in enumerate(services[:6], start=1)
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _expertise_areas_header()
-        + '          <div className="grid gap-10 md:grid-cols-2">\n'
-        + f"{cards}\n"
-        + "          </div>\n"
-        + _text_contact_cta(contact_path, "Boka introduktionssamtal")
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-def _render_expertise_areas_tag_cluster(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """Pill cloud where practice areas read as an associative tag cluster.
-
-    Each practice area renders as a compact rounded pill carrying
-    its label; the scope follows on a separate row beneath the
-    cluster as a single line of running text joined by middots.
-    The shape — pills + summary line — reads as "what we do" rather
-    than a numbered index, which suits the modern consulting tone.
-    Mapped to ``consulting-modern``.
-    """
-    pills = "\n".join(
-        f'              <li key={_jsx_safe_string(svc["id"])} className="rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-5 py-2 text-sm font-medium tracking-tight">{_jsx_safe_string(svc["label"])}</li>'
-        for svc in services[:6]
-    )
-    summary_line = " · ".join(
-        str(svc.get("summary", "")).strip()
-        for svc in services[:6]
-        if isinstance(svc.get("summary"), str) and svc.get("summary", "").strip()
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _expertise_areas_header()
-        + '          <ul className="flex flex-wrap gap-3">\n'
-        + f"{pills}\n"
-        + "          </ul>\n"
-        + f'          <p className="max-w-3xl text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(summary_line)}</p>\n'
-        + _text_contact_cta(contact_path, "Boka introduktionssamtal")
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-_PRACTICE_GRID_TREATMENT_DEFAULT = "dense-grid"
-
-
-def render_section_practice_grid(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/kontakta-oss",
-    variant_id: str | None = None,
-    blueprint: RenderBlueprint | None = None,
-) -> str:
-    """Render the full practice-area catalogue for professional-services /expertis.
-
-    Section design-treatments (Phase 2): the section now resolves a
-    treatment id via ``_treatment_for_section`` and routes the same
-    services array through one of three private renderers:
-
-    * ``dense-grid`` — the byte-identical default. 3-col compact
-      grid of small cards with formal restraint. Mapped to
-      ``consulting-modern`` so the modern consulting variant keeps
-      the pre-Phase-2 expertise menu.
-    * ``tabular`` — formal row listing (no card chrome) with thin
-      ``border-b`` separators between rows and a column header.
-      Reads as a court-filing index. Mapped to ``legal-classic``.
-    * ``grouped`` — 2-col feature columns with large numbered
-      eyebrows (``Område 01`` / ``Område 02``…) and richer
-      typography. Mapped to ``accounting-trust``.
-
-    Returns "" when no services are declared so the dispatcher
-    does not emit an empty grid scaffold regardless of treatment.
-    """
-    services = dossier.get("services") or []
-    if not services:
-        return ""
-    treatment = _treatment_for_section(
-        variant_id,
-        "practice-grid",
-        default=_PRACTICE_GRID_TREATMENT_DEFAULT,
-        operator_pin=_operator_pin_for_section(dossier, "practice-grid"),
-        visual_direction_pick=(
-            blueprint.section_treatment_pick("practice-grid")
-            if blueprint is not None
-            else None
-        ),
-    )
-    if treatment == "tabular":
-        return _render_practice_grid_tabular(services, contact_path)
-    if treatment == "grouped":
-        return _render_practice_grid_grouped(services, contact_path)
-    return _render_practice_grid_dense_grid(services, contact_path)
-
-
-def _practice_grid_header() -> str:
-    """Shared header markup for every practice-grid treatment.
-
-    Locks the eyebrow + h1 + supporting copy across all three
-    treatments. The Phase 3 operator-pin tier (ADR 0032) only
-    swaps the treatment renderer; copy overrides via dossier
-    directives are out of scope and left for a future iteration.
-    """
-    return (
-        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
-        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Praktikgrupper</h1>\n'
-        '            <p className="text-base text-[color:var(--muted)] leading-relaxed">Vår verksamhet är organiserad i specialiserade praktikgrupper. Välj det område som ligger närmast ert ärende — vi kopplar in den partner som har relevant precedent.</p>\n'
-        "          </header>\n"
-    )
-
-
-def _render_practice_grid_dense_grid(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """3-col compact card grid (the default treatment).
-
-    Kept byte-identical to the pre-Phase-2 output so existing
-    snapshots and any PS build that did not pin a variant in Phase 1
-    are not invalidated by introducing treatment dispatch.
-    """
-    cards = "\n".join(
-        f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] p-7">\n'
-        f'              <h2 className="text-lg font-semibold tracking-tight">{_jsx_safe_string(svc["label"])}</h2>\n'
-        f'              <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        + _text_contact_cta(
-            contact_path,
-            "Diskutera ärende",
-            indent="              ",
-            class_name="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline",
-            icon_size="size-3",
-        )
-        + "            </article>"
-        for svc in services
-    )
-    return (
-        '      <section className="border-b border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _practice_grid_header()
-        + '          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">\n'
-        + f"{cards}\n"
-        + "          </div>\n"
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-def _render_practice_grid_tabular(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """Formal row listing with thin separators (no card chrome).
-
-    Reads as a court-filing index: a header row labels the columns,
-    each practice area is a single row with a label / scope / link
-    layout and a thin ``border-b`` separator. No surface chrome —
-    the eye runs straight down the column. Mapped to
-    ``legal-classic`` so the classic law firm reads as a structured
-    filing index rather than a marketing brochure.
-    """
-    rows = "\n".join(
-        (
-            f'              <li key={_jsx_safe_string(svc["id"])} className="grid items-baseline gap-4 border-b border-[color:var(--border)] py-6 md:grid-cols-[14rem_1fr_auto] md:gap-8">\n'
-            f'                <h2 className="text-base font-semibold tracking-tight md:text-lg">{_jsx_safe_string(svc["label"])}</h2>\n'
-            f'                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-            + _text_contact_cta(
-                contact_path,
-                "Diskutera ärende",
-                indent="                ",
-                class_name="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline",
-                icon_size="size-3",
-            )
-            + "              </li>"
-        )
-        for svc in services
-    )
-    return (
-        '      <section className="border-b border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _practice_grid_header()
-        + '          <div className="flex flex-col">\n'
-        + '            <div className="grid gap-4 border-b border-[color:var(--border)] pb-3 text-xs font-mono uppercase tracking-widest text-[color:var(--muted)] md:grid-cols-[14rem_1fr_auto] md:gap-8">\n'
-        + "              <span>Praktikområde</span>\n"
-        + "              <span>Omfång</span>\n"
-        + '              <span className="hidden md:inline">Kontakt</span>\n'
-        + "            </div>\n"
-        + '            <ul className="flex flex-col">\n'
-        + f"{rows}\n"
-        + "            </ul>\n"
-        + "          </div>\n"
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-def _render_practice_grid_grouped(
-    services: list[dict],
-    contact_path: str | None,
-) -> str:
-    """2-col feature columns with numbered eyebrows.
-
-    Each practice area becomes a richer feature card with a large
-    monospace ``Område NN`` eyebrow, slightly bigger heading
-    typography and more vertical breathing room. Mapped to
-    ``accounting-trust`` so the audit / advisory variant reads as a
-    structured "this is how we organise our practice" rather than a
-    dense menu.
-    """
-    cards = "\n".join(
-        (
-            f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-8">\n'
-            f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--accent)]">{_jsx_safe_string(f"Område {idx:02d}")}</p>\n'
-            f'              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
-            f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-            + _text_contact_cta(
-                contact_path,
-                "Diskutera ärende",
-                indent="              ",
-                class_name="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline",
-                icon_size="size-3",
-            )
-            + "            </article>"
-        )
-        for idx, svc in enumerate(services, start=1)
-    )
-    return (
-        '      <section className="border-b border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        + _practice_grid_header()
-        + '          <div className="grid gap-6 md:grid-cols-2">\n'
-        + f"{cards}\n"
-        + "          </div>\n"
-        + "        </div>\n"
-        + "      </section>\n"
-        + "\n"
-    )
-
-
-def render_section_industries_served(dossier: dict) -> str:
-    """Render an industries-served row for professional-services scaffolds.
-
-    Reads ``location.serviceAreas`` (which for a professional-
-    services firm is the natural place to declare served markets
-    or industries — a multi-office advokatbyrå already uses this
-    field for its office cities or covered regions, an audit firm
-    might list industries served) and emits a compact pill row
-    under a "Branscher och marknader vi arbetar inom" eyebrow.
-    Visually identifiable as PS — uppercase eyebrow, monospace
-    pill labels, no icons — and structurally separate from the
-    LSB service-area block which renders the same field as a
-    travel-distance trust message.
-
-    Returns "" when the field is empty so the dispatcher does
-    not emit an empty pill row.
-    """
-    location = dossier.get("location") or {}
-    areas = location.get("serviceAreas") or []
-    cleaned: list[str] = [item.strip() for item in areas if isinstance(item, str) and item.strip()]
-    if not cleaned:
-        return ""
-    pills = "\n".join(
-        f'            <li key={_jsx_safe_string(area)} className="rounded-sm border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2 text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(area)}</li>'
-        for area in cleaned
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)] bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/10">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.7)]">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Branscher och marknader vi arbetar inom</p>\n'
-        '          <ul className="flex flex-wrap gap-2">\n'
-        f"{pills}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def render_section_partners_grid(dossier: dict) -> str:
-    """Render a formal partners grid for professional-services scaffolds.
-
-    Reads ``company.team`` and presents each named member as a
-    formal partner card with their role on a separate eyebrow
-    line — the visual convention of an advokatbyrå or
-    revisionsbyrå roster. Bigger cards than the clinic
-    ``team-block``, more typographic restraint than the LSB
-    team renderer; the layout is designed so that bar
-    admissions, audit registrations or "delägare sedan ÅÅÅÅ"
-    dates read as the primary attribute.
-
-    Returns "" when no team is declared so the dispatcher does
-    not emit a hollow grid.
-    """
-    company = dossier.get("company") or {}
-    team = company.get("team") or []
-    members: list[dict] = [m for m in team if isinstance(m, dict) and m.get("name") and m.get("role")]
-    if not members:
-        return ""
-    cards = "\n".join(
-        f'            <article key={_jsx_safe_string(member["name"])} className="flex flex-col gap-2 border-t border-[color:var(--border)] pt-6">\n'
-        f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
-        f'              <h3 className="text-2xl font-semibold tracking-tight">{_jsx_safe_string(member["name"])}</h3>\n'
-        "            </article>"
-        for member in members
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Partners och rådgivare</p>\n'
-        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Vårt team</h2>\n'
-        "          </header>\n"
-        '          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{cards}\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def render_section_insights_list(dossier: dict) -> str:  # noqa: ARG001 — dossier reserved for future insights schema
-    """Render an insights / publications row for professional-services.
-
-    The current project-input schema does not carry a structured
-    ``insights`` collection, so this renderer is intentionally a
-    no-op — it returns ``""`` until a future schema extension lets
-    a dossier declare publications. Registering it now means PS
-    sections.json can list ``insights-list`` as an optional
-    section without crashing the dispatcher; once the schema
-    grows the renderer can be filled in without touching the
-    contract.
-    """
-    return ""
-
-
-_SECTION_RENDERERS.update(
-    {
-        "expertise-areas": render_section_expertise_areas,
-        "practice-grid": render_section_practice_grid,
-        "industries-served": render_section_industries_served,
-        "partners-grid": render_section_partners_grid,
-        "insights-list": render_section_insights_list,
-    }
-)
-
-
-_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT = "editorial-stack"
-
-
-def render_section_selected_work_preview(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/kontakta-oss",  # noqa: ARG001 — included for kwarg-call symmetry; preview uses /arbeten as the explicit follow link
-    variant_id: str | None = None,
-    blueprint: RenderBlueprint | None = None,
-) -> str:
-    """Render the home-page Selected Work preview for agency-studio.
-
-    Section design-treatments (Phase 1 pilot + Phase 2 expansion):
-    the section resolves a treatment id via
-    ``_treatment_for_section`` and routes the same dossier data
-    through one of three private renderers:
-
-    * ``editorial-stack`` — the byte-identical default that preserves
-      pre-pilot snapshots. Vertical 2-col grid, every card sits on
-      the same baseline with a thin top border and a "Case 01"
-      eyebrow.
-    * ``asymmetric-grid`` — offset 2-col grid where every other card
-      is vertically translated by ``md:translate-y-12`` and rendered
-      as an enclosed surface card with a "Studio nº 01" eyebrow.
-      Same services, deliberately broken rhythm.
-    * ``marquee-row`` — horizontal scroll-snap rail with six tight
-      cards, "Studio reel"-eyebrow and a gradient fade hint on the
-      right edge. No auto-animation in Phase 2; reduced-motion users
-      get the same browseable rail. Mapped to ``bold-electric``.
-
-    The variant-to-treatment mapping lives in
-    ``_SECTION_TREATMENTS_BY_VARIANT`` so the section renderer itself
-    does not have to know about variants — only about treatments.
-
-    Returns "" when no work is declared so the dispatcher does not
-    emit an empty grid regardless of treatment.
-    """
-    services = dossier.get("services") or []
-    if not services:
-        return ""
-    treatment = _treatment_for_section(
-        variant_id,
-        "selected-work-preview",
-        default=_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT,
-        operator_pin=_operator_pin_for_section(
-            dossier, "selected-work-preview"
-        ),
-        visual_direction_pick=(
-            blueprint.section_treatment_pick("selected-work-preview")
-            if blueprint is not None
-            else None
-        ),
-    )
-    if treatment == "asymmetric-grid":
-        return _render_selected_work_preview_asymmetric_grid(services)
-    if treatment == "marquee-row":
-        return _render_selected_work_preview_marquee_row(services)
-    return _render_selected_work_preview_editorial_stack(services)
-
-
-def _render_selected_work_preview_editorial_stack(services: list[dict]) -> str:
-    """Vertical 2-col grid where every card sits on a shared baseline.
-
-    The default treatment for ``selected-work-preview``. Kept
-    byte-identical to the pre-pilot output of the section renderer
-    so existing snapshots (editorial-warm, bold-electric) are not
-    invalidated by the introduction of treatment dispatch.
-    """
-    cards = "\n".join(
-        f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 border-t border-[color:var(--border)] pt-8">\n'
-        f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Case {idx:02d}")}</p>\n'
-        f'              <h3 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h3>\n'
-        f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        '              <a href={"/arbeten"} className="mt-2 inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se case<ArrowRight className="size-4" /></a>\n'
-        "            </article>"
-        for idx, svc in enumerate(services[:4], start=1)
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-12 py-[var(--section-spacing)]">\n'
-        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Selected work</p>\n'
-        '            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Senaste arbeten</h2>\n'
-        "          </div>\n"
-        '          <div className="grid gap-12 md:grid-cols-2">\n'
-        f"{cards}\n"
-        "          </div>\n"
-        '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def _render_selected_work_preview_asymmetric_grid(services: list[dict]) -> str:
-    """Offset 2-col grid where every other card is vertically translated.
-
-    Visually breaks the editorial baseline by pushing every odd-
-    indexed card down with ``md:translate-y-12`` and rendering each
-    card as a self-contained surface (``bg-[color:var(--card)]`` +
-    ``rounded-[var(--radius-lg)]`` + generous padding) instead of
-    the flat top-border card used in ``editorial-stack``. The
-    eyebrow is reframed as "Studio nº NN" so the visual identity
-    reads as a curated studio index rather than a project log.
-
-    Same data as ``editorial-stack``; only the spatial rhythm and
-    surface treatment differ.
-    """
-    cards = "\n".join(
-        (
-            f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--card)] p-8 md:p-10'
-            + (' md:translate-y-12' if idx % 2 == 0 else '')
-            + '">\n'
-            f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Studio nº {idx:02d}")}</p>\n'
-            f'              <h3 className="text-2xl font-semibold tracking-tight md:text-4xl">{_jsx_safe_string(svc["label"])}</h3>\n'
-            f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-            '              <a href={"/arbeten"} className="mt-auto inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se case<ArrowRight className="size-4" /></a>\n'
-            "            </article>"
-        )
-        for idx, svc in enumerate(services[:4], start=1)
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-16 py-[var(--section-spacing)]">\n'
-        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Selected work</p>\n'
-        '            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Senaste arbeten</h2>\n'
-        "          </div>\n"
-        '          <div className="grid gap-x-10 gap-y-12 md:grid-cols-2 md:gap-x-16 md:pb-16">\n'
-        f"{cards}\n"
-        "          </div>\n"
-        '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def _render_selected_work_preview_marquee_row(services: list[dict]) -> str:
-    """Horizontal scroll-snap rail with up to six tight cards.
-
-    Reads as a "studio reel" — six cards (vs four in editorial-stack
-    and asymmetric-grid) packed into a horizontal scroll container
-    with ``snap-x snap-mandatory`` so each card snaps into view.
-    Cards have a fixed minimum width so they do not collapse on
-    narrow viewports, and the right edge has a gradient mask
-    suggesting "more to scroll". The eyebrow becomes "Studio reel"
-    to telegraph the motion-led identity bold-electric leans into.
-
-    Phase 2 deliberately does NOT auto-animate the rail. Reduced-
-    motion users get the same browseable scroll-snap experience as
-    everyone else; only the user's own scroll input drives the row.
-    Phase 3 may add a ``prefers-reduced-motion: no-preference``-
-    gated CSS animation if operator feedback wants it.
-    """
-    cards = "\n".join(
-        (
-            f'              <article key={_jsx_safe_string(svc["id"])} className="flex w-[18rem] shrink-0 snap-start flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--card)] p-6 md:w-[22rem] md:p-8">\n'
-            f'                <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Studio reel · {idx:02d}")}</p>\n'
-            f'                <h3 className="text-xl font-semibold tracking-tight md:text-2xl">{_jsx_safe_string(svc["label"])}</h3>\n'
-            f'                <p className="text-sm text-[color:var(--muted)] leading-relaxed line-clamp-4">{_jsx_safe_string(svc["summary"])}</p>\n'
-            '                <a href={"/arbeten"} className="mt-auto inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se case<ArrowRight className="size-4" /></a>\n'
-            "              </article>"
-        )
-        for idx, svc in enumerate(services[:6], start=1)
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-12 py-[var(--section-spacing)]">\n'
-        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Studio reel</p>\n'
-        '            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Senaste arbeten</h2>\n'
-        "          </div>\n"
-        '          <div className="relative -mr-[max(0px,calc((100vw-var(--container-width))/2))]">\n'
-        '            <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-6 pr-[max(2rem,calc((100vw-var(--container-width))/2))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">\n'
-        f"{cards}\n"
-        "            </div>\n"
-        '            <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[color:var(--background)] to-transparent" />\n'
-        "          </div>\n"
-        '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def render_section_selected_work_grid(
-    dossier: dict,
-    *,
-    contact_path: str | None = "/kontakta-oss",
-) -> str:
-    """Render the full Selected Work catalogue for agency-studio /arbeten.
-
-    Iterates the entire ``dossier.services`` array as case studies
-    and emits a single-column editorial layout — large project
-    label, generous reading width on the summary, and a quiet
-    "Diskutera projekt"-link at the bottom of each entry pointing
-    at the contact route. Distinct from the LSB ``service-list``
-    (vertical, icon-led, USP bullets), the clinic ``treatment-list``
-    (clinical menu) and the PS ``practice-grid`` (3-col counsel
-    cards) — agency work pages read as a magazine spread, not a
-    services catalogue.
-
-    Returns "" when no work is declared so the dispatcher does
-    not emit an empty list scaffold.
-    """
-    services = dossier.get("services") or []
-    if not services:
-        return ""
-    items = "\n".join(
-        f'            <li key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-5 border-t border-[color:var(--border)] py-12 first:border-t-0 first:pt-0 last:pb-0">\n'
-        f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Case {idx:02d}")}</p>\n'
-        f'              <h2 className="max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(svc["label"])}</h2>\n'
-        f'              <p className="max-w-3xl text-base text-[color:var(--muted)] leading-relaxed md:text-lg">{_jsx_safe_string(svc["summary"])}</p>\n'
-        + _text_contact_cta(
-            contact_path,
-            "Diskutera projekt",
-            indent="              ",
-        )
-        + "            </li>"
-        for idx, svc in enumerate(services, start=1)
-    )
-    return (
-        '      <section className="border-b border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-12 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Arkivet</p>\n'
-        '            <h1 className="text-4xl font-semibold tracking-tight md:text-6xl">Selected work</h1>\n'
-        "          </header>\n"
-        '          <ul className="flex flex-col">\n'
-        f"{items}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def render_section_capabilities_row(dossier: dict) -> str:
-    """Render a horizontal capabilities row for agency-studio.
-
-    Reads ``dossier.tone.secondary`` (the studio's secondary tone
-    descriptors are the most natural place to lift discipline
-    keywords like 'Brand identity', 'Motion', 'Web' until the
-    project-input schema grows a structured capabilities array)
-    and renders them as a single horizontal row of monospace
-    pills under a "What we make"-eyebrow. Distinct from the LSB
-    services-summary block (cards) and the PS industries-served
-    block (uppercase pills under a different framing) — agency
-    capabilities read as a one-liner taxonomy, not a card grid.
-
-    Returns "" when no tone descriptors are declared so the
-    dispatcher does not emit a hollow row.
-    """
-    tone = dossier.get("tone") or {}
-    secondary = tone.get("secondary") or []
-    cleaned: list[str] = [item.strip() for item in secondary if isinstance(item, str) and item.strip()]
-    if not cleaned:
-        return ""
-    pills = "\n".join(
-        f'            <li key={_jsx_safe_string(label)} className="text-sm font-mono uppercase tracking-widest">{_jsx_safe_string(label)}</li>'
-        for label in cleaned
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.6)]">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">What we make</p>\n'
-        '          <ul className="flex flex-wrap gap-x-10 gap-y-3">\n'
-        f"{pills}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def render_section_manifesto_block(dossier: dict) -> str:
-    """Render a manifesto statement for agency-studio.
-
-    Lifts ``dossier.company.tagline`` and reads it as the studio's
-    point of view, presented as a single full-width oversized
-    typographic statement. No icons, no decoration — the section
-    is the studio's voice. Distinct from the LSB hero (CTA-led)
-    and the PS about story (multi-paragraph) — a manifesto is
-    one sentence done loud.
-
-    Returns "" when the dossier carries no tagline so the
-    dispatcher does not emit a hollow section.
-    """
-    company = dossier.get("company") or {}
-    tagline = company.get("tagline")
-    if not isinstance(tagline, str) or not tagline.strip():
-        return ""
-    return (
-        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--background)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*1.2)]">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Manifest</p>\n'
-        f'          <p className="max-w-4xl text-3xl font-semibold leading-tight tracking-tight md:text-5xl lg:text-6xl">{_jsx_safe_string(tagline.strip())}</p>\n'
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def render_section_process_steps(dossier: dict) -> str:  # noqa: ARG001 — dossier reserved for studio-supplied process descriptions
-    """Render a four-step studio-process block for agency-studio.
-
-    Renders a fixed four-step process (Discovery → Concept →
-    Production → Launch) as a numbered horizontal flow. Each step
-    has a Roman-style numeric label, a step name and a short
-    descriptor pulled from the studio's voice manual rather than
-    the dossier — the names are the actual stages a producer
-    would recognise from any well-run studio engagement, so the
-    section can render even when the dossier carries no
-    structured process data.
-
-    Once project-input.schema.json grows a structured
-    ``process[]`` array the renderer can be extended to read it;
-    until then the fixed step names are a deliberate, non-mock
-    studio convention.
-    """
-    steps = (
-        ("01", "Discovery", "Vi lyssnar, läser och kartlägger så att vi vet vad arbetet faktiskt ska göra."),
-        ("02", "Concept", "Skriver, skissar och visar riktning. Vi visar val, inte färdiga lösningar."),
-        ("03", "Production", "Designar, kodar, animerar — det praktiska arbetet där studion bygger sakerna."),
-        ("04", "Launch", "Vi sjösätter med er och stannar kvar för att se hur arbetet beter sig i världen."),
-    )
-    cells = "\n".join(
-        f'            <li key={_jsx_safe_string(label)} className="flex flex-col gap-3 border-l border-[color:var(--border)] pl-6">\n'
-        f'              <span className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(idx)}</span>\n'
-        f'              <h3 className="text-xl font-semibold tracking-tight">{_jsx_safe_string(label)}</h3>\n'
-        f'              <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(blurb)}</p>\n'
-        "            </li>"
-        for idx, label, blurb in steps
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Process</p>\n'
-        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Så jobbar vi</h2>\n'
-        "          </header>\n"
-        '          <ol className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">\n'
-        f"{cells}\n"
-        "          </ol>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-def render_section_client_roster(dossier: dict) -> str:
-    """Render a text-only client roster for agency-studio.
-
-    Reads ``dossier.trustSignals`` (the same field LSB uses for
-    trust bullets) and renders each entry as a discreet pill —
-    no logos, just names — under a "Selected clients"-eyebrow.
-    Studios usually decline to publish actual logos for
-    procurement reasons; a text roster captures the recognition
-    signal without the image-rights complication. Visually
-    distinct from the clinic credentials block (badges) and the
-    PS credentials block (registrations) — agency rosters read as
-    a casually arranged list, not a regulated certification panel.
-
-    Returns "" when no entries are declared so the dispatcher
-    does not emit a hollow section.
-    """
-    trust_raw = dossier.get("trustSignals") or []
-    entries: list[str] = []
-    for item in trust_raw:
-        if isinstance(item, str) and item.strip():
-            entries.append(item.strip())
-        elif isinstance(item, dict):
-            label = item.get("label")
-            if isinstance(label, str) and label.strip():
-                entries.append(label.strip())
-    if not entries:
-        return ""
-    pills = "\n".join(
-        f'            <li key={_jsx_safe_string(label)} className="text-sm text-[color:var(--muted)]">{_jsx_safe_string(label)}</li>'
-        for label in entries
-    )
-    return (
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.7)]">\n'
-        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Selected clients</p>\n'
-        '          <ul className="grid gap-x-10 gap-y-2 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{pills}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
-    )
-
-
-_SECTION_RENDERERS.update(
-    {
-        "selected-work-preview": render_section_selected_work_preview,
-        "selected-work-grid": render_section_selected_work_grid,
-        "capabilities-row": render_section_capabilities_row,
-        "manifesto-block": render_section_manifesto_block,
-        "process-steps": render_section_process_steps,
-        "client-roster": render_section_client_roster,
     }
 )
 
 
 _CLINIC_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "clinic-healthcare"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "clinic-healthcare"
 )
 
 _PROFESSIONAL_SERVICES_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "professional-services"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "professional-services"
 )
 
 _AGENCY_STUDIO_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "agency-studio"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "agency-studio"
 )
 
 
@@ -5884,8 +4183,6 @@ def _url_quote(value: str) -> str:
     return quote(value, safe="")
 
 
-
-
 def _route_ids_with_style_overrides(dossier: dict) -> set[str]:
     """Route ids named by ``directives.sectionStyleOverrides``.
 
@@ -5895,19 +4192,13 @@ def _route_ids_with_style_overrides(dossier: dict) -> set[str]:
     upstream, this guards hand-edited Project Inputs.
     """
     directives = dossier.get("directives")
-    overrides = (
-        directives.get("sectionStyleOverrides")
-        if isinstance(directives, dict)
-        else None
-    )
+    overrides = directives.get("sectionStyleOverrides") if isinstance(directives, dict) else None
     if not isinstance(overrides, list):
         return set()
     return {
         entry["routeId"]
         for entry in overrides
-        if isinstance(entry, dict)
-        and isinstance(entry.get("routeId"), str)
-        and entry["routeId"]
+        if isinstance(entry, dict) and isinstance(entry.get("routeId"), str) and entry["routeId"]
     }
 
 
@@ -5995,9 +4286,7 @@ def write_pages(
         elif route_id == "products":
             content = render_products(render_dossier, contact_path=contact_target)
         elif route_id == "menu":
-            content = render_menu(
-                render_dossier, contact_path=contact_target, blueprint=blueprint
-            )
+            content = render_menu(render_dossier, contact_path=contact_target, blueprint=blueprint)
         elif route_id == "booking":
             content = render_booking(
                 render_dossier, contact_path=contact_target, blueprint=blueprint

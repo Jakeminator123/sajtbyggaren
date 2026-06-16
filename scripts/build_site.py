@@ -65,6 +65,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 _subprocess_exports = importlib.import_module("packages.generation.build.subprocesses")
+_io_helpers_exports = importlib.import_module("packages.generation.build.io_helpers")
 _renderer_exports = importlib.import_module("packages.generation.build.renderers")
 _static_asset_exports = importlib.import_module("packages.generation.build.static_assets")
 _dispatcher_exports = importlib.import_module("packages.generation.build.dispatcher")
@@ -76,6 +77,18 @@ _npm_step_result = _subprocess_exports._npm_step_result
 _sanitized_npm_env = _subprocess_exports._sanitized_npm_env
 run_npm = _subprocess_exports.run_npm
 subprocess = _subprocess_exports.subprocess
+
+# IO helpers (behavior-preserving extraction): JSON read/write helpers and the
+# env-secret write guard now live in ``packages.generation.build.io_helpers``.
+# They are re-exported here so existing imports and monkeypatches against the
+# ``scripts.build_site`` facade keep resolving. Path/time helpers stay local
+# below because they depend on this facade's ``REPO_ROOT``/clock semantics.
+_FORBIDDEN_ENV_PATTERN = _io_helpers_exports._FORBIDDEN_ENV_PATTERN
+_ALLOWED_ENV_NAMES = _io_helpers_exports._ALLOWED_ENV_NAMES
+load_json = _io_helpers_exports.load_json
+assert_not_env_secret = _io_helpers_exports.assert_not_env_secret
+write = _io_helpers_exports.write
+write_json = _io_helpers_exports.write_json
 
 # Eager re-exports of the most commonly imported names — kept so IDE/static
 # analysis can see them. Everything else (including the 30+ section renderers
@@ -142,7 +155,7 @@ render_route_generic = _dispatcher_exports.render_route_generic
 # ``from scripts.build_site import variant_css``, and the renderers/
 # static-assets lazy shim resolves ``getattr(build_site, "_normalise_hex_color")``
 # / ``"_normalize_tone_key"``. ``patch_globals_css``/``patch_package_json`` stay
-# defined locally (they use write/load_json, which move in the io-helpers slice).
+# defined locally (they use write/load_json from the io-helpers module).
 _tokens_exports = importlib.import_module("packages.generation.build.tokens")
 _HEX_COLOR_RE = _tokens_exports._HEX_COLOR_RE
 _TONE_COLOR_TOKENS = _tokens_exports._TONE_COLOR_TOKENS
@@ -210,11 +223,11 @@ _public_product_asset_stem = _assets_exports._public_product_asset_stem
 # existing spelling keeps resolving: build(), build_targeted_version(),
 # build_plan_artefakts(), write_phase1/2 and _detect_followup_applied_visible_effect
 # call them as bare names, and tests do ``from scripts.build_site import
-# load_prompt_input_meta``. The readers that need io-helpers (``load_json``/
-# ``_to_repo_relative``, which move in a later io-helpers slice) do a lazy
-# ``from scripts.build_site import ...`` inside their bodies, so this eager import
-# stays cycle-free. ``_prompt_meta_unapplied_followup_intents`` stays defined
-# locally below (separate region near write_build_result).
+# load_prompt_input_meta``. The reader imports ``load_json`` from the
+# io-helpers module and keeps a lazy ``from scripts.build_site import
+# _to_repo_relative`` only for the repo-relative facade helper, so this eager
+# import stays cycle-free. ``_prompt_meta_unapplied_followup_intents`` stays
+# defined locally below (separate region near write_build_result).
 _prompt_meta_exports = importlib.import_module("packages.generation.build.prompt_meta")
 _VERSIONED_PROMPT_INPUT_RE = _prompt_meta_exports._VERSIONED_PROMPT_INPUT_RE
 _CURRENT_PROMPT_INPUT_RE = _prompt_meta_exports._CURRENT_PROMPT_INPUT_RE
@@ -283,6 +296,13 @@ _nav_items_from_scaffold = _render_helpers_exports._nav_items_from_scaffold
 _pick_contact_route = _render_helpers_exports._pick_contact_route
 _pick_listing_route = _render_helpers_exports._pick_listing_route
 _collect_icons_for_pages = _render_helpers_exports._collect_icons_for_pages
+# JSX-formatting + contact-CTA helpers (megafiles-plan Del 1 slice 5): their
+# source of truth moved to render_helpers; re-export here so the renderers' lazy
+# getattr shim and ``from scripts.build_site import _route_href`` keep resolving.
+_jsx_safe_string = _render_helpers_exports._jsx_safe_string
+_validated_site_route_path = _render_helpers_exports._validated_site_route_path
+_route_href = _render_helpers_exports._route_href
+_contact_href = _render_helpers_exports._contact_href
 # constants (parity with the tokens block; safe if anything reaches them)
 SERVICE_ICONS = _render_helpers_exports.SERVICE_ICONS
 DEFAULT_SERVICE_ICON = _render_helpers_exports.DEFAULT_SERVICE_ICON
@@ -332,10 +352,6 @@ DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"
 
-# Files the builder must NEVER write under any siteId. Case-insensitive.
-# `.env.example` is allowed (canonical placeholder).
-_FORBIDDEN_ENV_PATTERN = re.compile(r"^\.env(\..+)?$", flags=re.IGNORECASE)
-_ALLOWED_ENV_NAMES = {".env.example"}
 _API_ROUTE_RE = re.compile(r"(/api/[A-Za-z0-9/_-]+)")
 
 
@@ -361,36 +377,6 @@ def make_run_id(site_id: str) -> str:
     millis = f"{now.microsecond // 1000:03d}"
     short = uuid.uuid4().hex[:8]
     return f"{stamp}.{millis}Z-{short}-{site_id}"
-
-
-def load_json(path: Path) -> dict:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def assert_not_env_secret(path: Path) -> None:
-    """Refuse to touch real .env files (case-insensitive). .env.example is OK."""
-    name = path.name
-    if name in _ALLOWED_ENV_NAMES:
-        return
-    if _FORBIDDEN_ENV_PATTERN.match(name):
-        raise AssertionError(
-            f"Builder must not write secret env files (attempted: {path}). "
-            "Hard Dossiers handle their own env contracts via env-contract.json."
-        )
-
-
-def write(path: Path, contents: str) -> None:
-    """Write text to disk through the central guard. Use for ALL file writes.
-
-    This is the single chokepoint that enforces the env-secret block.
-    Helpers that previously called ``Path.write_text`` directly must go via
-    this function instead so the guard cannot be bypassed.
-    """
-    assert_not_env_secret(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as f:
-        f.write(contents)
 
 
 def _to_repo_relative(path: Path) -> str:
@@ -501,28 +487,6 @@ def _member_initials(full_name: str) -> str:
     return first + parts[-1][:1]
 
 
-def _jsx_safe_string(text: str) -> str:
-    """Wrap user-supplied text as a safe JSX expression.
-
-    Returns the string in the form ``{"<json-encoded>"}``. Use as a drop-in
-    replacement for raw f-string interpolation in JSX text content OR as the
-    full attribute value (the part after ``=``):
-
-        # Text content
-        f"<h1>{_jsx_safe_string(name)}</h1>"
-
-        # Attribute value
-        f"<a href={_jsx_safe_string('tel:' + phone)}>"
-
-    Routing the value through ``json.dumps`` ensures every JSX-special
-    character (``<``, ``>``, ``{``, ``}``, ``&``, ``"``, ``\\``) becomes
-    valid JS string-literal content. The earlier raw-interpolation approach
-    let a customer name with ``<`` or ``{`` produce invalid TSX that
-    ``next build`` would reject mid-pipeline.
-    """
-    return "{" + json.dumps(text, ensure_ascii=False) + "}"
-
-
 def _js_string_literal(text: str) -> str:
     """Return user-supplied text as a JS string literal (with surrounding
     double quotes already included).
@@ -542,72 +506,6 @@ def _js_string_literal(text: str) -> str:
     cannot contain raw.
     """
     return json.dumps(text, ensure_ascii=False)
-
-
-def _validated_site_route_path(route_path: str) -> str:
-    """Return a scaffold route path after fail-fast canonical validation."""
-    if not isinstance(route_path, str) or not route_path.startswith("/"):
-        raise SystemExit(
-            "Builder failed: scaffold route path must be an absolute "
-            f"site path starting with '/' (got {route_path!r})."
-        )
-    if route_path.startswith("//"):
-        raise SystemExit(
-            "Builder failed: scaffold route path must be a root-relative "
-            f"site path, not a protocol-relative URL (got {route_path!r})."
-        )
-    if "\\" in route_path or "?" in route_path or "#" in route_path:
-        raise SystemExit(
-            "Builder failed: scaffold route path must be a canonical site "
-            f"path without backslashes, query strings or fragments (got {route_path!r})."
-        )
-    if route_path != "/":
-        segments = route_path.split("/")[1:]
-        if any(segment in {"", ".", ".."} for segment in segments):
-            raise SystemExit(
-                "Builder failed: scaffold route path must not contain empty, "
-                f"'.' or '..' path segments (got {route_path!r})."
-            )
-    return route_path
-
-
-def _route_href(route_path: str) -> str:
-    """Return a scaffold route path as a safe JSX href attribute value."""
-    route_path = _validated_site_route_path(route_path)
-    return _jsx_safe_string(route_path)
-
-
-def _contact_href(contact_target: str | None) -> str | None:
-    """Return a JSX-safe href for a contact CTA, or ``None`` to omit the anchor.
-
-    The single contact-target seam for Route/Nav Mutation V1 Slice B (ADR 0060).
-    ``write_pages`` resolves ONE contact target and threads it to every renderer:
-
-    - a scaffold route path (``"/kontakt"``, ``"/kontakta-oss"``, ...) when the
-      contact page exists -> validated as a canonical site path via
-      ``_route_href`` (leading ``/``, no traversal), byte-identical to before;
-    - a ``mailto:``/``tel:`` action when the contact page was removed but the
-      business has a real email/phone -> passed through (JSX-safe) so the CTA
-      still converts without linking to a dead ``/kontakt`` route;
-    - ``None`` when the contact page was removed and no real channel exists ->
-      the caller omits the anchor honestly (never a dangling internal link).
-
-    Unlike ``_route_href`` (which rejects anything without a leading ``/`` so the
-    nav cannot emit a protocol href), this helper lets the ``mailto:``/``tel:``
-    fallback through. Any other shape returns ``None`` (defensive: never emit a
-    non-route, non-protocol href).
-    """
-    if not contact_target:
-        return None
-    if contact_target.startswith("/"):
-        return _route_href(contact_target)
-    if contact_target.startswith(("mailto:", "tel:")):
-        return _jsx_safe_string(contact_target)
-    return None
-
-
-def write_json(path: Path, data: Any) -> None:
-    write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
 # ---------------------------------------------------------------------------

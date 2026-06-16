@@ -2,7 +2,7 @@
 status: active
 owner: governance
 truth_level: summary
-last_verified_commit: f56ac30
+last_verified_commit: 5e29a74d
 ---
 
 # Glossary
@@ -66,7 +66,7 @@ ska uppfinnas:
 | `Scaffold Registry` | Centralt index över giltiga `Scaffold`-id:n. Sanningskälla i `scaffold-contract.v1.json:primaryScaffoldRegistry`. |
 | `Selection Profile` | Per-`Scaffold`-fil med embedding-text, semanticSignals, negativeSignals, llmClassificationHints. Det är **denna** som styr `Scaffold Selector`, inte ordmatchning. |
 | `Quality Contract` | Per-`Scaffold`-fil med scorecard-vikter, must-pass och avoid. Härleder från `page-quality-traits` men kan justera per `Scaffold`. |
-| `Project Input` | Strukturerad tolkning av init-promptens kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: committade exempel ligger i `examples/<siteId>.project-input.json`; **runtime/följdprompt-versioner** (Viewser `/api/prompt`) skrivs som immutabla snapshots i `data/prompt-inputs/<siteId>.vN.project-input.json`. Alias: `Deep Brief`. **Är inte en Dossier.** |
+| `Project Input` | Strukturerad tolkning av init-promptens kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: committade exempel ligger i `examples/<siteId>.project-input.json`; **runtime/följdprompt-versioner** (Viewser `/api/prompt`) skrivs som immutabla snapshots i `data/prompt-inputs/<siteId>.vN.project-input.json`. Alias: `Deep Brief`. **Är inte en Dossier.** Varning: CLI-flaggan `--dossier` i `scripts/build_site.py` (och kodvariabeln `dossier`) pekar på en `Project Input`-fil — inte på en `Dossier`. Det är ett legacy-namn; blanda inte ihop det med capability-`Dossier` nedan. |
 | `Dossier` | Återanvändbar capability/legokloss som kan kopplas på en `Route`/section/slot. Klass: `soft` eller `hard`. Default-kompatibel med alla `Scaffolds`. |
 | `Dossier Class` | En av `soft` (frontend/content utan secrets) eller `hard` (kräver env/backend/auth/betalning/extern API). ADR 0012 tog bort `hybrid` - en Dossier som behöver mock i designläge är `hard` med `mockMode`-konfiguration. |
 | `Soft Dossier` | Återanvändbar frontend/content capability. Exempel: `pacman-game`, `mouse-reactive-background`, `pricing-calculator`. |
@@ -119,6 +119,37 @@ ska uppfinnas:
 | `WebContainer` | Browser-baserad Node.js-runtime (StackBlitz-tekniken). Underliggande för `StackBlitzRuntime`. Inte en produktterm utanför det paketet. |
 | `Preview Session` | Aktiv session från en `Preview Runtime`: id, url, kind, createdAt. Returneras av `PreviewRuntime.start()`. |
 | `Preview File` | En fil i den filuppsättning som monteras i `Preview Runtime`: path + content. |
+
+## Följdprompt-loopen
+
+Init-bygget ovan skapar version 1. Allt därefter är **följdprompt-loopen**: en
+ändringsprompt i chatten blir antingen en ny version eller ett ärligt
+icke-resultat. Init går Golden Path direkt; en följdprompt går genom
+OpenClaw-dirigenten, där en samtalsgrind avgör om något alls ska byggas. Samma
+chattruta speglar därför två helt olika utfall.
+
+Håll isär tre ord som ständigt blandas ihop: **action** är operatörens vardagsord
+för en ändringstyp, `editKind` är det kanoniska routerfältet för samma sak, och
+en **Konduktör-roll** är den interna ägaren av ett `editKind`. En `Dossier`
+(kurerat feature-block) är inte detsamma som ett *generativt recept* (mall som
+skriver ny kod), och ingetdera är `Project Input` (kundens fakta + val).
+
+| Term | Vad det är |
+|------|------------|
+| Följdprompt | En ändringsprompt mot en redan byggd sajt (`mode=followup`). Init-prompten skapar version 1; följdprompten muterar till nästa version. |
+| OpenClaw-dirigent | Konduktören över den kontrollerade motorn: den förstår och föreslår, medan den deterministiska apply-kedjan validerar och applicerar. En dirigent — **inte** en fri kodagent och **ingen** extern daemon/gateway (regel 09). |
+| OpenClaw action bridge | Bryggan från dirigentens beslut till bygget: `scripts/run_openclaw_followup.py --apply`. Utan `--apply` fattas bara read-only-beslut; bara en verklig edit går vidare till bygg-kedjan. |
+| KÖR-7 | Bygg-kedjan en edit går igenom: router → context → patch → apply → riktad render (`run_followup_chain` i `scripts/build_site.py`). |
+| `editKind` | Det kanoniska routerfältet för *typen* av ändring (`router-decision.schema.json`). "Action" är operatörens vardagsord för samma sak. Värden idag: `visual_style`, `copy_change`, `section_add`, `component_add`, `route_remove`, `nav_hide` (samt planerade `layout_change`/`route_add`). |
+| Konduktör-roll | Intern ägare av ett `editKind` (`packages/generation/orchestration/openclaw/roles.py`). `router` dirigerar; `stylist` äger `visual_style`, `copy` äger `copy_change`, `section_builder` äger `section_add`, `component_builder` äger `component_add`, `route_editor` äger `route_remove` + `nav_hide`. Skilj från `Model Role` (var en LLM anropas). |
+| Directive | En strukturerad mutation som skrivs i nästa `Project Input`-version i stället för fri filpatch: `copyDirective`, `themeDirective`, `directives.disabledRoutes`, `directives.hiddenNavRoutes`, `directives.generativeComponents`, `mountedSections`. |
+| Generativt recept | En vitlistad, deterministisk tsx-mall som skriver NY kod genom samma bygge + Quality Gate + immutabel versionering. V1 = `image-placeholder-grid` (ADR 0061): ingen fri LLM-kod, inga nya npm-paket. Skilj från `Dossier` (kurerat feature-block) och från fri kodgenerering. |
+| Riktad render | KÖR-7d: bygger om bara det som behövs från den nya `Project Input`-versionen och mintar en ny immutabel version + `runId` (engelska: targeted render). |
+| `appliedVisibleEffect` | Ärlighetssignal från kedjan: sann ENBART när en verklig synlig ändring upptäcktes — aldrig fejkad. |
+| `previewShouldRefresh` | Signal om att previewen bör laddas om. Härleds från en verklig ändring, inte från att en version skrevs. |
+| Mount-only | En capability/dossier registrerades och monterades, men renderar inte (nödvändigtvis) något synligt ännu (`applied=true`, `appliedVisibleEffect=false`). |
+| Answer-only | En tur som besvaras i chatten utan bygge (småprat, åsikt om sajten, ren fråga). Ingen ny version skrivs. |
+| No-op | Dirigenten förstod meddelandet men kunde inte applicera något (okänd/ostödd/ogiltig ändring). Ett ärligt icke-resultat med konkret anledning — aldrig en påhittad ändring. |
 
 ## LLM-modeller och roller
 

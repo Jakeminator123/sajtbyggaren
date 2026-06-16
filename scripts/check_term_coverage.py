@@ -70,11 +70,12 @@ EXCLUDE_DIRS = {
     # indexera men vars OpenClaw-termer inte är Sajtbyggaren-domänbegrepp -
     # samma behandling som MIN_IDE/openclaw-mvp ovan.
     "openclaw-docs",
-    # Local Cursor canvas mirror (gitignored, docs/heavy-llm-flow/canvases/).
-    # Cursor only renders canvases from ~/.cursor/projects/<ws>/canvases/; we
-    # keep a portable copy in-repo so it survives folder-jumps/restarts. The
-    # .canvas.tsx files carry Cursor SDK component identifiers, not canonical
-    # Sajtbyggaren domain terms - same treatment as MIN_IDE / openclaw-mvp above.
+    # Shared Cursor canvas source (git-tracked, docs/canvases/). Cursor only
+    # renders canvases from ~/.cursor/projects/<ws>/canvases/; the in-repo copy
+    # under docs/canvases/ is the shared source (mirror via
+    # scripts/sync_canvases.py). The .canvas.tsx files carry Cursor SDK
+    # component identifiers, not canonical Sajtbyggaren domain terms - same
+    # treatment as MIN_IDE / openclaw-mvp above.
     "canvases",
 }
 

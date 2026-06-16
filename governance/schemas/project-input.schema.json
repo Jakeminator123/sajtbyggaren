@@ -357,7 +357,7 @@
           "type": "array",
           "maxItems": 8,
           "uniqueItems": true,
-          "description": "Generativa komponenter som materialiseras deterministiskt ur en component_add-följdprompt (Generative Component V1, ADR 0061, component_builder-rollen). Varje post är ett VITLISTAT, deterministiskt recept (V1 = endast 'image-placeholder-grid', dvs 'lägg till 6 bildplatshållare'/'lägg till en bildgrid') som buildern skriver som EN ny Server Component-.tsx under components/generated/<id>.tsx OCH splice:ar in (import + användning) i målroutens page.tsx — INGEN fri LLM-genererad kod och INGA nya npm-beroenden i V1. Listan är STICKY (ackumuleras över versioner, union:as i apply per id) så en tillagd komponent inte försvinner vid en senare orelaterad följdprompt; ett okänt recept eller en okänd komponentnoun refuseras ärligt av generative_component_directives innan den når hit (honest no-op, aldrig en påhittad komponent och aldrig en fil utanför build-katalogen). Buildern materialiserar idempotent: samma direktiv dubbelinjiceras aldrig.",
+          "description": "Generativa komponenter som materialiseras deterministiskt ur en component_add-följdprompt (Generative Component V1, ADR 0061/0064, component_builder-rollen). Varje post är ett VITLISTAT, deterministiskt recept (V1 = 'image-placeholder-grid', dvs 'lägg till 6 bildplatshållare'/'lägg till en bildgrid', eller 'cta-contact-block', dvs en kontakt-/boknings-CTA utan påhittade kontaktfakta) som buildern skriver som EN ny Server Component-.tsx under components/generated/<id>.tsx OCH splice:ar in (import + användning) i målroutens page.tsx — INGEN fri LLM-genererad kod och INGA nya npm-beroenden i V1. Listan är STICKY (ackumuleras över versioner, union:as i apply per id) så en tillagd komponent inte försvinner vid en senare orelaterad följdprompt; ett okänt recept eller en okänd komponentnoun refuseras ärligt av generative_component_directives innan den når hit (honest no-op, aldrig en påhittad komponent och aldrig en fil utanför build-katalogen). Buildern materialiserar idempotent: samma direktiv dubbelinjiceras aldrig.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -365,14 +365,14 @@
             "properties": {
               "recipe": {
                 "type": "string",
-                "enum": ["image-placeholder-grid"],
-                "description": "Vilket vitlistat, deterministiskt recept komponenten genereras från. V1 har exakt ett: 'image-placeholder-grid' (ett responsivt rutnät av bildplatshållare). Sluten enum så schemavalideringen fångar ett okänt recept innan bygget startar; fler recept tillkommer i senare slices (ADR 0061)."
+                "enum": ["image-placeholder-grid", "cta-contact-block"],
+                "description": "Vilket vitlistat, deterministiskt recept komponenten genereras från. V1 har två: 'image-placeholder-grid' (ett responsivt rutnät av bildplatshållare) och 'cta-contact-block' (en kontakt-/boknings-CTA utan påhittade telefon- eller e-postfakta). Sluten enum så schemavalideringen fångar ett okänt recept innan bygget startar; fler recept tillkommer i senare slices (ADR 0061/0064)."
               },
               "count": {
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 12,
-                "description": "Antal platshållarrutor receptet ska rendera. Tolkat ur prompten ('6 bildplatshållare' -> 6) och klampat till 1..12 av generative_component_directives innan det når hit; default 6 när prompten inte anger ett antal."
+                "description": "Receptets numeriska parameter. För image-placeholder-grid är det antal platshållarrutor ('6 bildplatshållare' -> 6), klampat till 1..12 med default 6. För cta-contact-block är värdet fast 1 eftersom receptet renderar ett enda CTA-block."
               },
               "routeId": {
                 "type": "string",
@@ -386,6 +386,11 @@
                 "maxLength": 64,
                 "pattern": "^[a-z0-9][a-z0-9-]*$",
                 "description": "Filsäkert id (gemener, bindestreck) som också är komponentfilens slug: components/generated/<id>.tsx. Sticky-union:en i apply dedupar på detta id så samma komponent aldrig dubbleras över versioner. Mönstret hindrar path-traversal (aldrig '..', aldrig snedstreck) — buildern fail-closar dessutom på allt som skulle skriva utanför build-katalogen."
+              },
+              "position": {
+                "type": "string",
+                "enum": ["top", "bottom", "before-contact"],
+                "description": "Var i page.tsx komponenten splice:as in. Återanvänder samma kanoniska position-fält som mountade sektioner (RouterTarget.position). Härleds ur följdprompten ('högst upp' -> top, 'längst ner' -> bottom). top = direkt efter öppnande <main> (före hero); bottom och before-contact (= default) = före den avslutande </main> (oförändrat beteende). Utelämnas = default-slot. Endast top/bottom är route-ordnings-placeringar; en 'top'-begäran på en sida utan öppnande <main> faller tillbaka till default-slotten."
               }
             }
           }

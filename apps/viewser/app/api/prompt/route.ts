@@ -352,18 +352,31 @@ const CONVERSATION_ANSWER_KINDS: ReadonlySet<string> = new Set([
 // #328 review (finding 6): chain stages that are a TERMINAL honest no-op — the
 // KÖR-7 chain RECOGNISED a concrete edit and deliberately refused it (an unknown/
 // required/already-removed page for route_remove; an unsupported section type for
-// section_add). The legacy Phase 1+2 path has no executor for these either, so
-// falling through to it would mint an identical "legacy" version the operator
-// never asked for ("inget hände men en ny version skapades"). These stages stop
-// the follow-up with a build-free honest answer instead. The string values are
-// build_site.py's run_followup_chain stage names, surfaced verbatim as
-// bridge.status (run_openclaw_followup.py). NOTE: only stages with NO legacy
-// executor belong here — a generic no-op (plan_empty/router_no_edit) still falls
-// through so the legacy copy/edit resolver gets its chance.
+// section_add; an unrecognised generative recipe for component_add). The legacy
+// Phase 1+2 path has no executor for these either, so falling through to it would
+// mint an identical "legacy" version the operator never asked for ("inget hände
+// men en ny version skapades"). These stages stop the follow-up with a build-free
+// honest answer instead. The string values are build_site.py's run_followup_chain
+// stage names, surfaced verbatim as bridge.status (run_openclaw_followup.py).
+// NOTE: only stages with NO legacy executor belong here — a generic no-op
+// (plan_empty/router_no_edit) still falls through so the legacy copy/edit resolver
+// gets its chance.
 const TERMINAL_EDIT_NOOP_STAGES: ReadonlySet<string> = new Set([
+  // Emitted by build_site.py today (verified against run_followup_chain).
   "route_remove_unsupported",
   "nav_hide_unsupported",
   "section_unsupported",
+  "generative_unsupported",
+  // Forward-compatible: not emitted yet, but reserved for the unowned editKinds
+  // (route_add / component_remove / layout_change — ADR 0062 §4) whose honest
+  // no-op will follow the same <editKind>_unsupported convention. route_add's
+  // planned stage is already named in docs/heavy-llm-flow/foljdprompt-loopen.md.
+  // None of these have a legacy executor either, so they are safe to pre-treat as
+  // terminal; if build_site.py never emits them they are simply inert. (No
+  // section_remove editKind exists, so no section_remove_unsupported is reserved.)
+  "route_add_unsupported",
+  "component_remove_unsupported",
+  "layout_change_unsupported",
 ]);
 
 type ConversationMetadata = {
@@ -967,7 +980,12 @@ async function runPromptBuildOnce(
         // Roll-bekräftelsen (nullable). Skickas BARA tillsammans med ett
         // riktigt runId + applied bridge, så use-followup-build:s answer-only-
         // gren (som kräver !runId) aldrig kan misstolka den.
-        answerText: appliedAnswerText,
+        // Operatörsfynd 2026-06-16: utan OPENAI_API_KEY (eller vid timeout) är
+        // appliedAnswerText null och dirigenten blev stum efter ett bygge. Fall
+        // tillbaka på den deterministiska, ärliga svenska rapporten från seamen
+        // (härledd ur decision + bridge) så en applicerad ändring ALLTID bär en
+        // grundad rad. Med nyckel + synlig effekt vinner LLM-bekräftelsen.
+        answerText: appliedAnswerText ?? applyResult.report,
         // F1 slice 3: which role acted (e.g. section_builder) for the honest
         // role-row; threaded but never controls build/preview.
         conversation: conversationMeta,
@@ -1307,7 +1325,7 @@ async function runPromptBuildOnce(
   // to a generic deterministic "Klart!" with no answer. Init builds keep
   // answerText null; without OPENAI_API_KEY the helper returns null and the
   // deterministic rows stand. Grounded ENTIRELY in the build facts.
-  const followupAnswerText =
+  const followupOutcomeSummary =
     payload.mode === "followup"
       ? await generateFollowupOutcomeSummary(payload.prompt, {
           engine: "legacy",
@@ -1331,6 +1349,17 @@ async function runPromptBuildOnce(
           role: conversationMeta?.role ?? null,
         })
       : null;
+  // Operatörsfynd 2026-06-16: utan OPENAI_API_KEY ger summeringen null och en
+  // ärlig no-op (t.ex. "gör hero mer premium" -> plan_empty) blev stum. Fall
+  // tillbaka på seamens deterministiska svenska rapport — MEN bara när den
+  // legacy-vägen INTE landade en synlig ändring: då bär bridgen ett
+  // patch_plan_request-beslut vars rapport ärligt säger "kunde inte göras". När
+  // legacy-resolvern faktiskt applicerade en copy-ändring (då är openClawDecision
+  // null) skulle den rapporten motsäga verkligheten, så då står de
+  // deterministiska byggraderna kvar oförändrade.
+  const followupAnswerText =
+    followupOutcomeSummary ??
+    (legacyPathAppliedVisibleChange ? null : applyResult?.report ?? null);
 
   return {
     runId: build.runId,

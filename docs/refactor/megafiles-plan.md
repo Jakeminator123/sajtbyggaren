@@ -1,17 +1,48 @@
 ---
 title: Refaktorplan för backend-megafilerna
-status: förslag (plan only — ingen kod körs i denna lane)
+status: pågår (flera slices har landat; resten är fortfarande plan)
 ägare: backend (lane C, Scout/Steward)
-datum: 2026-06-09
+datum: 2026-06-09 (statusnoteringar uppdaterade 2026-06-16)
 ---
 
 # Refaktorplan för backend-megafilerna
 
-Den här filen är en **plan, inte en åtgärd**. Den kartlägger de tre största
-backend-filerna och föreslår en ordnad serie mycket små, beteendebevarande
-extraktioner (slices) som var och en kan mergas självständigt. Inga slices körs
-i denna lane — varje slice blir sitt eget lilla framtida arbete med egna
-paritetstester.
+Den här filen kartlägger de tre största backend-filerna och beskriver en ordnad
+serie mycket små, beteendebevarande extraktioner (slices) som var och en kan
+mergas självständigt. Filen var ursprungligen en ren plan; sedan dess har flera
+slices faktiskt landat (se statusnoteringarna nedan), så den är nu en blandning
+av **landad historik** och **kvarvarande plan**. Varje kvarvarande slice blir
+sitt eget lilla framtida arbete med egna paritetstester.
+
+## Statusöversikt (2026-06-16)
+
+Landat sedan planen skrevs:
+
+- **Del 1 (renderers.py):** slice 1 (restaurang/hospitality), slice 2
+  (behandling/credential/expertis/practice), slice 3 (professional/agency) och
+  slice 5 (rena format-/util-/CTA-hjälpare → `render_helpers.py`) har landat.
+  Hjälparna bor nu i `render_helpers.py` och `renderers.py` importerar
+  hero/commerce-CTA-klustret (`_hero_cta_variant`, `_hero_cta_label`,
+  `_hero_cta_target_path`, `_commerce_bottom_cta_label`) samt
+  `_collect_icons_for_pages` direkt därifrån i stället för via den lata
+  shimmen. Slice 4 (hero-subsystemet → `hero.py`) är **inte** landad ännu.
+- **Del 2 (build_site.py):** slice 1 (färg-/token-systemet → `tokens.py`),
+  slice 2 (asset-pipelinen → `assets.py`), slice 3 (prompt-meta →
+  `prompt_meta.py`) och slice 4 (brief-genereringen →
+  `packages/generation/brief/site_brief.py`) har landat. Slice 5
+  (nav/cta/business-type-hjälparna) är delvis landad: hjälparna bor i
+  `render_helpers.py` men `build_site.py` re-exporterar dem fortfarande.
+
+Kvarvarande shim i `renderers.py`: io-omslag (`write`, `route_to_page_path`,
+`resolve_media_asset`), `build_site`-egna hjälpare/konstanter
+(`_js_string_literal`, `_member_initials`, `_normalise_hex_color`,
+`_normalize_tone_key`, `_LISTING_COPY_BY_ROUTE_ID`,
+`_RUNTIME_TOKEN_LISTENER_JS`) samt några hjälpare som redan bor i
+`render_helpers.py` men ännu nås via shimmen (`_icon_for_service`,
+`_location_is_country_only`, `_nav_items_from_scaffold`,
+`_normalize_business_type`, `_phone_href`, `_pick_contact_route`,
+`_pick_listing_route`). Att rewira de sista och flytta ned `build_site`-egna
+hjälpare/konstanter är en senare slice.
 
 ## Ordningsregel (läs först)
 
@@ -126,20 +157,22 @@ re-exportera de flyttade namnen så att externa stavningar
 (`from ... import render_section_*`) fungerar oförändrat tills en senare,
 separat upprydning.
 
-| # | Vad flyttas | Vart | Paritetstester |
-| --- | --- | --- | --- |
-| 1 | restaurang/hospitality-familjen | `packages/generation/build/sections_restaurant.py` | `test_builder_restaurant_routes`, `test_builder_route_emission`, `test_section_renderer_registry` |
-| 2 | behandling/credential/expertis/practice-familjen | `packages/generation/build/sections_treatments.py` | `test_section_treatments_resolve`, `test_section_treatments_prompts`, `test_section_treatments_json_parity`, `test_section_renderer_registry` |
-| 3 | professional-services + agency-familjen | `packages/generation/build/sections_professional.py` | `test_section_renderer_registry`, `test_builder_route_emission` |
-| 4 | hero-subsystemet | `packages/generation/build/hero.py` | `test_renderer_blueprint`, `test_build_media_rendering`, `test_visual_direction_pick` |
-| 5 | rena format-/util-hjälpare (sist; rör den lata shimmen) | `packages/generation/build/render_helpers.py` | `test_lucide_react_consistency`, `test_kor1c_copy_render`, hela renderar-sviten |
+| # | Status | Vad flyttas | Vart | Paritetstester |
+| --- | --- | --- | --- | --- |
+| 1 | landat | restaurang/hospitality-familjen | `packages/generation/build/sections_restaurant.py` | `test_builder_restaurant_routes`, `test_builder_route_emission`, `test_section_renderer_registry` |
+| 2 | landat | behandling/credential/expertis/practice-familjen | `packages/generation/build/sections_treatments.py` | `test_section_treatments_resolve`, `test_section_treatments_prompts`, `test_section_treatments_json_parity`, `test_section_renderer_registry` |
+| 3 | landat | professional-services + agency-familjen | `packages/generation/build/sections_professional.py` | `test_section_renderer_registry`, `test_builder_route_emission` |
+| 4 | kvar | hero-subsystemet | `packages/generation/build/hero.py` | `test_renderer_blueprint`, `test_build_media_rendering`, `test_visual_direction_pick` |
+| 5 | landat (shim krymper stegvis) | rena format-/util-hjälpare (rör den lata shimmen) | `packages/generation/build/render_helpers.py` | `test_lucide_react_consistency`, `test_kor1c_copy_render`, `test_renderers_helper_shim_parity`, hela renderar-sviten |
 
-Slice 5 är medvetet sist eftersom den tvingar fram en konfrontation med den lata
-shimmen mot byggaren: målet är att de delade hjälparna får ett enda hem i
-paketet i stället för att pendla mellan `scripts/build_site.py` och
-`renderers.py`. Den slicen kan behöva delas i ännu mindre steg (en hjälpargrupp
-i taget) och kräver att del-2-slicen som flyttar samma hjälpare nedåt
-koordineras, så att en symbol inte definieras på två ställen samtidigt.
+Slice 5 landade format-/util-/CTA-hjälparna i `render_helpers.py` så de delade
+hjälparna får ett enda hem i paketet i stället för att pendla mellan
+`scripts/build_site.py` och `renderers.py`. Själva *shimkrympningen* sker
+stegvis (en hjälpargrupp i taget): hero/commerce-CTA-klustret och
+`_collect_icons_for_pages` importeras nu direkt från `render_helpers.py`, medan
+återstoden (se statusöversikten ovan) fortfarande nås via shimmen. De sista
+stegen kräver att del-2-slicen som flyttar `build_site`-egna hjälpare/konstanter
+nedåt koordineras, så att en symbol inte definieras på två ställen samtidigt.
 
 ### 1.4 Testtäckning och luckor
 
@@ -221,13 +254,13 @@ hävdas redan av `tests/test_build_site_size.py`.
 
 ### 2.3 Beteendebevarande slices (minsta/lägst risk först)
 
-| # | Vad flyttas | Vart | Paritetstester |
-| --- | --- | --- | --- |
-| 1 | färg-/token-systemet (rent, väl testat) | `packages/generation/build/tokens.py` | `test_builder_smoke`, `test_builder_hardening`, `test_b154_next_dev_tdz` |
-| 2 | asset-pipelinen (favicon/og-konvertering + uppladdningar) | `packages/generation/build/assets.py` | `test_builder_favicon_ogimage`, `test_operator_uploads`, `test_product_image_pipeline`, `test_mood_isolation`, `test_build_media_rendering` |
-| 3 | prompt-meta-läsarfamiljen | `packages/generation/build/prompt_meta.py` | `test_builder_smoke`, `test_followup_versioning_regression` |
-| 4 | brief-genereringen | in i `packages/generation/brief/` (finns redan) | `test_builder_brief`, `test_brief_model_resolver` |
-| 5 | nav/cta/business-type-hjälparna (delade med renderarna) | `packages/generation/build/render_helpers.py` (samma hem som del 1 slice 5) | `test_builder_route_emission`, `test_contact_route_regression`, hela byggar-sviten |
+| # | Status | Vad flyttas | Vart | Paritetstester |
+| --- | --- | --- | --- | --- |
+| 1 | landat | färg-/token-systemet (rent, väl testat) | `packages/generation/build/tokens.py` | `test_builder_smoke`, `test_builder_hardening`, `test_b154_next_dev_tdz` |
+| 2 | landat | asset-pipelinen (favicon/og-konvertering + uppladdningar) | `packages/generation/build/assets.py` | `test_builder_favicon_ogimage`, `test_operator_uploads`, `test_product_image_pipeline`, `test_mood_isolation`, `test_build_media_rendering` |
+| 3 | landat | prompt-meta-läsarfamiljen | `packages/generation/build/prompt_meta.py` | `test_builder_smoke`, `test_followup_versioning_regression` |
+| 4 | landat | brief-genereringen | `packages/generation/brief/site_brief.py` (i `packages/generation/brief/`) | `test_builder_brief`, `test_brief_model_resolver` |
+| 5 | delvis (hjälparna bor i `render_helpers.py`; re-exporten kvar) | nav/cta/business-type-hjälparna (delade med renderarna) | `packages/generation/build/render_helpers.py` (samma hem som del 1 slice 5) | `test_builder_route_emission`, `test_contact_route_regression`, hela byggar-sviten |
 
 `build`, `run_phase3_quality_and_repair`, snapshot-kedjan och version/följdprompt-
 vägen **flyttas inte ut** ur scripts. De får på sin höjd refaktoreras genom att
@@ -351,11 +384,12 @@ Refaktor är beteendebevarande hygien och alltid lägre prioriterad än produktb
 2. `scripts/build_site.py` — börja med färg-/token-systemet.
 3. `scripts/prompt_to_project_input.py` — börja med följdprompt-intent-klassning.
 
-### Detta är ett förslag
+### Status: del plan, del landad
 
-Lanen föreslår, den utför inte. Ingen slice körs här. Varje framtida slice är sin
-egen lilla ändring med namngivna paritetstester, och varje slice ska lämna
-`tests/test_build_site_size.py` och de övriga skydds-testerna gröna. Repo-gränsen
-(`packages/generation/`-lager; `scripts/` håller tunn wiring) respekteras i varje
-steg, och den lata shimmen mellan renderarna och byggaren ska krympas av
-refaktorn, inte växa.
+Filen var ursprungligen ett rent förslag. Flera slices har sedan dess landat (se
+statusöversikten överst och status-kolumnerna i 1.3 och 2.3); återstoden är
+fortfarande plan. Varje kvarvarande slice är sin egen lilla ändring med
+namngivna paritetstester och ska lämna `tests/test_build_site_size.py` och de
+övriga skydds-testerna gröna. Repo-gränsen (`packages/generation/`-lager;
+`scripts/` håller tunn wiring) respekteras i varje steg, och den lata shimmen
+mellan renderarna och byggaren ska krympas av refaktorn, inte växa.

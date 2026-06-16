@@ -10,7 +10,7 @@ Christopher via `main` — precis som all annan dokumentation.
 | --- | --- |
 | `begreppskarta-sajtbyggaren.canvas.tsx` | Interaktiv begreppskarta: bibliotek (scaffold/variant/dossier/starter), körningsartefakter (project input → site brief → site plan → generation package → byggd sajt), projektminne (project DNA), blueprint-fältgrupperna, faser mot 9/10 samt vad som finns/fattas på `main`. |
 | `openclaw-floden.canvas.tsx` | Interaktivt OpenClaw-flöde: Viewser-chatten → samtalsgrinden → konduktörens beslut → KÖR-kedjan (6a/7a–7d) → ny version + preview, plus roller, action-registry och hårda regler. |
-| `roller-vs-agenter-modeller.canvas.tsx` | Begreppsklargörande: skillnaden mellan Model Roles (var en LLM anropas), konduktör-roller (vem som förstår en ändring), SOUL-persona (hur chatten låter) och att fristående "agenter"/daemon inte finns här — plus var `gpt-4o` faktiskt körs, motorns 12 Model Roles, gränser och aktuell OpenAI-lineup (live via docs-MCP). |
+| `roller-vs-agenter-modeller.canvas.tsx` | Begreppsklargörande: skillnaden mellan Model Roles (var en LLM anropas), konduktör-roller (vem som förstår en ändring), SOUL-persona (hur chatten låter) och att fristående "agenter"/daemon inte finns här — plus motorns 13 Model Roles (alla på `gpt-5.5` i llm-models v14), de env-styrda sidoanropen, gränser och aktuell OpenAI-lineup (live via docs-MCP). |
 | `steward-revision-llm-floden.canvas.tsx` | Steward-/scout-revision: de två LLM-kedjorna (init Golden Path + följdprompt-konduktören) och hur de speglas i chatten (bygg vs chat-svar), status implementerat/kvar/i synk, glapp & obsoleta kedjor, samt en grundad städningsrekommendation för tester/docs/governance mot ett 9/10-flöde. Klickbar flödeskarta. |
 
 ## Så visas en canvas
@@ -67,7 +67,5 @@ och `docs/handoff.md`:
 - Operatörstext i canvaserna är svenska; kodidentifierare engelska.
 - Canvas-filerna importerar bara från `cursor/canvas` och bär inline-data —
   inga nätverksanrop, inga andra beroenden.
-- Mappen är undantagen från term-coverage-skanning (samma behandling som den
-  äldre, numera oanvända spegeln under `docs/heavy-llm-flow/canvases/`),
-  eftersom filerna medvetet katalogiserar även förbjudna alias i pedagogiskt
-  syfte.
+- Mappen är undantagen från term-coverage-skanning, eftersom filerna medvetet
+  katalogiserar även förbjudna alias i pedagogiskt syfte.

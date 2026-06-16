@@ -173,6 +173,40 @@ def _capitalise(text: str) -> str:
     return text[:1].upper() + text[1:] if text else text
 
 
+# Forbidden-claim gate for ``honest_trust_signals``: a confirmed
+# ``businessFacts.fact`` is dropped from the trust band when the blueprint's
+# ``qualityRisks`` flag the matching claim category AND the fact text carries
+# that category's tokens. Keyed on a lower-case substring of the canonical risk
+# string (``planning.blueprint._RISK_ORDER`` / ``derive_quality_risks``) so the
+# trust-band gate stays in sync with the modeled honesty risks instead of
+# hardcoding only the cert/review pair. Only categories whose tokens describe an
+# *overclaim inside a trust bullet* are gated — fake certifications, invented
+# reviews and medical guarantees. Price/stock/delivery risks describe
+# contact/commerce data, not trust-bullet facts, and filtering a confirmed
+# price/area would risk dropping grounded copy (the same false-positive
+# reasoning behind the planner's number-only grounding guard), so they stay out.
+_FORBIDDEN_FACT_TOKENS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("fake certification", ("cert", "legitim", "licens", "license")),
+    ("invented review", ("recension", "omdöme", "omdome", "review")),
+    (
+        "medical guarantee",
+        (
+            "garanter",
+            "garanti",
+            "guarantee",
+            "100%",
+            "smärtfri",
+            "smartfri",
+            "pain-free",
+            "pain free",
+            "botar",
+            "bota ",
+            "cure",
+        ),
+    ),
+)
+
+
 class RenderBlueprint:
     """Read-only view over the blueprint with an applied-effect tracker.
 
@@ -409,25 +443,27 @@ class RenderBlueprint:
         """Return confirmed ``businessFacts.facts`` safe to render as trust copy.
 
         Drops any fact that names a deliberate unknown or that a quality risk
-        forbids (fake cert / invented review), so the trust band never shows an
-        ungrounded claim. Facts are capitalised for display and capped at
-        ``limit`` so the bullet grid stays balanced.
+        forbids (fake cert, invented review, medical guarantee), so the trust
+        band never shows an ungrounded or overpromised claim. The forbidden-claim
+        categories are driven by ``_FORBIDDEN_FACT_TOKENS`` so the gate stays in
+        sync with the modeled ``qualityRisks`` rather than hardcoding a subset.
+        Facts are capitalised for display and capped at ``limit`` so the bullet
+        grid stays balanced.
         """
         facts = _clean_list(self._business_facts.get("facts"))
         if not facts:
             return []
         unknown_tokens = {_norm(token) for token in self.unknowns if _norm(token)}
         risk_blob = " ".join(self._quality_risks).casefold()
-        forbid_cert = "fake certification" in risk_blob
-        forbid_reviews = "invented review" in risk_blob
+        forbidden_groups = [
+            tokens for risk_key, tokens in _FORBIDDEN_FACT_TOKENS if risk_key in risk_blob
+        ]
         safe: list[str] = []
         for fact in facts:
             low = fact.casefold()
             if any(token and token in low for token in unknown_tokens):
                 continue
-            if forbid_cert and any(t in low for t in ("cert", "legitim", "licens", "license")):
-                continue
-            if forbid_reviews and any(t in low for t in ("recension", "omdöme", "omdome", "review")):
+            if any(token in low for group in forbidden_groups for token in group):
                 continue
             safe.append(_capitalise(fact))
             if len(safe) >= limit:

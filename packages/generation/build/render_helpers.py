@@ -12,11 +12,14 @@ Funktionerna här är rena (nollkoppling): de anropar INGA io-hjälpare
 import-grafen förblir cykelfri.
 
 ``scripts/build_site.py`` re-exporterar dessa namn (ivriga attribut-binds) så att
-``from scripts.build_site import ...`` fortsätter resolva, och renderarna i
-``renderers.py`` når dem TILLBAKA via sin lata shim
-(``_call_build_site("<name>", …)`` -> ``getattr(scripts.build_site, "<name>")``).
-Så länge build_site re-exporterar namnen resolvar den shimmen hit. Krymp inte
-shimmen i ``renderers.py`` här — det är ett separat steg (Del 1 slice 5).
+``from scripts.build_site import ...`` fortsätter resolva. ``renderers.py``
+importerar nu de delade format-/CTA-hjälparna (``_jsx_safe_string``,
+``_contact_href``, ``_filled_contact_cta``, ``_route_href``,
+``_text_contact_cta``) DIREKT härifrån. Den lata shimmen
+(``_call_build_site("<name>", …)`` -> ``getattr(scripts.build_site, "<name>")``)
+finns kvar i ``renderers.py`` för de hjälpare/konstanter som ännu inte brutits ut
+ur ``scripts.build_site``; eftersom build_site re-exporterar flera av namnen
+härifrån landar den shimmen ändå i samma funktioner.
 
 ``_LISTING_COPY_BY_ROUTE_ID`` och ``_RUNTIME_TOKEN_LISTENER_JS`` stannar kvar i
 ``scripts/build_site.py`` (de nås av renderarna via ``_lazy_attr`` men ingen
@@ -24,6 +27,8 @@ flyttad funktion här använder dem).
 """
 
 from __future__ import annotations
+
+import json
 
 SERVICE_ICONS: dict[str, str] = {
     "interior-painting": "Paintbrush",
@@ -100,12 +105,8 @@ _HERO_CTA_VARIANT_LABELS: dict[str, dict[str, str]] = {
     "quote": {"sv": "Begär offert", "en": "Request a quote"},
 }
 
-_SHOP_CONVERSION_GOALS: frozenset[str] = frozenset(
-    {"product_purchase", "shop_visit", "purchase"}
-)
-_BOOKING_CONVERSION_GOALS: frozenset[str] = frozenset(
-    {"booking_request", "book_appointment"}
-)
+_SHOP_CONVERSION_GOALS: frozenset[str] = frozenset({"product_purchase", "shop_visit", "purchase"})
+_BOOKING_CONVERSION_GOALS: frozenset[str] = frozenset({"booking_request", "book_appointment"})
 _SHOP_BUSINESS_TYPES: frozenset[str] = frozenset(
     {
         "e-commerce",
@@ -452,3 +453,123 @@ def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) ->
     if "/spel" in dossier_routes:
         used.add("Gamepad2")
     return sorted(used)
+
+
+# ---------------------------------------------------------------------------
+# Shared JSX-formatting + contact-CTA helpers (megafiles-plan Del 1 slice 5).
+#
+# Moved here from scripts/build_site.py (_jsx_safe_string, _validated_site_
+# route_path, _route_href, _contact_href) and from
+# packages/generation/build/renderers.py (_filled_contact_cta,
+# _text_contact_cta) so the cross-family formatting/CTA helpers have ONE home
+# in the package instead of living in build_site.py + renderers.py and being
+# reached through lazy shims. Pure (json + string ops only): no io-helpers, no
+# scripts/ import, so the import graph stays cycle-free. build_site.py and
+# renderers.py re-export these names so every existing spelling keeps resolving.
+# ---------------------------------------------------------------------------
+
+
+def _jsx_safe_string(text: str) -> str:
+    """Wrap user-supplied text as a safe JSX expression ``{"<json-encoded>"}``.
+
+    Routing the value through ``json.dumps`` ensures every JSX-special
+    character (``<``, ``>``, ``{``, ``}``, ``&``, ``"``, ``\\``) becomes valid
+    JS string-literal content, so a customer name with ``<`` or ``{`` cannot
+    produce invalid TSX that ``next build`` would reject mid-pipeline.
+    """
+    return "{" + json.dumps(text, ensure_ascii=False) + "}"
+
+
+def _validated_site_route_path(route_path: str) -> str:
+    """Return a scaffold route path after fail-fast canonical validation."""
+    if not isinstance(route_path, str) or not route_path.startswith("/"):
+        raise SystemExit(
+            "Builder failed: scaffold route path must be an absolute "
+            f"site path starting with '/' (got {route_path!r})."
+        )
+    if route_path.startswith("//"):
+        raise SystemExit(
+            "Builder failed: scaffold route path must be a root-relative "
+            f"site path, not a protocol-relative URL (got {route_path!r})."
+        )
+    if "\\" in route_path or "?" in route_path or "#" in route_path:
+        raise SystemExit(
+            "Builder failed: scaffold route path must be a canonical site "
+            f"path without backslashes, query strings or fragments (got {route_path!r})."
+        )
+    if route_path != "/":
+        segments = route_path.split("/")[1:]
+        if any(segment in {"", ".", ".."} for segment in segments):
+            raise SystemExit(
+                "Builder failed: scaffold route path must not contain empty, "
+                f"'.' or '..' path segments (got {route_path!r})."
+            )
+    return route_path
+
+
+def _route_href(route_path: str) -> str:
+    """Return a scaffold route path as a safe JSX href attribute value."""
+    route_path = _validated_site_route_path(route_path)
+    return _jsx_safe_string(route_path)
+
+
+def _contact_href(contact_target: str | None) -> str | None:
+    """Return a JSX-safe href for a contact CTA, or ``None`` to omit the anchor.
+
+    A scaffold ``/`` route path is validated as a canonical site path via
+    ``_route_href``; a ``mailto:``/``tel:`` action is passed through (JSX-safe);
+    anything else returns ``None`` so the caller omits the anchor instead of
+    emitting a dead/invalid href (ADR 0060 Slice B).
+    """
+    if not contact_target:
+        return None
+    if contact_target.startswith("/"):
+        return _route_href(contact_target)
+    if contact_target.startswith(("mailto:", "tel:")):
+        return _jsx_safe_string(contact_target)
+    return None
+
+
+def _filled_contact_cta(
+    contact_path: str | None,
+    label: str,
+    *,
+    indent: str = "          ",
+    lead_icon: str = "",
+) -> str:
+    """Filled primary contact-CTA button, or ``""`` when there is no target.
+
+    Slice B (ADR 0060): the shared filled "Begär offert"/"Boka tid"/shop button
+    used by the service-list, collection, products and wizard-route renderers.
+    Returns ``""`` when contact was removed with no ``mailto:``/``tel:`` fallback
+    so the page omits the button instead of linking to a dead ``/kontakt`` route.
+    Byte-identical to the previous inline anchor when a target exists.
+    """
+    href = _contact_href(contact_path)
+    if href is None:
+        return ""
+    return f'{indent}<a href={href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{lead_icon}{label}<ArrowRight className="size-4" /></a>\n'
+
+
+def _text_contact_cta(
+    contact_path: str | None,
+    label: str,
+    *,
+    indent: str = "          ",
+    class_name: str = (
+        "inline-flex w-fit items-center gap-2 text-sm font-medium "
+        "underline-offset-4 hover:underline"
+    ),
+    icon_size: str = "size-4",
+) -> str:
+    """Underlined text contact-CTA link, or ``""`` when there is no target.
+
+    Slice B (ADR 0060): the shared clinic/professional/agency "Boka tid" /
+    "Diskutera ärende" / "Diskutera projekt" link. Same omit-on-no-target rule
+    as ``_filled_contact_cta``; byte-identical to the previous inline anchor
+    when a target exists.
+    """
+    href = _contact_href(contact_path)
+    if href is None:
+        return ""
+    return f'{indent}<a href={href} className="{class_name}">{label}<ArrowRight className="{icon_size}" /></a>\n'
