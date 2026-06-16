@@ -12,11 +12,14 @@ Funktionerna här är rena (nollkoppling): de anropar INGA io-hjälpare
 import-grafen förblir cykelfri.
 
 ``scripts/build_site.py`` re-exporterar dessa namn (ivriga attribut-binds) så att
-``from scripts.build_site import ...`` fortsätter resolva, och renderarna i
-``renderers.py`` når dem TILLBAKA via sin lata shim
-(``_call_build_site("<name>", …)`` -> ``getattr(scripts.build_site, "<name>")``).
-Så länge build_site re-exporterar namnen resolvar den shimmen hit. Krymp inte
-shimmen i ``renderers.py`` här — det är ett separat steg (Del 1 slice 5).
+``from scripts.build_site import ...`` fortsätter resolva. ``renderers.py``
+importerar nu de delade format-/CTA-hjälparna (``_jsx_safe_string``,
+``_contact_href``, ``_filled_contact_cta``, ``_route_href``,
+``_text_contact_cta``) DIREKT härifrån. Den lata shimmen
+(``_call_build_site("<name>", …)`` -> ``getattr(scripts.build_site, "<name>")``)
+finns kvar i ``renderers.py`` för de hjälpare/konstanter som ännu inte brutits ut
+ur ``scripts.build_site``; eftersom build_site re-exporterar flera av namnen
+härifrån landar den shimmen ändå i samma funktioner.
 
 ``_LISTING_COPY_BY_ROUTE_ID`` och ``_RUNTIME_TOKEN_LISTENER_JS`` stannar kvar i
 ``scripts/build_site.py`` (de nås av renderarna via ``_lazy_attr`` men ingen

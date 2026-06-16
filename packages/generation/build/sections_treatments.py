@@ -20,12 +20,10 @@ did inline in ``renderers.py``. ``renderers.py`` imports this module
 The treatment-resolution helpers (``_treatment_for_section``,
 ``_operator_pin_for_section``) stay in ``dispatcher`` and are imported
 here. The shared formatting/CTA helpers ``_jsx_safe_string`` and
-``_text_contact_cta`` still live in ``renderers.py`` (their move to
-``render_helpers`` is a later slice); to avoid an import cycle this
-module reaches them lazily at call time through the ``_renderers()``
-shim, mirroring the existing lazy ``_call_build_site`` shim pattern in
-``renderers.py``/``static_assets.py``. This module therefore never
-imports ``renderers`` at module-import time.
+``_text_contact_cta`` now live in ``render_helpers`` (their move there is
+megafiles-plan Del 1 slice 5, done) and are imported directly from there.
+This module therefore never imports ``renderers`` at module-import time,
+so the import graph stays cycle-free.
 """
 
 from __future__ import annotations

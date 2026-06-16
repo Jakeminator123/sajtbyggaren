@@ -14,13 +14,11 @@ re-exporterar varje flyttat namn så att ``scripts.build_site`` (som
 re-exporterar från ``renderers``) och paritetstesterna behåller sina
 befintliga import-stavningar.
 
-Söm mot ``renderers``: bara tre bakåtberoenden behövs vid körning —
-``_jsx_safe_string``, ``_phone_href`` och ``render_section_contact_cta``.
-De nås lazy via :func:`_renderers` så att ``renderers`` kan importera
-den här modulen vid sin egen import utan en cirkulär import. De två
-förstnämnda är i sin tur tunna shims i ``renderers`` mot
-``scripts.build_site`` (``_call_build_site``), så kedjan landar i samma
-funktioner som före utbrytningen och utdata blir byte-identisk.
+Söm mot ``renderers``: ``_jsx_safe_string`` och ``_phone_href`` importeras
+nu DIREKT från ``render_helpers``. Bara ``render_section_contact_cta`` nås
+fortfarande lazy via :func:`_renderers` så att ``renderers`` kan importera
+den här modulen vid sin egen import utan en cirkulär import. Utdata är
+byte-identisk med läget före utbrytningen.
 """
 
 from __future__ import annotations

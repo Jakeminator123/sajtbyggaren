@@ -23,11 +23,10 @@ re-exporterar dessutom varje publikt ``render_section_*``-namn så att
 Tvärberoenden: ``_treatment_for_section`` / ``_operator_pin_for_section``
 hämtas från ``dispatcher`` och ``RenderBlueprint`` från
 ``blueprint_render`` (deras nuvarande hem). De delade format-/CTA-hjälparna
-``_jsx_safe_string`` och ``_text_contact_cta`` bor fortfarande i
-``renderers.py`` (deras flytt till ett delat hjälpar-hem är megafiles-plan
-Del 1 slice 5, en separat lane); de nås här via en CALL-TIME-shim
-(``_renderers()``) så import-grafen förblir cykelfri — den här modulen
-importerar aldrig ``renderers`` vid modul-laddning.
+``_jsx_safe_string`` och ``_text_contact_cta`` bor nu i ``render_helpers``
+(megafiles-plan Del 1 slice 5, genomförd) och importeras DIREKT därifrån.
+Den här modulen importerar aldrig ``renderers`` vid modul-laddning, så
+import-grafen förblir cykelfri.
 """
 
 from __future__ import annotations

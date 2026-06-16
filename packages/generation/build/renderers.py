@@ -6,27 +6,36 @@ Christopher's section-dispatcher pattern + Phase 3 operator-pin tier
 from ``origin/main`` (PR #105 + PR #108) without re-inflating
 ``build_site.py`` past 7k rader.
 
-The split is now three-tier:
+Module layout after the megafiles refactor
+(``docs/refactor/megafiles-plan.md`` Del 1, slices A-3 + slice 5):
 
 * ``packages.generation.build.dispatcher``: section-id registry,
   scaffold sections cache, treatment-resolution helpers, generic route
   composer (``render_route_generic``).
-* ``packages.generation.build.renderers`` (this module): every page
-  renderer (``render_home`` etc.) and every section renderer
-  (``render_section_*``). Registers section renderers into
-  ``dispatcher._SECTION_RENDERERS`` at import time via
-  ``.update(...)`` blocks so the dispatcher's registry is fully
-  populated before any caller invokes it.
+* ``packages.generation.build.renderers`` (this module): the page
+  renderers (``render_home`` etc.), the hero subsystem and the generic
+  section renderers. It imports the extracted section families at import
+  time (side-effect registration) and re-exports their names so external
+  spellings keep resolving unchanged.
+* ``packages.generation.build.sections_restaurant`` /
+  ``sections_treatments`` / ``sections_professional``: the three
+  extracted section families. Each self-registers into
+  ``dispatcher._SECTION_RENDERERS`` via its own ``.update(...)`` block.
+* ``packages.generation.build.render_helpers``: the shared formatting/CTA
+  helpers (``_jsx_safe_string``, ``_contact_href``, ``_filled_contact_cta``,
+  ``_route_href``, ``_text_contact_cta``). This module imports them
+  directly from there.
 * ``packages.generation.build.static_assets``: deterministic static
   artefacts (robots.txt, sitemap.xml, OG fallback SVG, error pages,
   structured-data JSON-LD).
 
-Shared utility helpers (variant_css, ``_hero_cta_label``,
-``_nav_items_from_scaffold``, etc.) still live in ``scripts.build_site``
-and are reached via the lazy ``_call_build_site`` shim block below.
-A future sprint will finish moving them too; today's port keeps the
-helper territory untouched on purpose so PR-diff stays bounded to
-renderer + dispatcher movement.
+A lazy ``_call_build_site`` / ``_lazy_attr`` shim still remains below for
+the remaining helpers and constants not yet pulled out of
+``scripts.build_site`` (e.g. ``_hero_cta_label``,
+``_collect_icons_for_pages``, ``_LISTING_COPY_BY_ROUTE_ID``). Several of
+those now physically live in ``render_helpers`` and are re-exported by
+``scripts.build_site``, so the shim resolves to the same functions;
+shrinking it the rest of the way is a later slice.
 """
 
 from __future__ import annotations
