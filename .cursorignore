@@ -159,3 +159,13 @@ data/evals/manual-scorecards/
 data/evals/generated/
 data/evals/scaffold-probe/
 data/evals/golden-path/
+
+.coverage/
+../sajtbyggaren-output/
+
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.swc/
+.turbo/
