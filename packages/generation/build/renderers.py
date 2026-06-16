@@ -21,21 +21,38 @@ Module layout after the megafiles refactor
   ``sections_treatments`` / ``sections_professional``: the three
   extracted section families. Each self-registers into
   ``dispatcher._SECTION_RENDERERS`` via its own ``.update(...)`` block.
-* ``packages.generation.build.render_helpers``: the shared formatting/CTA
-  helpers (``_jsx_safe_string``, ``_contact_href``, ``_filled_contact_cta``,
-  ``_route_href``, ``_text_contact_cta``). This module imports them
-  directly from there.
+* ``packages.generation.build.render_helpers``: the shared formatting/CTA,
+  hero/commerce-CTA and nav/icon helpers (``_jsx_safe_string``,
+  ``_contact_href``, ``_filled_contact_cta``, ``_route_href``,
+  ``_text_contact_cta``, ``_hero_cta_variant``, ``_hero_cta_label``,
+  ``_hero_cta_target_path``, ``_commerce_bottom_cta_label``,
+  ``_collect_icons_for_pages``). This module imports them directly from there.
 * ``packages.generation.build.static_assets``: deterministic static
   artefacts (robots.txt, sitemap.xml, OG fallback SVG, error pages,
   structured-data JSON-LD).
 
 A lazy ``_call_build_site`` / ``_lazy_attr`` shim still remains below for
-the remaining helpers and constants not yet pulled out of
-``scripts.build_site`` (e.g. ``_hero_cta_label``,
-``_collect_icons_for_pages``, ``_LISTING_COPY_BY_ROUTE_ID``). Several of
-those now physically live in ``render_helpers`` and are re-exported by
-``scripts.build_site``, so the shim resolves to the same functions;
-shrinking it the rest of the way is a later slice.
+the remaining helpers and constants not yet imported directly. The
+hero/commerce-CTA cluster (``_hero_cta_variant``, ``_hero_cta_label``,
+``_hero_cta_target_path``, ``_commerce_bottom_cta_label``) and
+``_collect_icons_for_pages`` already lived in ``render_helpers`` (slice 5)
+and are now imported from there directly instead of via the shim. What stays
+on the shim:
+
+* io wrappers that genuinely belong to ``scripts.build_site``
+  (``write``, ``route_to_page_path``, ``resolve_media_asset``);
+* pure helpers/constants that still physically live ONLY in
+  ``scripts.build_site`` (``_js_string_literal``, ``_member_initials``,
+  ``_normalise_hex_color``, ``_normalize_tone_key``,
+  ``_LISTING_COPY_BY_ROUTE_ID``, ``_RUNTIME_TOKEN_LISTENER_JS``);
+* helpers that already physically live in ``render_helpers`` and are
+  re-exported by ``scripts.build_site`` but are not yet rewired here
+  (``_icon_for_service``, ``_location_is_country_only``,
+  ``_nav_items_from_scaffold``, ``_normalize_business_type``,
+  ``_phone_href``, ``_pick_contact_route``, ``_pick_listing_route``).
+  For these the shim resolves to the same functions; rewiring them to a
+  direct ``render_helpers`` import (and moving the ``build_site``-only
+  helpers/constants down) is a later slice.
 """
 
 from __future__ import annotations
@@ -72,10 +89,25 @@ from packages.generation.build.dispatcher import (
     render_route_generic,
 )
 from packages.generation.build.render_helpers import (
+    _collect_icons_for_pages as _collect_icons_for_pages,
+)
+from packages.generation.build.render_helpers import (
+    _commerce_bottom_cta_label as _commerce_bottom_cta_label,
+)
+from packages.generation.build.render_helpers import (
     _contact_href as _contact_href,
 )
 from packages.generation.build.render_helpers import (
     _filled_contact_cta as _filled_contact_cta,
+)
+from packages.generation.build.render_helpers import (
+    _hero_cta_label as _hero_cta_label,
+)
+from packages.generation.build.render_helpers import (
+    _hero_cta_target_path as _hero_cta_target_path,
+)
+from packages.generation.build.render_helpers import (
+    _hero_cta_variant as _hero_cta_variant,
 )
 from packages.generation.build.render_helpers import (
     _jsx_safe_string as _jsx_safe_string,
@@ -226,39 +258,6 @@ _RUNTIME_TOKEN_LISTENER_JS = _lazy_attr("_RUNTIME_TOKEN_LISTENER_JS")
 
 def _call_build_site(name: str, *args: Any, **kwargs: Any) -> Any:
     return getattr(_build_site_module(), name)(*args, **kwargs)
-
-
-def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) -> list[str]:
-    return _call_build_site("_collect_icons_for_pages", services, dossier_routes)
-
-
-def _commerce_bottom_cta_label(dossier: dict) -> str:
-    return _call_build_site("_commerce_bottom_cta_label", dossier)
-
-
-def _hero_cta_label(dossier: dict) -> str:
-    return _call_build_site("_hero_cta_label", dossier)
-
-
-def _hero_cta_variant(dossier: dict) -> str:
-    """Shim for ``scripts.build_site._hero_cta_variant``.
-
-    Returns ``"shop"`` / ``"booking"`` / ``"quote"`` based on the
-    dossier's conversionGoals + business type + scaffoldId. B97 uses
-    this to pick per-variant contact-page hero body copy so e-commerce
-    and booking businesses do not show the quote-flavoured
-    "Beskriv jobbet kort så återkommer vi … med tider och offert."
-    paragraph.
-    """
-    return _call_build_site("_hero_cta_variant", dossier)
-
-
-def _hero_cta_target_path(
-    dossier: dict,
-    listing_route: dict | None,
-    contact_path: str | None,
-) -> str | None:
-    return _call_build_site("_hero_cta_target_path", dossier, listing_route, contact_path)
 
 
 def _icon_for_service(service_id: str) -> str:
