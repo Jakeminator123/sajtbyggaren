@@ -11,6 +11,7 @@ const STATIC_PATHS: ReadonlyArray<string> = [
   "",
   "/produkt",
   "/om-oss",
+  "/vanliga-fragor",
   "/kontakt",
   "/cookies",
   "/integritetspolicy",

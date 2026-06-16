@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
@@ -24,6 +24,12 @@ export const metadata: Metadata = {
   },
   description:
     "Sajtbyggaren bygger en färdig företagshemsida åt dig med AI. Beskriv din verksamhet — vi sköter resten.",
+};
+
+// Tonar mobilwebbläsarens chrome till samma varma off-white som sajtens
+// bakgrund (--background) i stället för webbläsarens standard.
+export const viewport: Viewport = {
+  themeColor: "#f7f6f2",
 };
 
 export default function RootLayout({

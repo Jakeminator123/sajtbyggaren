@@ -11,6 +11,7 @@ import { ManageCookiesButton } from "@/components/marketing/manage-cookies-butto
 const FOOTER_LINKS: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/produkt", label: "Produkt" },
   { href: "/om-oss", label: "Om oss" },
+  { href: "/vanliga-fragor", label: "Vanliga frågor" },
   { href: "/kontakt", label: "Kontakt" },
   { href: "/cookies", label: "Cookies" },
   { href: "/integritetspolicy", label: "Integritetspolicy" },
