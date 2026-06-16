@@ -169,12 +169,22 @@ def resolve_generative_component(
         # LAST-WINS union UPDATES the count (matris #1 fix: a second prompt used to
         # be silently dropped by a first-wins union). Multiple distinct grids on
         # one route is a later slice.
-        spec = {
+        spec: dict[str, Any] = {
             "recipe": recipe,
             "count": count,
             "routeId": _DEFAULT_ROUTE_ID,
             "id": recipe,
         }
+        # Placement: reuse the router-derived position (the SAME top/bottom tokens
+        # section_add honours, RouterTarget.position via the router's
+        # _detect_position) so "lägg till 6 bildplatshållare högst upp" lands the
+        # grid at the top. Only top/bottom are route-order placements (mirrors
+        # scripts/build_site.py section_positions); left/right/center are intra-
+        # section and ignored, and an absent position keeps the default
+        # before-</main> slot. No new prompt parser - one position truth.
+        position = getattr(getattr(decision, "target", None), "position", None)
+        if position in ("top", "bottom"):
+            spec["position"] = position
         return [spec], []
 
     unsupported = _first_unsupported_cue(text)

@@ -94,6 +94,42 @@ def test_add_image_placeholder_grid_materialises_and_splices(
     assert "<GeneratedImagePlaceholderGrid />" in page
 
 
+def test_add_image_placeholder_grid_at_top_lands_after_main_before_hero(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Placement reuse (full user path): "lägg till 6 bildplatshållare högst upp"
+    lands the grid at the TOP of home - after the opening <main> and BEFORE the
+    hero section - instead of the default before-</main> slot. Proves the router
+    position -> resolver spec -> emit splice wiring end-to-end."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till 6 bildplatshållare högst upp",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "component_add", result
+    assert result["applied"] is True, result
+
+    build_dir = _newest_build_dir(generated_dir, site_id)
+    page = (build_dir / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "<GeneratedImagePlaceholderGrid />" in page
+    usage = page.index("<GeneratedImagePlaceholderGrid />")
+    opening_main = page.index("<main")
+    hero = page.index('data-section-id="hero"')
+    closing_main = page.index("</main>")
+    # The grid is the first child of <main>, before the hero section.
+    assert opening_main < usage < hero < closing_main
+
+
 def test_image_grid_directive_is_sticky_across_a_later_restyle(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
