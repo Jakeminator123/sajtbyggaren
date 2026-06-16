@@ -21,8 +21,8 @@
  *                              uploads/, evals/ är lokal historik, inte build-kontext).
  *   - requirements.txt         full pip-lista (lokalt/CI + fallback i sandboxen).
  *   - requirements-build.txt   slim pip-lista som den hostade bygg-sandboxen
- *                              föredrar (utelämnar streamlit/openai-agents/
- *                              pytest*/ruff = färre tunga wheels i kall sandbox).
+ *                              föredrar (utelämnar streamlit, openai-agents,
+ *                              pytest-paket och ruff = färre tunga wheels i kall sandbox).
  *   - pyproject.toml           liten, ofarlig, håller verktygskontext komplett.
  *   - (repo-roten har ingen config/-katalog — pipens konfiguration ligger i
  *     governance/policies/, som följer med ovan.)
@@ -174,7 +174,9 @@ function createTarball(root) {
 
   // spawnSync utan shell: inga glob-expansioner av *.pyc, och paths med
   // mellanslag (Windows-hemkataloger) hanteras korrekt.
-  const result = spawnSync("tar", args, { stdio: ["ignore", "inherit", "inherit"] });
+  const result = spawnSync("tar", args, {
+    stdio: ["ignore", "inherit", "inherit"],
+  });
   if (result.error) {
     throw new Error(
       `Kunde inte starta tar (${result.error.message}). Windows 10+ har ` +

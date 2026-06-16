@@ -140,5 +140,5 @@ jobs:
         run: python scripts/ai_bug_review.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_REVIEW_MODEL: ${{ vars.OPENAI_REVIEW_MODEL || 'gpt-5.4' }}
+          OPENAI_REVIEW_MODEL: ${{ vars.OPENAI_REVIEW_MODEL || 'gpt-5.5' }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
