@@ -27,8 +27,11 @@ Landat sedan planen skrevs:
   `_collect_icons_for_pages` direkt därifrån i stället för via den lata
   shimmen. Slice 4 (hero-subsystemet → `hero.py`) är **inte** landad ännu.
 - **Del 2 (build_site.py):** slice 1 (färg-/token-systemet → `tokens.py`),
-  slice 2 (asset-pipelinen → `assets.py`) och slice 3 (prompt-meta →
-  `prompt_meta.py`) har landat.
+  slice 2 (asset-pipelinen → `assets.py`), slice 3 (prompt-meta →
+  `prompt_meta.py`) och slice 4 (brief-genereringen →
+  `packages/generation/brief/site_brief.py`) har landat. Slice 5
+  (nav/cta/business-type-hjälparna) är delvis landad: hjälparna bor i
+  `render_helpers.py` men `build_site.py` re-exporterar dem fortfarande.
 
 Kvarvarande shim i `renderers.py`: io-omslag (`write`, `route_to_page_path`,
 `resolve_media_asset`), `build_site`-egna hjälpare/konstanter
@@ -256,7 +259,7 @@ hävdas redan av `tests/test_build_site_size.py`.
 | 1 | landat | färg-/token-systemet (rent, väl testat) | `packages/generation/build/tokens.py` | `test_builder_smoke`, `test_builder_hardening`, `test_b154_next_dev_tdz` |
 | 2 | landat | asset-pipelinen (favicon/og-konvertering + uppladdningar) | `packages/generation/build/assets.py` | `test_builder_favicon_ogimage`, `test_operator_uploads`, `test_product_image_pipeline`, `test_mood_isolation`, `test_build_media_rendering` |
 | 3 | landat | prompt-meta-läsarfamiljen | `packages/generation/build/prompt_meta.py` | `test_builder_smoke`, `test_followup_versioning_regression` |
-| 4 | kvar | brief-genereringen | in i `packages/generation/brief/` (finns redan) | `test_builder_brief`, `test_brief_model_resolver` |
+| 4 | landat | brief-genereringen | `packages/generation/brief/site_brief.py` (i `packages/generation/brief/`) | `test_builder_brief`, `test_brief_model_resolver` |
 | 5 | delvis (hjälparna bor i `render_helpers.py`; re-exporten kvar) | nav/cta/business-type-hjälparna (delade med renderarna) | `packages/generation/build/render_helpers.py` (samma hem som del 1 slice 5) | `test_builder_route_emission`, `test_contact_route_regression`, hela byggar-sviten |
 
 `build`, `run_phase3_quality_and_repair`, snapshot-kedjan och version/följdprompt-
