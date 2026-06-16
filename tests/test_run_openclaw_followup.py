@@ -173,6 +173,11 @@ def test_apply_edit_no_base_run_degrades_to_honest_error(monkeypatch):
     bridge = payload["bridge"]
     assert bridge["status"] == "error"
     assert bridge["applied"] is False
+    # Operator finding 2026-06-16: the error path still carries an honest report
+    # (understood the edit, but nothing to build on) - never a faked success.
+    report = payload["report"]
+    assert isinstance(report, str) and report.strip()
+    assert "byggde en ny version" not in report
 
 
 # ---------------------------------------------------------------------------
@@ -327,6 +332,125 @@ def test_decide_edit_decision_is_unchanged_with_role_metadata():
     assert payload["action"] == "patch_plan_request"
     ppr = payload["patchPlanRequest"]
     assert ppr["status"] == "action_bridge_missing"
+
+
+# ---------------------------------------------------------------------------
+# Honest follow-up report (operator finding 2026-06-16): EVERY turn type
+# carries a short, grounded Swedish line in ``report`` - applied edit, honest
+# no-op, answer-only - derived deterministically from decision + bridge so an
+# applied edit / honest no-op is never stum without OPENAI_API_KEY.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("message", "expected_kind"),
+    [
+        ("dra ett skämt", "small_talk"),
+        ("vad tycker du om sajten?", "site_opinion"),
+        ("vad kostar en hemsida?", "question"),
+    ],
+)
+def test_report_answer_only_is_honest_swedish(monkeypatch, message, expected_kind):
+    """An answer-only turn carries a non-empty Swedish report that never claims
+    a change and says the site is untouched."""
+    _forbid_chain(monkeypatch)
+    payload = json.loads(apply_followup_to_json(message, site_id="painter-palma"))
+    report = payload["report"]
+    assert isinstance(report, str) and report.strip()
+    assert "rör inte sajten" in report
+    # Honest: an answer-only turn never claims a build/version.
+    assert "ny version" not in report
+    assert payload["decision"]["conversation"]["conversationKind"] == expected_kind
+
+
+@pytest.mark.tooling
+def test_report_applied_edit_reports_new_version(monkeypatch):
+    """A visibly-applied edit reports the new version + that the preview shows
+    it - grounded in the chain's authoritative facts (never invented)."""
+
+    def _fake_chain(site_id, follow_up_prompt, **kwargs):
+        return {
+            "siteId": site_id,
+            "stage": "built",
+            "applied": True,
+            "appliedVisibleEffect": True,
+            "previewShouldRefresh": True,
+            "version": 2,
+            "runId": "run-2",
+            "changedRoutes": ["/"],
+        }
+
+    monkeypatch.setattr("scripts.build_site.run_followup_chain", _fake_chain)
+    payload = json.loads(
+        apply_followup_to_json("gör sajten mörkblå", site_id="painter-palma")
+    )
+    report = payload["report"]
+    assert isinstance(report, str) and report.strip()
+    assert "Jag uppfattar" in report
+    assert "ny version" in report and "v2" in report
+
+
+@pytest.mark.tooling
+def test_report_mount_only_is_honest_about_no_visible_effect(monkeypatch):
+    """An applied-but-mount-only edit (previewShouldRefresh False) says the
+    change was registered but is not visible yet - never a faked success."""
+
+    def _fake_chain(site_id, follow_up_prompt, **kwargs):
+        return {
+            "siteId": site_id,
+            "stage": "built",
+            "applied": True,
+            "appliedVisibleEffect": False,
+            "previewShouldRefresh": False,
+            "version": 4,
+            "runId": "run-4",
+        }
+
+    monkeypatch.setattr("scripts.build_site.run_followup_chain", _fake_chain)
+    payload = json.loads(
+        apply_followup_to_json("lägg till en faq-sektion", site_id="painter-palma")
+    )
+    report = payload["report"]
+    assert "registrerade" in report
+    assert "syns inte" in report
+
+
+@pytest.mark.tooling
+def test_report_honest_no_op_states_understood_and_unchanged(monkeypatch):
+    """An honest no-op (chain plan_empty) reports WHAT was understood and that
+    nothing visible changed - never that a new version was built."""
+
+    def _fake_chain(site_id, follow_up_prompt, **kwargs):
+        return {
+            "siteId": site_id,
+            "stage": "plan_empty",
+            "applied": False,
+            "appliedVisibleEffect": False,
+            "previewShouldRefresh": False,
+            "messageKind": "edit_instruction",
+            "editKind": "visual_style",
+        }
+
+    monkeypatch.setattr("scripts.build_site.run_followup_chain", _fake_chain)
+    payload = json.loads(
+        apply_followup_to_json("gör hero mer premium", site_id="painter-palma")
+    )
+    report = payload["report"]
+    assert "Jag uppfattar" in report
+    assert "likadan ut" in report
+    # Honest: a no-op must never claim a build happened.
+    assert "byggde en ny version" not in report
+
+
+@pytest.mark.tooling
+def test_report_present_on_every_decide_turn():
+    """The read-only decide path also carries a non-empty report for a question
+    and for an edit (deterministic floor on every turn)."""
+    question = json.loads(decide_to_json("vad ar klockan?"))
+    edit = json.loads(decide_to_json("byt rubriken till X", site_id="painter-palma"))
+    assert isinstance(question["report"], str) and question["report"].strip()
+    assert isinstance(edit["report"], str) and edit["report"].strip()
 
 
 # ---------------------------------------------------------------------------

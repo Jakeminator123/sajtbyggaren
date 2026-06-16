@@ -223,6 +223,24 @@ def _classify_conversation(message: str, *, site_id: str | None, router=None):
     )
 
 
+def _attach_report(
+    decision_payload: dict[str, object],
+    bridge: dict[str, object] | None = None,
+) -> str:
+    """Build the deterministic honest Swedish report from decision + bridge.
+
+    Operator finding 2026-06-16: every follow-up turn must carry a short,
+    grounded, Swedish natural-language report (how it was interpreted + what
+    was done or why not). The actual chat answer text still comes from the
+    Viewser chat helper when ``OPENAI_API_KEY`` is set, but this deterministic
+    floor means the seam ALWAYS carries one - an applied edit / honest no-op is
+    never stum without a key. Deferred import keeps the seam import-light.
+    """
+    from packages.generation.orchestration.openclaw import build_followup_report
+
+    return build_followup_report(decision_payload, bridge)
+
+
 def _conversation_metadata(conversation) -> dict[str, object]:
     """The additive ``conversation`` block attached to the decision payload.
 
@@ -345,6 +363,11 @@ def decide_to_json(
     (small_talk / site_opinion / question) is emitted as an honest
     answer-only decision instead of e.g. a clarification. Everything else -
     edits included - keeps the exact same decision as before.
+
+    Operator finding 2026-06-16 (additive): the payload also carries a
+    ``report`` key - a short, deterministic, honest Swedish line. On this
+    read-only path no apply is attempted, so it is grounded in the decision
+    alone.
     """
     router = _classify_router(message, site_id=site_id)
     conversation = _classify_conversation(
@@ -364,6 +387,10 @@ def decide_to_json(
         )
     payload = decision.model_dump()
     payload["conversation"] = _conversation_metadata(conversation)
+    # Honest report floor (operator finding 2026-06-16). Read-only path: no
+    # apply was attempted this turn, so the report is grounded in the decision
+    # alone (bridge=None).
+    payload["report"] = _attach_report(payload, None)
     return json.dumps(payload, ensure_ascii=False)
 
 
@@ -393,7 +420,14 @@ def apply_followup_to_json(
 
     Output shape (the seam apps/viewser consumes):
         {"decision": <OpenClawDecision + conversation metadata>,
-         "bridge": {status, applied, previewShouldRefresh, chain}}
+         "bridge": {status, applied, previewShouldRefresh, chain},
+         "report": <short honest Swedish line, deterministic floor>}
+
+    ``report`` (operator finding 2026-06-16) is a DETERMINISTIC Swedish line
+    derived from decision + bridge - how the prompt was interpreted and what was
+    done or why not. It is the honest floor /api/prompt uses when the LLM chat
+    helper produces nothing (no key / timeout), so an applied edit / honest
+    no-op is never stum.
 
     F1 slice 2 (conductor wiring): the conversation classification runs FIRST.
     A conversation kind (small_talk / site_opinion / question) stops here with
@@ -423,7 +457,11 @@ def apply_followup_to_json(
         decision_payload = decision.model_dump()
         decision_payload["conversation"] = _conversation_metadata(conversation)
         return json.dumps(
-            {"decision": decision_payload, "bridge": bridge},
+            {
+                "decision": decision_payload,
+                "bridge": bridge,
+                "report": _attach_report(decision_payload, bridge),
+            },
             ensure_ascii=False,
         )
 
@@ -470,7 +508,14 @@ def apply_followup_to_json(
     decision_payload = decision.model_dump()
     decision_payload["conversation"] = _conversation_metadata(conversation)
     return json.dumps(
-        {"decision": decision_payload, "bridge": bridge},
+        {
+            "decision": decision_payload,
+            "bridge": bridge,
+            # Honest report floor (operator finding 2026-06-16): grounded in the
+            # decision + the authoritative bridge result (applied / stage / no-op
+            # reason), never a faked success.
+            "report": _attach_report(decision_payload, bridge),
+        },
         ensure_ascii=False,
     )
 
