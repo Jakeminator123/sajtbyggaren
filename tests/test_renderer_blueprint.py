@@ -335,6 +335,40 @@ def test_trust_proof_drops_facts_matching_unknowns():
 
 
 @pytest.mark.tooling
+def test_trust_proof_drops_medical_guarantee_facts():
+    """A confirmed fact that reads as a medical guarantee must not render when
+    qualityRisks forbid medical guarantees — the modeled "No medical guarantees"
+    risk the trust band previously ignored (it enforced only the cert/review
+    subset). The grounded, non-promise fact still renders, so closing the gap
+    keeps honest copy while dropping the overpromise."""
+    blueprint = RenderBlueprint(
+        business_facts={
+            "facts": ["Garanterar smärtfrihet", "Mottagning i Stockholm"],
+            "unknowns": [],
+        },
+        quality_risks=["No medical guarantees"],
+    )
+    signals = blueprint.honest_trust_signals()
+    assert "Mottagning i Stockholm" in signals
+    assert all("garanter" not in s.lower() for s in signals)
+
+
+@pytest.mark.tooling
+def test_trust_proof_medical_tokens_not_gated_without_medical_risk():
+    """The medical-guarantee token gate is scoped to the modeled risk: a
+    non-medical business (no "No medical guarantees" risk) keeps a legitimate
+    workmanship "garanti" fact, so the gate never drops grounded copy outside
+    the medical context."""
+    blueprint = RenderBlueprint(
+        business_facts={"facts": ["5 års garanti på arbetet", "Verksam i Malmö"], "unknowns": []},
+        quality_risks=["No fake certifications"],
+    )
+    signals = blueprint.honest_trust_signals()
+    assert "5 års garanti på arbetet" in signals
+    assert "Verksam i Malmö" in signals
+
+
+@pytest.mark.tooling
 def test_contact_cta_follows_conversion_primary_cta():
     nap = _dossier("naprapat-stockholm")
     section = render_section_contact_cta(
