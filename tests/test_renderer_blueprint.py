@@ -296,8 +296,8 @@ def test_trust_proof_usp_seed_does_not_mark_blueprint_applied():
 @pytest.mark.tooling
 def test_usps_never_render_as_home_testimonials():
     """Honesty guard: uniqueSellingPoints feed only the neutral "Varför oss"
-    strengths section, never the "Sagt om oss" testimonials cards (which would
-    misframe an operator self-claim as a customer quote). The testimonials
+    strengths section, never the home trust-card rail (which would duplicate
+    an operator self-claim in a stronger proof layout). The testimonials
     section keys off trustSignals alone, so 4 USPs with empty trustSignals
     must NOT produce a testimonials section.
     """
@@ -306,6 +306,31 @@ def test_usps_never_render_as_home_testimonials():
     dossier = _dossier("elektriker-malmo")  # trustSignals = []
     dossier["uniqueSellingPoints"] = ["A-fakta", "B-fakta", "C-fakta", "D-fakta"]
     assert _render_home_testimonials_section(dossier) == ""
+
+
+@pytest.mark.tooling
+def test_trust_signals_cards_use_neutral_proof_framing():
+    """Honesty guard: trustSignals are generic/operator proof facts, not a
+    verified reviews schema. With 3+ items the card rail may render, but it must
+    not invent customer-testimonial framing around those facts."""
+    from packages.generation.build.renderers import _render_home_testimonials_section
+
+    dossier = _dossier("elektriker-malmo")
+    dossier["trustSignals"] = [
+        "Tio år i branschen",
+        "Lokalt team",
+        "Tydlig offert",
+    ]
+
+    section = _render_home_testimonials_section(dossier)
+
+    assert "Tio år i branschen" in section
+    assert "Lokalt team" in section
+    assert "Tydlig offert" in section
+    assert "Förtroendesignal" in section
+    assert "Det här bygger förtroende" in section
+    assert "Sagt om oss" not in section
+    assert "Det här uppskattar våra kunder" not in section
 
 
 @pytest.mark.tooling
