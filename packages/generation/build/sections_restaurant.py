@@ -40,6 +40,12 @@ from packages.generation.build.dispatcher import (
     annotate_section_marker,
     render_route_generic,
 )
+from packages.generation.build.render_helpers import (
+    _jsx_safe_string as _jsx_safe_string,
+)
+from packages.generation.build.render_helpers import (
+    _phone_href as _phone_href,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -55,16 +61,6 @@ def _renderers() -> ModuleType:
     from packages.generation.build import renderers
 
     return renderers
-
-
-def _jsx_safe_string(text: str) -> str:
-    """Lazy shim to ``renderers._jsx_safe_string`` (→ ``scripts.build_site``)."""
-    return _renderers()._jsx_safe_string(text)
-
-
-def _phone_href(phone: str) -> str:
-    """Lazy shim to ``renderers._phone_href`` (→ ``scripts.build_site``)."""
-    return _renderers()._phone_href(phone)
 
 
 def _menu_items(dossier: dict) -> list[dict]:
@@ -211,10 +207,10 @@ def render_section_dietary_key(dossier: dict) -> str:
     ]
     rows = "\n".join(
         '            <li className="inline-flex items-center gap-2 rounded-full '
-        'border border-[color:var(--border)] px-3 py-1 text-xs '
+        "border border-[color:var(--border)] px-3 py-1 text-xs "
         'text-[color:var(--muted)]">'
         f'<span className="font-semibold text-[color:var(--foreground)]">{_jsx_safe_string(short)}</span>'
-        f'<span>{_jsx_safe_string(label)}</span>'
+        f"<span>{_jsx_safe_string(label)}</span>"
         "</li>"
         for short, label in markers
     )
@@ -328,7 +324,7 @@ def render_section_fallback_phone(dossier: dict) -> str:
         cards.append(
             '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
             '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via telefon</p>\n'
-            f'              <a href={_jsx_safe_string("tel:" + _phone_href(phone))} '
+            f"              <a href={_jsx_safe_string('tel:' + _phone_href(phone))} "
             f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(phone)}</a>\n'
             "            </div>"
         )
@@ -336,7 +332,7 @@ def render_section_fallback_phone(dossier: dict) -> str:
         cards.append(
             '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
             '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via e-post</p>\n'
-            f'              <a href={_jsx_safe_string("mailto:" + email.strip())} '
+            f"              <a href={_jsx_safe_string('mailto:' + email.strip())} "
             f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(email.strip())}</a>\n'
             "            </div>"
         )
@@ -470,12 +466,7 @@ _SECTION_RENDERERS.update(
 
 
 _RESTAURANT_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "restaurant-hospitality"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "restaurant-hospitality"
 )
 
 

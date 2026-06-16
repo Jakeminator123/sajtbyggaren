@@ -62,6 +62,21 @@ from packages.generation.build.dispatcher import (
     annotate_section_marker,
     render_route_generic,
 )
+from packages.generation.build.render_helpers import (
+    _contact_href as _contact_href,
+)
+from packages.generation.build.render_helpers import (
+    _filled_contact_cta as _filled_contact_cta,
+)
+from packages.generation.build.render_helpers import (
+    _jsx_safe_string as _jsx_safe_string,
+)
+from packages.generation.build.render_helpers import (
+    _route_href as _route_href,
+)
+from packages.generation.build.render_helpers import (
+    _text_contact_cta as _text_contact_cta,
+)
 from packages.generation.build.sections_professional import (
     render_section_capabilities_row as render_section_capabilities_row,
 )
@@ -245,10 +260,6 @@ def _js_string_literal(text: Any) -> str:
     return _call_build_site("_js_string_literal", _resolve_lazy(text))
 
 
-def _jsx_safe_string(text: str) -> str:
-    return _call_build_site("_jsx_safe_string", text)
-
-
 def _location_is_country_only(location: dict) -> bool:
     return _call_build_site("_location_is_country_only", location)
 
@@ -296,20 +307,6 @@ def _pick_listing_route(scaffold_default_routes: list[dict]) -> dict | None:
     return _call_build_site("_pick_listing_route", scaffold_default_routes)
 
 
-def _route_href(route: str) -> str:
-    return _call_build_site("_route_href", route)
-
-
-def _contact_href(contact_target: str | None) -> str | None:
-    """Shim for ``scripts.build_site._contact_href`` (Route/Nav V1 Slice B).
-
-    Returns a JSX-safe href for a contact CTA target (a ``/`` route path or a
-    ``mailto:``/``tel:`` action), or ``None`` when the target is missing so the
-    caller omits the anchor instead of emitting a dead/invalid href.
-    """
-    return _call_build_site("_contact_href", contact_target)
-
-
 def _contact_cta_target(contact_route: dict | None, dossier: dict) -> str | None:
     """Resolve the single contact-CTA target for a build (ADR 0060 Slice B).
 
@@ -340,56 +337,6 @@ def _contact_cta_target(contact_route: dict | None, dossier: dict) -> str | None
     if phone:
         return "tel:" + _phone_href(phone)
     return None
-
-
-def _filled_contact_cta(
-    contact_path: str | None,
-    label: str,
-    *,
-    indent: str = "          ",
-    lead_icon: str = "",
-) -> str:
-    """Filled primary contact-CTA button, or ``""`` when there is no target.
-
-    Slice B (ADR 0060): the shared filled "Begär offert"/"Boka tid"/shop button
-    used by the service-list, collection, products and wizard-route renderers.
-    Returns ``""`` when contact was removed with no ``mailto:``/``tel:`` fallback
-    so the page omits the button instead of linking to a dead ``/kontakt`` route.
-    Byte-identical to the previous inline anchor when a target exists.
-    """
-    href = _contact_href(contact_path)
-    if href is None:
-        return ""
-    return (
-        f'{indent}<a href={href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{lead_icon}{label}<ArrowRight className="size-4" /></a>\n'
-    )
-
-
-def _text_contact_cta(
-    contact_path: str | None,
-    label: str,
-    *,
-    indent: str = "          ",
-    class_name: str = (
-        "inline-flex w-fit items-center gap-2 text-sm font-medium "
-        "underline-offset-4 hover:underline"
-    ),
-    icon_size: str = "size-4",
-) -> str:
-    """Underlined text contact-CTA link, or ``""`` when there is no target.
-
-    Slice B (ADR 0060): the shared clinic/professional/agency "Boka tid" /
-    "Diskutera ärende" / "Diskutera projekt" link. Same omit-on-no-target rule
-    as ``_filled_contact_cta``; byte-identical to the previous inline anchor when
-    a target exists (``_contact_href`` matches ``_jsx_safe_string`` for a valid
-    ``/`` path).
-    """
-    href = _contact_href(contact_path)
-    if href is None:
-        return ""
-    return (
-        f'{indent}<a href={href} className="{class_name}">{label}<ArrowRight className="{icon_size}" /></a>\n'
-    )
 
 
 def _hard_dossier_runtime(dossier: dict, dossier_id: str) -> dict[str, Any] | None:
@@ -547,7 +494,7 @@ def render_layout(
         logo_height = operator_logo.get("height")
         dims = ""
         if isinstance(logo_width, int) and isinstance(logo_height, int):
-            dims = f' width={{{logo_width}}} height={{{logo_height}}}'
+            dims = f" width={{{logo_width}}} height={{{logo_height}}}"
         # eslint-disable-next-line @next/next/no-img-element — vi använder
         # raw <img> för att slippa Next.js Image-loader inställningar i
         # alla starters; webp:erna är redan komprimerade av sharp.
@@ -558,11 +505,11 @@ def render_layout(
         # och bröt next build med "Expected '</', got '.'". Korrekt är att
         # låta hela attribut-värdet vara ett JS-uttryck (`src={...}`).
         header_logo_jsx = (
-            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
+            f"              <img src={_jsx_safe_string('/uploads/' + logo_filename)}"
             f' alt={_js_string_literal(logo_alt)} className="h-9 w-auto object-contain"{dims} />'
         )
         footer_logo_jsx = (
-            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
+            f"              <img src={_jsx_safe_string('/uploads/' + logo_filename)}"
             f' alt={_js_string_literal(logo_alt)} className="h-10 w-auto object-contain mb-1"{dims} />'
         )
     else:
@@ -661,9 +608,7 @@ def render_layout(
     # som matchar default --background. Detta gör att mobilen visuellt
     # ankrar mot sajtens identitet redan innan första paint.
     brand = dossier.get("brand") or {}
-    primary_hex_raw = (
-        brand.get("primaryColorHex") if isinstance(brand, dict) else None
-    )
+    primary_hex_raw = brand.get("primaryColorHex") if isinstance(brand, dict) else None
     theme_color_hex = _normalise_hex_color(primary_hex_raw) or "#ffffff"
     viewport_block = (
         "\n"
@@ -679,9 +624,7 @@ def render_layout(
     # the JSX attribute well-formed even if a future query carried one.
     font_stylesheet_link = ""
     if font_stylesheet_href and '"' not in font_stylesheet_href:
-        font_stylesheet_link = (
-            f'        <link rel="stylesheet" href="{font_stylesheet_href}" />\n'
-        )
+        font_stylesheet_link = f'        <link rel="stylesheet" href="{font_stylesheet_href}" />\n'
 
     return (
         'import type { Metadata, Viewport } from "next";\n'
@@ -922,14 +865,10 @@ def render_section_hero(
     # wins over BOTH the regenerated blueprint copy and the heroHeadline pin so
     # "ändra texten i hero-sektionen till X" is visible in the H1 and survives a
     # rebuild. Absent on init/most builds, so the no-override path is unchanged.
-    hero_headline_override = resolve_section_content_override(
-        dossier, "hero", "headline"
-    )
+    hero_headline_override = resolve_section_content_override(dossier, "hero", "headline")
     if hero_headline_override is not None:
         hero_headline = hero_headline_override
-    hero_subheadline_override = resolve_section_content_override(
-        dossier, "hero", "subheadline"
-    )
+    hero_subheadline_override = resolve_section_content_override(dossier, "hero", "subheadline")
     if hero_subheadline_override is not None:
         hero_subheadline = hero_subheadline_override
     spel_cta = (
@@ -973,9 +912,7 @@ def render_section_hero(
     # (a /path, a mailto:/tel: fallback, or None when contact was removed with
     # no channel); _contact_href turns it into a safe href or None so the hero
     # primary CTA is omitted rather than linking to a dead /kontakt route.
-    hero_cta_href = _contact_href(
-        _hero_cta_target_path(dossier, listing_route, contact_path)
-    )
+    hero_cta_href = _contact_href(_hero_cta_target_path(dossier, listing_route, contact_path))
 
     # Operator-uploaded hero image (if present) renders as a banner
     # above the gradient section. The asset is placed in public/uploads/
@@ -1090,9 +1027,7 @@ def _render_product_grid_image(item: dict, label: str, escape) -> str:
     image_url = item.get("imageUrl")
     if not isinstance(image_url, str) or not image_url.strip():
         service_id = _product_grid_text(item, "id", "product")
-        return (
-            f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(service_id)} className="size-6" /></span>\n'
-        )
+        return f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(service_id)} className="size-6" /></span>\n'
 
     product_image = item.get("productImage")
     alt = label
@@ -1146,8 +1081,7 @@ def render_section_product_grid(dossier: dict) -> str:
         return _jsx_safe_string(value)
 
     items = "\n".join(
-        _render_product_grid_card(item, index, escape)
-        for index, item in enumerate(products)
+        _render_product_grid_card(item, index, escape) for index, item in enumerate(products)
     )
     return (
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
@@ -1222,11 +1156,23 @@ _CONTACT_PAGE_HERO_BODY_BY_VARIANT: dict[tuple[str, str], str] = {
     # conversionGoals + business type + scaffoldId, so we reuse it here
     # for consistency with the hero CTA label/target.
     ("quote", "sv"): "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.",
-    ("quote", "en"): "Tell us briefly about the job and we'll get back within one business day with times and a quote.",
+    (
+        "quote",
+        "en",
+    ): "Tell us briefly about the job and we'll get back within one business day with times and a quote.",
     ("shop", "sv"): "Frågor om beställning, leverans eller retur? Vi återkommer inom en arbetsdag.",
-    ("shop", "en"): "Questions about your order, delivery or return? We get back to you within one business day.",
-    ("booking", "sv"): "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar.",
-    ("booking", "en"): "Tell us briefly what you need — we'll come back within one business day with a time that suits you.",
+    (
+        "shop",
+        "en",
+    ): "Questions about your order, delivery or return? We get back to you within one business day.",
+    (
+        "booking",
+        "sv",
+    ): "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar.",
+    (
+        "booking",
+        "en",
+    ): "Tell us briefly what you need — we'll come back within one business day with a time that suits you.",
 }
 
 
@@ -1325,8 +1271,7 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
             '              <address className="mt-2 not-italic">\n'
             f"{address_lines}\n"
             "              </address>\n"
-            "            </article>\n"
-            + footer
+            "            </article>\n" + footer
         )
 
     # Honest path: at least one field is a placeholder. Render only the
@@ -1423,15 +1368,9 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
         )
 
     if resend_runtime is not None:
-        submit_path = str(
-            resend_runtime.get("submitTarget") or "/api/contact/resend"
-        )
+        submit_path = str(resend_runtime.get("submitTarget") or "/api/contact/resend")
         mode = "integration" if resend_runtime.get("mode") == "integration" else "design"
-        heading = (
-            "Send us a message"
-            if language == "en"
-            else "Skicka ett meddelande"
-        )
+        heading = "Send us a message" if language == "en" else "Skicka ett meddelande"
         intro = (
             "Use the form below and we reply by email."
             if language == "en"
@@ -1459,9 +1398,7 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
             if behavior
             else ""
         )
-        design_mode_message = str(
-            resend_runtime.get("designModeBehavior", "")
-        ).strip()
+        design_mode_message = str(resend_runtime.get("designModeBehavior", "")).strip()
         if not design_mode_message:
             design_mode_message = (
                 "Design mode active: submission is a no-op until RESEND_API_KEY is configured."
@@ -1472,8 +1409,8 @@ def render_section_contact_info(dossier: dict, *, contact_path: str | None = "/k
             f'              <p className="mt-2 text-[color:var(--muted)]">{_jsx_safe_string(intro)}</p>\n'
             f'              <p className="mt-2 text-sm font-medium text-[color:var(--muted)]">{_jsx_safe_string(mode_note)}</p>\n'
             + behavior_line
-            + "              <div className=\"mt-4\">\n"
-            + f'                <ResendContactForm submitPath={_jsx_safe_string(submit_path)} designModeAtBuild={"{true}" if mode == "design" else "{false}"} designModeMessage={_jsx_safe_string(design_mode_message)} />\n'
+            + '              <div className="mt-4">\n'
+            + f"                <ResendContactForm submitPath={_jsx_safe_string(submit_path)} designModeAtBuild={'{true}' if mode == 'design' else '{false}'} designModeMessage={_jsx_safe_string(design_mode_message)} />\n"
             + "              </div>\n"
             + "            </article>\n"
         )
@@ -1700,13 +1637,9 @@ def _collect_home_icons(dossier: dict, dossier_routes: list[str]) -> list[str]:
         icons_used = sorted({*icons_used, "Check"})
     story_text = (dossier.get("company") or {}).get("story") or ""
     trust_count = sum(
-        1
-        for item in (dossier.get("trustSignals") or [])
-        if isinstance(item, str) and item.strip()
+        1 for item in (dossier.get("trustSignals") or []) if isinstance(item, str) and item.strip()
     )
-    needs_quote_icon = (
-        bool(str(story_text).strip()) or trust_count >= _HOME_TESTIMONIAL_MIN_ITEMS
-    )
+    needs_quote_icon = bool(str(story_text).strip()) or trust_count >= _HOME_TESTIMONIAL_MIN_ITEMS
     if needs_quote_icon and "Quote" not in icons_used:
         icons_used = sorted({*icons_used, "Quote"})
     return icons_used
@@ -1926,9 +1859,7 @@ def render_home(
     section_order.extend(bottom_ids)
     section_order.append("contact-cta")
 
-    effective_sections = {
-        "home": {"requiredSections": section_order, "optionalSections": []}
-    }
+    effective_sections = {"home": {"requiredSections": section_order, "optionalSections": []}}
 
     body = render_route_generic(
         dossier,
@@ -1945,9 +1876,7 @@ def render_home(
         icon_import + "\n"
         "export default function Home() {\n"
         "  return (\n"
-        '    <main className="flex flex-1 flex-col">\n'
-        + body
-        + "    </main>\n"
+        '    <main className="flex flex-1 flex-col">\n' + body + "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -2000,9 +1929,7 @@ def render_section_service_list(
         default=_SERVICE_LIST_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "service-list"),
         visual_direction_pick=(
-            blueprint.section_treatment_pick("service-list")
-            if blueprint is not None
-            else None
+            blueprint.section_treatment_pick("service-list") if blueprint is not None else None
         ),
     )
     if treatment == "alternating-rows":
@@ -2058,9 +1985,7 @@ def _render_service_list_card_grid(dossier: dict, contact_path: str | None) -> s
     )
 
 
-def _render_service_list_alternating_rows(
-    dossier: dict, contact_path: str | None
-) -> str:
+def _render_service_list_alternating_rows(dossier: dict, contact_path: str | None) -> str:
     """Vertical sequence of left-/right-flipped icon+copy rows.
 
     Each service is its own row spanning the full container width;
@@ -2073,7 +1998,7 @@ def _render_service_list_alternating_rows(
     items = "\n".join(
         (
             f'          <li key={_jsx_safe_string(svc["id"])} className="flex flex-col items-start gap-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:flex-row md:items-center md:gap-10 md:p-10'
-            + (' md:flex-row-reverse' if idx % 2 == 0 else '')
+            + (" md:flex-row-reverse" if idx % 2 == 0 else "")
             + '">\n'
             f'            <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-7" /></span>\n'
             f'            <div className="flex flex-col gap-2">\n'
@@ -2098,9 +2023,7 @@ def _render_service_list_alternating_rows(
     )
 
 
-def _render_service_list_icon_strip(
-    dossier: dict, contact_path: str | None
-) -> str:
+def _render_service_list_icon_strip(dossier: dict, contact_path: str | None) -> str:
     """Compact horizontal icon-label strip with summaries underneath.
 
     The strip is a single row of small icon-label pills (each
@@ -2113,7 +2036,7 @@ def _render_service_list_icon_strip(
         (
             f'              <li key={_jsx_safe_string(svc["id"])} className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2 text-sm font-medium tracking-tight">\n'
             f'                <{_icon_for_service(svc["id"])} className="size-4 text-[color:var(--accent)]" />\n'
-            f'                <span>{_jsx_safe_string(svc["label"])}</span>\n'
+            f"                <span>{_jsx_safe_string(svc['label'])}</span>\n"
             "              </li>"
         )
         for svc in services
@@ -2170,7 +2093,7 @@ def _render_service_list_tabular(dossier: dict, contact_path: str | None) -> str
         + _service_list_header()
         + '          <div className="flex flex-col">\n'
         + '            <div className="grid gap-4 border-b border-[color:var(--border)] pb-3 text-xs font-mono uppercase tracking-widest text-[color:var(--muted)] md:grid-cols-[3rem_14rem_1fr] md:gap-8">\n'
-        + '              <span aria-hidden />\n'
+        + "              <span aria-hidden />\n"
         + "              <span>Tjänst</span>\n"
         + "              <span>Beskrivning</span>\n"
         + "            </div>\n"
@@ -2237,9 +2160,7 @@ def _render_collection_page(
     cta_label: str | None = None,
 ) -> str:
     items_source = dossier["services"]
-    icons_used = sorted(
-        {_icon_for_service(item["id"]) for item in items_source} | {"ArrowRight"}
-    )
+    icons_used = sorted({_icon_for_service(item["id"]) for item in items_source} | {"ArrowRight"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
         f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
@@ -2266,9 +2187,7 @@ def _render_collection_page(
         "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
-        "          </div>\n"
-        + _filled_contact_cta(contact_path, label)
-        + "        </div>\n"
+        "          </div>\n" + _filled_contact_cta(contact_path, label) + "        </div>\n"
         "      </section>\n"
         "    </main>\n"
         "  );\n"
@@ -2331,10 +2250,7 @@ def render_about(dossier: dict) -> str:
     # bemärkelse). Suppressas för ecommerce-lite. För övriga scaffolds
     # gäller fortsatt bara B104-checken (country-only suppression).
     scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
-    if (
-        not _location_is_country_only(location)
-        and scaffold_id != "ecommerce-lite"
-    ):
+    if not _location_is_country_only(location) and scaffold_id != "ecommerce-lite":
         location_section = (
             '          <div className="flex flex-col gap-2">\n'
             '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
@@ -2414,9 +2330,7 @@ def render_contact(dossier: dict, *, contact_path: str | None = "/kontakt") -> s
     )
     icons = sorted(set(_DISPATCHED_ICON_PATTERN.findall(contact_info_section)))
     icon_import = (
-        ("import { " + ", ".join(icons) + ' } from "lucide-react";\n' + "\n")
-        if icons
-        else ""
+        ("import { " + ", ".join(icons) + ' } from "lucide-react";\n' + "\n") if icons else ""
     )
     form_import = (
         'import { ResendContactForm } from "@/components/resend-contact-form";\n\n'
@@ -2424,9 +2338,7 @@ def render_contact(dossier: dict, *, contact_path: str | None = "/kontakt") -> s
         else ""
     )
     return (
-        form_import
-        + icon_import
-        + "export default function ContactPage() {\n"
+        form_import + icon_import + "export default function ContactPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
         f"{contact_info_section}"
@@ -2571,22 +2483,12 @@ def _wizard_contact_cta(dossier: dict, contact_path: str | None) -> str:
     cta_anchor = _filled_contact_cta(contact_path, cta_label, indent="            ")
     if not cta_anchor:
         return ""
-    return (
-        '          <div>\n'
-        + cta_anchor
-        + "          </div>\n"
-    )
+    return "          <div>\n" + cta_anchor + "          </div>\n"
 
 
 def _wizard_page_footer() -> str:
     """Closing tags shared by every wizard-route renderer."""
-    return (
-        "        </div>\n"
-        "      </section>\n"
-        "    </main>\n"
-        "  );\n"
-        "}\n"
-    )
+    return "        </div>\n      </section>\n    </main>\n  );\n}\n"
 
 
 _FAQ_DEFAULT_SV: list[tuple[str, str]] = [
@@ -2710,9 +2612,9 @@ def render_faq(
 
     if use_accordion:
         items = "\n".join(
-            f'            <AccordionItem key={_jsx_safe_string(f"faq-{i}")}>\n'
-            f'              <AccordionTrigger>{_jsx_safe_string(question)}</AccordionTrigger>\n'
-            f'              <AccordionContent>{_jsx_safe_string(answer)}</AccordionContent>\n'
+            f"            <AccordionItem key={_jsx_safe_string(f'faq-{i}')}>\n"
+            f"              <AccordionTrigger>{_jsx_safe_string(question)}</AccordionTrigger>\n"
+            f"              <AccordionContent>{_jsx_safe_string(answer)}</AccordionContent>\n"
             "            </AccordionItem>"
             for i, (question, answer) in enumerate(pairs)
         )
@@ -3033,9 +2935,7 @@ def _extract_usps(dossier: dict) -> list[str]:
         if isinstance(directives, dict):
             raw = directives.get("uniqueSellingPoints")
             if isinstance(raw, list):
-                candidates = [
-                    str(item).strip() for item in raw if isinstance(item, str)
-                ]
+                candidates = [str(item).strip() for item in raw if isinstance(item, str)]
     if not candidates:
         return []
     return [item for item in candidates if item][:_HERO_USP_MAX]
@@ -3057,9 +2957,7 @@ def _render_hero_usp_chips(usps: list[str], *, centered: bool = False) -> str:
         for i, item in enumerate(usps)
     )
     return (
-        f'          <ul className="flex flex-wrap gap-2 {align_class}">\n'
-        f"{items}\n"
-        "          </ul>\n"
+        f'          <ul className="flex flex-wrap gap-2 {align_class}">\n{items}\n          </ul>\n'
     )
 
 
@@ -3117,9 +3015,7 @@ def _hero_style_for(
     return "gradient"
 
 
-def _render_hero_background_video(
-    background_video: dict | None, hero_asset: dict | None
-) -> str:
+def _render_hero_background_video(background_video: dict | None, hero_asset: dict | None) -> str:
     """Render a tyst loopande bakgrundsvideo bakom hero-textinnehållet.
 
     Avgör layout: <video> ligger som ``absolute inset-0`` i en wrapper
@@ -3225,9 +3121,7 @@ def _render_hero_block(
     # three hero layouts so real-phone output stays byte-identical.
     phone_cta_button = ""
     if not is_placeholder_phone(contact_phone):
-        phone_cta_button = (
-            f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
-        )
+        phone_cta_button = f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
     # Slice B (ADR 0060): the primary hero CTA is omitted when there is no target
     # (contact page removed and no mailto:/tel: fallback) so the hero never links
     # to a dead /kontakt route. Byte-identical when a target exists. Reused across
@@ -3251,7 +3145,9 @@ def _render_hero_block(
         # left-aligned default to a centered one inline rather than
         # branching upstream.
         centered_location = (
-            location_tag.replace("flex items-center gap-2", "flex items-center gap-2 justify-center")
+            location_tag.replace(
+                "flex items-center gap-2", "flex items-center gap-2 justify-center"
+            )
             if location_tag
             else ""
         )
@@ -3353,9 +3249,7 @@ def _render_hero_block(
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{safe_name}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
         f"{proof_p_10}"
-        f"{usp_chips_left}"
-        + cta_buttons
-        + "        </div>\n"
+        f"{usp_chips_left}" + cta_buttons + "        </div>\n"
         "      </section>\n"
         "\n"
     )
@@ -3527,9 +3421,7 @@ def _render_home_testimonials_section(dossier: dict) -> str:
     if not isinstance(trust, list):
         return ""
     items: list[str] = [
-        str(item).strip()
-        for item in trust
-        if isinstance(item, str) and item.strip()
+        str(item).strip() for item in trust if isinstance(item, str) and item.strip()
     ]
     if len(items) < _HOME_TESTIMONIAL_MIN_ITEMS:
         return ""
@@ -3600,9 +3492,7 @@ def _render_home_faq_section(
     )
     faq_link = ""
     if has_faq_route:
-        faq_link = (
-            '          <a href="/faq" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se alla frågor<ArrowRight className="size-4" /></a>\n'
-        )
+        faq_link = '          <a href="/faq" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se alla frågor<ArrowRight className="size-4" /></a>\n'
     return (
         '      <section className="border-t border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
@@ -3891,14 +3781,15 @@ def render_map(dossier: dict, *, contact_path: str | None = "/kontakt") -> str:
         )
     else:
         areas_block = ""
-    query_source = ", ".join(address_lines) if address_lines else (
-        (location.get("city") if isinstance(location, dict) else None) or ""
+    query_source = (
+        ", ".join(address_lines)
+        if address_lines
+        else ((location.get("city") if isinstance(location, dict) else None) or "")
     )
     map_block: str
     if isinstance(query_source, str) and query_source.strip():
-        maps_url = (
-            "https://www.google.com/maps/search/?api=1&query="
-            + _url_quote(query_source.strip())
+        maps_url = "https://www.google.com/maps/search/?api=1&query=" + _url_quote(
+            query_source.strip()
         )
         map_block = (
             '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
@@ -4006,9 +3897,7 @@ def render_section_faq(
     a grounded FAQ replaces the generic template questions.
     """
     has_faq_route = "/faq" in (dossier_routes or [])
-    return _render_home_faq_section(
-        dossier, has_faq_route=has_faq_route, blueprint=blueprint
-    )
+    return _render_home_faq_section(dossier, has_faq_route=has_faq_route, blueprint=blueprint)
 
 
 def render_section_service_area(dossier: dict) -> str:
@@ -4061,12 +3950,7 @@ _SECTION_RENDERERS.update(
 
 
 _LSB_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "local-service-business"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "local-service-business"
 )
 
 
@@ -4138,30 +4022,15 @@ _SECTION_RENDERERS.update(
 
 
 _CLINIC_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "clinic-healthcare"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "clinic-healthcare"
 )
 
 _PROFESSIONAL_SERVICES_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "professional-services"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "professional-services"
 )
 
 _AGENCY_STUDIO_SCAFFOLD_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-    / "agency-studio"
+    REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds" / "agency-studio"
 )
 
 
@@ -4308,8 +4177,6 @@ def _url_quote(value: str) -> str:
     return quote(value, safe="")
 
 
-
-
 def _route_ids_with_style_overrides(dossier: dict) -> set[str]:
     """Route ids named by ``directives.sectionStyleOverrides``.
 
@@ -4319,19 +4186,13 @@ def _route_ids_with_style_overrides(dossier: dict) -> set[str]:
     upstream, this guards hand-edited Project Inputs.
     """
     directives = dossier.get("directives")
-    overrides = (
-        directives.get("sectionStyleOverrides")
-        if isinstance(directives, dict)
-        else None
-    )
+    overrides = directives.get("sectionStyleOverrides") if isinstance(directives, dict) else None
     if not isinstance(overrides, list):
         return set()
     return {
         entry["routeId"]
         for entry in overrides
-        if isinstance(entry, dict)
-        and isinstance(entry.get("routeId"), str)
-        and entry["routeId"]
+        if isinstance(entry, dict) and isinstance(entry.get("routeId"), str) and entry["routeId"]
     }
 
 
@@ -4419,9 +4280,7 @@ def write_pages(
         elif route_id == "products":
             content = render_products(render_dossier, contact_path=contact_target)
         elif route_id == "menu":
-            content = render_menu(
-                render_dossier, contact_path=contact_target, blueprint=blueprint
-            )
+            content = render_menu(render_dossier, contact_path=contact_target, blueprint=blueprint)
         elif route_id == "booking":
             content = render_booking(
                 render_dossier, contact_path=contact_target, blueprint=blueprint
