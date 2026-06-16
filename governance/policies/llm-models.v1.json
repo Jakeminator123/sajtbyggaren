@@ -128,17 +128,33 @@
     {
       "groupId": "smallReasoning",
       "purpose": "Light reasoning, classification, rerank.",
-      "roles": ["briefModel", "planningModel", "copyDirectiveModel", "styleDirectiveModel", "routerModel", "rerankModel", "verifierModel"]
+      "roles": [
+        "briefModel",
+        "planningModel",
+        "copyDirectiveModel",
+        "styleDirectiveModel",
+        "routerModel",
+        "rerankModel",
+        "verifierModel"
+      ]
     },
     {
       "groupId": "heavyCodegen",
       "purpose": "Code generation, design-asset generation and code-aware repair.",
-      "roles": ["codegenModel", "variantModel", "dossierModel", "scaffoldModel", "repairModel"]
+      "roles": [
+        "codegenModel",
+        "variantModel",
+        "dossierModel",
+        "scaffoldModel",
+        "repairModel"
+      ]
     },
     {
       "groupId": "embedding",
       "purpose": "Semantic search.",
-      "roles": ["embeddingModel"]
+      "roles": [
+        "embeddingModel"
+      ]
     }
   ],
   "forbiddenLegacyTierNames": [
