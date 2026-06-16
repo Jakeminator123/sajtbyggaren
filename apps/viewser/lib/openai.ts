@@ -82,10 +82,13 @@ function maxOutputTokens(): number {
 }
 
 // ADR 0052: per-roll modellparametrar ur llm-models.v1.json. TS-sidan är
-// enbart plumbing - chatten är medvetet INGEN registrerad Model Role, så
-// utan roleId är beteendet exakt som tidigare. Spegelbild av den delade
-// Python-läsaren packages/policies/llm_model_params.py (defensiv: misslyckad
-// läsning => inga params, aldrig ett kastat fel).
+// enbart plumbing. ADR 0065: dirigentens följdpromptsvar i chatten går nu via
+// den registrerade answerModel-rollen (chatWithAnswerModel nedan trådar dess
+// roleId), så LLM-anropet för svaret drivs av en Model Role i stället för ett
+// rollöst anrop. Den generiska chatWithOpenAi UTAN roleId är oförändrad
+// (bakåtkompatibel: utan roleId exakt som tidigare beteende). Spegelbild av den
+// delade Python-läsaren packages/policies/llm_model_params.py (defensiv:
+// misslyckad läsning => inga params, aldrig ett kastat fel).
 const VALID_REASONING_EFFORTS = new Set([
   "none",
   "low",
@@ -218,4 +221,25 @@ export async function chatWithOpenAi(
     },
     usage: toUsageSummary(model, completion.usage),
   };
+}
+
+// ADR 0065: the conductor's answer/reasoning Model Role id. Registered in
+// governance/policies/llm-models.v1.json (v15); its reasoningEffort/
+// maxOutputTokens resolve through readRoleModelParams above, exactly like every
+// other role.
+export const ANSWER_MODEL_ROLE_ID = "answerModel";
+
+// ADR 0065: the conductor's follow-up answer seam. The prompt-route chat helpers
+// (generateConversationAnswer / generateAppliedConfirmation /
+// generateFollowupOutcomeSummary) call THIS instead of a bare chatWithOpenAi so
+// the answer is driven by the registered answerModel role (closing the #363
+// "unregistered LLM call" governance gap). It is a thin pass-through that only
+// threads the roleId: text-only narration with NO new authority to act — the
+// deterministic apply chain still validates+applies, and the honest no-key
+// fallback (report.py's deterministic line) stays owned by the callers.
+export async function chatWithAnswerModel(messages: ChatMessage[]): Promise<{
+  message: ChatMessage;
+  usage: UsageSummary;
+}> {
+  return chatWithOpenAi(messages, { roleId: ANSWER_MODEL_ROLE_ID });
 }
