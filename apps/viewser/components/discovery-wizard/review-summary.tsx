@@ -101,7 +101,7 @@ export function ReviewSummary({
         value:
           imageCount > 0
             ? `${imageCount} uppladdade`
-            : "Inga (AI-hero + monogram)",
+            : "Inga (AI-toppbild + monogram)",
         gap: imageCount === 0,
         gapLabel: "bild",
         // Bilder-steget ÄR den aktiva tabben — ingen "Ändra"-länk behövs.
