@@ -14,7 +14,7 @@ the SOUL view:
    code support (toggling enables nothing), that a skill is text rather than
    permission, and that conductor roles are read-only.
 4. Source-of-truth dynamics - chat limits shown in the cockpit come from the
-   live parse of apps/viewser/lib/openai.ts (1500/8000/40 today) and model
+   live parse of apps/viewser/lib/openai.ts (15000/8000/40 today) and model
    defaults are never hardcoded (the gpt-4o -> gpt-5.5 bump must need no
    change here).
 """
@@ -268,7 +268,7 @@ def test_chat_limits_shown_match_viewser_source() -> None:
 
     limits = runtime_models.chat_limits()
     assert limits == {
-        "maxOutputTokensDefault": 1500,
+        "maxOutputTokensDefault": 15000,
         "maxInputCharsPerMessage": 8000,
         "maxMessagesPerRequest": 40,
     }

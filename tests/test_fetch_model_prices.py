@@ -179,7 +179,7 @@ def test_runtime_models_parses_all_env_defaults_and_limits() -> None:
 
     Deliberately does NOT assert which model the fallback is (a parallel PR
     bumps gpt-4o -> gpt-5.5 and future bumps must pass unchanged). The limits
-    are pinned: they are stable contract values (1500/8000/40).
+    are pinned: they are stable contract values (15000/8000/40).
     """
     from backoffice import runtime_models
 
@@ -193,7 +193,7 @@ def test_runtime_models_parses_all_env_defaults_and_limits() -> None:
         assert isinstance(value, str) and value, f"no fallback parsed for {env_name}"
 
     limits = runtime_models.chat_limits()
-    assert limits["maxOutputTokensDefault"] == 1500
+    assert limits["maxOutputTokensDefault"] == 15000
     assert limits["maxInputCharsPerMessage"] == 8000
     assert limits["maxMessagesPerRequest"] == 40
 

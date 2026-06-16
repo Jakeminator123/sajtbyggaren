@@ -44,13 +44,13 @@ const DEFAULT_MODEL_IS_REASONING = /^(gpt-5|o\d)/.test(DEFAULT_MODEL);
 // .env. Samma openaiEnv-fallback som övriga OpenAI-inställningar.
 const INPUT_USD_PER_1K = Number(openaiEnv("OPENAI_INPUT_USD_PER_1K") ?? "0");
 const OUTPUT_USD_PER_1K = Number(openaiEnv("OPENAI_OUTPUT_USD_PER_1K") ?? "0");
-const DEFAULT_MAX_OUTPUT_TOKENS = 1500;
+const DEFAULT_MAX_OUTPUT_TOKENS = 15000;
 const MAX_INPUT_CHARS_PER_MESSAGE = 8000;
 const MAX_MESSAGES_PER_REQUEST = 40;
 
 // Fråga.. vad är max-tokengränsen här då?
 // Svar: max-tokengränsen (per svar, dvs max antalet tokens som modellen får generera) sätts av DEFAULT_MAX_OUTPUT_TOKENS,
-// dvs 1500 tokens som default, men kan överskrivas via env-variabeln VIEWSER_MAX_CHAT_TOKENS. Modeller har olika absoluta gränser
+// dvs 15000 tokens som default, men kan överskrivas via env-variabeln VIEWSER_MAX_CHAT_TOKENS. Modeller har olika absoluta gränser
 // för prompt+output, men denna kod begränsar *svarstokens* till maxOutputTokens().
 
 let openaiClient: OpenAI | null = null;
