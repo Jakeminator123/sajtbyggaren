@@ -47,6 +47,11 @@ från målbilden ska det framgå i status-/handoff-dokumenten eller via B-ID i
 
 ## Hårda krav per starter
 
+> Dessa krav är formaliserade som ett hårt kontrakt i
+> [ADR 0063 — Hard Starter-kontrakt](../../governance/decisions/0063-hard-starter-kontrakt.md):
+> en Starter är ett layout-skal som ansluter generiskt via section-dispatchern
+> (Path B) och får aldrig kräva ändring i `scripts/build_site.py`.
+
 Efter fork eller setup ska följande gälla:
 
 - Next.js 16 (`package.json:dependencies.next` minst `^16.0.0`)
