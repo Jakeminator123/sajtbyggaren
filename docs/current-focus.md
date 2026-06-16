@@ -55,6 +55,10 @@ på main → prod; build-context uppladdad; prod-bygge + följdprompt live-verif
 - **#324** (`feat/viewser-uiux-prod-polish`, Christopher): viewser UI/UX-putts
   (banner-overlap, jargong, bygg-text + canary-skript). CLEAN + grön CI, men det
   är UI → hålls för operatörens browser-check innan merge.
+- **#371** (`feat/viewser-generative-visible`, Christopher): generativa
+  komponenter (bildgrid/kontakt-CTA, ADR 0061) ytas som en exakt "Ändrat"-rad i
+  FloatingChat via run-diff (`lib/run-change-set.ts` + `lib/build-changes.ts`,
+  enhetstest). Rör inte `app/api/prompt/route.ts`. CLEAN + grön CI, redo för merge.
 
 Mergat och i `main` (= 0f2e5758): #338 (Fas 1), #341 (generativ V1, ADR 0061),
 #342 (generativ-fixar), #340 (ADR 0062), #337 (known-issues-arkiv), temperature-fix
