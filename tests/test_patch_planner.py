@@ -293,6 +293,55 @@ def test_component_add_with_named_component_stays_valid(env):
     assert plan.patches[0].value["component"] == "clock-widget"
 
 
+# ---------------------------------------------------------------------------
+# ADR 0061: a generative component_add applies route-level, not via an
+# accessory-section patch -> the planner must NOT reject it for lacking a section
+# ---------------------------------------------------------------------------
+
+
+def test_generative_component_add_is_skipped_not_rejected(env):
+    """A generative component_add (image_placeholder_grid) with a route+position
+    target (no section) must NOT be rejected by the accessory planner.
+
+    It applies via the route-level generative path
+    (``directives.generativeComponents`` -> a ``page.tsx`` splice), so
+    ``plan_patches`` proposes no accessory patch and returns an EMPTY VALID plan
+    (no rejected) — the generative path owns the change. Before the fix this was
+    rejected ("nothing to address") and ``run_followup_chain`` bailed to
+    ``plan_rejected``, discarding the already-resolved recipe (prod no-op on
+    "lägg till 6 bildplatshållare högst upp på startsidan")."""
+    paths, _tmp = env
+    context, _registry = _contexts(paths)
+    decision = RouterDecision(
+        messageKind="edit_instruction",
+        editKind="component_add",
+        target=RouterTarget(routeId="home", position="top"),
+        componentIntent="image_placeholder_grid",
+    )
+    plan = plan_patches(decision, context)
+    assert plan.valid is True
+    assert plan.patches == []
+    assert plan.rejected == []
+
+
+def test_non_generative_component_add_without_section_still_rejected(env):
+    """Guards the narrowness of the generative skip: a NON-generative
+    component_add with a bare position (no section) is STILL rejected — the
+    accessory path needs a concrete section to attach to."""
+    paths, _tmp = env
+    context, _registry = _contexts(paths)
+    decision = RouterDecision(
+        messageKind="edit_instruction",
+        editKind="component_add",
+        target=RouterTarget(routeId="home", position="top"),
+        componentIntent="clock_widget",
+    )
+    plan = plan_patches(decision, context)
+    assert plan.valid is False
+    assert len(plan.rejected) == 1
+    assert "nothing to address" in plan.rejected[0].reason
+
+
 def test_validate_patch_rejects_componentless_accessory(env):
     """Defensive rail: a hand-built accessoryComponent with no component is rejected.
 
