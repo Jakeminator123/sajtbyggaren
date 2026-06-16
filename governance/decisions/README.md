@@ -7,7 +7,7 @@ senare ADR som rör samma yta.
 
 ## Aktiva beslut (läs dessa)
 
-De senaste operativa besluten (0040–0062), aktiva om inget annat anges:
+De senaste operativa besluten (0040–0063), aktiva om inget annat anges:
 
 - [0040 komponentkatalog](0040-component-catalog.md)
 - [0041 varm sandbox-reuse](0041-vercel-sandbox-warm-reuse.md)
@@ -32,6 +32,7 @@ De senaste operativa besluten (0040–0062), aktiva om inget annat anges:
 - [0060 route/nav-mutation v1](0060-route-nav-mutation-v1.md)
 - [0061 generative component v1](0061-generative-component-v1.md) — image-placeholder-grid via materialize + Quality Gate (Fas 4, #341)
 - [0062 OpenClaw-dirigent: rollkontrakt + action-brygga](0062-openclaw-conductor-roles-and-action-bridge.md) — aktiv OpenClaw-foundation (de två flödena + bryggan; Fas 1 landad, #338)
+- [0063 auto-prune av hostad blob (cron)](0063-blob-auto-prune-cron.md) — daglig Vercel Cron prunar gammal sajt-data; build-context skyddad, CRON_SECRET-gatead
 
 Live preview-runtime-beslut (äldre men gällande):
 

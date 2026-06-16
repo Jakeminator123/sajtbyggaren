@@ -51,8 +51,11 @@ Tre lager, i prioritetsordning (senare vinner):
    `OPENAI_OUTPUT_USD_PER_1K`, `ASSET_STORE_DRIVER=vercel-blob`,
    `VIEWSER_PREVIEW_MODE` + `NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`
    (`vercel-sandbox`), `VIEWSER_ALLOW_NON_LOCALHOST=true`,
-   `VIEWSER_ENABLE_HOSTED_SANDBOX=1`, `VIEWSER_ENABLE_HOSTED_BUILD=1` och
-   `VIEWSER_BUILD_CONTEXT_URL`. (`VIEWSER_ALLOWED_HOSTS` behövs inte så
+   `VIEWSER_ENABLE_HOSTED_SANDBOX=1`, `VIEWSER_ENABLE_HOSTED_BUILD=1`,
+   `VIEWSER_BUILD_CONTEXT_URL` samt — för auto-prune-cronen (avsnitt 10) —
+   `CRON_SECRET` (obligatorisk för att aktivera cronen) och valfria
+   `RETENTION_DAYS` (default 14) + `PRUNE_ENABLED` (default på).
+   (`VIEWSER_ALLOWED_HOSTS` behövs inte så
    länge `VIEWSER_ALLOW_NON_LOCALHOST=true` — bypassen kortsluter
    host-listan. `ANTHROPIC_API_KEY` är borttagen: ingen kod anropar
    Anthropic.) Env-ändringar slår igenom först vid NÄSTA deploy.
@@ -214,3 +217,52 @@ route + kv-koppling fungerar utan att starta något.)
 - **Wizard-direktiv hostat**: discovery-svaren följer med i master-prompten
   (texten), men de strukturerade direktiven skickas inte in i hostade byggen
   ännu — wizardens resultat blir därför något mindre styrt hostat än lokalt.
+
+## 10. Auto-prune av blob (cron)
+
+Den hostade blob-storen växer obegränsat: hostade byggen skriver
+`generated/<siteId>/`, `run-artifacts/<siteId>/`, `run-state/<siteId>/` och
+`preview-bundles/<siteId>/`, men inget städar upp gamla sajter (sandboxar
+auto-termineras via TTL, blob gör inte det). En daglig Vercel Cron sköter
+rensningen (ADR 0063).
+
+- **Schema:** `vercel.json` → `crons: [{ path: "/api/cron/prune-blob",
+  schedule: "0 4 * * *" }]` (04:00 UTC, en gång/dygn — Hobby-planens gräns).
+  Bara production-deployen kör cronen. Ändra tidpunkt genom att redigera
+  schemat och deploya om.
+- **Auktorisering:** routen kräver `Authorization: Bearer <CRON_SECRET>`.
+  Vercel skickar headern automatiskt på cron-anrop när `CRON_SECRET` är satt i
+  env. Utan giltig secret svarar routen 401 — den får aldrig vara en oskyddad
+  delete-relä (samma lärdom som #156). **Cronen är inaktiv tills `CRON_SECRET`
+  sätts i Vercel-projektet.**
+- **Retention:** sajt-data äldre än `RETENTION_DAYS` (default 14) prunas.
+  Färskheten per sajt = max(senaste blob-`uploadedAt`,
+  `viewser:site:<siteId>:current`.updatedAt); den senaste versionen behålls
+  alltid om den inte själv är äldre än retention. Sajter med okänd ålder
+  behålls.
+- **build-context/ rörs ALDRIG** — den är Python-motorn, inte en sajt, och
+  skyddas med en explicit grind i `apps/viewser/lib/blob-prune.mjs`.
+- **Av/på utan redeploy:** sätt `PRUNE_ENABLED=0` (eller `false`/`off`) i
+  Vercel-env för att pausa raderingen; cronen loggar då `skipped` och rör
+  ingenting. Default är på.
+- **Torrkörning:** `?dryRun=1` listar vad som *skulle* raderas utan att
+  radera.
+
+Manuellt (samma logik, samma store — blob/KV delas av alla Vercel-miljöer):
+
+```bash
+# torrkörning (raderar inget) mot produktionen
+curl "https://sajtbyggaren-viewser.vercel.app/api/cron/prune-blob?dryRun=1" \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# CLI mot den delade storen (kräver BLOB_*/KV_*-env, t.ex. via env pull)
+node apps/viewser/scripts/blob-admin.mjs prune                    # dry-run
+node apps/viewser/scripts/blob-admin.mjs prune --apply --retention-days 30
+```
+
+Backoffice: vyn **Underhåll → Vercel - blob auto-prune** kör samma
+torrkörning/radering med en retention-reglage, och visar vad cronen skulle
+göra.
+
+Varje körning loggar en strukturerad JSON-rad (`event: "blob-prune"`,
+`prunedSites`, `freedBytes`, `keptCount`) som syns i Vercel-loggarna.

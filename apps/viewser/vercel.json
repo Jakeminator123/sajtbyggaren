@@ -4,6 +4,12 @@
   "buildCommand": "next build",
   "installCommand": "npm install",
   "ignoreCommand": "BASE=\"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\"; git cat-file -e \"$BASE\" 2>/dev/null || exit 1; git diff --quiet \"$BASE\" HEAD -- . ../../governance/policies ../../packages/generation/orchestration/scaffolds ../../docs/openclaw-workspace",
+  "crons": [
+    {
+      "path": "/api/cron/prune-blob",
+      "schedule": "0 4 * * *"
+    }
+  ],
   "git": {
     "deploymentEnabled": {
       "feat/*": false,
