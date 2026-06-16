@@ -540,9 +540,21 @@ echo "hosted-build: anvander $PYTHON_BIN ($($PYTHON_BIN --version 2>&1))."
 "$PYTHON_BIN" -m pip --version >/dev/null 2>&1 \\
   || "$PYTHON_BIN" -m ensurepip --upgrade >/dev/null 2>&1 \\
   || true
-"$PYTHON_BIN" -m pip install --quiet -r requirements.txt \\
-  || "$PYTHON_BIN" -m pip install --quiet --user -r requirements.txt \\
-  || fail "pip install -r requirements.txt misslyckades i sandboxen."
+# Slim bygg-beroenden (perf): build-sandboxen behover BARA den deterministiska
+# genereringspipens paket. Foredra requirements-build.txt nar build-kontexten
+# bar den: den utelamnar streamlit (-> pandas/pyarrow/numpy/altair),
+# openai-agents och dev-verktygen (pytest*/ruff), dvs farre tunga wheels att
+# hamta i en kall sandbox. Fall annars tillbaka pa requirements.txt sa en
+# ALDRE uppladdad build-kontext-tarball (utan den slimmade filen) fortsatter
+# fungera oforandrat.
+REQ_FILE="requirements.txt"
+if [ -f requirements-build.txt ]; then
+  REQ_FILE="requirements-build.txt"
+fi
+echo "hosted-build: pip install -r $REQ_FILE"
+"$PYTHON_BIN" -m pip install --quiet -r "$REQ_FILE" \\
+  || "$PYTHON_BIN" -m pip install --quiet --user -r "$REQ_FILE" \\
+  || fail "pip install -r $REQ_FILE misslyckades i sandboxen."
 
 # Fas 2: prompt -> Project Input. Foljdlage hamtar forst run-state-paret
 # (B194): prompt_to_project_input.py harleder foregaende version ur

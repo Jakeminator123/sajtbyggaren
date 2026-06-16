@@ -1,0 +1,22 @@
+# requirements-build.txt — slim beroendelista för den HOSTADE bygg-sandboxen.
+#
+# Den deterministiska genereringspipen (scripts/build_site.py,
+# scripts/prompt_to_project_input.py, scripts/run_openclaw_followup.py och
+# packages/generation/**) importerar bara dessa paket. Den fulla
+# requirements.txt drar dessutom in streamlit (backoffice -> pandas/pyarrow/
+# numpy/altair), openai-agents (operatör-only component_intake) och
+# dev-verktygen (pytest*/ruff) — tunga att installera i en kall sandbox och
+# aldrig importerade av bygget. Bygg-runnern
+# (apps/viewser/lib/hosted-build-runner.ts) föredrar därför den här filen och
+# faller tillbaka på requirements.txt när en äldre build-kontext-tarball
+# saknar den.
+#
+# Versionsspecarna måste matcha requirements.txt exakt —
+# tests/test_viewser_hosted_slim_build_deps.py låser samma spec i båda
+# (drift-skydd) och att inga tunga/dev-paket smyger in här.
+jsonschema>=4.23
+pydantic>=2.9
+openai>=2.41,<3
+pillow>=10.0
+requests>=2.32
+beautifulsoup4>=4.12
