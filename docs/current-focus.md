@@ -6,42 +6,49 @@ aktuellt statusblock — äldre block ligger i arkivet. Full överlämning:
 [`docs/handoff.md`](handoff.md). Startpromptar/rollgränser:
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Status nu (2026-06-16 ~01:00 — Fas 1 + generativ komponent V1 live; ADR 0061/0062)
+## Status nu (2026-06-16 ~04:50 — gpt-5.5 överallt live i prod; edit-flödesdiagnos klar)
 
-**Git:** `main = jakob-be = origin/main = origin/jakob-be = 0f2e5758` (+ denna
-current-focus-bump). Production deployar från `main`; build-context (Python-motorn)
-uppladdad + i synk (`npm run build-context:check`).
+**Git:** `main = jakob-be = origin/main = origin/jakob-be = 1c9a4e18`. Production
+deployar från `main`; build-context (Python-motorn) omuppladdad + i synk (KV-sha matchar HEAD).
 
-**Stora planen + orientering för nästa agent:** läs det auktoritativa
-orienteringsblocket ÖVERST i [`docs/handoff.md`](handoff.md). Där bor den fulla
-beskrivningen (north star, de två flödena + action-bryggan, 4-fas-planen) — den
-upprepas inte här. Denna fil håller bara status, nästa prioriteringar och blockers.
+**Stora planen + orientering:** orienteringsblocket överst i [`docs/handoff.md`](handoff.md).
+Nattens fullständiga överlämning + den definitiva edit-flödesdiagnosen:
+[`docs/handover-next-agent.md`](handover-next-agent.md).
 
-**Landat senast (2026-06-15 kväll → 16 natt):** **Fas 1 — beslutsenhet** (#338,
-`run_followup_chain` konsumerar dirigentens routerbeslut, beteendebevarande).
-**generativ komponent V1** (#341, ADR 0061, Fas 4 — "lägg till N bildplatshållare"
-materialiserar en ny `.tsx` genom build + Quality Gate; deterministiskt recept,
-inga nya npm-deps) + review-fixar (#342: last-wins grid-uppdatering + import efter
-`'use client'`). **ADR-sanningstvätt** (#340, ny ADR 0062 OpenClaw-dirigent +
-notiser). **Chat-regression fixad** (temperature ej till gpt-5.x reasoning-modeller).
-**build-context-automatisering** (#1: `scripts/sync_vercel_build_context.py` +
-backoffice-vy). nav_hide/route_remove-fix/docs-städning sedan tidigare.
+**Landat i natt (2026-06-16 02–05, operatörsstyrt pass):**
+- **llm-models v14** (`c360a931`): hela chat-/generationskedjan → gpt-5.5; rejält höjda
+  maxOutputTokens (16000–24000), aldrig xhigh. Fixar `<no output>`: Responses-API:t räknar
+  reasoning-tokens i utdatataket, så ett för lågt tak gav tyst mock-fallback. rerankModel → gpt-5.5
+  (gpt-5.5-mini finns INTE på kontot, verifierat mot riktig nyckel). Real-key-smoke + 372 tester gröna.
+- **scaffoldModel-konsistensfix** (`5d3cd56d`): rollen saknade reasoningEffort/maxOutputTokens.
+- **chat-tak 1500 → 15000** (`1c9a4e18`): samma `<no output>`-klass i Viewser-skalets TS-chatt
+  (`apps/viewser/lib/openai.ts`), som v14 inte rörde.
+- **#343 + #344** (backoffice-refaktorer) mergade. Build-context **omuppladdad** → v14 live i prod.
+- **Prod live-verifierat i webbläsaren:** riktig gpt-5.5-restaurangsajt byggdes (inget mock), och en
+  följdprompt (namnbyte → v2) landade via Python-motorn. OpenClaw är INTE globalt read-only.
 
-**Nästa 3 prioriteringar** (faser/fullständig kapacitetslista i [`docs/handoff.md`](handoff.md)):
+**Nästa 3 prioriteringar:**
 
-1. **Hostad edit-perf/pålitlighet** — varje edit kör en KALL bygg-sandbox (pip +
-   npm + next build = minuter); ingen snabbväg för direktiv-edits, och sandbox-TTL
-   (15 min, reuse av) ger 410 SANDBOX_STOPPED. Levrar: skippa `next build` för
-   direktiv-edits (störst), höj TTL + `VIEWSER_SANDBOX_REUSE`, cacha pip.
-2. **reviews/trust synliga** (ADR 0059) — kräver operatörens visuella riktning.
-3. **generativ V2** — fler recept / sandboxad fri TSX (efter V1-rälsen).
+1. **Edit-flödesdiagnos (NY #1):** rika edits (component_add/route_remove/section/route_add/rename)
+   no-op:ar i PROD men APPLICERAR lokalt via samma dirigent-ingång (`apply_followup_to_json`, bevisat
+   på både restaurant-hospitality och local-service-business, nyckel på). Hostat ger `bridge.applied=false`
+   → ärlig "inte inkopplad"-rad → faller till full `build_site.py`-rebuild (bara copy-merges). Trolig rot:
+   den hydrerade bas-kontexten i sandboxen får routern att klassa edit:en till en V0/ej-inkopplad intent.
+   Behöver dirigentens decision-trace för en prod-sajt (site-4d8d1a1b) + action-bridge V1 / hydrerings-paritet.
+   Allt i [`docs/handover-next-agent.md`](handover-next-agent.md).
+2. **Hostad edit-perf** — kall bygg-sandbox (pip+npm+next build = minuter), TTL-410. Höj TTL,
+   `VIEWSER_SANDBOX_REUSE`, pip-cache, skippa next build för direktiv-edits.
+3. **generativ V2 / reviews-trust synliga** (ADR 0059/0061).
 
-**Öppna blockers:** inga hårda.
+**Öppna blockers:** inga hårda — edit-flödet är en kapacitets-/wiring-lucka, inte en regression
+(copy-edits + init bygger korrekt i prod).
 
-Last verified state: `0f2e5758` (2026-06-16 ~01:00 UTC+2; Fas 1 #338 + generativ V1
-#341 + #342-fixar + ADR 0062 #340 mergade → fast-forward till main → prod;
-build-context uppladdad). Öppen PR: #324 (Christophers viewser UI/UX — väntar
-operatörens browser-check). Föregående: `25250a46`.
+**Noterat:** `.github/workflows/governance.yml` har en ocommittad ändring i arbetsträdet som inte
+kommer från detta pass (annan agent/operatör) — lämnad orörd.
+
+Last verified state: `1c9a4e18` (2026-06-16 ~04:50 UTC+2; v14 + scaffold-fix + chat-tak + #343/#344
+på main → prod; build-context uppladdad; prod-bygge + följdprompt live-verifierat). Öppen PR: #324
+(Christophers viewser UI/UX — väntar operatörens browser-check). Föregående: `0f2e5758`.
 
 ## Öppna PR att känna till
 
