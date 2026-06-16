@@ -3406,16 +3406,17 @@ def _render_home_story_section(dossier: dict) -> str:
 
 
 def _render_home_testimonials_section(dossier: dict) -> str:
-    """Render a testimonials-style section on the home page when the
+    """Render a trust-card section on the home page when the
     dossier has at least ``_HOME_TESTIMONIAL_MIN_ITEMS`` trustSignals.
 
     The threshold is intentional: with only 1–2 trustSignals, a
     3-column card grid looks underpopulated. The caller falls back to
     the existing ``trust_section`` (bullet list with ``ShieldCheck``
     icons) below this threshold. With 3+ items we render each
-    trustSignal as a card with a ``Quote``-glyph and bold attribution
-    ("Sagt om oss") so the visual feel matches real customer
-    testimonials, even though the source is operator-authored copy.
+    trustSignal as a card with a ``Quote``-glyph and neutral proof
+    label. The wording must not imply customer testimonials: the
+    ``trustSignals`` field is generic operator proof, not a verified
+    review schema.
 
     Returns ``""`` when fewer than the minimum number of items exist,
     so the caller can decide whether to render its bullet-list
@@ -3433,7 +3434,7 @@ def _render_home_testimonials_section(dossier: dict) -> str:
     ]
     if len(items) < _HOME_TESTIMONIAL_MIN_ITEMS:
         return ""
-    # Fas 2.3 — hover-effekter på testimonial-cards. Identisk timing
+    # Fas 2.3 — hover-effekter på trust-cards. Identisk timing
     # och easing som services-cards så hover-känslan är konsistent
     # över startsidan. ``-translate-y-0.5`` ger en lätt lyft-effekt
     # som Apple/Stripe använder för dwell-tid på cards.
@@ -3441,7 +3442,7 @@ def _render_home_testimonials_section(dossier: dict) -> str:
         f'            <figure key={_jsx_safe_string(f"trust-card-{i}")} className="group relative flex h-full flex-col gap-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
         f'              <Quote className="size-6 text-[color:var(--primary)]/30 transition-colors group-hover:text-[color:var(--primary)]/60" />\n'
         f'              <blockquote className="text-base text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(item)}</blockquote>\n'
-        f'              <figcaption className="mt-auto text-xs uppercase tracking-widest text-[color:var(--muted)]">Sagt om oss</figcaption>\n'
+        f'              <figcaption className="mt-auto text-xs uppercase tracking-widest text-[color:var(--muted)]">Förtroendesignal</figcaption>\n'
         "            </figure>"
         for i, item in enumerate(items)
     )
@@ -3450,7 +3451,7 @@ def _render_home_testimonials_section(dossier: dict) -> str:
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Förtroende</p>\n'
-        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här uppskattar våra kunder</h2>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här bygger förtroende</h2>\n'
         "          </div>\n"
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{cards}\n"
