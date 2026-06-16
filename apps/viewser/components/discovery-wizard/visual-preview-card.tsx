@@ -130,31 +130,39 @@ export function VibeSwatchRow({
   background,
   size = 12,
   className,
+  title,
 }: {
   primary: string;
   accent?: string;
   background?: string;
   size?: number;
   className?: string;
+  /**
+   * Hover-förklaring på hela raden. Utan den framstår de små färgprickarna
+   * som "oförklarade" för en slutanvändare. Sätt en kundvänlig mening
+   * (t.ex. "Förvald färgpalett …") där raden används i kundvyn.
+   */
+  title?: string;
 }) {
   const px = `${size}px`;
   return (
-    <div className={`flex items-center gap-1 ${className ?? ""}`} aria-hidden>
+    <div
+      className={`flex items-center gap-1 ${className ?? ""}`}
+      aria-hidden
+      title={title}
+    >
       <span
-        title={`Primary ${primary}`}
         className="border-border/40 rounded-full border"
         style={{ background: primary, width: px, height: px }}
       />
       {accent ? (
         <span
-          title={`Accent ${accent}`}
           className="border-border/40 rounded-full border"
           style={{ background: accent, width: px, height: px }}
         />
       ) : null}
       {background ? (
         <span
-          title={`Background ${background}`}
           className="border-border/40 rounded-full border"
           style={{ background, width: px, height: px }}
         />

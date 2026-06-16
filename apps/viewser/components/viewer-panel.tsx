@@ -80,6 +80,17 @@ type ViewerPanelProps = {
    * aktiv i BuildProgressCard-stegmarkören.
    */
   buildStage?: PromptStage;
+  /**
+   * True när PromptBuilder äger den tomma landningen (pre-build, inte i
+   * builder-läge). Då renderar composern sin egen rubrik ("Vad ska vi
+   * bygga?") + starters mitt på ytan, så ViewerPanel:s hero-text skulle bli
+   * en ANDRA, krockande rubrik. På mobil staplas de ovanpå varandra (båda
+   * absolut/centrerade) → oläslig röra. Vi låter därför composern vara den
+   * enda ingången och döljer hero-texten här. Hero-VIDEON behålls som lugn
+   * bakgrund. Default false så övriga (osannolika) konsumenter får dagens
+   * beteende.
+   */
+  composerOwnsEmptyState?: boolean;
 };
 
 // prefers-reduced-motion-prenumeration för studio-hero-videorna. Speglar
@@ -323,6 +334,7 @@ export function ViewerPanel({
   siteId,
   isBuilding = false,
   buildStage = "idle",
+  composerOwnsEmptyState = false,
 }: ViewerPanelProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   // Tidigare en ren boolean. Utvidgad till strukturerad info-shape så
@@ -662,8 +674,16 @@ export function ViewerPanel({
   // när bygget precis blivit klart men preview fortfarande bootas.
   // Hero-texten ska INTE visas i någondera fas — det skulle vara dubbel
   // information med två konkurrerande UI:n.
+  // Tom landning: när composern äger ytan (pre-build, ej builder-läge)
+  // renderar PromptBuilder sin egen rubrik + starters mitt på canvasen, så
+  // ViewerPanel:s hero-text blir en andra, krockande rubrik (på mobil staplas
+  // de ovanpå varandra). Vi låter då composern vara enda ingången och döljer
+  // hero-texten. ``showUnavailable`` (run vald men ej byggd) behåller texten
+  // — där visas ingen composer-starters-vy att krocka med.
   const showHeroText =
-    (showEmpty || showUnavailable) && !isBuilding && !isFinalizing;
+    ((showEmpty && !composerOwnsEmptyState) || showUnavailable) &&
+    !isBuilding &&
+    !isFinalizing;
   const showBuildCard = isBuilding || isFinalizing;
 
   // Nolla placerings-flaggan när banner-bygget är klart (showBuildCard
@@ -1082,7 +1102,7 @@ const BUILD_STEPS: ReadonlyArray<{
   {
     id: "build",
     title: "Bygger sajten",
-    hint: "Vi monterar alla sidor och bilder. Första bygget tar 1–3 minuter, sedan går det snabbare.",
+    hint: "Vi monterar alla sidor och bilder. Första bygget tar oftast 2–4 minuter, sedan går det snabbare.",
   },
   {
     id: "preview",

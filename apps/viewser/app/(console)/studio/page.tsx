@@ -627,7 +627,13 @@ export default function Home() {
             hideBrand={builderActive}
           />
 
-          {hostedBanner ? <HostedNoticeBanner message={hostedBanner} /> : null}
+          {/* Hostad info-banner: bara på den tomma landningen + under
+              bygg-progressen. När previewn väl renderats (builderActive) tas
+              den bort — annars ligger den fixerade top-16-bannern ovanpå den
+              genererade sajtens egen toppnavigation (occlusion i builder-vyn). */}
+          {hostedBanner && !builderActive ? (
+            <HostedNoticeBanner message={hostedBanner} />
+          ) : null}
 
           <ErrorBoundary area="Förhandsvisningen" className="h-full w-full">
             {/* C4: preview-POST:en går mot /api/preview/<siteId> medan runId
@@ -647,6 +653,12 @@ export default function Home() {
               siteId={runSiteId ?? selectedSiteId}
               isBuilding={building}
               buildStage={buildStage}
+              // Pre-build (ej builder-läge): PromptBuilder äger den tomma
+              // landningen med sin egen rubrik + starters. Be ViewerPanel dölja
+              // sin hero-text så vi inte får två konkurrerande rubriker (och på
+              // mobil ett oläsligt överlapp). I builder-läget är previewn aktiv
+              // så hero-texten visas ändå inte.
+              composerOwnsEmptyState={!builderActive}
             />
           </ErrorBoundary>
 

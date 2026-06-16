@@ -6,6 +6,13 @@ import { AssetDropzone } from "@/components/discovery-wizard/asset-dropzone";
 import type { AssetRef } from "@/lib/asset-store/types";
 
 import { PayloadAlignmentPopover } from "../payload-alignment-popover";
+
+// PayloadAlignmentPopover ("Vad backend får") är ett operatör-/utvecklar-
+// transparens-fönster som visar rå directives-JSON och nämner briefModel.
+// Det är värdefullt vid felsökning men ren jargong för en slutanvändare som
+// bara vill bygga sin hemsida. Vi gatear det bakom en debug-flagga så det är
+// dolt i kundvyn men ett klick bort för operatörer (NEXT_PUBLIC_VIEWSER_DEBUG=1).
+const WIZARD_DEBUG = process.env.NEXT_PUBLIC_VIEWSER_DEBUG === "1";
 import {
   resolveAutoTreatment,
   type SectionTreatmentSpec,
@@ -254,10 +261,12 @@ export function VisualStep({
               Vibe
             </SectionHeader>
           </div>
-          <PayloadAlignmentPopover
-            answers={answers}
-            rawPrompt={popoverRawPrompt}
-          />
+          {WIZARD_DEBUG ? (
+            <PayloadAlignmentPopover
+              answers={answers}
+              rawPrompt={popoverRawPrompt}
+            />
+          ) : null}
         </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {vibes.map((vibe) => (

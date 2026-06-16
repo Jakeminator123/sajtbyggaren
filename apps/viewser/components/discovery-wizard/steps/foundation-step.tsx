@@ -484,6 +484,7 @@ function FamilyCard({
           accent={defaultVibe.accentSwatch}
           background={defaultVibe.background}
           size={9}
+          title="Förvald färgpalett för branschen — du kan ändra den i nästa steg"
           className="mt-0.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
         />
       ) : null}

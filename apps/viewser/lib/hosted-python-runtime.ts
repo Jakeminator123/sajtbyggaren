@@ -45,25 +45,26 @@ export function isHostedBuildEnabled(): boolean {
   return process.env.VIEWSER_ENABLE_HOSTED_BUILD === "1";
 }
 
-/** Shared Swedish notice surfaced to the UI for hosted-only-degraded views. */
+// Kundvänlig ton (UI-text): plain svenska utan teknisk jargong om
+// infrastruktur, lagring eller interna byggbegrepp. Bannern syns för
+// slutanvändaren i den hostade vyn, så den ska beskriva VAD hen kan göra —
+// inte HUR det körs under huven. Honest: vi lovar inget den hostade vyn inte
+// kan i respektive läge. (Källåsen i tests/test_viewser_hosted_run_history.py
+// vaktar att inga jargongtokens läcker tillbaka in i strängarna.)
+
+/** Kundvänlig notis för hostad vy där byggkedjan ännu inte är aktiverad. */
 export const HOSTED_LOCAL_ONLY_NOTICE =
-  "Den här hostade vyn visar gränssnittet och kan förhandsvisa redan byggda " +
-  "sajter. Att skapa nya sajter — bygge, följdprompt och run-historik — sker i " +
-  "operatörens lokala miljö i den här versionen, inte i den hostade vyn, tills " +
-  "bygg-kedjan flyttas till en riktig backend-runtime.";
+  "Den här vyn visar Sajtbyggaren och kan förhandsvisa färdiga sajter. Att " +
+  "skapa nya sajter är inte aktiverat i den här vyn just nu.";
 
 /**
- * Honest notice for hosted deployments where the build chain IS enabled.
- * Since B199 v2 the hosted view also serves run history, artefakter and
- * inspector data from KV/blob (per site — siteId is the capability key) and
- * the builder selection survives a page reload via sessionStorage. The
- * remaining honest gap is the per-run file tree (StackBlitz fallback).
+ * Kundvänlig notis för hostad vy där byggkedjan ÄR aktiverad. Sedan B199 v2
+ * sparas det du bygger automatiskt så att du kan komma tillbaka och förfina
+ * det. Inga interna driftdetaljer i UI-texten.
  */
 export const HOSTED_BUILD_ENABLED_NOTICE =
-  "Hostad drift: byggen och följdprompter körs i Vercel Sandbox, och " +
-  "run-historik, artefakter och inspector läses från molnlagringen för " +
-  "sajter byggda i den här vyn. Filträdet för enskilda runs serveras inte " +
-  "hostat ännu.";
+  "Den här vyn körs i molnet. Sajter du skapar här sparas automatiskt så att " +
+  "du kan komma tillbaka och förfina dem.";
 
 /** Pick the notice that matches the hosted deployment's actual capability. */
 export function hostedRuntimeNotice(): string {
