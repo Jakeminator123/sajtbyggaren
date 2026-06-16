@@ -87,26 +87,18 @@ förbud — fler agenter är okej när det tydligt hjälper. Samma anda finns i
 
 ## READ-ONLY reference projects (NEVER modify)
 
-The following external folders are **strictly read-only reference material**.
-They are NOT part of this repo's build and must NEVER be created in, edited,
-deleted, renamed, moved, formatted, linted, committed, or written to in any
-way — not by an agent, a subagent, a script, or a git command. You MAY read
-and study them freely (that is their whole purpose); you may NOT change a
-single byte.
+These external folders are **strictly read-only reference material**: never
+create, edit, delete, rename, move, format, lint, commit or write to them in
+any way (agent, subagent, script or git). You MAY read and study them freely.
 
-- `C:\Users\jakem\Desktop\openclaw\` — the operator's standalone OpenClaw
-  gateway/assistant installation plus the sajtmaskin integration. The
-  conductor/agent-role reference we study to design Sajtbyggaren's own
-  *conductor-only* OpenClaw — a reference, never a build target.
-- `C:\Users\jakem\dev\projects\sajtmaskin\` — the actual predecessor project
-  (Next.js app + `infra/openclaw/` Docker gateway blueprint). The richest
-  reference for an external Docker OpenClaw conductor.
-- Any other folder named `sajtmaskin`, wherever it appears on disk.
+- `C:\Users\jakem\Desktop\openclaw\`
+- `C:\Users\jakem\dev\projects\sajtmaskin\`
+- any other folder named `sajtmaskin`, wherever it is on disk.
 
-If a change to that material ever seems necessary, STOP and ask the operator
-first. The repo's own OpenClaw work happens ONLY inside this repository
+If a change there seems necessary, STOP and ask the operator first. The repo's
+own OpenClaw work happens ONLY inside this repo
 (`packages/generation/orchestration/openclaw/`, `openclaw-mvp/`, `apps/`,
-`scripts/`), never in the read-only reference folders above.
+`scripts/`). What each reference contains: see `docs/reference-projects.md`.
 
 ## Lint, test och validering (kort)
 
