@@ -34,10 +34,17 @@ B155 follow-up (honest compound follow-ups):
     compute_unapplied_followup_chain_intents(decision, ...) -> bounded
     {target, reason} posts for compound subtasks no executor applied, surfaced
     through the existing unappliedFollowupIntents channel (no new mechanism).
+
+Honest follow-up report (operator finding 2026-06-16):
+    build_followup_report(decision, bridge) -> a short, grounded Swedish line
+    that reflects how a follow-up was interpreted and what was done or why it
+    was not. DETERMINISTIC (no LLM): the floor the seam carries on EVERY turn
+    so an applied edit / honest no-op is never stum without OPENAI_API_KEY.
 """
 
 from .core import decide, orchestrate
 from .models import OpenClawAction, OpenClawDecision, PatchPlanRequest, ToolCall
+from .report import build_followup_report
 from .roles import (
     ANSWER_ONLY_CONVERSATION_KINDS,
     ROLE_CONTRACTS,
@@ -67,6 +74,7 @@ __all__ = [
     "RoleContract",
     "RoleDirectiveKind",
     "ToolCall",
+    "build_followup_report",
     "classify_conversation",
     "compute_unapplied_followup_chain_intents",
     "contract_for_role",

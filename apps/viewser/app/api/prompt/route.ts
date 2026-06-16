@@ -980,7 +980,12 @@ async function runPromptBuildOnce(
         // Roll-bekräftelsen (nullable). Skickas BARA tillsammans med ett
         // riktigt runId + applied bridge, så use-followup-build:s answer-only-
         // gren (som kräver !runId) aldrig kan misstolka den.
-        answerText: appliedAnswerText,
+        // Operatörsfynd 2026-06-16: utan OPENAI_API_KEY (eller vid timeout) är
+        // appliedAnswerText null och dirigenten blev stum efter ett bygge. Fall
+        // tillbaka på den deterministiska, ärliga svenska rapporten från seamen
+        // (härledd ur decision + bridge) så en applicerad ändring ALLTID bär en
+        // grundad rad. Med nyckel + synlig effekt vinner LLM-bekräftelsen.
+        answerText: appliedAnswerText ?? applyResult.report,
         // F1 slice 3: which role acted (e.g. section_builder) for the honest
         // role-row; threaded but never controls build/preview.
         conversation: conversationMeta,
@@ -1320,7 +1325,7 @@ async function runPromptBuildOnce(
   // to a generic deterministic "Klart!" with no answer. Init builds keep
   // answerText null; without OPENAI_API_KEY the helper returns null and the
   // deterministic rows stand. Grounded ENTIRELY in the build facts.
-  const followupAnswerText =
+  const followupOutcomeSummary =
     payload.mode === "followup"
       ? await generateFollowupOutcomeSummary(payload.prompt, {
           engine: "legacy",
@@ -1344,6 +1349,17 @@ async function runPromptBuildOnce(
           role: conversationMeta?.role ?? null,
         })
       : null;
+  // Operatörsfynd 2026-06-16: utan OPENAI_API_KEY ger summeringen null och en
+  // ärlig no-op (t.ex. "gör hero mer premium" -> plan_empty) blev stum. Fall
+  // tillbaka på seamens deterministiska svenska rapport — MEN bara när den
+  // legacy-vägen INTE landade en synlig ändring: då bär bridgen ett
+  // patch_plan_request-beslut vars rapport ärligt säger "kunde inte göras". När
+  // legacy-resolvern faktiskt applicerade en copy-ändring (då är openClawDecision
+  // null) skulle den rapporten motsäga verkligheten, så då står de
+  // deterministiska byggraderna kvar oförändrade.
+  const followupAnswerText =
+    followupOutcomeSummary ??
+    (legacyPathAppliedVisibleChange ? null : applyResult?.report ?? null);
 
   return {
     runId: build.runId,
