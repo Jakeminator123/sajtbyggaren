@@ -522,10 +522,114 @@ def view_hosted_sites() -> None:
             st.rerun()
 
 
+def _render_prune_result(data: dict, *, applied: bool) -> None:
+    pruned = data.get("prunedSites", []) or []
+    kept = data.get("keptCount", len(data.get("keptSites", []) or []))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Prunas" if not applied else "Raderade", len(pruned))
+    c2.metric("Behålls", kept)
+    c3.metric(
+        "Frigjort" if applied else "Skulle frigöra",
+        format_megabytes(data.get("freedBytes", 0)),
+    )
+    plan = data.get("plan", []) or []
+    if plan:
+        st.dataframe(
+            [
+                {
+                    "siteId": entry.get("siteId"),
+                    "Objekt": entry.get("totalObjects", 0),
+                    "Storlek": format_megabytes(entry.get("totalBytes", 0)),
+                    "Ålder (dygn)": entry.get("ageDays", -1),
+                }
+                for entry in plan
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+    elif not pruned:
+        st.success("Inga sajter är äldre än retention — inget att pruna.")
+
+
+def view_blob_prune() -> None:
+    st.title("Vercel - blob auto-prune")
+    st.caption(
+        "Auto-prune av den HOSTADE lagringen (Vercel Blob + Upstash KV). En "
+        "daglig Vercel Cron (`vercel.json`: `0 4 * * *`, 04:00 UTC, endast "
+        "production) anropar `/api/cron/prune-blob` och raderar sajt-data äldre "
+        "än `RETENTION_DAYS`. Den AKTIVA/senaste versionen per sajt behålls om "
+        "den inte själv är äldre än retention. `build-context/` (Python-motorn) "
+        "rörs ALDRIG. Här kör du samma logik manuellt mot samma delade store — "
+        "torrkörning som standard."
+    )
+    st.caption(
+        "Cron-styrning (Vercel-env, slår igenom vid nästa deploy): `CRON_SECRET` "
+        "aktiverar cronen (utan den svarar routen 401), `RETENTION_DAYS` (default "
+        "14) styr hur mycket som rensas, och `PRUNE_ENABLED=0` pausar raderingen "
+        "utan redeploy. Tidpunkten ändras i `vercel.json`. Se "
+        "`docs/operations/hosted-viewser-manual.md` avsnitt 10."
+    )
+
+    retention_days = st.number_input(
+        "Retention (dygn) för den här körningen",
+        min_value=0,
+        max_value=3650,
+        value=14,
+        step=1,
+        help="Sajter vars senaste aktivitet är äldre än så här prunas.",
+    )
+
+    c1, c2 = st.columns(2)
+    if c1.button("Torrkörning (visa vad som skulle raderas)", width="stretch", key="prune_dry"):
+        with st.spinner("Läser blob-storen och planerar prune..."):
+            ok, data, err = vercel_sync.prune_blob(
+                dry_run=True, retention_days=int(retention_days)
+            )
+        if not ok or data is None:
+            st.error(f"Kunde inte köra torrkörning:\n\n{err}")
+        else:
+            st.session_state["prune_dry_result"] = data
+
+    dry = st.session_state.get("prune_dry_result")
+    if dry is not None:
+        st.subheader("Torrkörning")
+        _render_prune_result(dry, applied=False)
+
+    st.divider()
+    st.subheader("Radera på riktigt (permanent)")
+    st.error(
+        "Detta raderar varje för-gammal sajts alla blob-objekt + KV-nycklar "
+        "permanent. `build-context/` rörs aldrig."
+    )
+    typed = st.text_input("Skriv PRUNA för att bekräfta", key="prune_confirm")
+    confirmed = typed.strip() == "PRUNA"
+    if c2.button(
+        "Pruna nu (radera)",
+        type="primary",
+        width="stretch",
+        disabled=not confirmed,
+        key="prune_apply",
+    ):
+        with st.spinner("Prunar gammal sajt-data..."):
+            ok, data, err = vercel_sync.prune_blob(
+                dry_run=False, retention_days=int(retention_days)
+            )
+        if not ok or data is None:
+            st.error(f"Prune misslyckades:\n\n{err}")
+        else:
+            st.success(
+                f"Prunade {data.get('prunedCount', 0)} sajter, frigjorde "
+                f"{format_megabytes(data.get('freedBytes', 0))}."
+            )
+            _render_prune_result(data, applied=True)
+            st.session_state.pop("prune_dry_result", None)
+
+
 VIEWS = {
     "Cleanup - Säker rensning": lambda: safe_render(view_safe_cleanup),
     "Cleanup - Med varning": lambda: safe_render(view_warning_cleanup),
     "Toggle - Aktivera/inaktivera": lambda: safe_render(view_toggle),
     "Vercel - synka & publicera": lambda: safe_render(view_vercel_sync),
     "Vercel - hostade sajter": lambda: safe_render(view_hosted_sites),
+    "Vercel - blob auto-prune": lambda: safe_render(view_blob_prune),
 }

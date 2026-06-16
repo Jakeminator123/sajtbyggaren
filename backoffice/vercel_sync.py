@@ -126,3 +126,20 @@ def list_sites() -> tuple[bool, dict[str, Any] | None, str]:
 def delete_site(site_id: str) -> tuple[bool, dict[str, Any] | None, str]:
     """Radera en sajts alla blob-objekt + KV-nycklar (permanent)."""
     return _run_blob_admin(["delete-site", site_id])
+
+
+def prune_blob(
+    *, dry_run: bool = True, retention_days: int | None = None
+) -> tuple[bool, dict[str, Any] | None, str]:
+    """Auto-prune gammal hostad sajt-data via samma logik som cron-routen.
+
+    ``dry_run`` (default) listar bara vad som SKULLE raderas. ``retention_days``
+    sätter retention för den här körningen (annars CLI:ts default/env). Rör
+    aldrig build-context/.
+    """
+    args = ["prune"]
+    if not dry_run:
+        args.append("--apply")
+    if retention_days is not None:
+        args.extend(["--retention-days", str(retention_days)])
+    return _run_blob_admin(args)
