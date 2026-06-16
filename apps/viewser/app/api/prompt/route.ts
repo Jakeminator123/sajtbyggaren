@@ -352,18 +352,31 @@ const CONVERSATION_ANSWER_KINDS: ReadonlySet<string> = new Set([
 // #328 review (finding 6): chain stages that are a TERMINAL honest no-op — the
 // KÖR-7 chain RECOGNISED a concrete edit and deliberately refused it (an unknown/
 // required/already-removed page for route_remove; an unsupported section type for
-// section_add). The legacy Phase 1+2 path has no executor for these either, so
-// falling through to it would mint an identical "legacy" version the operator
-// never asked for ("inget hände men en ny version skapades"). These stages stop
-// the follow-up with a build-free honest answer instead. The string values are
-// build_site.py's run_followup_chain stage names, surfaced verbatim as
-// bridge.status (run_openclaw_followup.py). NOTE: only stages with NO legacy
-// executor belong here — a generic no-op (plan_empty/router_no_edit) still falls
-// through so the legacy copy/edit resolver gets its chance.
+// section_add; an unrecognised generative recipe for component_add). The legacy
+// Phase 1+2 path has no executor for these either, so falling through to it would
+// mint an identical "legacy" version the operator never asked for ("inget hände
+// men en ny version skapades"). These stages stop the follow-up with a build-free
+// honest answer instead. The string values are build_site.py's run_followup_chain
+// stage names, surfaced verbatim as bridge.status (run_openclaw_followup.py).
+// NOTE: only stages with NO legacy executor belong here — a generic no-op
+// (plan_empty/router_no_edit) still falls through so the legacy copy/edit resolver
+// gets its chance.
 const TERMINAL_EDIT_NOOP_STAGES: ReadonlySet<string> = new Set([
+  // Emitted by build_site.py today (verified against run_followup_chain).
   "route_remove_unsupported",
   "nav_hide_unsupported",
   "section_unsupported",
+  "generative_unsupported",
+  // Forward-compatible: not emitted yet, but reserved for the unowned editKinds
+  // (route_add / component_remove / layout_change — ADR 0062 §4) whose honest
+  // no-op will follow the same <editKind>_unsupported convention. route_add's
+  // planned stage is already named in docs/heavy-llm-flow/foljdprompt-loopen.md.
+  // None of these have a legacy executor either, so they are safe to pre-treat as
+  // terminal; if build_site.py never emits them they are simply inert. (No
+  // section_remove editKind exists, so no section_remove_unsupported is reserved.)
+  "route_add_unsupported",
+  "component_remove_unsupported",
+  "layout_change_unsupported",
 ]);
 
 type ConversationMetadata = {

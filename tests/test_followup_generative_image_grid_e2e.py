@@ -228,3 +228,41 @@ def test_unrecognised_component_add_is_honest_no_op(
     build_dir = _newest_build_dir(generated_dir, site_id)
     generated = build_dir / "components" / "generated"
     assert not generated.exists() or not list(generated.glob("*.tsx")), result
+
+
+def test_unsupported_generative_add_emits_generative_unsupported_stage(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Stage-kontrakt (C1): när prompten KLASSAS som component_add och namnger en
+    igenkänd-men-ostödd generativ familj (en karusell) är utfallet en TERMINAL
+    honest no-op med stagen ``generative_unsupported`` (applied False).
+
+    Detta är exakt strängen Viewser-seamen (``TERMINAL_EDIT_NOOP_STAGES`` i
+    apps/viewser/app/api/prompt/route.ts) litar på för att rapportera no-op:en
+    UTAN att falla igenom till legacy och mynta en meningslös ny version. En
+    section-target ("i andra sektionen") gör att den deterministiska routern
+    klassar component_add trots att "karusell" inte är ett känt komponent-substantiv
+    — samma component_add-väg som konduktorn driver i prod. Lås strängen så en
+    omdöpning i build_site.py inte tyst kopplar bort den terminala seamen."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg en karusell i andra sektionen",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["editKind"] == "component_add", result
+    assert result["applied"] is False, result
+    assert result["stage"] == "generative_unsupported", result
+    # No component .tsx was faked for the refused generative family.
+    build_dir = _newest_build_dir(generated_dir, site_id)
+    generated = build_dir / "components" / "generated"
+    assert not generated.exists() or not list(generated.glob("*.tsx")), result
