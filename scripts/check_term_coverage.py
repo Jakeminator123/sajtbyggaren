@@ -698,6 +698,18 @@ COMMON_WORDS = {
     # UI-gap-fix (juni 2026): exakt change-set i FloatingChat ("Ändrat")
     # härledd ur run-diff istället för prompt-heuristik ("Troligen ändrat").
     "RunChangeSet",
+    # Generativ V1-synlighet (ADR 0061/0064, juni 2026): nya generativa
+    # komponenter (bildgrid/kontakt-CTA) görs synliga som en exakt "Ändrat"-
+    # rad i FloatingChat. ``AppliedGenerativeComponent`` är den lokala
+    # UI-/server-helper-typen i apps/viewser/lib/runs.ts (schema-strikt mirror
+    # av schema-objektet ``directives.generativeComponents``), och
+    # ``ChangeSetGenerativeComponent`` är dess beroende-fria spegel i
+    # apps/viewser/lib/build-changes.ts. Inga canonical domänbegrepp (domän-
+    # konceptet heter ``generativeComponents`` och är schema-registrerat) —
+    # samma lokala allowlist-logik som ``AppliedCopyDirective`` / ``RunChangeSet``,
+    # så viewser-lanen passerar term-coverage --strict utan att röra
+    # governance/policies.
+    "AppliedGenerativeComponent", "ChangeSetGenerativeComponent",
     # Sektionsmarkering i preview (ADR 0046): MarkedSectionRef är registrerad
     # som canonical domänterm i naming-dictionary; dessa är lokala
     # implementationssymboler runt overlay-läget och zod-valideringen.
