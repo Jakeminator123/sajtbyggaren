@@ -4590,6 +4590,17 @@ def run_followup_chain(
             resolve_generative_component(follow_up_prompt, decision, context)
         )
 
+    # route_add (ADR 0062 §4): an "add a page" follow-up. No executor materialises
+    # a new route today (the page renderer + nav wiring is a noted follow-up), so a
+    # route_add ALWAYS reaches the no-op gate below. Surfacing it as the reserved
+    # ``route_add_unsupported`` terminal stage (already in route.ts's
+    # TERMINAL_EDIT_NOOP_STAGES) makes the bridge stop with a build-free honest
+    # no-op - no version, no fall-through to the legacy copy path that would
+    # otherwise steal a quoted "...som heter X" page name as a company rename.
+    is_route_add = decision.editKind == "route_add" or any(
+        subtask.editKind == "route_add" for subtask in decision.subtasks
+    )
+
     if (
         not plan.patches
         and theme_directive is None
@@ -4641,6 +4652,13 @@ def run_followup_chain(
                 f"genererings-recept kunde materialiseras: {reasons}"
             )
             stage = "generative_unsupported"
+        elif is_route_add:
+            no_edit_note = (
+                "Router klassade ett sidtillägg (route_add) men att lägga till "
+                "en helt ny sida stöds inte än; ingen sida skapades och inget "
+                "annat (t.ex. företagsnamnet) ändrades."
+            )
+            stage = "route_add_unsupported"
         elif is_restyle:
             no_edit_note = (
                 "Router klassade en stiländring (visual_style) men ingen känd "

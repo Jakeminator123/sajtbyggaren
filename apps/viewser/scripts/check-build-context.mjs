@@ -25,6 +25,7 @@ const WATCHED_ENTRIES = [
   "governance",
   "data/starters",
   "requirements.txt",
+  "requirements-build.txt",
   "pyproject.toml",
 ];
 

@@ -307,6 +307,18 @@ _COMPONENT_INTENT_SECTION_TYPE = {
     "contact_form": "contact-form",
 }
 
+# Section types whose ONLY honest add path is the section route: they have no
+# working component_add recipe, so the bare type word IS the whole-section
+# request and must reach section_add even WITHOUT an explicit "sektion" word.
+# Today only ``hours``: its component noun (öppettider -> ``opening_hours``) has
+# no component recipe, so a bare "lägg till öppettider" otherwise fell through to
+# a dead component_add that downstream reports as "opening-hours kunde inte
+# kopplas till någon känd förmåga". The wired path is the hours capability ->
+# opening-hours dossier, rendered inline on home (ADR 0038); this reuses the
+# opening_hours -> hours bridge above, never a new slug. Every OTHER section type
+# still needs an explicit section word, so its component_add stays byte-identical.
+_SECTION_ONLY_TYPES = frozenset({"hours"})
+
 _ORDINAL_WORDS = {
     "första": 1, "andra": 2, "tredje": 3, "fjärde": 4, "femte": 5,
     "sjätte": 6, "sjunde": 7, "åttonde": 8, "nionde": 9, "tionde": 10,
@@ -733,6 +745,12 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     # type) stays component_add via _is_section_object.
     has_section_word = _any_word(work, _SECTION_NOUNS)
     section_type = _detect_section_type(work)
+    # A "section-only" type (``hours``/öppettider) has no honest component_add
+    # recipe, so the bare type word IS the whole-section request and reaches
+    # section_add even WITHOUT an explicit section word ("lägg till öppettider").
+    # ``_is_section_object`` below still guards it: a DIFFERENT widget aimed at
+    # the hours section ("lägg till en knapp för öppettider") keeps component_add.
+    section_only_type = section_type in _SECTION_ONLY_TYPES
     # An ordinal reference ("andra sektionen", "sista sektionen") points at an
     # EXISTING section as a LOCATION, not a new section to add - that stays
     # component_add ("lägg till X i andra sektionen"). A bare position ("överst")
@@ -740,7 +758,7 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     section_is_location = target is not None and target.sectionOrdinal is not None
     if (
         (has_add or has_create)
-        and has_section_word
+        and (has_section_word or section_only_type)
         and not section_is_location
         and _is_section_object(component_intent, section_type)
     ):

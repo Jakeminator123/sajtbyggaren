@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from packages.generation.followup.copy_directives import is_page_add_request
 from scripts.build_site import build
 from scripts.prompt_to_project_input import (
     _copy_directive_llm_eligible,
@@ -342,6 +343,53 @@ def test_explicit_company_name_keyword_wins_over_scope_word() -> None:
             "target": "company-name",
             "operation": "replace-text",
             "payload": "Akustik",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        # The 2026-06-16 honesty bug: the explicit name keyword ("heter") won in
+        # _classify_copy_target and the NEW PAGE's quoted name was published as a
+        # company rename - "add a page" silently renamed the company + "Klart!".
+        'Lägg till en sida och en navigationslänk som heter "Jakobs sida"',
+        "lägg till en sida som heter 'Jakobs sida'",
+        "lägg till en kontaktsida som heter 'Jakobs sida'",
+        "skapa en ny sida som heter 'Jakobs sida'",
+    ],
+)
+def test_page_add_som_heter_is_never_a_company_rename(prompt: str) -> None:
+    """A route_add ("add a page [called X]") must never mint a company-name directive."""
+    assert is_page_add_request(prompt) is True
+    assert _extract_copy_directives(prompt, language="sv") == []
+
+
+@pytest.mark.tooling
+def test_merge_page_add_keeps_company_name_unchanged() -> None:
+    """End-to-end (merge): a page-add follow-up leaves company.name untouched."""
+    merged = _merge('Lägg till en sida som heter "Jakobs sida"')
+    assert merged["company"]["name"] == "Örhängsföretaget"
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_genuine_company_rename_unaffected_by_page_add_guard() -> None:
+    """Regression guard: a real rename (no add-a-page intent) STILL targets
+    company-name. The page-add guard is scoped to company-name + a page-add
+    intent, so an ordinary "ändra företagsnamnet till X" is byte-identical."""
+    assert is_page_add_request("ändra företagsnamnet till Akustik AB") is False
+    assert _extract_copy_directives(
+        "ändra företagsnamnet till 'Akustik AB'", language="sv"
+    ) == [
+        {
+            "target": "company-name",
+            "operation": "replace-text",
+            "payload": "Akustik AB",
             "source": "prompt-rule",
         }
     ]

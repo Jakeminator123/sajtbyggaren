@@ -2301,6 +2301,14 @@ def _copy_directive_llm_eligible(
     # value as copy. Same outside-quotes media-noun check as the rules path.
     if _copy_directives.is_media_change_request(follow_up_prompt):
         return False
+    # page-add-guard (2026-06-16): a route_add ("lägg till en sida som heter X",
+    # "skapa en ny kontaktsida") must not reach copyDirectiveModel either - the
+    # model would face the same temptation as the deterministic rules to publish
+    # the new page's name as a company rename. The additive-keyword check below
+    # only catches some phrasings ("lägg till"/"ny sida"); this also closes
+    # "skapa en sida ..." which is not in _FOLLOWUP_ADD_ONLY_KEYWORDS.
+    if _copy_directives.is_page_add_request(follow_up_prompt):
+        return False
     # The additive guard reads the instruction OUTSIDE quotes so an "add"
     # keyword inside quoted OLD copy does not wrongly block the LLM fallback.
     text = _text_outside_quotes(follow_up_prompt) or _normalise_followup_text(

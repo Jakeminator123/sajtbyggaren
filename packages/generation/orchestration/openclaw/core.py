@@ -123,11 +123,17 @@ def orchestrate(
 
 
 def _answer(router: RouterDecision, context: AssembledContext) -> OpenClawDecision:
+    # ``decide`` stays a PURE function (no LLM, no I/O), so it only marks the
+    # turn answer_only here; the natural-language answer text is produced by the
+    # registered answerModel role in the conductor's TS answer layer (ADR 0065,
+    # apps/viewser chatWithAnswerModel), with report.py as the deterministic
+    # no-key floor. The line below is the honest placeholder for the rare caller
+    # that consumes decide() directly without that layer.
     answer = (
         "Detta är en ren fråga som inte kräver någon ändring av sajten. "
-        "OpenClaw Core V0 markerar den som answer_only och startar varken "
-        "build eller preview; själva svarstexten produceras av svarsmodellen "
-        "(ännu inte inkopplad i V0)."
+        "OpenClaw Core V0 markerar den som answer_only och startar varken build "
+        "eller preview; själva svarstexten formuleras av answerModel-rollen i "
+        "dirigentens svarslager (ADR 0065), inte i den rena decide-funktionen."
     )
     return OpenClawDecision(
         router=router,
@@ -203,8 +209,9 @@ def _site_review(router: RouterDecision, context: AssembledContext) -> OpenClawD
             action="answer_only",
             answer=(
                 "Granskning av sajten baserad på lästa artefakter (read-only). "
-                "Detaljerad bedömning produceras av granskningsmodellen (ej "
-                "inkopplad i V0); ingen ändring görs."
+                "Den detaljerade bedömningen formuleras av answerModel-rollen i "
+                "dirigentens svarslager (ADR 0065), inte i den rena "
+                "decide-funktionen; ingen ändring görs."
             ),
             rationale="site_review: svar/granskning, ingen build.",
         )
