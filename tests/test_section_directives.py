@@ -35,6 +35,7 @@ from packages.generation.followup.section_directives import (  # noqa: E402
     resolve_section_capabilities,
     resolve_visible_section_pages,
 )
+from packages.generation.orchestration.router import classify_message  # noqa: E402
 
 # Core-lane (docs/testing.md): kärnflödet prompt -> bygge -> följdprompt.
 pytestmark = pytest.mark.core
@@ -114,6 +115,28 @@ def test_resolution_dedupes_repeated_and_mixed_types() -> None:
     )
     assert capabilities == ["gallery", "pricing"]
     assert [item["type"] for item in unsupported] == ["färger"]
+
+
+def test_bare_opening_hours_followup_resolves_to_hours_capability() -> None:
+    """End-to-end bridge: a bare "lägg till öppettider" follow-up classifies as
+    section_add(hours), and that slug resolves to the known ``hours`` capability
+    with NO ``unsupported`` entry. This is exactly the dead component_add no-op
+    ("opening-hours kunde inte kopplas till någon känd förmåga") that the router
+    fix removes - the slug the router emits is a resolvable capability, never an
+    unknown ``opening-hours`` one."""
+    decision = classify_message("lägg till öppettider")
+    assert decision.editKind == "section_add"
+    assert decision.componentIntent == "hours"
+
+    capabilities, unsupported = resolve_section_capabilities([decision.componentIntent])
+    assert capabilities == ["hours"]
+    assert unsupported == []
+    # And the hours capability has a wired INLINE home placement (ADR 0038), so
+    # the section is mount-only-with-a-render-path, not a dead end.
+    assert INLINE_SECTION_PLACEMENTS["hours"] == {
+        "sectionId": "hours-summary",
+        "routeId": "home",
+    }
 
 
 # ---------------------------------------------------------------------------
