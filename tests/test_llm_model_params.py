@@ -71,6 +71,7 @@ def test_real_policy_declares_adr_0052_start_values():
         "verifierModel": ("high", 16000),
         "variantModel": ("medium", 16000),
         "dossierModel": ("medium", 16000),
+        "scaffoldModel": ("medium", 16000),
     }
     for role_id, (effort, tokens) in expected.items():
         params = resolve_role_params(role_id)

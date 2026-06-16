@@ -92,7 +92,9 @@
       "id": "scaffoldModel",
       "purpose": "Design tooling - generera kandidat-only scaffold-spec (routes, sektioner, primaryJobs, quality-contract, selection-profile) för en specifik bransch utifrån branschprofil (industry-profiles.v1.json) + närmaste befintliga scaffold som referens. Skriver ALDRIG till packages/generation/orchestration/ — kandidater landar under data/scaffold-candidates/ och promotion kräver ADR per scaffold-contract.v1 revisionRules. Utan OPENAI_API_KEY: deterministisk spec ur branschprofilens recommendedPages/extraCapabilities.",
       "model": "gpt-5.5",
-      "provider": "openai"
+      "provider": "openai",
+      "reasoningEffort": "medium",
+      "maxOutputTokens": 16000
     },
     {
       "id": "repairModel",
