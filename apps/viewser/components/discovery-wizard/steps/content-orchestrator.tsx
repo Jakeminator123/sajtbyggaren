@@ -53,7 +53,7 @@ export function ContentOrchestratorStep({
       <SectionCard
         icon={<BookText className="h-3.5 w-3.5" />}
         title="Företagets identitet"
-        description="Om-oss matar hero + intro-texter."
+        description="Om-oss formar toppbild- och introtexter."
         descriptionLong="Mer detaljer (historia, vision, målgrupp) ligger i disclosure nedan. AI:n fyller i det som saknas från tone of voice."
       >
         <FieldStack>

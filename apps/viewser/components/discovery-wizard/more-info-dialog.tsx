@@ -387,7 +387,7 @@ function MediaExtrasBlock({
       <MediaCard
         icon={<Video className="h-4 w-4" />}
         title="Bakgrundsvideo"
-        description="Loop bakom hero-texten. Hero-bilden visas som fallback."
+        description="Loop bakom toppbilden. Toppbilden visas som fallback."
       >
         {answers.media.backgroundVideo ? (
           <FileRow

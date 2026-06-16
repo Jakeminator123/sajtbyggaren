@@ -57,9 +57,9 @@ export function MediaStep({
           info, och 1-mening på AssetCard:en räcker som intro. */}
       <AssetCard
         icon={<ImagePlus className="h-4 w-4" />}
-        title="Logotyp, hero och galleri"
+        title="Logotyp, toppbild och galleri"
         description="Huvudtillgångarna som syns på sajten."
-        descriptionLong="AI:n föreslår alt-text och placering. Lämna fält tomma och vi genererar fallbacks (monogram, text-hero, brand-OG)."
+        descriptionLong="AI:n föreslår beskrivning och placering. Lämna fält tomma så genererar vi dem automatiskt — t.ex. ett bokstavs-monogram som logotyp och en passande toppbild."
       >
         <AssetsStepInline answers={answers} onChange={onChange} />
         {/* AI-knapprad för rollerna inne i AssetsStep — vi modifierar
@@ -77,7 +77,11 @@ export function MediaStep({
               className="border-border/60 hover:border-foreground/40 hover:bg-foreground/[0.03] inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors"
             >
               <Sparkles className="h-3 w-3" />
-              {r === "logo" ? "Logotyp" : r === "hero" ? "Hero" : "Galleribild"}
+              {r === "logo"
+                ? "Logotyp"
+                : r === "hero"
+                  ? "Toppbild"
+                  : "Galleribild"}
             </button>
           ))}
         </div>
@@ -156,8 +160,8 @@ export function MediaStep({
         <AssetCard
           icon={<Video className="h-4 w-4" />}
           title="Bakgrundsvideo"
-          description="Loop bakom hero-texten."
-          descriptionLong="Tyst, kort, ger sajten liv. Hero-bilden visas som fallback om videon inte stöds."
+          description="Loop bakom toppbilden."
+          descriptionLong="Tyst, kort, ger sajten liv. Toppbilden visas som fallback om videon inte stöds."
         >
           {answers.media.backgroundVideo ? (
             <VideoPreview
@@ -171,7 +175,7 @@ export function MediaStep({
               role="backgroundVideo"
               mode="single"
               emptyLabel="Släpp video här (.mp4 / .webm)"
-              hintLabel="5-15 sekunder, max ~50 MB. Hero-bilden visas som fallback."
+              hintLabel="5-15 sekunder, max ~50 MB. Toppbilden visas som fallback."
               onUploaded={(refs) => {
                 const next = refs[0];
                 if (next)

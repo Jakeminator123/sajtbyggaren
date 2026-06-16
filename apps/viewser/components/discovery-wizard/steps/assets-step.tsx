@@ -211,8 +211,8 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
       <div>
         <SectionHeader>Logotyp</SectionHeader>
         <HelperText>
-          Vi använder logon i header och footer. SVG ger skarpast resultat; PNG
-          med transparent bakgrund fungerar också.
+          Vi använder logotypen högst upp och längst ner på sidan. SVG ger
+          skarpast resultat; PNG med transparent bakgrund fungerar också.
         </HelperText>
       </div>
       {answers.assets.logo ? (
@@ -236,10 +236,10 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
       )}
 
       <div>
-        <SectionHeader>Hero-bild</SectionHeader>
+        <SectionHeader>Toppbild</SectionHeader>
         <HelperText>
-          Stor bild på startsidan. En liggande bild i hög kvalitet av lokalen,
-          produkten, kunden eller resultatet fungerar bäst.
+          Stor bild högst upp på startsidan. En liggande bild i hög kvalitet av
+          lokalen, produkten, kunden eller resultatet fungerar bäst.
         </HelperText>
       </div>
       {answers.assets.heroImage ? (
@@ -253,7 +253,7 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
         <AssetDropzone
           role="hero"
           mode="single"
-          emptyLabel="Släpp hero-bilden här"
+          emptyLabel="Släpp toppbilden här"
           hintLabel="Liggande format, minst 1200 px bred. JPG/WebP rekommenderas."
           onUploaded={(refs) => {
             const next = refs[0];
@@ -309,7 +309,7 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
         role="gallery"
         mode="multi"
         emptyLabel="Släpp galleribilder eller filmer här"
-        hintLabel="Upp till ~20 bilder. Vi väljer automatiskt bästa hero-bilden om du inte laddat upp en separat."
+        hintLabel="Upp till ~20 bilder. Vi väljer automatiskt bästa toppbilden om du inte laddat upp en separat."
         onUploaded={(refs) =>
           updateAssets((a) => {
             const nextGallery = [...a.gallery, ...refs];

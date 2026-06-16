@@ -69,7 +69,7 @@ const STYLE_OPTIONS: Array<{
 
 const ROLE_LABEL: Record<AssetRole, string> = {
   logo: "logotyp",
-  hero: "hero-bild",
+  hero: "toppbild",
   gallery: "galleribild",
   favicon: "favicon",
   ogImage: "social-image",
