@@ -130,7 +130,7 @@ def _critic(gp, brief):
 
 @pytest.mark.tooling
 def test_resolve_repair_model_returns_registered_model():
-    assert resolve_repair_model() == "gpt-5.4"
+    assert resolve_repair_model() == "gpt-5.5"
 
 
 # ---------------------------------------------------------------------------

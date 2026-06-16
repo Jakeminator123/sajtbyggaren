@@ -133,7 +133,7 @@ ska uppfinnas:
 | `verifierModel` | Read-only granskning av `Generated Files` som producerar findings till `Quality Gate`. |
 | `embeddingModel` | `Embedding Index` för Scaffold-/Dossier-/Section Pattern-/Style Signature-index. |
 
-I [`llm-models.v1.json`](../governance/policies/llm-models.v1.json) pekar alla generation-roller just nu på `gpt-5.4`, embedding på `text-embedding-3-small`. Det är medvetet en linje av modeller; vi optimerar per roll först när användning kräver det.
+I [`llm-models.v1.json`](../governance/policies/llm-models.v1.json) pekar alla generation-roller just nu på `gpt-5.5`, embedding på `text-embedding-3-small`. Det är medvetet en linje av modeller; vi optimerar per roll först när användning kräver det.
 
 ## Governance och styrning
 

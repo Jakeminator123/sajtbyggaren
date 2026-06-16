@@ -697,7 +697,7 @@ class BriefResult(BaseModel):
 def extract_site_brief(
     prompt: str,
     *,
-    model: str = "gpt-5.4",
+    model: str = "gpt-5.5",
     language_hint: str | None = None,
 ) -> BriefResult:
     """Phase 1 Understand entry point.

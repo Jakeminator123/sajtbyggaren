@@ -158,8 +158,8 @@ def test_run_openai_review_defaults_to_gpt_5_4(monkeypatch) -> None:
 
     run_openai_review("review this diff")
 
-    assert DEFAULT_OPENAI_REVIEW_MODEL == "gpt-5.4"
-    assert calls[0]["model"] == "gpt-5.4"
+    assert DEFAULT_OPENAI_REVIEW_MODEL == "gpt-5.5"
+    assert calls[0]["model"] == "gpt-5.5"
 
 
 def test_build_prompt_includes_repo_specific_review_rules() -> None:

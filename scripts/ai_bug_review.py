@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 COMMENT_MARKER = "<!-- sajtbyggaren-ai-bug-review -->"
 GITHUB_ACTIONS_BOT_LOGIN = "github-actions[bot]"
 MAX_DIFF_CHARS = 120_000
-DEFAULT_OPENAI_REVIEW_MODEL = "gpt-5.4"
+DEFAULT_OPENAI_REVIEW_MODEL = "gpt-5.5"
 
 
 @dataclass(frozen=True)

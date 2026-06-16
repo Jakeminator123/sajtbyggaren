@@ -66,7 +66,7 @@ def test_builder_uses_brief_extractor_when_api_key_exists(
     _, run_dir = build(project_input_path, do_build=False, runs_dir=tmp_path)
 
     assert len(calls) == 1
-    assert calls[0]["model"] == "gpt-5.4"
+    assert calls[0]["model"] == "gpt-5.5"
     assert calls[0]["language_hint"] == "sv"
     assert "Norrljus Studio" in calls[0]["prompt"]
     assert "framing-service" in calls[0]["prompt"]
@@ -74,14 +74,14 @@ def test_builder_uses_brief_extractor_when_api_key_exists(
     brief = json.loads((run_dir / "site-brief.json").read_text(encoding="utf-8"))
     assert brief["briefSource"] == "real"
     assert brief["sourceModelRole"] == "briefModel"
-    assert brief["modelUsed"] == "gpt-5.4"
+    assert brief["modelUsed"] == "gpt-5.5"
     assert brief["businessTypeGuess"] == "photo-studio"
     assert brief["locationHint"] == "Göteborg"
     assert brief["scaffoldHint"] == "local-service-business"
 
     result = json.loads((run_dir / "build-result.json").read_text(encoding="utf-8"))
     assert result["briefSource"] == "real"
-    assert result["modelUsed"] == "gpt-5.4"
+    assert result["modelUsed"] == "gpt-5.5"
     assert result["modelUsage"]["source"] == "real"
 
 
@@ -114,7 +114,7 @@ def test_builder_falls_back_to_mock_when_brief_extractor_fails(
     assert brief["briefSource"] == "mock-llm-error"
     assert brief["modelUsed"] == "mock"
     assert brief["sourceModelRole"] == "briefModel"
-    assert brief["attemptedModel"] == "gpt-5.4"
+    assert brief["attemptedModel"] == "gpt-5.5"
     assert "synthetic extractor failure" in brief["briefError"]
     # Project Input fields project into canonical Site Brief fields per ADR 0013.
     assert brief["businessTypeGuess"] == "painter"

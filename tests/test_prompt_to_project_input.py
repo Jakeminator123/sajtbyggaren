@@ -909,7 +909,7 @@ def test_generate_warns_when_brief_model_resolution_fails(
     )
 
     captured = capsys.readouterr()
-    assert "briefModel resolution failed; using fallback model gpt-5.4" in captured.err
+    assert "briefModel resolution failed; using fallback model gpt-5.5" in captured.err
     assert "briefModel role missing" in captured.err
     assert meta["briefSource"] == "mock-no-key"
 

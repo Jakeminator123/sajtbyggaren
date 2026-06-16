@@ -216,7 +216,7 @@ Total runtime: 7.6 s, exit: 0
 | Artefakt | Skrivs av fas | Innehåll |
 |----------|---------------|----------|
 | `input.json` | understand | Den oförändrade inmatningen plus `runId`, `mode=init`, `dossierPath` (Project Input-path), `detectedLanguage` |
-| `site-brief.json` | understand | Site Brief från `briefModel` när `OPENAI_API_KEY` är satt (`briefSource=real`, `modelUsed=gpt-5.4`), annars mock med `briefSource=mock-no-key` eller `briefSource=mock-llm-error` om LLM-anropet failade |
+| `site-brief.json` | understand | Site Brief från `briefModel` när `OPENAI_API_KEY` är satt (`briefSource=real`, `modelUsed=gpt-5.5`), annars mock med `briefSource=mock-no-key` eller `briefSource=mock-llm-error` om LLM-anropet failade |
 | `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec via `produce_site_plan` (`planSource`: `real` / `mock-no-key` / `mock-llm-error` / `pinned`) |
 | `generation-package.json` | plan | Sammanfattning av vad codegen-LLM skulle få (utan att vi anropar någon) |
 | `generated-files/` | build | Snapshot av filerna under `../sajtbyggaren-output/.generated/<siteId>/` exklusive `node_modules` och `.next` |

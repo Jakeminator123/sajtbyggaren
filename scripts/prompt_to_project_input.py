@@ -3594,7 +3594,7 @@ def generate(
     except Exception as exc:  # noqa: BLE001
         # Mirror dev_generate.py's tolerance: a misconfigured llm-models
         # policy must not block the prompt-driven loop entirely.
-        model = "gpt-5.4"
+        model = "gpt-5.5"
         print(
             "briefModel resolution failed; using fallback model "
             f"{model}: {type(exc).__name__}: {exc}",

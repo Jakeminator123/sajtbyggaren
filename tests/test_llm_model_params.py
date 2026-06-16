@@ -43,32 +43,34 @@ def _write_policy(tmp_path: Path, roles: list[dict]) -> Path:
 
 
 def test_resolves_brief_model_params_from_real_policy():
-    """briefModel = medium / 6000 (v13 model routing bumpade effort low->medium;
-    modellen stannar gpt-5.4 per coach-matrisen)."""
+    """briefModel = gpt-5.5 / medium / 16000 (v14 model routing v2: hela
+    chat-/generationskedjan på gpt-5.5, höjt tak så reasoning inte svälter
+    utdata i Responses-API:t)."""
     params = resolve_role_params("briefModel")
     assert params.role_id == "briefModel"
-    assert params.model == "gpt-5.4"
+    assert params.model == "gpt-5.5"
     assert params.reasoning_effort == "medium"
-    assert params.max_output_tokens == 6000
+    assert params.max_output_tokens == 16000
 
 
 def test_real_policy_declares_adr_0052_start_values():
     """Hela ADR-tabellen, så en framtida policy-bump som tappar ett värde syns."""
-    # v13 (model routing, coach-beslut 2026-06-15) bumpade konduktor-/planerings-/
-    # kritiker-rollerna till high reasoning + högre tak och briefModel till medium;
-    # övriga rollers effort/tokens är oförändrade.
+    # v14 (model routing v2, operatörsbeslut 2026-06-16): gpt-5.5 på alla
+    # chat-/generationsroller och rejält höjda maxOutputTokens eftersom
+    # Responses-API:t räknar reasoning-tokens inne i utdatataket (ett för lågt
+    # tak gav <no output> -> tyst mock-fallback). xhigh används aldrig.
     expected = {
-        "briefModel": ("medium", 6000),
-        "planningModel": ("high", 16000),
-        "routerModel": ("high", 8000),
-        "copyDirectiveModel": ("low", 4000),
-        "styleDirectiveModel": ("none", 2000),
-        "rerankModel": ("low", 2000),
-        "codegenModel": ("medium", 4000),
-        "repairModel": ("medium", 4000),
-        "verifierModel": ("high", 8000),
-        "variantModel": ("medium", 8000),
-        "dossierModel": ("medium", 12000),
+        "briefModel": ("medium", 16000),
+        "planningModel": ("high", 24000),
+        "routerModel": ("high", 16000),
+        "copyDirectiveModel": ("low", 12000),
+        "styleDirectiveModel": ("none", 8000),
+        "rerankModel": ("low", 8000),
+        "codegenModel": ("medium", 16000),
+        "repairModel": ("medium", 16000),
+        "verifierModel": ("high", 16000),
+        "variantModel": ("medium", 16000),
+        "dossierModel": ("medium", 16000),
     }
     for role_id, (effort, tokens) in expected.items():
         params = resolve_role_params(role_id)
