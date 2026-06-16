@@ -82,6 +82,50 @@ def test_default_route_id_is_home():
     assert specs[0]["routeId"] == "home"
 
 
+@pytest.mark.parametrize(
+    ("prompt", "expected_position"),
+    [
+        ("lägg till 6 bildplatshållare högst upp", "top"),
+        ("lägg till 6 bildplatshållare längst ner", "bottom"),
+    ],
+)
+def test_position_is_parsed_from_router_target(prompt: str, expected_position: str):
+    """Placement reuse: a prompt naming top/bottom carries the router-derived
+    position (RouterTarget.position via _detect_position) onto the spec, so the
+    materialiser can honour 'högst upp'/'längst ner'. The router really sets this
+    for a component_add target (verified against classify_message), so the
+    resolver reads it straight off decision.target.position."""
+    decision = classify_message(prompt)
+    assert decision.editKind == "component_add"
+    assert getattr(decision.target, "position", None) == expected_position
+    specs, refused = resolve_generative_component(prompt, decision)
+    assert refused == []
+    assert len(specs) == 1
+    assert specs[0]["position"] == expected_position
+
+
+def test_position_absent_when_prompt_names_none():
+    """A prompt with no placement keeps the spec free of a 'position' key, so the
+    default before-</main> slot is used and existing specs stay byte-identical."""
+    prompt = "lägg till 6 bildplatshållare"
+    decision = classify_message(prompt)
+    assert getattr(decision.target, "position", None) is None
+    specs, _refused = resolve_generative_component(prompt, decision)
+    assert len(specs) == 1
+    assert "position" not in specs[0]
+
+
+def test_intra_section_position_is_not_recorded_as_route_placement():
+    """left/right/center are intra-section placements, not route-order slots, so
+    they are NOT written onto the spec (only top/bottom mirror section_positions)."""
+    prompt = "lägg till 6 bildplatshållare till vänster"
+    decision = classify_message(prompt)
+    assert getattr(decision.target, "position", None) == "left"
+    specs, _refused = resolve_generative_component(prompt, decision)
+    assert len(specs) == 1
+    assert "position" not in specs[0]
+
+
 def test_id_is_stable_across_counts_so_apply_can_update_in_place():
     """Matris #1: the spec id is the STABLE recipe slug regardless of count, so a
     repeat 'lägg till N bildplatshållare' re-uses the same id and apply's

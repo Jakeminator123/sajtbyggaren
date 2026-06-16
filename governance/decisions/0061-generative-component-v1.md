@@ -63,6 +63,22 @@ höjer fel. En routeId vars `page.tsx` saknas blir en ärlig skip (ingen
 orphan-fil), aldrig en krasch. Materialiseringen är idempotent: samma direktiv
 dubbelinjicerar aldrig import eller användning.
 
+## Placement / position (följdprompt)
+
+En följdprompt som namnger en placering ("lägg till 6 bildplatshållare högst
+upp" / "längst ner") respekteras genom att ÅTERANVÄNDA det kanoniska
+`position`-fältet — samma `top`/`bottom`-tokens som mountade sektioner och
+`RouterTarget.position` (routerns `_detect_position`), inte ett nytt
+`placement`-fält. Resolvern läser `decision.target.position` och skriver
+`spec["position"]` endast för `top`/`bottom` (intra-sektions-placeringar som
+`left`/`right`/`center` ignoreras, de är inte route-ordnings-slots — speglar
+`scripts/build_site.py` `section_positions`). Buildern splice:ar då in
+användningen direkt efter öppnande `<main>` (`top`, första barn före hero)
+respektive före avslutande `</main>` (`bottom`). En utelämnad position behåller
+default-slotten före `</main>` (oförändrat, byte-identiskt beteende); en
+`top`-begäran på en sida utan öppnande `<main>` faller tillbaka till
+default-slotten i stället för att skippa.
+
 ## Inga nya beroenden
 
 Mallen använder bara Tailwind-klasser som scaffolden redan levererar (inga

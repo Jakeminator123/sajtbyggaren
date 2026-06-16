@@ -48,6 +48,11 @@ _LEADING_DIRECTIVE_RE = re.compile(
     r"^\s*(?:\"use (?:client|server)\"|'use (?:client|server)')\s*;?[ \t]*\r?\n"
 )
 
+# The opening <main ...> tag (with optional attributes). Used to honour a "top"
+# placement: a generative component asked to land "högst upp" is spliced right
+# AFTER this tag (first child of <main>), instead of the default before-</main>.
+_OPENING_MAIN_RE = re.compile(r"<main\b[^>]*>")
+
 # The V1 recipe allowlist. A spec whose recipe is not here is a contract violation
 # (the schema enum + the resolver allowlist should make it unreachable); we fail
 # closed rather than write an unknown template. Each value is a template renderer
@@ -164,28 +169,72 @@ def _prepend_import(text: str, import_line: str) -> str:
     return import_line + text
 
 
+def _insert_before_closing_main(text: str, usage_line: str) -> str | None:
+    """Insert ``usage_line`` immediately before the LAST ``</main>``, or None.
+
+    The default placement (and the same "before the closing main" shape the
+    section renderers use). Returns None when the page has no ``</main>``.
+    """
+    marker = "</main>"
+    idx = text.rfind(marker)
+    if idx == -1:
+        return None
+    line_start = text.rfind("\n", 0, idx) + 1
+    return text[:line_start] + usage_line + text[line_start:]
+
+
+def _insert_after_opening_main(text: str, usage_line: str) -> str | None:
+    """Insert ``usage_line`` right AFTER the first opening ``<main ...>`` tag.
+
+    Honours a "top" placement ("högst upp"): the component becomes the first
+    child of ``<main>``, before the hero/first section. ``usage_line`` carries
+    its own trailing newline, so it is placed on its own line after the opening
+    tag's line. Returns None when the page has no opening ``<main>`` tag (the
+    caller then falls back to the default before-``</main>`` placement).
+    """
+    match = _OPENING_MAIN_RE.search(text)
+    if match is None:
+        return None
+    end = match.end()
+    rest = text[end:]
+    if rest.startswith("\r\n"):
+        newline, rest = "\r\n", rest[2:]
+    elif rest.startswith("\n"):
+        newline, rest = "\n", rest[1:]
+    else:
+        newline = ""
+    return text[:end] + newline + usage_line + rest
+
+
 def _splice_into_page(
-    page_text: str, *, import_line: str, usage_line: str
+    page_text: str, *, import_line: str, usage_line: str, position: str | None = None
 ) -> str | None:
     """Return ``page_text`` with the import + usage spliced in, or None to skip.
 
-    Inserts ``usage_line`` immediately before the LAST ``</main>`` (the same
-    "before the closing main" placement the section renderers use) and inserts
-    ``import_line`` at the top - but AFTER any leading ``"use client"`` directive
-    (which must remain the first statement, or the Next.js build breaks).
+    ``position`` honours the router-derived placement (the same ``top``/``bottom``
+    tokens section_add uses, RouterTarget.position): ``"top"`` splices the usage
+    right after the opening ``<main>`` (first child); ``"bottom"`` and the default
+    (``None`` / ``"before-contact"``) splice it before the LAST ``</main>`` - the
+    unchanged behaviour. A ``"top"`` request on a page with no opening ``<main>``
+    falls back to the default placement rather than skipping.
+
+    ``import_line`` is inserted at the top - but AFTER any leading ``"use client"``
+    directive (which must remain the first statement, or the Next.js build breaks).
     Idempotent: an already present import or usage is left untouched, so re-running
     never double-inserts. Returns None when the page has no ``</main>`` to splice
     into (honest skip).
     """
-    marker = "</main>"
     text = page_text
     component_token = usage_line.strip()
     if component_token not in text:
-        idx = text.rfind(marker)
-        if idx == -1:
+        spliced: str | None = None
+        if position == "top":
+            spliced = _insert_after_opening_main(text, usage_line)
+        if spliced is None:
+            spliced = _insert_before_closing_main(text, usage_line)
+        if spliced is None:
             return None
-        line_start = text.rfind("\n", 0, idx) + 1
-        text = text[:line_start] + usage_line + text[line_start:]
+        text = spliced
     if import_line not in text:
         text = _prepend_import(text, import_line)
     return text
@@ -222,6 +271,9 @@ def materialize_generative_components(
         component_id = spec.get("id")
         route_id = spec.get("routeId") or "home"
         count = spec.get("count")
+        # Placement: the resolver records the router-derived position (top/bottom)
+        # only when the prompt named one; absent = default before-</main>.
+        position = spec.get("position")
 
         renderer = _RECIPE_TEMPLATES.get(recipe) if isinstance(recipe, str) else None
         if renderer is None:
@@ -255,6 +307,7 @@ def materialize_generative_components(
                 f'"@/components/generated/{component_id}";\n'
             ),
             usage_line=f"      <{component_name} />\n",
+            position=position if isinstance(position, str) else None,
         )
         if spliced is None:
             # The page has no </main> to splice into -> honest skip, no orphan.

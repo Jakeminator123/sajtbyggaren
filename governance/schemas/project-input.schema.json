@@ -386,6 +386,11 @@
                 "maxLength": 64,
                 "pattern": "^[a-z0-9][a-z0-9-]*$",
                 "description": "Filsäkert id (gemener, bindestreck) som också är komponentfilens slug: components/generated/<id>.tsx. Sticky-union:en i apply dedupar på detta id så samma komponent aldrig dubbleras över versioner. Mönstret hindrar path-traversal (aldrig '..', aldrig snedstreck) — buildern fail-closar dessutom på allt som skulle skriva utanför build-katalogen."
+              },
+              "position": {
+                "type": "string",
+                "enum": ["top", "bottom", "before-contact"],
+                "description": "Var i page.tsx komponenten splice:as in. Återanvänder samma kanoniska position-fält som mountade sektioner (RouterTarget.position). Härleds ur följdprompten ('högst upp' -> top, 'längst ner' -> bottom). top = direkt efter öppnande <main> (före hero); bottom och before-contact (= default) = före den avslutande </main> (oförändrat beteende). Utelämnas = default-slot. Endast top/bottom är route-ordnings-placeringar; en 'top'-begäran på en sida utan öppnande <main> faller tillbaka till default-slotten."
               }
             }
           }
