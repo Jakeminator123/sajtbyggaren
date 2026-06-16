@@ -121,6 +121,41 @@ def test_edit_followup_routes_through_openclaw_apply() -> None:
     )
 
 
+# --- 3b. versionerad PI-snapshot hydreras (B199-followup-fix) ------------------
+
+
+def test_versioned_pi_snapshot_is_hydrated_before_apply() -> None:
+    """B199-followup-fix: rika edits (component_add/route_remove/section_add/
+    nav_hide) no-op:ade i PROD men applicerade lokalt. Rotorsak: apply-bryggans
+    read_base_run_snapshot läser bas-PI:n ur den versionerade snapshotten
+    ``<siteId>.v<N>.project-input.json``, men den hostade hydreringen återskapade
+    bara den oversionerade pekaren → SystemExit "baseRunId Project Input-snapshot
+    saknas" → bridge.applied=false → legacy. Hydreringen måste därför kopiera
+    den hämtade PI/meta till de versionerade sökvägarna FÖRE apply-anropet."""
+    runner = _runner()
+    # Pekarens version trås in som env (set -u-säkert, tom vid init/äldre pekare).
+    assert "RUN_STATE_VERSION:" in runner, (
+        "sandboxEnv måste bära pekarens version som RUN_STATE_VERSION."
+    )
+    # Versionerad PI-snapshot skrivs ur den hämtade pekar-PI:n.
+    assert (
+        '"$REPO_DIR/data/prompt-inputs/$SITE_ID.v$RUN_STATE_VERSION.project-input.json"'
+        in runner
+    ), "Hydreringen måste återskapa <siteId>.v<N>.project-input.json."
+    assert (
+        '"$REPO_DIR/data/prompt-inputs/$SITE_ID.v$RUN_STATE_VERSION.meta.json"'
+        in runner
+    ), "Hydreringen måste återskapa <siteId>.v<N>.meta.json."
+    # Versionsskrivningen måste ske FÖRE OpenClaw apply-anropet (annars dör apply).
+    version_cp_at = runner.index(
+        "$SITE_ID.v$RUN_STATE_VERSION.project-input.json"
+    )
+    apply_at = runner.index("scripts/run_openclaw_followup.py --apply")
+    assert version_cp_at < apply_at, (
+        "Den versionerade snapshotten måste hydreras före apply-anropet."
+    )
+
+
 # --- 4. answer-only returnerar answerText UTAN runId/utan bygge ----------------
 
 
