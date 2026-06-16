@@ -21,20 +21,21 @@ import {
 // Spegla till Cursors canvas-mapp med: python scripts/sync_canvases.py
 //
 // Roller vs agenter vs personas vs modeller i Sajtbyggaren
-// Faktakällor (repo): governance/policies/llm-models.v1.json (v10),
+// Faktakällor (repo): governance/policies/llm-models.v1.json (v14),
 //   packages/generation/orchestration/openclaw/roles.py (ROLE_CONTRACTS),
 //   apps/viewser/lib/openai.ts, apps/viewser/lib/asset-store/vision.ts,
 //   scripts/scrape_site.py, docs/openclaw-workspace/SOUL.md.
 // Live-modellfakta: OpenAI docs-MCP (developers.openai.com/mcp), hämtat 2026-06-11.
-// Uppdaterad 2026-06-11 efter gpt-5.5-lyftet (6015af17): sidoanropens
-// fallback är numera gpt-5.5 (vision: 600 tokens + reasoning_effort low).
+// Uppdaterad 2026-06-16 (llm-models v14, operatörsbeslut 2026-06-16): hela
+// chat-/generationskedjan OCH sidoanropen kör nu en enda modell-linje, gpt-5.5
+// (embedding oförändrad). Tidigare körde motorn gpt-5.4 + sidoanrop gpt-5.5.
 // ---------------------------------------------------------------------------
 
 // AUTOGEN_MODEL_FACTS_START -- skrivs av scripts/update_canvas_facts.py, redigera inte for hand
 const MODEL_FACTS = {
-  generatedAt: "2026-06-15",
-  llmModelsVersion: 13,
-  engineModels: ["gpt-5.4", "gpt-5.5", "gpt-5.4-mini"],
+  generatedAt: "2026-06-16",
+  llmModelsVersion: 14,
+  engineModels: ["gpt-5.5"],
   embeddingModel: "text-embedding-3-small",
   chatFallbackModel: "gpt-5.5",
   visionFallbackModel: "gpt-5.5",
@@ -63,7 +64,7 @@ const LAYERS: Layer[] = [
     oneLiner:
       "Namngivna anropspunkter i motorn (briefModel, planningModel, codegenModel …). Varje roll mappas mot en modellsträng. Ingen kod får anropa en LLM utan att gå via en registrerad roll.",
     source: `governance/policies/llm-models.v1.json (v${MODEL_FACTS.llmModelsVersion})`,
-    count: "12 roller",
+    count: "13 roller",
     model: `${MODEL_FACTS.engineModels.join(" + ")} (alla generation-roller)`,
     tone: "info",
   },
@@ -72,9 +73,9 @@ const LAYERS: Layer[] = [
     title: "Konduktör-roller (agent-roller)",
     question: "VEM förstår & föreslår en ändring?",
     oneLiner:
-      "Frysta kontrakt (data, inte processer): router, section_builder, stylist, copy. En roll FÖRSTÅR och väljer skill; den deterministiska apply-kedjan VALIDERAR och applicerar.",
+      "Frysta kontrakt (data, inte processer): router (dirigent) + 5 redigerande roller — stylist (visual_style), copy (copy_change), section_builder (section_add), component_builder (component_add), route_editor (route_remove + nav_hide). En roll FÖRSTÅR och väljer skill; den deterministiska apply-kedjan VALIDERAR och applicerar.",
     source: "packages/generation/orchestration/openclaw/roles.py",
-    count: "4 roller",
+    count: "6 roller",
     model: "ärver Model Role (t.ex. stylist → styleDirectiveModel)",
     tone: "success",
   },
@@ -113,19 +114,22 @@ const LAYERS: Layer[] = [
   },
 ];
 
-// Model Roles ur llm-models.v1.json (v10). Alla generation-roller = gpt-5.4.
+// Model Roles ur llm-models.v1.json (v14, operatörsbeslut 2026-06-16): en enda
+// modell-linje — alla generation-roller = gpt-5.5 (reasoningEffort i parens);
+// embedding oförändrad. 13 roller totalt (12 generation + embedding).
 const MODEL_ROLES: Array<[string, string, string]> = [
-  ["briefModel", "Fas 1 Understand — extrahera Site Brief ur prompten", "gpt-5.4"],
-  ["planningModel", "Fas 2 Plan — route-hints, dossier-rationale", "gpt-5.4"],
-  ["routerModel", "Följdprompt-router (LLM-fallback ovanpå heuristiken)", "gpt-5.4"],
-  ["copyDirectiveModel", "Tolkar följdprompt → validerade copy-direktiv", "gpt-5.4"],
-  ["styleDirectiveModel", "Stylist — fri stil/färg-prompt → tema-mutation", "gpt-5.4"],
-  ["rerankModel", "Rerank av scaffold-/dossier-kandidater", "gpt-5.4"],
-  ["codegenModel", "Fas 3 Build — generera filerna", "gpt-5.4"],
-  ["variantModel", "Design-tooling — Scaffold Variant-kandidater", "gpt-5.4"],
-  ["dossierModel", "Design-tooling — Soft Dossier-kandidater", "gpt-5.4"],
-  ["repairModel", "Repair Pipeline — LLM-fix när mekanik inte räcker", "gpt-5.4"],
-  ["verifierModel", "Read-only smak-critic ovanpå Quality Critic", "gpt-5.4"],
+  ["briefModel", "Fas 1 Understand — extrahera Site Brief ur prompten", "gpt-5.5 (medium)"],
+  ["planningModel", "Fas 2 Plan — route-hints, dossier-rationale", "gpt-5.5 (high)"],
+  ["routerModel", "Följdprompt-router (LLM-fallback ovanpå heuristiken)", "gpt-5.5 (high)"],
+  ["copyDirectiveModel", "Tolkar följdprompt → validerade copy-direktiv", "gpt-5.5 (low)"],
+  ["styleDirectiveModel", "Stylist — fri stil/färg-prompt → tema-mutation", "gpt-5.5 (none)"],
+  ["rerankModel", "Rerank av scaffold-/dossier-kandidater", "gpt-5.5 (low)"],
+  ["codegenModel", "Fas 3 Build — generera filerna", "gpt-5.5 (medium)"],
+  ["variantModel", "Design-tooling — Scaffold Variant-kandidater", "gpt-5.5 (medium)"],
+  ["dossierModel", "Design-tooling — Soft Dossier-kandidater", "gpt-5.5 (medium)"],
+  ["scaffoldModel", "Design-tooling — kandidat-only scaffold-spec per bransch", "gpt-5.5 (medium)"],
+  ["repairModel", "Repair Pipeline — LLM-fix när mekanik inte räcker", "gpt-5.5 (medium)"],
+  ["verifierModel", "Read-only smak-critic ovanpå Quality Critic", "gpt-5.5 (high)"],
   ["embeddingModel", "Semantisk sökning (index)", "text-embedding-3-small"],
 ];
 
@@ -153,9 +157,9 @@ const GPT4O_USAGE: Array<[string, string, string, string]> = [
 
 // Aktuell OpenAI-lineup enligt docs-MCP (live, 2026-06-11).
 const OPENAI_LINEUP: Array<[string, string, string]> = [
-  ["gpt-5.5", "Flagship", "Nuvarande topp; reasoning.effort default medium"],
+  ["gpt-5.5", "Flagship", "Nuvarande topp; hela motorn + sidoanropen kör denna (llm-models v14)"],
   ["gpt-5.5-pro", "Tyngsta reasoning", "För de svåraste agentiska uppgifterna"],
-  ["gpt-5.4", "Föregående generation", "Det motorns Model Roles kör idag"],
+  ["gpt-5.4", "Föregående generation", "Motorn körde denna före v14; gpt-5.4-mini finns kvar som billigare rerank-alternativ"],
   ["gpt-5.2", "Äldre GPT-5", "Nämns som tidigare generation"],
   ["gpt-4o", "Äldre (icke-reasoning)", "Pensionerad som fallback 2026-06-11"],
 ];
@@ -221,8 +225,8 @@ export default function RollerVsAgenterModeller() {
       </Stack>
 
       <Grid columns={4} gap={16}>
-        <Stat value="12" label="Model Roles (motorn)" tone="info" />
-        <Stat value="4" label="Konduktör-roller" tone="success" />
+        <Stat value="13" label="Model Roles (motorn)" tone="info" />
+        <Stat value="6" label="Konduktör-roller" tone="success" />
         <Stat value="3" label="Sidoanrop (env-styrda)" />
         <Stat value="0" label="Fristående agenter/daemon" />
       </Grid>
@@ -239,11 +243,12 @@ export default function RollerVsAgenterModeller() {
       </Stack>
 
       <Stack gap={12}>
-        <H2>Sidoanropen — fallback numera gpt-5.5</H2>
+        <H2>Sidoanropen — env-styrda, fallback gpt-5.5</H2>
         <Text tone="secondary">
-          Motorns Model Roles ligger på <Text weight="semibold">gpt-5.4</Text>. De tre sidoanropen
-          faller sedan 2026-06-11 tillbaka på <Text weight="semibold">gpt-5.5</Text> (lyft från
-          gpt-4o) — fallbacken gäller bara när respektive env-variabel inte är satt.
+          Sedan llm-models v14 (2026-06-16) kör motorns Model Roles{" "}
+          <Text weight="semibold">och</Text> de tre sidoanropen samma modell-linje:{" "}
+          <Text weight="semibold">gpt-5.5</Text>. Sidoanropen går dock via egna env-variabler
+          (inte Model Roles); fallbacken gäller bara när respektive env-variabel inte är satt.
         </Text>
         <Table
           headers={["Anropspunkt", "Fil", "Env-override", "Vad den gör"]}
@@ -252,16 +257,16 @@ export default function RollerVsAgenterModeller() {
           rows={GPT4O_USAGE}
         />
         <Callout tone="info" title="Viktig nyans om env">
-          Env vinner alltid: på Vercel-deploy sätts <Text weight="semibold">OPENAI_MODEL=gpt-5.4</Text>{" "}
-          i miljön, så sidoanropen kör gpt-5.4 där. Kod-fallbacken i `lib/openai.ts` / `vision.ts` är
-          sedan 2026-06-11 <Text weight="semibold">gpt-5.5</Text> (en generation nyare än env-värdet) och
-          träffar bara när respektive env-variabel saknas — t.ex. lokalt utan rad i `.env`.
+          Env vinner alltid: om <Text weight="semibold">OPENAI_MODEL</Text> sätts i miljön (t.ex. på
+          en Vercel-deploy) kör sidoanropen den modellen där. Kod-fallbacken i `lib/openai.ts` /
+          `vision.ts` är <Text weight="semibold">gpt-5.5</Text> (parsas av `update_canvas_facts.py`)
+          och träffar bara när respektive env-variabel saknas — t.ex. lokalt utan rad i `.env`.
           Viewser läser process.env först och faller annars tillbaka på repo-rotens `.env`.
         </Callout>
       </Stack>
 
       <Stack gap={12}>
-        <H2>Motorns 12 Model Roles</H2>
+        <H2>Motorns 13 Model Roles</H2>
         <Table
           headers={["Roll-id", "Syfte", "Modell"]}
           striped
@@ -292,9 +297,9 @@ export default function RollerVsAgenterModeller() {
             <CardHeader>Motor-roller</CardHeader>
             <CardBody>
               <Stack gap={6}>
-                <Text size="small">Inga per-roll token-gränser i policyn</Text>
+                <Text size="small">Per-roll `reasoningEffort` + `maxOutputTokens` i policyn (v11+)</Text>
                 <Text size="small">Anropas via `responses.parse` (structured output)</Text>
-                <Text size="small">Ingen `reasoning`/`temperature` satt → modellens defaults</Text>
+                <Text size="small">Läses via `packages/policies/llm_model_params.py`; `xhigh` används aldrig</Text>
               </Stack>
             </CardBody>
           </Card>
@@ -347,11 +352,10 @@ export default function RollerVsAgenterModeller() {
           styrs av env. Persona (ton) i `SOUL.md`. Blanda aldrig ihop dem — en SOUL-ändring gör
           inte chatten smartare, bara artigare.
         </Callout>
-        <Callout tone="info" title="Outnyttjad hävstång: reasoning.effort + verbosity">
-          Motoranropen kör `responses.parse` helt utan reasoning-/verbosity-parametrar idag. På
-          GPT-5-serien är `reasoning.effort` (low för klassning/router, high för codegen/repair) och
-          `text.verbosity` den största kvalitets-/kostnadsspaken — värt en medveten policy innan en
-          ren modell-bump.
+        <Callout tone="info" title="Hävstång: reasoning.effort redan per roll, verbosity ännu inte">
+          Motoranropen sätter numera `reasoningEffort` per roll (v11+: t.ex. low för router/copy,
+          high för planning/verifier) men ännu inte `text.verbosity`. På GPT-5-serien är effort +
+          verbosity den största kvalitets-/kostnadsspaken — verbosity är nästa medvetna policy-spak.
         </Callout>
         <Callout tone="neutral" title="Behåll 'inga fristående agenter'">
           Frestelsen att bygga en daemon/gateway som extern OpenClaw är reell, men hela poängen här

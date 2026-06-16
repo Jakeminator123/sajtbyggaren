@@ -25,7 +25,7 @@ import {
 // Steward ansvarar for att fakta-blocket nedan matchar main
 // (python scripts/update_canvas_facts.py).
 //
-// Killor: governance/policies/naming-dictionary.v1.json (v29), docs/glossary.md,
+// Killor: governance/policies/naming-dictionary.v1.json (v42), docs/glossary.md,
 // governance/policies/engine-run.v1.json, page-quality-traits.v1.json,
 // ADR 0005 / 0012 / 0015 / 0027 / 0036 / 0039, docs/current-focus.md.
 // ---------------------------------------------------------------------------
@@ -903,7 +903,7 @@ export default function BegreppskartaSajtbyggaren() {
           `python scripts/sync_canvases.py`. Systerkarta: `openclaw-floden.canvas.tsx`.
         </Text>
         <Text size="small" tone="tertiary">
-          Källor: `governance/policies/naming-dictionary.v1.json` (v29), `docs/glossary.md`,
+          Källor: `governance/policies/naming-dictionary.v1.json` (v42), `docs/glossary.md`,
           `governance/policies/engine-run.v1.json`, `page-quality-traits.v1.json`,
           ADR 0005 / 0012 / 0015 / 0027 / 0036 / 0039 · fakta per {REPO_FACTS.generatedAt}.
         </Text>

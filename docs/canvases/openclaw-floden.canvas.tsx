@@ -104,7 +104,7 @@ const STEPS: Record<string, Step> = {
     canonical: "Router (KÖR-6a, + LLM-fallback 6b)",
     status: "finns",
     statusNote: "Deterministisk bas + valfri routerModel-fallback.",
-    what: "Klassificerar ändringen till editKind: visual_style, copy_change, section_add m.fl. F1-rollerna mappas härifrån: stylist, copy, section_builder.",
+    what: "Klassificerar ändringen till editKind: visual_style, copy_change, section_add, component_add, route_remove, nav_hide m.fl. Rollerna mappas härifrån: stylist, copy, section_builder, component_builder, route_editor.",
     files: "`packages/generation/orchestration/router/` (`llm_fallback.py` för 6b)",
   },
   context: {
@@ -455,22 +455,28 @@ function RolesAndActions() {
           ["stylist", "Visuell stil: tokens, brand, ton — aldrig struktur", "visual_style"],
           ["copy", "Textändringar via copyDirective", "copy_change"],
           ["section_builder", "Lägger till/monterar sektioner via capability + dossier", "section_add"],
+          ["component_builder", "Komponenter: mount-only som standard + generativt recept (image-placeholder-grid)", "component_add"],
+          ["route_editor", "Tar bort sida (disabledRoutes) resp. döljer nav-länk (hiddenNavRoutes)", "route_remove + nav_hide"],
         ]}
       />
 
       <H2>Sanktionerade åtgärder (action-registry)</H2>
       <Text tone="secondary">
-        Registret i `docs/openclaw-workspace/action-registry.json` är spec-lagret — motorn läser det
-        inte ännu (planerad F1-grind).
+        Registret i `docs/openclaw-workspace/action-registry.json` är spec-lagret; motorn speglar det
+        i `roles.py` (korsvaliderat av `tests/test_openclaw_registry_consistency.py`), den läser inte
+        JSON-filen direkt i runtime.
       </Text>
       <Table
         headers={["Åtgärd", "Status", "Kommentar"]}
         striped
-        rowTone={["success", "success", "success", "warning", "neutral"]}
+        rowTone={["success", "success", "success", "success", "success", "success", "warning", "neutral"]}
         rows={[
           ["restyle", "Stöds", "themeTokens / brand / tone i Project Input"],
           ["copy_change", "Stöds", "Strukturerad copyDirective (ADR 0034)"],
-          ["section_add", "Stöds", "faq/team synliga på local-service-business; övriga mount-only (ADR 0038)"],
+          ["section_add", "Stöds", "faq/team renderas på local-service-business; övriga mount-only (ADR 0038)"],
+          ["component_add", "Stöds", "Mount-only som standard + generativt recept image-placeholder-grid (ADR 0061)"],
+          ["route_remove", "Stöds", "Tar bort icke-obligatorisk sida + nav-länk via disabledRoutes (ADR 0060)"],
+          ["nav_hide", "Stöds", "Döljer nav-länk men behåller sidan via hiddenNavRoutes (ADR 0060)"],
           ["site_review", "Delvis", "Läs-bara granskning"],
           ["layout_change", "Planerad", "Ej implementerad ännu"],
         ]}

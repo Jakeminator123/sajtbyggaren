@@ -399,13 +399,14 @@ const CAPABILITIES: Array<{ name: string; status: string; tone: CapTone }> = [
   { name: "Foljdprompt restyle (tema/brand/ton, stylist)", status: "Finns", tone: "success" },
   { name: "Foljdprompt copy (copyDirective + editPlan)", status: "Finns", tone: "success" },
   { name: "Foljdprompt section_add (faq/team synlig, pricing -> /priser)", status: "Delvis - reviews/trust an stub", tone: "warning" },
-  { name: "Route/Nav Mutation V1 (ta bort sida + nav + lankar)", status: "Saknas - hogsta prio (current-focus)", tone: "danger" },
-  { name: "OpenClaw Core decide() -> apply-brygga", status: "Saknas - action_bridge_missing", tone: "danger" },
+  { name: "Foljdprompt component_add (mount-only + generativt recept image-placeholder-grid)", status: "Finns (ADR 0061)", tone: "success" },
+  { name: "Route/Nav Mutation V1 (ta bort sida + nav + lankar)", status: "Finns (ADR 0060): route_remove + nav_hide, Slice A+B", tone: "success" },
+  { name: "OpenClaw Core decide() -> apply-brygga (unifierad)", status: "Glapp - decide() ger action_bridge_missing; edits appliceras via CLI run_followup_chain", tone: "danger" },
   { name: "routerModel 6b LLM-fallback / verifierModel critic", status: "Finns", tone: "success" },
   { name: "Preview: vercel-sandbox primar + local-next fallback", status: "Finns (ADR 0033)", tone: "success" },
   { name: "StackBlitz embedded preview", status: "Pausad - Chromium-only", tone: "warning" },
   { name: "Extern Docker-konduktor (Fas 2)", status: "Planerad - medvetet ej byggd (regel 09)", tone: "neutral" },
-  { name: "Model routing v13 (gpt-5.5 / gpt-5.4-mini)", status: "Finns - real-key-smoke OK", tone: "success" },
+  { name: "Model routing v14 (gpt-5.5 enhetlig linje)", status: "Finns - real-key-smoke OK", tone: "success" },
 ];
 
 // Glapp + obsoleta kedjor
@@ -416,9 +417,9 @@ const GAPS: Array<{ title: string; tone: "danger" | "warning" | "info"; body: st
     body: "OpenClaw Core decide() returnerar action_bridge_missing for edits. Faktiska andringar appliceras idag via CLI:n run_openclaw_followup.py -> run_followup_chain, INTE via konduktorsbeslutet. Tva nastan-parallella foljdvagar tills bryggan byggs.",
   },
   {
-    title: "Route/Nav Mutation V1 saknas",
-    tone: "danger",
-    body: "Det gar inte att ta bort en sida/nav/lank. 'ta bort Kontakt' faller till component_remove eller action_bridge_missing. Basal redigeringsformaga - hogre produktvarde an mer katalog-mount.",
+    title: "Route/Nav Mutation V1 landad (ADR 0060)",
+    tone: "info",
+    body: "Tidigare glapp, nu byggt: route_remove tar bort en icke-obligatorisk sida + nav-lank (disabledRoutes); nav_hide doljer lanken men behaller sidan (hiddenNavRoutes). Slice B tar aven bort contact + retargetar CTA till mailto/tel + dodlankscan i Quality Gate.",
   },
   {
     title: "StackBlitz: pausad men kvar (obsolet kedja)",
@@ -426,9 +427,9 @@ const GAPS: Array<{ title: string; tone: "danger" | "warning" | "info"; body: st
     body: "7 filer lever kvar (adapter, UI, test, ADR 0003/0021) trots att ADR 0033 gjorde vercel-sandbox primar och produktkompassen markerar StackBlitz pausad. Avskriv formellt eller markera som legacy - annars underhalls/kors dod kod.",
   },
   {
-    title: "Canvas-/doc-drift mot koden",
-    tone: "warning",
-    body: "roller-vs-agenter-canvasen listar 12 Model Roles, men policyn (v13) har 13 (scaffoldModel saknas) och modellerna ar inte uppdaterade (planning/router/verifier = gpt-5.5, rerank = gpt-5.4-mini). docs/testing.md sager '~160 testfiler' men det ar 213.",
+    title: "Canvas-/doc-drift mot koden (delvis atgardad)",
+    tone: "info",
+    body: "roller-vs-agenter-canvasen ar nu synkad: 13 Model Roles inkl scaffoldModel, alla pa gpt-5.5 (llm-models v14). docs/testing.md rapporterar nu 209 testfiler / 4227 testfall; den har scout-snapshoten raknade 213/3232 den 2026-06-15 - kor om rakningen vid behov.",
   },
   {
     title: "gpt-4o pensionerad som fallback",
@@ -510,7 +511,7 @@ const GOV: GovRow[] = [
   { area: "Policies (kontrakt)", count: "21", verdict: "BEHALL - kallan for sanning (ADR 0001).", tone: "success" },
   { area: "Schemas", count: "39", verdict: "BEHALL - laser artefaktkontrakt.", tone: "success" },
   { area: "Rules (aktiva)", count: "13", verdict: "BEHALL - speglas till .cursor/rules via rules_sync.", tone: "success" },
-  { area: "Docs .md (totalt / top-level)", count: "160 / 22", verdict: "DRIFTRISK. testing.md inaktuell (160 vs 213). Hall current-focus/handoff korta (regel 07).", tone: "warning" },
+  { area: "Docs .md (totalt / top-level)", count: "~160 / 22", verdict: "DRIFTRISK. testing.md rapporterar 209/4227; scout-snapshot 213/3232 (2026-06-15). Hall current-focus/handoff korta (regel 07).", tone: "warning" },
   { area: "docs/heavy-llm-flow/ (designspec + historik)", count: "30", verdict: "Konsolidera/indexera - delvis historik blandad med aktiv spec.", tone: "info" },
 ];
 
@@ -530,10 +531,10 @@ export default function StewardRevision() {
       </Stack>
 
       <Grid columns={4} gap={16}>
-        <Stat value="213" label="testfiler (3232 testfall)" tone="warning" />
-        <Stat value="13" label="Model Roles (policy v13)" tone="info" />
+        <Stat value="213" label="testfiler (3232 testfall, räknat 2026-06-15)" tone="warning" />
+        <Stat value="13" label="Model Roles (policy v14)" tone="info" />
         <Stat value="59 / 21 / 39 / 13" label="ADR / policies / schemas / rules" />
-        <Stat value="2" label="hårda glapp: Route/Nav V1 + action-brygga" tone="danger" />
+        <Stat value="1" label="hårt glapp: konduktor-action-brygga (decide→apply)" tone="danger" />
       </Grid>
 
       <Callout tone="info" title="Sammanfattning pa en rad">
@@ -656,7 +657,7 @@ export default function StewardRevision() {
             <CardHeader trailing={<Pill size="sm" active>Builder - nu</Pill>}>Karnvardet forst</CardHeader>
             <CardBody>
               <Stack gap={6}>
-                <Text size="small">1. Fortsatt <Text weight="semibold">Route/Nav Mutation V1</Text> (ta bort sida/nav/lank) - hogsta produktvardet. Ror INTE testsviten samtidigt.</Text>
+                <Text size="small">1. <Text weight="semibold">Route/Nav Mutation V1</Text> ar landad (ADR 0060). Nasta karnvarde: fler generativa recept (efter image-placeholder-grid) + layout_change. Ror INTE testsviten samtidigt.</Text>
                 <Text size="small">2. Avgransa fritext -&gt; grundade tjanste-kort (arlighet).</Text>
               </Stack>
             </CardBody>
