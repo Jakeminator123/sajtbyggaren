@@ -49,6 +49,14 @@ _SPEC = {
     "id": "image-placeholder-grid",
 }
 
+_CTA_SPEC = {
+    "recipe": "cta-contact-block",
+    "count": 1,
+    "routeId": "home",
+    "id": "cta-contact-block",
+}
+_CTA_COMPONENT = "Generated" + "Cta" + "Contact" + "Block"
+
 
 def _make_build(tmp_path: Path) -> tuple[Path, Path]:
     """Create a minimal build dir with a home page.tsx to splice into."""
@@ -87,6 +95,37 @@ def test_splices_import_and_usage_into_page(tmp_path: Path):
     assert "<GeneratedImagePlaceholderGrid />" in text
     # The usage lands before the closing </main>.
     assert text.index("<GeneratedImagePlaceholderGrid />") < text.index("</main>")
+
+
+def test_cta_contact_block_writes_deterministic_component(tmp_path: Path):
+    target, _page = _make_build(tmp_path)
+    written = materialize_generative_components(target, [_CTA_SPEC])
+
+    assert written == ["components/generated/cta-contact-block.tsx"]
+    component = target / "components" / "generated" / "cta-contact-block.tsx"
+    assert component.exists()
+    source = component.read_text(encoding="utf-8")
+    assert _CTA_COMPONENT in source
+    assert "Redo att boka eller be om offert?" in source
+    assert "Kontakta oss" in source
+    assert "mailto:" not in source
+    assert "tel:" not in source
+    assert "@" not in source
+    assert "+34" not in source
+    assert "/kontakt" not in source
+
+
+def test_cta_contact_block_splices_import_and_usage_into_page(tmp_path: Path):
+    target, page = _make_build(tmp_path)
+    materialize_generative_components(target, [_CTA_SPEC])
+
+    text = page.read_text(encoding="utf-8")
+    assert (
+        f"import {{ {_CTA_COMPONENT} }} from "
+        '"@/components/generated/cta-contact-block";' in text
+    )
+    assert f"<{_CTA_COMPONENT} />" in text
+    assert text.index(f"<{_CTA_COMPONENT} />") < text.index("</main>")
 
 
 _PAGE_TSX_USE_CLIENT = (
@@ -138,6 +177,19 @@ def test_top_position_lands_after_opening_main_before_hero(tmp_path: Path):
     hero = text.index('<section className="hero"')
     closing_main = text.index("</main>")
     # After the opening <main>, before the hero, and well before the closing tag.
+    assert opening_main < usage < hero < closing_main
+
+
+def test_cta_top_position_lands_after_opening_main_before_hero(tmp_path: Path):
+    target, page = _make_build(tmp_path)
+    materialize_generative_components(target, [{**_CTA_SPEC, "position": "top"}])
+
+    text = page.read_text(encoding="utf-8")
+    assert f"<{_CTA_COMPONENT} />" in text
+    usage = text.index(f"<{_CTA_COMPONENT} />")
+    opening_main = text.index("<main")
+    hero = text.index('<section className="hero"')
+    closing_main = text.index("</main>")
     assert opening_main < usage < hero < closing_main
 
 
@@ -219,6 +271,17 @@ def test_materialise_is_idempotent(tmp_path: Path):
     assert second.count("<GeneratedImagePlaceholderGrid />") == 1
     assert second.count("@/components/generated/image-placeholder-grid") == 1
     # A second run on an already-spliced page is a no-op (no further change).
+    assert first == second
+
+
+def test_cta_materialise_is_idempotent(tmp_path: Path):
+    target, page = _make_build(tmp_path)
+    materialize_generative_components(target, [_CTA_SPEC])
+    first = page.read_text(encoding="utf-8")
+    materialize_generative_components(target, [_CTA_SPEC])
+    second = page.read_text(encoding="utf-8")
+    assert second.count(f"<{_CTA_COMPONENT} />") == 1
+    assert second.count("@/components/generated/cta-contact-block") == 1
     assert first == second
 
 

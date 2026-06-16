@@ -27,6 +27,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_CTA_COMPONENT = "Generated" + "Cta" + "Contact" + "Block"
+
 
 def _seed_painter_palma(tmp_path: Path) -> tuple[Path, Path, Path]:
     """Init-build the LSB painter-palma example (no npm), isolated dirs."""
@@ -128,6 +130,111 @@ def test_add_image_placeholder_grid_at_top_lands_after_main_before_hero(
     closing_main = page.index("</main>")
     # The grid is the first child of <main>, before the hero section.
     assert opening_main < usage < hero < closing_main
+
+
+def test_add_cta_contact_block_materialises_and_splices(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """"lägg till en kontaktknapp" -> new version with the deterministic CTA
+    contact block materialised and spliced, without free LLM code."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en kontaktknapp",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "component_add", result
+    assert result["applied"] is True, result
+    assert result["appliedVisibleEffect"] is True, result
+
+    build_dir = _newest_build_dir(generated_dir, site_id)
+    component = build_dir / "components" / "generated" / "cta-contact-block.tsx"
+    assert component.exists(), "the CTA component .tsx must be materialised"
+    source = component.read_text(encoding="utf-8")
+    assert _CTA_COMPONENT in source
+    assert "Redo att boka eller be om offert?" in source
+
+    page = (build_dir / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "@/components/generated/cta-contact-block" in page
+    assert f"<{_CTA_COMPONENT} />" in page
+
+
+def test_add_cta_contact_block_at_top_lands_after_main_before_hero(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Placement reuse (full user path): the CTA recipe honours top placement."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en kontaktknapp högst upp",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert result["stage"] == "built", result
+    assert result["editKind"] == "component_add", result
+    assert result["applied"] is True, result
+
+    build_dir = _newest_build_dir(generated_dir, site_id)
+    page = (build_dir / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert f"<{_CTA_COMPONENT} />" in page
+    usage = page.index(f"<{_CTA_COMPONENT} />")
+    opening_main = page.index("<main")
+    hero = page.index('data-section-id="hero"')
+    closing_main = page.index("</main>")
+    assert opening_main < usage < hero < closing_main
+
+
+def test_cta_contact_block_does_not_invent_contact_facts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The CTA recipe must not copy or invent phone/email/contact route facts.
+
+    This recipe currently receives no Project Input contact object at emit time,
+    so the safe grounded output is a generic CTA block: no ``tel:``/``mailto:``,
+    no fixture phone/email, and no guessed /kontakt route.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import run_followup_chain
+
+    site_id = "painter-palma"
+    prompt_inputs, runs_dir, generated_dir = _seed_painter_palma(tmp_path)
+
+    result = run_followup_chain(
+        site_id,
+        "lägg till en kontaktknapp för offert",
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        output_dir=prompt_inputs,
+    )
+    assert result["stage"] == "built", result
+
+    build_dir = _newest_build_dir(generated_dir, site_id)
+    source = (
+        build_dir / "components" / "generated" / "cta-contact-block.tsx"
+    ).read_text(encoding="utf-8")
+    assert "tel:" not in source
+    assert "mailto:" not in source
+    assert "hej@malareipalma.es" not in source
+    assert "+34 600 12 34 56" not in source
+    assert "/kontakt" not in source
 
 
 def test_image_grid_directive_is_sticky_across_a_later_restyle(

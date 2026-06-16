@@ -2,13 +2,14 @@
 
 Generative Component V1 (ADR 0061, component_builder role). A ``component_add``
 follow-up that names a WHITELISTED, DETERMINISTIC recipe ("lägg till 6
-bildplatshållare", "lägg till en bildgrid") is resolved here into a structured
-``directives.generativeComponents`` spec the deterministic builder materialises
-as ONE new ``components/generated/<id>.tsx`` Server Component spliced into the
-target route's ``page.tsx``. V1 ships a SINGLE recipe (``image-placeholder-grid``)
-and NO LLM-generated free code + NO new npm deps: this proves the write-path
-rails (write new tsx safely + Quality Gate + immutable rollback) before free
-codegen lands in a later slice.
+bildplatshållare", "lägg till en bildgrid", "lägg till en kontaktknapp") is
+resolved here into a structured ``directives.generativeComponents`` spec the
+deterministic builder materialises as ONE new
+``components/generated/<id>.tsx`` Server Component spliced into the target
+route's ``page.tsx``. V1 ships only allowlisted recipes and NO LLM-generated
+free code + NO new npm deps: this proves the write-path rails (write new tsx
+safely + Quality Gate + immutable rollback) before free codegen lands in a
+later slice.
 
 Honest by construction (mirrors ``route_directives``): a component_add that does
 NOT name a whitelisted recipe but DOES name a recognised generative component
@@ -36,11 +37,12 @@ __all__ = [
 # later slice. Kept here so the resolver and the materialiser agree on the default.
 _DEFAULT_ROUTE_ID = "home"
 
-# The V1 allowlist: recipe slug -> the deterministic recipe contract. ``componentIntent``
-# is the router slug that maps to this recipe (``classify._COMPONENT_INTENTS``);
-# ``cues`` are the prompt nouns that name it; the count bounds clamp the parsed
-# tile count. Adding a recipe here (with its emit template in
-# ``packages.generation.codegen.followup_emit``) is how V1 grows - never free code.
+# The V1 allowlist: recipe slug -> the deterministic recipe contract.
+# ``componentIntent`` is the router slug that maps to this recipe
+# (``classify._COMPONENT_INTENTS``); ``cues`` are the prompt nouns that name it;
+# the count bounds clamp any parsed count. Adding a recipe here (with its emit
+# template in ``packages.generation.codegen.followup_emit``) is how V1 grows -
+# never free code.
 GENERATIVE_RECIPES: dict[str, dict[str, Any]] = {
     "image-placeholder-grid": {
         "componentIntent": "image_placeholder_grid",
@@ -60,6 +62,21 @@ GENERATIVE_RECIPES: dict[str, dict[str, Any]] = {
         "defaultCount": 6,
         "minCount": 1,
         "maxCount": 12,
+    },
+    "cta-contact-block": {
+        "componentIntent": "contact_button",
+        "cues": (
+            "kontaktruta",
+            "kontaktrutan",
+            "boka",
+            "offert",
+            "cta",
+            "kontaktknapp",
+            "kontaktknappen",
+        ),
+        "defaultCount": 1,
+        "minCount": 1,
+        "maxCount": 1,
     },
 }
 
@@ -138,7 +155,7 @@ def resolve_generative_component(
     Returns ``(specs, refused)`` where:
 
     - ``specs`` is the list of ``{recipe, count, routeId, id}`` directives a
-      WHITELISTED recipe resolved to (V1: at most one, ``image-placeholder-grid``).
+      WHITELISTED recipe resolved to (V1: at most one recipe per prompt).
       Each is recorded STICKY on ``directives.generativeComponents`` by apply and
       materialised by the deterministic builder.
     - ``refused`` is ``[{"component", "reason"}]`` for a recognised but
@@ -163,12 +180,12 @@ def resolve_generative_component(
         contract = GENERATIVE_RECIPES[recipe]
         count = _parse_count(text, contract)
         # The id is the sticky-union key in apply + the generated filename/
-        # component name, so it must be STABLE (one recipe -> one grid with a
-        # clean ``GeneratedImagePlaceholderGrid`` name, not Grid6/Grid8). A repeat
-        # "lägg till N bildplatshållare" therefore re-uses this id and apply's
-        # LAST-WINS union UPDATES the count (matris #1 fix: a second prompt used to
-        # be silently dropped by a first-wins union). Multiple distinct grids on
-        # one route is a later slice.
+        # component name, so it must be STABLE (one recipe -> one generated block
+        # with a clean name, not Grid6/Grid8). A repeat "lägg till N
+        # bildplatshållare" therefore re-uses this id and apply's LAST-WINS union
+        # UPDATES the count (matris #1 fix: a second prompt used to be silently
+        # dropped by a first-wins union). Multiple distinct instances of one
+        # recipe on one route is a later slice.
         spec: dict[str, Any] = {
             "recipe": recipe,
             "count": count,
@@ -178,7 +195,7 @@ def resolve_generative_component(
         # Placement: reuse the router-derived position (the SAME top/bottom tokens
         # section_add honours, RouterTarget.position via the router's
         # _detect_position) so "lägg till 6 bildplatshållare högst upp" lands the
-        # grid at the top. Only top/bottom are route-order placements (mirrors
+        # generated block at the top. Only top/bottom are route-order placements (mirrors
         # scripts/build_site.py section_positions); left/right/center are intra-
         # section and ignored, and an absent position keeps the default
         # before-</main> slot. No new prompt parser - one position truth.
@@ -194,8 +211,9 @@ def resolve_generative_component(
                 "component": unsupported,
                 "reason": (
                     f"Komponenttypen {unsupported!r} kan inte genereras ännu. "
-                    "Generative Component V1 stödjer bara ett vitlistat recept: "
-                    "bildplatshållargrid (image-placeholder-grid). Ingen komponent "
+                    "Generative Component V1 stödjer bara vitlistade recept: "
+                    "bildplatshållargrid (image-placeholder-grid) och "
+                    "kontakt-/boknings-CTA (cta-contact-block). Ingen komponent "
                     "skapades (aldrig en påhittad komponent)."
                 ),
             }

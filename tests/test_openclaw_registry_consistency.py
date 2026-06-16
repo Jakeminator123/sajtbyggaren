@@ -133,7 +133,7 @@ def test_tools_md_lists_every_action_id():
 
 def test_component_add_is_supported_with_generative_recipe():
     """ADR 0061: the component_add action is supported, mount-only by default,
-    with the whitelisted image-placeholder-grid recipe as the visible exception.
+    with the whitelisted deterministic recipes as visible exceptions.
     Locks the registry side of the flip alongside the contract lock in
     tests/test_openclaw_roles.py (the dynamic consistency tests above keep the
     two surfaces in agreement)."""
@@ -141,6 +141,9 @@ def test_component_add_is_supported_with_generative_recipe():
     component_add = actions["component_add"]
     assert component_add["status"] == "supported"
     assert component_add["mountOnly"] is True
-    assert component_add["visibleTypes"] == ["image-placeholder-grid"]
+    assert component_add["visibleTypes"] == [
+        "image-placeholder-grid",
+        "cta-contact-block",
+    ]
     # supported requires an owning code role (the gate above), and it is owned.
     assert role_for_edit_kind(component_add["routerEditKind"]) == "component_builder"

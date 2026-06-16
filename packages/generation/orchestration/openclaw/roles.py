@@ -209,18 +209,20 @@ ROLE_CONTRACTS: dict[Role, RoleContract] = {
             "Component Catalog (ADR 0040: capability-map components + per-Starter "
             "component-manifest). SUPPORTED with a mount-only default; the types in "
             "visibleTypes (mirrored from action-registry.json) render VISIBLY. "
-            "Generative Component V1 (ADR 0061): the image-placeholder-grid recipe "
-            "('lägg till 6 bildplatshållare') MATERIALISES a new "
+            "Generative Component V1 (ADR 0061/0064): the image-placeholder-grid "
+            "recipe ('lägg till 6 bildplatshållare') and cta-contact-block recipe "
+            "('lägg till en kontaktknapp') MATERIALISE a new "
             "components/generated/<id>.tsx Server Component (deterministic template, "
             "no LLM-generated free code, no new npm deps) spliced into the route's "
             "page.tsx through the existing build + Quality Gate + immutable-"
             "versioning pipeline; the directive is sticky and the write path is "
-            "fail-closed. Every non-recipe component_add stays mount-only: a "
+            "fail-closed. The CTA recipe never invents phone/email/contact facts. "
+            "Every non-recipe component_add stays mount-only: a "
             "catalog-grounded answer or an HONEST no-op (a recognised-but-unsupported "
             "generative family is stage generative_unsupported), never an invented "
             "component. Free codegen for arbitrary components is a later slice."
         ),
-        visibleTypes=("image-placeholder-grid",),
+        visibleTypes=("image-placeholder-grid", "cta-contact-block"),
     ),
     "route_editor": RoleContract(
         role="route_editor",

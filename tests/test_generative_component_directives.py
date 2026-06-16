@@ -3,7 +3,8 @@
 Locks the deterministic, offline contract of
 ``packages.generation.followup.generative_component_directives``:
 
-- the recipe allowlist holds exactly the V1 recipe (image-placeholder-grid);
+- the recipe allowlist holds exactly the V1 recipes (image-placeholder-grid and
+  cta-contact-block);
 - a whitelisted recipe noun resolves to a spec with the parsed + clamped count
   and the default route;
 - an unknown / non-whitelisted generative component is REFUSED (honest no-op),
@@ -33,8 +34,11 @@ pytestmark = pytest.mark.tooling
 
 
 def test_recipe_allowlist_is_exactly_v1():
-    """V1 ships exactly one whitelisted recipe (image-placeholder-grid)."""
-    assert set(GENERATIVE_RECIPES) == {"image-placeholder-grid"}
+    """V1 ships exactly the whitelisted deterministic recipes."""
+    assert set(GENERATIVE_RECIPES) == {
+        "image-placeholder-grid",
+        "cta-contact-block",
+    }
 
 
 @pytest.mark.parametrize(
@@ -56,6 +60,29 @@ def test_recipe_match_via_router_component_add(prompt: str):
     assert spec["recipe"] == "image-placeholder-grid"
     assert spec["routeId"] == "home"
     assert spec["id"] == "image-placeholder-grid"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "lägg till en kontaktknapp",
+        "lägg till en kontaktruta",
+        "lägg till en boka-knapp",
+        "lägg till en offert-cta",
+    ],
+)
+def test_cta_contact_block_recipe_cues_resolve(prompt: str):
+    """CTA/contact cue words resolve to the deterministic CTA recipe."""
+    specs, refused = resolve_generative_component(prompt, classify_message(prompt))
+    assert refused == []
+    assert len(specs) == 1
+    spec = specs[0]
+    assert spec == {
+        "recipe": "cta-contact-block",
+        "count": 1,
+        "routeId": "home",
+        "id": "cta-contact-block",
+    }
 
 
 @pytest.mark.parametrize(
@@ -82,6 +109,15 @@ def test_default_route_id_is_home():
     assert specs[0]["routeId"] == "home"
 
 
+def test_cta_contact_block_count_is_fixed_to_one():
+    specs, _ = resolve_generative_component(
+        "lägg till 7 kontaktknapp", classify_message("lägg till 7 kontaktknapp")
+    )
+    assert len(specs) == 1
+    assert specs[0]["recipe"] == "cta-contact-block"
+    assert specs[0]["count"] == 1
+
+
 @pytest.mark.parametrize(
     ("prompt", "expected_position"),
     [
@@ -104,6 +140,26 @@ def test_position_is_parsed_from_router_target(prompt: str, expected_position: s
     assert specs[0]["position"] == expected_position
 
 
+@pytest.mark.parametrize(
+    ("prompt", "expected_position"),
+    [
+        ("lägg till en kontaktknapp högst upp", "top"),
+        ("lägg till en kontaktknapp längst ner", "bottom"),
+    ],
+)
+def test_cta_position_reuses_router_target(prompt: str, expected_position: str):
+    """The CTA recipe reuses the same top/bottom RouterTarget.position handling."""
+    decision = classify_message(prompt)
+    assert decision.editKind == "component_add"
+    assert decision.componentIntent == "contact_button"
+    assert getattr(decision.target, "position", None) == expected_position
+    specs, refused = resolve_generative_component(prompt, decision)
+    assert refused == []
+    assert len(specs) == 1
+    assert specs[0]["recipe"] == "cta-contact-block"
+    assert specs[0]["position"] == expected_position
+
+
 def test_position_absent_when_prompt_names_none():
     """A prompt with no placement keeps the spec free of a 'position' key, so the
     default before-</main> slot is used and existing specs stay byte-identical."""
@@ -123,6 +179,16 @@ def test_intra_section_position_is_not_recorded_as_route_placement():
     assert getattr(decision.target, "position", None) == "left"
     specs, _refused = resolve_generative_component(prompt, decision)
     assert len(specs) == 1
+    assert "position" not in specs[0]
+
+
+def test_cta_intra_section_position_is_not_recorded_as_route_placement():
+    prompt = "lägg till en kontaktknapp till vänster"
+    decision = classify_message(prompt)
+    assert getattr(decision.target, "position", None) == "left"
+    specs, _refused = resolve_generative_component(prompt, decision)
+    assert len(specs) == 1
+    assert specs[0]["recipe"] == "cta-contact-block"
     assert "position" not in specs[0]
 
 
