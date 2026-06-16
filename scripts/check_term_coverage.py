@@ -107,6 +107,11 @@ COMMON_WORDS = {
     # WebContainer-runtime som referreras i kommentarer/tester för
     # stackblitz-permissions-policy-fix). Inte canonical domain terms.
     "EmbedOptions", "WebContainern",
+    # next/og-symboler för genererade metadata-bilder (apps/viewser/app/
+    # icon.tsx + opengraph-image.tsx): ImageResponse är Next:s OG-API och
+    # OpengraphImage är den lokala route-komponenten. Inte domänbegrepp —
+    # framework-API + filkonventions-export, allowlistas som ovan.
+    "ImageResponse", "OpengraphImage",
     # Status-strängar (verify_run.py + andra tooling-checkers)
     "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
     # Framework / lib
