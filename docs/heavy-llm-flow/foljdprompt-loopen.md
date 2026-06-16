@@ -33,7 +33,9 @@ nedan speglar `docs/glossary.md` (avsnittet "Följdprompt-loopen").
             └─ run_followup_chain (KÖR-7, i build_site.py):
                  router → context → patch → apply (ny immutabel version v+1)
                  → targeted render + next build
-       → (om inget gick att applicera: legacy via prompt_to_project_input.py + build_site.py)
+       → ärlig fallback — körs BARA om bryggan applicerade noll (inte en
+         parallell motor): legacy via prompt_to_project_input.py + build_site.py.
+         Primär apply-väg är bryggan → run_followup_chain ovan (ADR 0062).
      → laddar upp filerna till blob: generated/<siteId>/...
      → skriver KV-pekare (current + run-state)
 5. Klienten ser "done" (eller budget-meddelandet) → previewen laddar om → ny version syns

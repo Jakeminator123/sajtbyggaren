@@ -401,7 +401,7 @@ const CAPABILITIES: Array<{ name: string; status: string; tone: CapTone }> = [
   { name: "Foljdprompt section_add (faq/team synlig, pricing -> /priser)", status: "Delvis - reviews/trust an stub", tone: "warning" },
   { name: "Foljdprompt component_add (mount-only + generativt recept image-placeholder-grid)", status: "Finns (ADR 0061)", tone: "success" },
   { name: "Route/Nav Mutation V1 (ta bort sida + nav + lankar)", status: "Finns (ADR 0060): route_remove + nav_hide, Slice A+B", tone: "success" },
-  { name: "OpenClaw Core decide() -> apply-brygga (unifierad)", status: "Glapp - decide() ger action_bridge_missing; edits appliceras via CLI run_followup_chain", tone: "danger" },
+  { name: "OpenClaw action-brygga (dirigent -> KOR-kedjan)", status: "Landad (ADR 0062): bryggan AR run_openclaw_followup.py --apply -> run_followup_chain (primar apply-vag, konsumeras av Viewser). decide() ar medvetet ren (ingen disk/bygge) och returnerar action_bridge_missing by design.", tone: "success" },
   { name: "routerModel 6b LLM-fallback / verifierModel critic", status: "Finns", tone: "success" },
   { name: "Preview: vercel-sandbox primar + local-next fallback", status: "Finns (ADR 0033)", tone: "success" },
   { name: "StackBlitz embedded preview", status: "Pausad - Chromium-only", tone: "warning" },
@@ -412,9 +412,9 @@ const CAPABILITIES: Array<{ name: string; status: string; tone: CapTone }> = [
 // Glapp + obsoleta kedjor
 const GAPS: Array<{ title: string; tone: "danger" | "warning" | "info"; body: string }> = [
   {
-    title: "Konduktor-brygga saknas (glapp)",
-    tone: "danger",
-    body: "OpenClaw Core decide() returnerar action_bridge_missing for edits. Faktiska andringar appliceras idag via CLI:n run_openclaw_followup.py -> run_followup_chain, INTE via konduktorsbeslutet. Tva nastan-parallella foljdvagar tills bryggan byggs.",
+    title: "Action-brygga landad (ADR 0062)",
+    tone: "info",
+    body: "Tidigare beskrivet som glapp, nu klargjort: action-bryggan AR run_openclaw_followup.py --apply -> run_followup_chain (primar apply-vag, konsumeras av Viewser). decide() ar medvetet en ren funktion (ingen disk/bygge/natverk) och returnerar action_bridge_missing by design - en ev. in-process decide->apply ar uttryckligen uppskjuten (roadmap), inte ett glapp. Legacy ar bara arlig fallback nar bryggan applicerade noll.",
   },
   {
     title: "Route/Nav Mutation V1 landad (ADR 0060)",
@@ -534,7 +534,7 @@ export default function StewardRevision() {
         <Stat value="213" label="testfiler (3232 testfall, räknat 2026-06-15)" tone="warning" />
         <Stat value="13" label="Model Roles (policy v14)" tone="info" />
         <Stat value="59 / 21 / 39 / 13" label="ADR / policies / schemas / rules" />
-        <Stat value="1" label="hårt glapp: konduktor-action-brygga (decide→apply)" tone="danger" />
+        <Stat value="0" label="hårda glapp: action-bryggan landad (ADR 0062)" tone="info" />
       </Grid>
 
       <Callout tone="info" title="Sammanfattning pa en rad">
@@ -685,7 +685,7 @@ export default function StewardRevision() {
             <CardBody>
               <Stack gap={6}>
                 <Text size="small">7. Avskriv/legacy-marka StackBlitz-klustret (7 filer) - operatörsbeslut per fil.</Text>
-                <Text size="small">8. Bygg <Text weight="semibold">OpenClaw-action-bryggan</Text> (decide -&gt; KOR-kedjan) sa konduktoren blir en riktig dirigent, inte en parallell beslutsfattare.</Text>
+                <Text size="small">8. <Text weight="semibold">OpenClaw-action-bryggan</Text> ar landad (ADR 0062): dirigenten delegerar edits till KOR-kedjan via run_openclaw_followup.py --apply. decide() ar medvetet ren; en ev. in-process decide -&gt; apply ar uttryckligen uppskjuten (roadmap), inte ett glapp.</Text>
               </Stack>
             </CardBody>
           </Card>
