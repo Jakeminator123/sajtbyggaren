@@ -19,7 +19,10 @@
  *   - data/starters/           copy_starter() kopierar starter-mallen härifrån.
  *                              OBS: data/ exkluderas i övrigt (runs/, prompt-inputs/,
  *                              uploads/, evals/ är lokal historik, inte build-kontext).
- *   - requirements.txt         pip install i sandboxen.
+ *   - requirements.txt         full pip-lista (lokalt/CI + fallback i sandboxen).
+ *   - requirements-build.txt   slim pip-lista som den hostade bygg-sandboxen
+ *                              föredrar (utelämnar streamlit/openai-agents/
+ *                              pytest*/ruff = färre tunga wheels i kall sandbox).
  *   - pyproject.toml           liten, ofarlig, håller verktygskontext komplett.
  *   - (repo-roten har ingen config/-katalog — pipens konfiguration ligger i
  *     governance/policies/, som följer med ovan.)
@@ -66,6 +69,7 @@ const INCLUDE_ENTRIES = [
   "governance",
   "data/starters",
   "requirements.txt",
+  "requirements-build.txt",
   "pyproject.toml",
 ];
 

@@ -328,10 +328,12 @@ _EDIT_EXAMPLES: list[tuple[str, str | None]] = [
     ("gör sidan mörkare och mer premium", "stylist"),
     ("lägg till en faq-sektion", "section_builder"),
     ("lägg till en sektion om garantier", "section_builder"),
+    # Opening hours has no component_add recipe, so a bare "lägg till öppettider"
+    # is a section_add(hours) -> section_builder - not a dead component_add no-op.
+    ("lägg till öppettider överst", "section_builder"),
     ("skriv om rubriken till något kortare", "copy"),
     ("ändra texten i hero-sektionen", "copy"),
     # ADR 0057: component_add is now owned by component_builder (partial role).
-    ("lägg till öppettider överst", "component_builder"),
     ("lägg en klocka i andra sektionen till vänster", "component_builder"),
 ]
 

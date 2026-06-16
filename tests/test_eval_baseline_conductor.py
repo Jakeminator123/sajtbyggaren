@@ -109,8 +109,11 @@ _CONDUCTOR_BASELINE: tuple[tuple[str, str, str, str | None], ...] = (
     ("lägg till en faq-sektion", "edit_instruction", "edit", "section_builder"),
     ("kan du lägga till en team-sektion?", "edit_instruction", "edit", "section_builder"),
     ("skriv om rubriken till något kortare", "edit_instruction", "edit", "copy"),
+    # Opening hours has no component_add recipe, so a bare "lägg till öppettider"
+    # is a section_add(hours) -> section_builder - not a dead component_add no-op
+    # (downstream reported it as an unknown "opening-hours" capability before).
+    ("lägg till öppettider överst", "edit_instruction", "edit", "section_builder"),
     # ADR 0057: component_add is now owned by component_builder (partial role).
-    ("lägg till öppettider överst", "edit_instruction", "edit", "component_builder"),
     ("lägg en klocka i andra sektionen till vänster", "edit_instruction", "edit", "component_builder"),
     # A genuinely unowned edit kind still maps to role None (honest surface):
     # component_remove has no owning role in this slice.

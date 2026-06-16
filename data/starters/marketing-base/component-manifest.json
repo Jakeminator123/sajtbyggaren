@@ -24,12 +24,36 @@
       "path": "components/ui/card.tsx"
     },
     {
+      "name": "input",
+      "path": "components/ui/input.tsx"
+    },
+    {
+      "name": "label",
+      "path": "components/ui/label.tsx"
+    },
+    {
+      "name": "progress",
+      "path": "components/ui/progress.tsx"
+    },
+    {
+      "name": "scroll-area",
+      "path": "components/ui/scroll-area.tsx"
+    },
+    {
       "name": "separator",
       "path": "components/ui/separator.tsx"
     },
     {
+      "name": "skeleton",
+      "path": "components/ui/skeleton.tsx"
+    },
+    {
       "name": "tabs",
       "path": "components/ui/tabs.tsx"
+    },
+    {
+      "name": "textarea",
+      "path": "components/ui/textarea.tsx"
     }
   ]
 }
