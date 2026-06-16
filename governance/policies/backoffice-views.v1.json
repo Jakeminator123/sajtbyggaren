@@ -310,6 +310,15 @@
       "readsFrom": ["scripts"],
       "lastVerified": "2026-06-15",
       "note": "Live-översikt + permanent rensning av hostad lagring (Vercel Blob + Upstash KV) per genererad sajt. Listar objekt/storlek per prefix och raderar en sajts alla blob-objekt + KV-nycklar via apps/viewser/scripts/blob-admin.mjs. Rör inte build-context eller lokal disk."
+    },
+    {
+      "view": "Vercel - blob auto-prune",
+      "section": "Underhåll",
+      "ownerSource": "backoffice.views.maintenance",
+      "status": "diagnostic",
+      "readsFrom": ["scripts"],
+      "lastVerified": "2026-06-16",
+      "note": "Manuell torrkörning + radering av auto-prune-logiken (ADR 0063) via apps/viewser/scripts/blob-admin.mjs prune — samma staleness-/raderingskod som cron-routen /api/cron/prune-blob. Retention-reglage; build-context rörs aldrig."
     }
   ]
 }
