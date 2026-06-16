@@ -578,6 +578,25 @@ if [ "$FOLLOWUP_MODE" = "1" ]; then
     || fail "Kunde inte hamta persisterad project-input fran blob (run-state, B194)."
   fetch_run_state "$RUN_STATE_META_URL" "$REPO_DIR/data/prompt-inputs/$SITE_ID.meta.json" \\
     || fail "Kunde inte hamta persisterad meta fran blob (run-state, B194)."
+  # B199-followup-fix — aterskapa den IMMUTABLA versionerade PI/meta-snapshotten.
+  # Apply-bryggans read_base_run_snapshot (prompt_to_project_input.py) laser bas-
+  # PI:n ur data/prompt-inputs/<siteId>.v<N>.project-input.json (N ur
+  # data/runs/<runId>/input.json:version), INTE ur den oversionerade pekaren ovan.
+  # Utan snapshotten dog varje rik edit (component_add/route_remove/section_add/
+  # nav_hide) med "baseRunId Project Input-snapshot saknas" -> bridge.applied=false
+  # -> legacy-fallback (bara copy-merges syns). Pekarens PI/meta AR exakt
+  # v<N>-snapshotten (projectInputUrl pekar pa run-state/<siteId>/v<N>/...), sa en
+  # kopia till de versionerade sokvagarna ar byte-korrekt for default/latest-
+  # foljdprompten. (Historisk --base-run-id vars version != senaste ar kvar som
+  # dokumenterad B199-begransning: PI/meta re-pekas inte da.)
+  if [ -n "\${RUN_STATE_VERSION:-}" ]; then
+    cp "$REPO_DIR/data/prompt-inputs/$SITE_ID.project-input.json" \\
+       "$REPO_DIR/data/prompt-inputs/$SITE_ID.v$RUN_STATE_VERSION.project-input.json" 2>/dev/null \\
+      || echo "hosted-build: VARNING — kunde inte skriva versionerad PI-snapshot v$RUN_STATE_VERSION." >&2
+    cp "$REPO_DIR/data/prompt-inputs/$SITE_ID.meta.json" \\
+       "$REPO_DIR/data/prompt-inputs/$SITE_ID.v$RUN_STATE_VERSION.meta.json" 2>/dev/null \\
+      || echo "hosted-build: VARNING — kunde inte skriva versionerad meta-snapshot v$RUN_STATE_VERSION." >&2
+  fi
   # B199 — hydrera de kanoniska run-artefakterna (data/runs/<runId>/) tillbaka
   # i sandboxen. Lokalt ligger de pa disk; hostat curlas tarballen som TS-sidan
   # laste ur pekarens runArtifactsUrl och extraheras sa
@@ -1407,6 +1426,15 @@ export async function startHostedBuild(
     // PI/meta). Sätts bara när followup-pekaren bär dem.
     RUN_ARTIFACTS_URL: runState?.runArtifactsUrl ?? "",
     RUN_ARTIFACTS_RUN_ID: runState?.runId ?? "",
+    // B199-followup-fix: pekarens version så hydreringen kan återskapa den
+    // IMMUTABLA versionerade PI/meta-snapshotten (<siteId>.v<N>.{project-input,
+    // meta}.json) som apply-bryggans read_base_run_snapshot kräver för en rik
+    // edit. Tom sträng vid initialbygge / äldre pekare (set -u-säkert) → skriptet
+    // hoppar då ärligt över versionsskrivningen.
+    RUN_STATE_VERSION:
+      typeof runState?.version === "number" && runState.version > 0
+        ? String(runState.version)
+        : "",
     // Commit 3 (request-paritet): tomma strängar = ingen flagga (set -u-säkert).
     // BASE_RUN_ID → --base-run-id på BÅDE apply- och legacy-PI-anropet;
     // MARKED_SECTIONS_JSON → --marked-sections på legacy-PI-anropet.
