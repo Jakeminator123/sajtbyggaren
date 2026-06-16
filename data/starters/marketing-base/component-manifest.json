@@ -12,8 +12,24 @@
       "path": "components/ui/accordion.tsx"
     },
     {
+      "name": "badge",
+      "path": "components/ui/badge.tsx"
+    },
+    {
       "name": "button",
       "path": "components/ui/button.tsx"
+    },
+    {
+      "name": "card",
+      "path": "components/ui/card.tsx"
+    },
+    {
+      "name": "separator",
+      "path": "components/ui/separator.tsx"
+    },
+    {
+      "name": "tabs",
+      "path": "components/ui/tabs.tsx"
     }
   ]
 }
