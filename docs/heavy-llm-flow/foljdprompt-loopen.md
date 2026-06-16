@@ -7,8 +7,9 @@ owner: operator + backend
 # Följdprompt-loopen
 
 Detta dokument namnger och förklarar vad som händer när du skriver en prompt
-eller en följdprompt i chatten och sajten byggs om. En kopia ligger i repo-roten
-(`FOLJDPROMPT-LOOPEN.md`) som snabb referens.
+eller en följdprompt i chatten och sajten byggs om. Det här är den kanoniska
+källan; `FOLJDPROMPT-LOOPEN.md` i repo-roten är bara en pekare hit. Begreppen
+nedan speglar `docs/glossary.md` (avsnittet "Följdprompt-loopen").
 
 ## Namnet
 
@@ -79,7 +80,7 @@ stående server: sandbox-reuse (`VIEWSER_SANDBOX_REUSE`, preview), slimmad pip
 |---|---|---|
 | Capability | Abstrakt slug — vad en sajt kan ha (kontraktet) | gallery, faq-section, contact-form |
 | Dossier | Implementationen av en capability (förskrivna instruktioner som monteras) | image-gallery (→ gallery), faq-accordion (→ faq) |
-| Edit-kind / action | Typen av följdprompt-ändring | component_add, section_add, copy_change, route_remove |
+| `editKind` (vardagsord: action) | Typen av följdprompt-ändring; kanoniskt routerfält i `router-decision.schema.json` | component_add, section_add, copy_change, route_remove, nav_hide |
 | Generativt recept | Deterministisk tsx-mall som SKRIVER ny kod (undantaget) | image-placeholder-grid |
 
 ## "Action" — exempel och faktisk status
