@@ -72,6 +72,9 @@ def test_real_policy_declares_adr_0052_start_values():
         "variantModel": ("medium", 16000),
         "dossierModel": ("medium", 16000),
         "scaffoldModel": ("medium", 16000),
+        # v15 (ADR 0065): the conductor's answer/reasoning role. Light reasoning
+        # for grounded narration of known facts; generous cap as cost-insurance.
+        "answerModel": ("low", 16000),
     }
     for role_id, (effort, tokens) in expected.items():
         params = resolve_role_params(role_id)

@@ -23,7 +23,7 @@ import {
 import { getKvStore, kvGetJson } from "@/lib/kv-store";
 import { stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertLocalhost } from "@/lib/localhost-guard";
-import { chatWithOpenAi, openaiEnv } from "@/lib/openai";
+import { chatWithAnswerModel, openaiEnv } from "@/lib/openai";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { runOpenClawFollowupApply } from "@/lib/openclaw-runner";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
@@ -503,8 +503,9 @@ const CONVERSATION_SYSTEM_SAFE_CHARS = 7800;
 
 /**
  * F1 slice 2: generate the honest chat answer for a conversation kind via the
- * EXISTING lib/openai.ts chat helper. Never throws: no key → the honest
- * no-key line; any helper failure → an honest error line. The answer text is
+ * registered answerModel role (ADR 0065, chatWithAnswerModel). Never throws: no
+ * key → the honest no-key line; any helper failure → an honest error line. The
+ * answer text is
  * plain chat copy — it never claims a site change THIS turn (the gate
  * guarantees no build ran), but it MAY reference the build history snippet as
  * facts so the dispatcher never contradicts what the build roles just did.
@@ -563,7 +564,7 @@ async function generateConversationAnswer(
       ? dynamicLines.join("\n")
       : combinedSystem;
   try {
-    const { message } = await chatWithOpenAi([
+    const { message } = await chatWithAnswerModel([
       { role: "system", content: systemContent },
       { role: "user", content: prompt.slice(0, 8000) },
     ]);
@@ -645,7 +646,7 @@ async function generateAppliedConfirmation(
     });
     // .catch på kedjan (inte bara try/catch): om timeouten vinner racet och
     // anropet FALLERAR senare får processen ingen unhandled rejection.
-    const completion = chatWithOpenAi([
+    const completion = chatWithAnswerModel([
       { role: "system", content: systemContent },
       {
         role: "user",
@@ -672,8 +673,9 @@ async function generateAppliedConfirmation(
  * ändrades." Without OPENAI_API_KEY -> null (the deterministic rows stand).
  *
  * Reuses generateAppliedConfirmation's hard-honesty system-prompt style + the
- * APPLIED_CONFIRMATION_TIMEOUT_MS race + chatWithOpenAi, so a hung confirmation
- * call can never hold the already-finished build response hostage.
+ * APPLIED_CONFIRMATION_TIMEOUT_MS race + the registered answerModel role
+ * (chatWithAnswerModel), so a hung confirmation call can never hold the
+ * already-finished build response hostage.
  */
 async function generateFollowupOutcomeSummary(
   prompt: string,
@@ -755,7 +757,7 @@ async function generateFollowupOutcomeSummary(
       );
       if (typeof timer.unref === "function") timer.unref();
     });
-    const completion = chatWithOpenAi([
+    const completion = chatWithAnswerModel([
       { role: "system", content: systemContent },
       { role: "user", content: `Min önskan var: ${prompt.slice(0, 500)}` },
     ])
