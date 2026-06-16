@@ -32,42 +32,18 @@ importerar aldrig ``renderers`` vid modul-laddning.
 
 from __future__ import annotations
 
-import sys
-from types import ModuleType
-from typing import Any
-
 from packages.generation.build.blueprint_render import RenderBlueprint
 from packages.generation.build.dispatcher import (
     _SECTION_RENDERERS,
     _operator_pin_for_section,
     _treatment_for_section,
 )
-
-
-def _renderers() -> ModuleType:
-    """Return the fully-imported ``renderers`` module at CALL time.
-
-    The section renderers below reach two shared format-/CTA-helpers
-    (``_jsx_safe_string``, ``_text_contact_cta``) that still live in
-    ``packages.generation.build.renderers``. Resolving the module lazily
-    at call time — never at import time — keeps the import graph acyclic:
-    ``renderers`` imports this module at its tail to self-register, and
-    this module never imports ``renderers`` while it is loading.
-    """
-    module = sys.modules.get("packages.generation.build.renderers")
-    if module is not None:
-        return module
-    from packages.generation.build import renderers
-
-    return renderers
-
-
-def _jsx_safe_string(text: str) -> str:
-    return _renderers()._jsx_safe_string(text)
-
-
-def _text_contact_cta(*args: Any, **kwargs: Any) -> str:
-    return _renderers()._text_contact_cta(*args, **kwargs)
+from packages.generation.build.render_helpers import (
+    _jsx_safe_string as _jsx_safe_string,
+)
+from packages.generation.build.render_helpers import (
+    _text_contact_cta as _text_contact_cta,
+)
 
 
 def render_section_industries_served(dossier: dict) -> str:
@@ -126,7 +102,9 @@ def render_section_partners_grid(dossier: dict) -> str:
     """
     company = dossier.get("company") or {}
     team = company.get("team") or []
-    members: list[dict] = [m for m in team if isinstance(m, dict) and m.get("name") and m.get("role")]
+    members: list[dict] = [
+        m for m in team if isinstance(m, dict) and m.get("name") and m.get("role")
+    ]
     if not members:
         return ""
     cards = "\n".join(
@@ -211,9 +189,7 @@ def render_section_selected_work_preview(
         variant_id,
         "selected-work-preview",
         default=_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT,
-        operator_pin=_operator_pin_for_section(
-            dossier, "selected-work-preview"
-        ),
+        operator_pin=_operator_pin_for_section(dossier, "selected-work-preview"),
         visual_direction_pick=(
             blueprint.section_treatment_pick("selected-work-preview")
             if blueprint is not None
@@ -278,7 +254,7 @@ def _render_selected_work_preview_asymmetric_grid(services: list[dict]) -> str:
     cards = "\n".join(
         (
             f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--card)] p-8 md:p-10'
-            + (' md:translate-y-12' if idx % 2 == 0 else '')
+            + (" md:translate-y-12" if idx % 2 == 0 else "")
             + '">\n'
             f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Studio nº {idx:02d}")}</p>\n'
             f'              <h3 className="text-2xl font-semibold tracking-tight md:text-4xl">{_jsx_safe_string(svc["label"])}</h3>\n'
@@ -423,7 +399,9 @@ def render_section_capabilities_row(dossier: dict) -> str:
     """
     tone = dossier.get("tone") or {}
     secondary = tone.get("secondary") or []
-    cleaned: list[str] = [item.strip() for item in secondary if isinstance(item, str) and item.strip()]
+    cleaned: list[str] = [
+        item.strip() for item in secondary if isinstance(item, str) and item.strip()
+    ]
     if not cleaned:
         return ""
     pills = "\n".join(
@@ -489,10 +467,26 @@ def render_section_process_steps(dossier: dict) -> str:  # noqa: ARG001 — doss
     studio convention.
     """
     steps = (
-        ("01", "Discovery", "Vi lyssnar, läser och kartlägger så att vi vet vad arbetet faktiskt ska göra."),
-        ("02", "Concept", "Skriver, skissar och visar riktning. Vi visar val, inte färdiga lösningar."),
-        ("03", "Production", "Designar, kodar, animerar — det praktiska arbetet där studion bygger sakerna."),
-        ("04", "Launch", "Vi sjösätter med er och stannar kvar för att se hur arbetet beter sig i världen."),
+        (
+            "01",
+            "Discovery",
+            "Vi lyssnar, läser och kartlägger så att vi vet vad arbetet faktiskt ska göra.",
+        ),
+        (
+            "02",
+            "Concept",
+            "Skriver, skissar och visar riktning. Vi visar val, inte färdiga lösningar.",
+        ),
+        (
+            "03",
+            "Production",
+            "Designar, kodar, animerar — det praktiska arbetet där studion bygger sakerna.",
+        ),
+        (
+            "04",
+            "Launch",
+            "Vi sjösätter med er och stannar kvar för att se hur arbetet beter sig i världen.",
+        ),
     )
     cells = "\n".join(
         f'            <li key={_jsx_safe_string(label)} className="flex flex-col gap-3 border-l border-[color:var(--border)] pl-6">\n'

@@ -36,29 +36,12 @@ from packages.generation.build.dispatcher import (
     _operator_pin_for_section,
     _treatment_for_section,
 )
-
-
-def _renderers():
-    """Return the ``renderers`` module, imported lazily at call time.
-
-    Deferring the import breaks the cycle: ``renderers`` imports this
-    module at its top level (to register + re-export the family), so this
-    module must not import ``renderers`` until a renderer actually runs,
-    by which point ``renderers`` is fully initialised.
-    """
-    from packages.generation.build import renderers
-
-    return renderers
-
-
-def _jsx_safe_string(text: str) -> str:
-    """Lazy shim to ``renderers._jsx_safe_string`` (see module docstring)."""
-    return _renderers()._jsx_safe_string(text)
-
-
-def _text_contact_cta(contact_path: str | None, label: str, **kwargs: str) -> str:
-    """Lazy shim to ``renderers._text_contact_cta`` (see module docstring)."""
-    return _renderers()._text_contact_cta(contact_path, label, **kwargs)
+from packages.generation.build.render_helpers import (
+    _jsx_safe_string as _jsx_safe_string,
+)
+from packages.generation.build.render_helpers import (
+    _text_contact_cta as _text_contact_cta,
+)
 
 
 def render_section_treatment_summary(
@@ -99,9 +82,7 @@ def render_section_treatment_summary(
         "          </div>\n"
         '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{cards}\n"
-        "          </ul>\n"
-        + _text_contact_cta(contact_path, "Boka tid")
-        + "        </div>\n"
+        "          </ul>\n" + _text_contact_cta(contact_path, "Boka tid") + "        </div>\n"
         "      </section>\n"
         "\n"
     )
@@ -147,9 +128,7 @@ def render_section_treatment_list(
         default=_TREATMENT_LIST_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "treatment-list"),
         visual_direction_pick=(
-            blueprint.section_treatment_pick("treatment-list")
-            if blueprint is not None
-            else None
+            blueprint.section_treatment_pick("treatment-list") if blueprint is not None else None
         ),
     )
     if treatment == "split-cards":
@@ -255,7 +234,7 @@ def _render_treatment_list_numbered_stack(
         (
             f'            <li key={_jsx_safe_string(svc["id"])} className="grid gap-6 border-b border-[color:var(--border)] py-8 md:grid-cols-[6rem_1fr]">\n'
             f'              <p className="font-mono text-3xl tracking-tight text-[color:var(--muted)] md:text-4xl">{_jsx_safe_string(f"{idx:02d}")}</p>\n'
-            "              <div className=\"flex flex-col gap-3\">\n"
+            '              <div className="flex flex-col gap-3">\n'
             f'                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
             f'                <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
             "              </div>\n"
@@ -305,7 +284,7 @@ def render_section_credentials(dossier: dict) -> str:
     badges = "\n".join(
         f'            <li key={_jsx_safe_string(label)} className="flex items-center gap-3 rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-5 py-2 text-sm font-medium">\n'
         '              <Check className="size-4 text-[color:var(--primary)]" />\n'
-        f'              <span>{_jsx_safe_string(label)}</span>\n'
+        f"              <span>{_jsx_safe_string(label)}</span>\n"
         "            </li>"
         for label in trust
     )
@@ -362,9 +341,7 @@ def render_section_expertise_areas(
         default=_EXPERTISE_AREAS_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "expertise-areas"),
         visual_direction_pick=(
-            blueprint.section_treatment_pick("expertise-areas")
-            if blueprint is not None
-            else None
+            blueprint.section_treatment_pick("expertise-areas") if blueprint is not None else None
         ),
     )
     if treatment == "tag-cluster":
@@ -490,9 +467,7 @@ def render_section_practice_grid(
         default=_PRACTICE_GRID_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "practice-grid"),
         visual_direction_pick=(
-            blueprint.section_treatment_pick("practice-grid")
-            if blueprint is not None
-            else None
+            blueprint.section_treatment_pick("practice-grid") if blueprint is not None else None
         ),
     )
     if treatment == "tabular":
