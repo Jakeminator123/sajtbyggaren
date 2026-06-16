@@ -6,12 +6,13 @@ Modulen läser den valfria sidecar-metadatan bredvid
 ``data/prompt-inputs/<siteId>.{project-input,meta}.json`` och normaliserar
 init-/följdprompt-tillstånd för en Engine Run.
 
-io-helparna (``load_json``/``write``/``_to_repo_relative``) ligger kvar i
-``scripts/build_site.py`` tills de flyttas i en senare io-slice. De
-funktioner här som behöver dem gör därför en LAT import i funktionsbody
-(``from scripts.build_site import ...``) i stället för en toppnivå-import,
-för att undvika cirkulär import: ``scripts/build_site.py`` importerar den
-här modulen ivrigt i sin header, FÖRE io-helparna definieras längre ned.
+``load_json`` ligger nu i ``packages.generation.build.io_helpers``. Den
+repo-relativa facade-hjälparen (``_to_repo_relative``) ligger kvar i
+``scripts/build_site.py`` denna slice eftersom den beror på byggarens
+``REPO_ROOT``-semantik. Funktioner här som behöver den gör därför fortsatt en
+LAT import i funktionsbody (``from scripts.build_site import _to_repo_relative``)
+för att undvika cirkulär import: ``scripts/build_site.py`` importerar den här
+modulen ivrigt i sin header.
 ``_persist_init_project_input_sidecar`` behåller dessutom sin befintliga
 lata import från ``scripts.prompt_to_project_input``.
 """
@@ -25,6 +26,8 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from packages.generation.build.io_helpers import load_json
 
 _VERSIONED_PROMPT_INPUT_RE = re.compile(
     r"^(?P<site_id>[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)"
@@ -63,7 +66,7 @@ def load_prompt_input_meta(
     immutable version metadata instead of making Viewser read the mutable
     "latest" sidecar for every old run.
     """
-    from scripts.build_site import _to_repo_relative, load_json
+    from scripts.build_site import _to_repo_relative
 
     meta_path = _prompt_meta_path_for_dossier(dossier_path)
     if meta_path is None:

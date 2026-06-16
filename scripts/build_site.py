@@ -65,6 +65,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 _subprocess_exports = importlib.import_module("packages.generation.build.subprocesses")
+_io_helpers_exports = importlib.import_module("packages.generation.build.io_helpers")
 _renderer_exports = importlib.import_module("packages.generation.build.renderers")
 _static_asset_exports = importlib.import_module("packages.generation.build.static_assets")
 _dispatcher_exports = importlib.import_module("packages.generation.build.dispatcher")
@@ -76,6 +77,18 @@ _npm_step_result = _subprocess_exports._npm_step_result
 _sanitized_npm_env = _subprocess_exports._sanitized_npm_env
 run_npm = _subprocess_exports.run_npm
 subprocess = _subprocess_exports.subprocess
+
+# IO helpers (behavior-preserving extraction): JSON read/write helpers and the
+# env-secret write guard now live in ``packages.generation.build.io_helpers``.
+# They are re-exported here so existing imports and monkeypatches against the
+# ``scripts.build_site`` facade keep resolving. Path/time helpers stay local
+# below because they depend on this facade's ``REPO_ROOT``/clock semantics.
+_FORBIDDEN_ENV_PATTERN = _io_helpers_exports._FORBIDDEN_ENV_PATTERN
+_ALLOWED_ENV_NAMES = _io_helpers_exports._ALLOWED_ENV_NAMES
+load_json = _io_helpers_exports.load_json
+assert_not_env_secret = _io_helpers_exports.assert_not_env_secret
+write = _io_helpers_exports.write
+write_json = _io_helpers_exports.write_json
 
 # Eager re-exports of the most commonly imported names — kept so IDE/static
 # analysis can see them. Everything else (including the 30+ section renderers
@@ -142,7 +155,7 @@ render_route_generic = _dispatcher_exports.render_route_generic
 # ``from scripts.build_site import variant_css``, and the renderers/
 # static-assets lazy shim resolves ``getattr(build_site, "_normalise_hex_color")``
 # / ``"_normalize_tone_key"``. ``patch_globals_css``/``patch_package_json`` stay
-# defined locally (they use write/load_json, which move in the io-helpers slice).
+# defined locally (they use write/load_json from the io-helpers module).
 _tokens_exports = importlib.import_module("packages.generation.build.tokens")
 _HEX_COLOR_RE = _tokens_exports._HEX_COLOR_RE
 _TONE_COLOR_TOKENS = _tokens_exports._TONE_COLOR_TOKENS
@@ -210,11 +223,11 @@ _public_product_asset_stem = _assets_exports._public_product_asset_stem
 # existing spelling keeps resolving: build(), build_targeted_version(),
 # build_plan_artefakts(), write_phase1/2 and _detect_followup_applied_visible_effect
 # call them as bare names, and tests do ``from scripts.build_site import
-# load_prompt_input_meta``. The readers that need io-helpers (``load_json``/
-# ``_to_repo_relative``, which move in a later io-helpers slice) do a lazy
-# ``from scripts.build_site import ...`` inside their bodies, so this eager import
-# stays cycle-free. ``_prompt_meta_unapplied_followup_intents`` stays defined
-# locally below (separate region near write_build_result).
+# load_prompt_input_meta``. The reader imports ``load_json`` from the
+# io-helpers module and keeps a lazy ``from scripts.build_site import
+# _to_repo_relative`` only for the repo-relative facade helper, so this eager
+# import stays cycle-free. ``_prompt_meta_unapplied_followup_intents`` stays
+# defined locally below (separate region near write_build_result).
 _prompt_meta_exports = importlib.import_module("packages.generation.build.prompt_meta")
 _VERSIONED_PROMPT_INPUT_RE = _prompt_meta_exports._VERSIONED_PROMPT_INPUT_RE
 _CURRENT_PROMPT_INPUT_RE = _prompt_meta_exports._CURRENT_PROMPT_INPUT_RE
@@ -339,10 +352,6 @@ DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"
 
-# Files the builder must NEVER write under any siteId. Case-insensitive.
-# `.env.example` is allowed (canonical placeholder).
-_FORBIDDEN_ENV_PATTERN = re.compile(r"^\.env(\..+)?$", flags=re.IGNORECASE)
-_ALLOWED_ENV_NAMES = {".env.example"}
 _API_ROUTE_RE = re.compile(r"(/api/[A-Za-z0-9/_-]+)")
 
 
@@ -368,36 +377,6 @@ def make_run_id(site_id: str) -> str:
     millis = f"{now.microsecond // 1000:03d}"
     short = uuid.uuid4().hex[:8]
     return f"{stamp}.{millis}Z-{short}-{site_id}"
-
-
-def load_json(path: Path) -> dict:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def assert_not_env_secret(path: Path) -> None:
-    """Refuse to touch real .env files (case-insensitive). .env.example is OK."""
-    name = path.name
-    if name in _ALLOWED_ENV_NAMES:
-        return
-    if _FORBIDDEN_ENV_PATTERN.match(name):
-        raise AssertionError(
-            f"Builder must not write secret env files (attempted: {path}). "
-            "Hard Dossiers handle their own env contracts via env-contract.json."
-        )
-
-
-def write(path: Path, contents: str) -> None:
-    """Write text to disk through the central guard. Use for ALL file writes.
-
-    This is the single chokepoint that enforces the env-secret block.
-    Helpers that previously called ``Path.write_text`` directly must go via
-    this function instead so the guard cannot be bypassed.
-    """
-    assert_not_env_secret(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as f:
-        f.write(contents)
 
 
 def _to_repo_relative(path: Path) -> str:
@@ -527,10 +506,6 @@ def _js_string_literal(text: str) -> str:
     cannot contain raw.
     """
     return json.dumps(text, ensure_ascii=False)
-
-
-def write_json(path: Path, data: Any) -> None:
-    write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
 
 # ---------------------------------------------------------------------------
