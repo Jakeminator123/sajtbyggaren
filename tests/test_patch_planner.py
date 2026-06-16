@@ -324,6 +324,23 @@ def test_generative_component_add_is_skipped_not_rejected(env):
     assert plan.rejected == []
 
 
+def test_cta_generative_component_add_is_skipped_not_rejected(env):
+    """The cta-contact-block recipe is also route-level generative, not an
+    accessory-section patch, so a top-placement target must stay empty+valid."""
+    paths, _tmp = env
+    context, _registry = _contexts(paths)
+    decision = RouterDecision(
+        messageKind="edit_instruction",
+        editKind="component_add",
+        target=RouterTarget(routeId="home", position="top"),
+        componentIntent="contact_button",
+    )
+    plan = plan_patches(decision, context)
+    assert plan.valid is True
+    assert plan.patches == []
+    assert plan.rejected == []
+
+
 def test_non_generative_component_add_without_section_still_rejected(env):
     """Guards the narrowness of the generative skip: a NON-generative
     component_add with a bare position (no section) is STILL rejected — the

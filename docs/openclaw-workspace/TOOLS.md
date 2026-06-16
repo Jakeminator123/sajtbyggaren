@@ -19,20 +19,23 @@ ytor, inga nätverksanrop.
 - component_add — lägga till en komponent. Ägs av `component_builder`-rollen
   (ADR 0057), grundad i Component Catalog (ADR 0040: capability-map `components` +
   per-Starter `component-manifest.json`). SUPPORTED men mount-only som default med
-  ETT vitlistat, deterministiskt genererings-recept som undantag (Generative
-  Component V1, ADR 0061): `image-placeholder-grid` ("lägg till 6
-  bildplatshållare", "lägg till en bildgrid") MATERIALISERAS som EN ny
-  `components/generated/<id>.tsx` Server Component som splice:as in i routens
-  page.tsx via den befintliga build- + Quality Gate- + immutabel-versionerings-
-  pipelinen — INGEN fri LLM-genererad kod och INGA nya npm-beroenden i V1.
-  `directives.generativeComponents` är STICKY (union:as per id i apply); buildern
-  materialiserar idempotent och fail-closar på allt som skulle skriva utanför
-  build-katalogen eller röra `package.json`/`.env*`/`node_modules`. ALLT annat än
-  det vitlistade receptet förblir mount-only: en katalog-grundad component_add ger
-  ett katalog-grundat svar och en igenkänd-men-ostödd genererings-familj (en
-  karusell) blir en ÄRLIG no-op (stage `generative_unsupported`) som aldrig hittar
-  på en komponent. Att vendorera in en helt ny komponenttyp förblir en
-  operatörs-PR (intag → granskning → Starter); fri codegen är en senare slice.
+  två vitlistade, deterministiska genererings-recept som undantag (Generative
+  Component V1, ADR 0061/0064): `image-placeholder-grid` ("lägg till 6
+  bildplatshållare", "lägg till en bildgrid") och `cta-contact-block` ("lägg
+  till en kontaktknapp", "lägg till en kontaktruta", "boka", "offert", "cta")
+  MATERIALISERAS som EN ny `components/generated/<id>.tsx` Server Component som
+  splice:as in i routens page.tsx via den befintliga build- + Quality Gate- +
+  immutabel-versionerings-pipelinen — INGEN fri LLM-genererad kod och INGA nya
+  npm-beroenden i V1. CTA-receptet renderar inga telefonnummer, e-postadresser
+  eller kontaktvägar som inte finns grundade i data. `directives.generativeComponents`
+  är STICKY (union:as per id i apply); buildern materialiserar idempotent och
+  fail-closar på allt som skulle skriva utanför build-katalogen eller röra
+  `package.json`/`.env*`/`node_modules`. ALLT annat än de vitlistade recepten
+  förblir mount-only: en katalog-grundad component_add ger ett katalog-grundat
+  svar och en igenkänd-men-ostödd genererings-familj (en karusell) blir en ÄRLIG
+  no-op (stage `generative_unsupported`) som aldrig hittar på en komponent. Att
+  vendorera in en helt ny komponenttyp förblir en operatörs-PR (intag →
+  granskning → Starter); fri codegen är en senare slice.
 - route_remove — ta bort EN hel icke-obligatorisk sida + dess nav-länk via ett
   strukturerat direktiv (`directives.disabledRoutes`), aldrig en dossier och
   aldrig fri filpatch (Route/Nav Mutation V1, ADR 0060). Ägs av
