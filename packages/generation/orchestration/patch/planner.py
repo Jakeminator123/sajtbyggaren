@@ -22,6 +22,10 @@ emitted.
 
 from __future__ import annotations
 
+from packages.generation.followup.generative_component_directives import (
+    GENERATIVE_RECIPES,
+)
+
 from ..context.models import AssembledContext
 from ..router.models import EditKind, RouterDecision, RouterTarget
 from .models import (
@@ -34,6 +38,21 @@ from .models import (
 from .validate import rails_from_context, validate_patch
 
 __all__ = ["plan_patches"]
+
+# componentIntent slugs that name a GENERATIVE recipe (ADR 0061). A ``component_add``
+# for one of these applies via the route-level generative path
+# (``resolve_generative_component`` -> ``directives.generativeComponents`` -> a
+# ``page.tsx`` splice), NOT an accessory-section patch: they carry a route +
+# position ("högst upp på startsidan"), never a section target, so the accessory
+# planner would reject them ("no section to address") and the chain would discard
+# the resolved recipe. The planner therefore proposes NO accessory patch for them
+# (``_collect_edits`` skips them) and leaves the empty-valid plan to the generative
+# path. Derived from the single recipe allowlist so it never drifts.
+_GENERATIVE_COMPONENT_INTENTS: frozenset[str] = frozenset(
+    str(recipe["componentIntent"])
+    for recipe in GENERATIVE_RECIPES.values()
+    if isinstance(recipe.get("componentIntent"), str)
+)
 
 # Edit kinds the planner can turn into a named-field patch. Other edit kinds
 # (visual_style, layout_change, component_remove, route_add, none) are out of
@@ -131,12 +150,39 @@ def _collect_edits(
     only patchable edit kinds that carry a target (a patch needs a place to go).
     """
     edits: list[tuple[EditKind, RouterTarget, str | None]] = []
-    if decision.editKind in _PATCHABLE_EDITS and decision.target is not None:
+    if (
+        decision.editKind in _PATCHABLE_EDITS
+        and decision.target is not None
+        and not _is_generative_component_add(
+            decision.editKind, decision.componentIntent
+        )
+    ):
         edits.append((decision.editKind, decision.target, decision.componentIntent))
     for subtask in decision.subtasks:
-        if subtask.editKind in _PATCHABLE_EDITS and subtask.target is not None:
+        if (
+            subtask.editKind in _PATCHABLE_EDITS
+            and subtask.target is not None
+            and not _is_generative_component_add(
+                subtask.editKind, subtask.componentIntent
+            )
+        ):
             edits.append((subtask.editKind, subtask.target, subtask.componentIntent))
     return edits
+
+
+def _is_generative_component_add(
+    edit_kind: EditKind, component_intent: str | None
+) -> bool:
+    """True for a ``component_add`` whose intent names a generative recipe.
+
+    Those apply via the route-level generative path, not an accessory-section
+    patch, so the planner must not propose (and reject) a section patch for them.
+    """
+    return (
+        edit_kind == "component_add"
+        and component_intent is not None
+        and component_intent in _GENERATIVE_COMPONENT_INTENTS
+    )
 
 
 def _plan_one(
