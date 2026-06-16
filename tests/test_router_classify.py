@@ -752,6 +752,17 @@ def test_section_add_does_not_steal_new_page():
     assert d.editKind == "route_add"
 
 
+def test_route_add_with_quoted_page_name_is_not_copy_change():
+    """2026-06-16 honesty bug: "lägg till en sida ... som heter 'X'" must classify
+    as route_add, never a copy_change that renames the company. The quoted
+    "...som heter X" names the NEW PAGE; downstream it is an honest no-op."""
+    d = classify_message(
+        'Lägg till en sida och en navigationslänk som heter "Jakobs sida"'
+    )
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "route_add"
+
+
 def test_widget_into_named_section_stays_component_add():
     """A different widget added INTO a named section ("i andra sektionen") is a
     component_add at that location, not a section_add."""
