@@ -538,6 +538,47 @@ def is_media_change_request(follow_up_prompt: str) -> bool:
     return not _contains_any_word(skeleton, _MEDIA_GUARD_TEXT_NOUNS)
 
 
+# Page-add cues (route_add): an add/create/new verb paired with a page noun.
+# Mirrors classify_message's route_add signal set (packages/generation/
+# orchestration/router/classify.py: _ADD_VERBS/_CREATE_VERBS/_NEW_PAGE_CUES +
+# _PAGE_NOUNS) but is kept self-contained here so the followup layer never has
+# to import from the orchestration/router layer. The page nouns list the
+# "-sida"/"-sidan" compounds explicitly because word-boundary matching means a
+# bare "sida" never matches inside "kontaktsida".
+_PAGE_ADD_VERB_CUES: tuple[str, ...] = (
+    "lägg till", "lagg till", "lägg in", "lagg in", "lägga till", "lagga till",
+    "skapa", "skapar", "bygg", "bygga", "ny", "nytt", "ytterligare", "extra",
+    "add", "create", "new",
+)
+_PAGE_ADD_PAGE_NOUNS: tuple[str, ...] = (
+    "undersida", "undersidor", "kontaktsida", "kontaktsidan", "landningssida",
+    "tjänstesida", "tjanstesida", "prissida", "webbsida", "sida", "sidan",
+    "sidor", "page", "pages",
+)
+
+
+def is_page_add_request(follow_up_prompt: str) -> bool:
+    """True when the follow-up asks to ADD A PAGE ("lägg till en sida [som heter X]").
+
+    A page-add's trailing "...som heter X" names the NEW PAGE, not the company,
+    so the copy extractor must never steal that quoted name as a company rename
+    (the 2026-06-16 "Jakobs sida" honesty bug). The router classifies these as
+    ``route_add`` - an editKind with no executor yet (ADR 0062 §4), so the honest
+    outcome is a no-op, never a silent company-name change.
+
+    Evaluated on the instruction skeleton OUTSIDE quoted spans (same guard shape
+    as ``is_media_change_request``) so a company literally named "Lägg till en
+    sida AB" inside quotes never trips it. Requires BOTH an add/create/new verb
+    and a page noun, mirroring ``classify_message``'s route_add cue set.
+    """
+    skeleton = _text_outside_quotes(follow_up_prompt)
+    if not skeleton:
+        return False
+    if not _contains_any_word(skeleton, _PAGE_ADD_PAGE_NOUNS):
+        return False
+    return _contains_any_word(skeleton, _PAGE_ADD_VERB_CUES)
+
+
 def _classify_copy_target(text_norm: str) -> str | None:
     """Decide which structured field a copy directive targets.
 
@@ -1403,6 +1444,16 @@ def _extract_copy_directives(
         return []
     target = _classify_copy_target(text)
     if target is None:
+        return []
+    # page-add honesty guard (2026-06-16): "lägg till en sida som heter 'X'" is a
+    # route_add - the quoted "...som heter X" names the NEW PAGE, not the company.
+    # The explicit name keyword ("heter") otherwise wins in _classify_copy_target
+    # and "X" is published as a company rename (the confident-wrong "Jakobs sida"
+    # bug: an add-a-page request silently became a company-name change + "Klart!").
+    # Scoped to company-name so genuine renames ("ändra företagsnamnet till X")
+    # and every other copy target stay byte-identical; route_add itself is an
+    # honest no-op (full page-adding is a noted follow-up).
+    if target == "company-name" and is_page_add_request(follow_up_prompt):
         return []
     # Detect command verbs as WHOLE words/phrases, not substrings:
     # "Jag bytte företagsnamnet till X" is past-tense narration and must not

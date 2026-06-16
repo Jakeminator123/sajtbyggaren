@@ -752,6 +752,17 @@ def test_section_add_does_not_steal_new_page():
     assert d.editKind == "route_add"
 
 
+def test_route_add_with_quoted_page_name_is_not_copy_change():
+    """2026-06-16 honesty bug: "lägg till en sida ... som heter 'X'" must classify
+    as route_add, never a copy_change that renames the company. The quoted
+    "...som heter X" names the NEW PAGE; downstream it is an honest no-op."""
+    d = classify_message(
+        'Lägg till en sida och en navigationslänk som heter "Jakobs sida"'
+    )
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "route_add"
+
+
 def test_widget_into_named_section_stays_component_add():
     """A different widget added INTO a named section ("i andra sektionen") is a
     component_add at that location, not a section_add."""
@@ -774,3 +785,46 @@ def test_section_add_question_is_not_an_edit():
     assert d.editKind == "none"
     assert d.buildRequirement == "none"
     assert d.shouldStartPreview is False
+
+
+# ---------------------------------------------------------------------------
+# "lägg till öppettider" follow-up: opening hours has NO component_add recipe,
+# so a bare add (no explicit "sektion" word) must reach the wired section path
+# (section_add -> hours capability -> opening-hours dossier, inline on home per
+# ADR 0038) instead of a dead component_add(opening_hours) that downstream
+# reports as "opening-hours kunde inte kopplas till någon känd förmåga".
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "lägg till öppettider",
+        "lägg till öppettider på startsidan",
+        "lägg in våra öppettider",
+        # The definite/short Swedish forms reach the same section path via the
+        # section-type lexicon even though they are not component nouns.
+        "lägg till öppettiderna",
+        "lägg till öppettid",
+    ],
+)
+def test_bare_opening_hours_add_is_section_add_hours_not_component(prompt: str):
+    """A bare "add opening hours" follow-up is section_add(hours) - NOT a dead
+    component_add(opening_hours). It rides the existing opening_hours -> hours
+    bridge so it mounts the hours capability instead of an unknown slug."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.editKind == "section_add", f"{prompt!r} -> {d.editKind} ({d.rationale})"
+    assert d.componentIntent == "hours"
+    assert d.buildRequirement == "targeted_rebuild"
+    # The dead component_add(opening_hours) no-op must never be produced for it.
+    assert not (d.editKind == "component_add" and d.componentIntent == "opening_hours")
+
+
+def test_opening_hours_widget_into_section_stays_component_add():
+    """Guard for the section-only-type widening: a DIFFERENT widget aimed at the
+    hours section ("en knapp för öppettider") is still a component_add(button),
+    never swallowed into section_add(hours)."""
+    d = classify_message("lägg till en knapp för öppettider")
+    assert d.editKind == "component_add"
+    assert d.componentIntent == "button"
