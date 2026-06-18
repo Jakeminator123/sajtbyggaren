@@ -52,9 +52,31 @@ på main → prod; build-context uppladdad; prod-bygge + följdprompt live-verif
 
 ## Öppna PR att känna till
 
-- **#324** (`feat/viewser-uiux-prod-polish`, Christopher): viewser UI/UX-putts
-  (banner-overlap, jargong, bygg-text + canary-skript). CLEAN + grön CI, men det
-  är UI → hålls för operatörens browser-check innan merge.
+Christophers viewser-frontend-lane: **fem PR:er, alla CLEAN/MERGEABLE mot färska
+`jakob-be` (cae8971) och grön CI**. (`ai-bug-review` skippas på alla PR sedan
+gpt-5.5-modellbumpen `dae2019` — *"temperature does not support 0 with this
+mode"*; "skipped", inte "fail", så ej blockerande, men AI-review-skyddet är de
+facto av tills review-workflowens `temperature` justeras.) Konfliktfria
+sinsemellan och mot Jakobs
+backend (rör varken `route.ts`, `hosted-build-runner.ts`, discovery eller
+studio-flödet). Redo att review:as + mergas i valfri ordning; **#324 hålls för
+operatörens browser-check** eftersom den rör hostad UI direkt.
+
+- **#324** (`feat/viewser-uiux-prod-polish`): UI/UX-putts för hostad prod —
+  banner-overlap, jargong, bygg-text + canary-skript. (Väntar browser-check.)
+- **#371** (`feat/viewser-generative-visible`): visar genererade komponenter
+  (bildgrid/CTA) i chattens "Ändrat"-lista (ADR 0061-yta).
+- **#372** (`feat/viewser-uiux-copy-polish`): jargong-fri discovery-wizard
+  (hero/header/footer → klar svenska).
+- **#373** (`feat/viewser-product-page`): riktig `/produkt`-sida (ersätter
+  placeholder-stub).
+- **#374** (`feat/viewser-error-404-favicon`): frontend-metadata — branded
+  404/error, PWA-manifest + brand-ikoner, OG-bild, FAQ-sida. OBS: justerade en
+  föräldralös triangel-`favicon.ico` till samma "S"-mark som `apple-icon.png`
+  (apple-icon orörd); revertbart om triangeln var avsiktlig.
+
+Detaljer i inbox: `msg-c-0094` (samlad) konsoliderar de grenlokala notiserna
+`msg-c-0089`–`0093`.
 
 Mergat och i `main` (= 0f2e5758): #338 (Fas 1), #341 (generativ V1, ADR 0061),
 #342 (generativ-fixar), #340 (ADR 0062), #337 (known-issues-arkiv), temperature-fix
